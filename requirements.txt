@@ -1,0 +1,5 @@
+oletools
+prettytable
+colorlog
+colorama
+pyparsing
