@@ -8,6 +8,7 @@ and deobfuscate malicious VBA Macros contained in Microsoft Office files
 **DISCLAIMER**:
 - ViperMonkey is a *very* incomplete and experimental VBA Engine. For now it will NOT
 handle most real-life macros without errors.
+- VBA parsing and emulation is *extremely* slow for now.
 - VBA Emulation is hard and complex, because of all the features of the VBA language, of Microsoft
 Office applications, and all the DLLs and ActiveX objects that can be called from VBA.
 - This open-source project is only developed on my scarce spare time, so do not expect
@@ -27,7 +28,7 @@ miracles. Any help from you will be very appreciated!
 News
 ----
 
-- **2016-09-?? v0.01**: First published version
+- **2016-09-26 v0.02**: First published version
 - 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
 - see changelog in source code for more info.
 
@@ -36,7 +37,29 @@ News
 Download and Install:
 ---------------------
 
-TODO
+For now, there is no package on PyPI for automated installation. It must be done manually:
+
+- Download the archive form the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+- Extract it in the folder of your choice
+- Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
+or `pip install -U -r requirements.txt` on Windows
+
+Usage:
+------
+
+To parse and interpret VBA macros from a document, use the vmonkey script:
+
+```text
+python vmonkey.py <file>
+```
+
+If the output is too verbose and too slow, you may reduce the logging level using the
+-l option:
+
+```text
+python vmonkey.py -l info <file>
+```
+
 
 Documentation:
 --------------
