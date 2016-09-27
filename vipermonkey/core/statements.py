@@ -570,6 +570,6 @@ statement <<= dim_statement | let_statement | call_statement | simple_for_statem
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
 # TODO: use statement_block instead!
-statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOL.suppress()
+statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
 

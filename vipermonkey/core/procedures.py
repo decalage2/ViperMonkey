@@ -162,8 +162,8 @@ public_private = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')
 params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
 
 sub_start = public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
-            + Optional(params_list_paren) + EOL.suppress()
-sub_end = (CaselessKeyword('End') + CaselessKeyword('Sub') + EOL).suppress()
+            + Optional(params_list_paren) + EOS.suppress()
+sub_end = (CaselessKeyword('End') + CaselessKeyword('Sub') + EOS).suppress()
 sub = sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end
 sub.setParseAction(Sub)
 
@@ -214,9 +214,9 @@ function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type'
                  + Optional(Literal('(') + Literal(')')).suppress()
 
 function_start = public_private + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
-                 + Optional(params_list_paren) + Optional(function_type2) + EOL.suppress()
+                 + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
-function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOL).suppress()
+function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
 function = function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + function_end
 function.setParseAction(Function)
