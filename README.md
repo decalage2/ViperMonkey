@@ -39,7 +39,7 @@ Download and Install:
 
 For now, there is no package on PyPI for automated installation. It must be done manually:
 
-- Download the archive form the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+- Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
 - Extract it in the folder of your choice
 - Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
 or `pip install -U -r requirements.txt` on Windows
