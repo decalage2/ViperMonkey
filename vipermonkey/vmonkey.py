@@ -235,13 +235,14 @@ def main():
     print ('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
     print ('')
 
-    DEFAULT_LOG_LEVEL = "debug" # Default log level
-    LOG_LEVELS = {'debug':    logging.DEBUG,
-              'info':     logging.INFO,
-              'warning':  logging.WARNING,
-              'error':    logging.ERROR,
-              'critical': logging.CRITICAL
-             }
+    DEFAULT_LOG_LEVEL = "info" # Default log level
+    LOG_LEVELS = {
+        'debug':    logging.DEBUG,
+        'info':     logging.INFO,
+        'warning':  logging.WARNING,
+        'error':    logging.ERROR,
+        'critical': logging.CRITICAL
+        }
 
     usage = 'usage: %prog [options] <filename> [filename2 ...]'
     parser = optparse.OptionParser(usage=usage)
