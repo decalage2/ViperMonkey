@@ -5,6 +5,9 @@ ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
+See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+for real-life examples of malware deobfucation with ViperMonkey.
+
 **DISCLAIMER**:
 - ViperMonkey is a *very* incomplete and experimental VBA Engine. For now it will NOT
 handle most real-life macros without errors.
@@ -16,14 +19,14 @@ miracles. Any help from you will be very appreciated!
 
 
 **Quick links:**
-[Home page](http://www.decalage.info/vipermonkey) -
-[Download/Install](https://github.com/decalage2/ViperMonkey/wiki/Install) -
-[Documentation](https://github.com/decalage2/ViperMonkey/wiki) -
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
 [Contact the Author](http://decalage.info/contact) -
 [Repository](https://github.com/decalage2/ViperMonkey) -
 [Updates on Twitter](https://twitter.com/decalage2)
 
+[//]: # (Home page http://www.decalage.info/vipermonkey)
+[//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
+[//]: # (Download/Install https://github.com/decalage2/ViperMonkey/wiki/Install)
 
 News
 ----
@@ -57,15 +60,14 @@ If the output is too verbose and too slow, you may reduce the logging level usin
 -l option:
 
 ```text
-python vmonkey.py -l info <file>
+python vmonkey.py -l warning <file>
 ```
 
 
 Documentation:
 --------------
 
-The latest version of the documentation can be found [online](https://github.com/decalage2/ViperMonkey/wiki), otherwise
-a copy is provided in the doc subfolder of the package.
+Winter is coming.
 
 
 How to Suggest Improvements, Report Issues or Contribute:
