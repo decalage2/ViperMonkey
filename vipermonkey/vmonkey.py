@@ -88,7 +88,7 @@ from oletools.thirdparty.prettytable import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
 
-from core import *
+from vipermonkey.core import *
 
 
 
