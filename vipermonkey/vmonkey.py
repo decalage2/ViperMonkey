@@ -41,9 +41,10 @@ https://github.com/decalage2/ViperMonkey
 #------------------------------------------------------------------------------
 # CHANGELOG:
 # 2015-02-12 v0.01 PL: - first prototype
-# 2015-03-28 v0.02 PL:
+# 2015-2016        PL: - many changes
+# 2016-10-06 v0.03 PL: - fixed vipermonkey.core import
 
-__version__ = '0.02'
+__version__ = '0.03'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -88,7 +89,10 @@ from oletools.thirdparty.prettytable import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
 
-from vipermonkey.core import *
+try:
+    from vipermonkey.core import *
+except:
+    from core import *
 
 
 
