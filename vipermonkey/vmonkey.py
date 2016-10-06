@@ -90,7 +90,7 @@ from oletools.olevba import VBA_Parser, filter_vba
 
 from vipermonkey.core import *
 
-
+log = logging.getLogger("vipermonkey.vmonkey")
 
 # === MAIN (for tests) ===============================================================================================
 
@@ -103,64 +103,60 @@ def process_file (container, filename, data):
     :param filename: str, path and filename of file on disk, or within the container.
     :param data: bytes, content of the file if it is in a container, None if it is a file on disk.
     """
-    #TODO: replace print by writing to a provided output file (sys.stdout by default)
+    results = {}
     if container:
         display_filename = '%s in %s' % (filename, container)
     else:
         display_filename = filename
-    print '='*79
-    print 'FILE:', display_filename
+    results['display_filename'] = display_filename
     vm = ViperMonkey()
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data)
-        print 'Type:', vba.type
+        results['vba_type'] = vba.type
+        #: results from macro extraction
+        results['macros'] = []
         if vba.detect_vba_macros():
-            #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+                macro_res = {}
+                results['macros'].append(macro_res)
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
                 vba_code_filtered = filter_vba(vba_code)
-                print '-'*79
-                print 'VBA MACRO %s ' % vba_filename
-                print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-                print '- '*39
+                macro_res['vba_filename'] = vba_filename
+                macro_res['subfilename'] = subfilename
+                macro_res['stream_path'] = repr(stream_path)
                 # detect empty macros:
                 if vba_code_filtered.strip() == '':
-                    print '(empty macro)'
+                    macro_res['vba_code'] = None
                 else:
                     # TODO: option to display code
                     vba_code = vba_collapse_long_lines(vba_code)
-                    print '-'*79
-                    print 'VBA CODE (with long lines collapsed):'
-                    print vba_code
-                    print '-'*79
-                    print 'PARSING VBA CODE:'
+                    macro_res['vba_code'] = vba_code
                     try:
                         vm.add_module(vba_code)
                     except ParseException as err:
-                        print err.line
-                        print " "*(err.column-1) + "^"
-                        print err
+                        # XXX never happens: exception has already been caught
+                        # in vm.add_module
+                        log.error(
+                            "Error while parsing VBA macro %s in file: %s - "
+                            "OLE stream: %s", vba_filename, subfilename,
+                            repr(stream_path))
+                        log.error("%s\n", err.line)
+                        log.error(" %s ^\n", " " * (err.column-1))
+                        log.error("%s\n", err)
 
 
-            print '-'*79
-            print 'TRACING VBA CODE (entrypoint = Auto*):'
             vm.trace()
-            # print table of all recorded actions
-            print('Recorded Actions:')
-            print(vm.dump_actions())
+            results['actions'] = vm.dump_actions()
 
-
-        else:
-            print 'No VBA macros found.'
     except: #TypeError:
         #raise
         #TODO: print more info if debug mode
         #print sys.exc_value
         # display the exception with full stack trace for debugging, but do not stop:
         traceback.print_exc()
-    print ''
+    return results
 
 
 def process_file_scanexpr (container, filename, data):
@@ -172,57 +168,88 @@ def process_file_scanexpr (container, filename, data):
     :param filename: str, path and filename of file on disk, or within the container.
     :param data: bytes, content of the file if it is in a container, None if it is a file on disk.
     """
-    #TODO: replace print by writing to a provided output file (sys.stdout by default)
+    results = {}
     if container:
         display_filename = '%s in %s' % (filename, container)
     else:
         display_filename = filename
-    print '='*79
-    print 'FILE:', display_filename
+    results['display_filename'] = display_filename
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data)
-        print 'Type:', vba.type
+        results['vba_type'] = vba.type
+        #: results from macro extraction
+        results['macros'] = []
         if vba.detect_vba_macros():
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+                macro_res = {}
+                results['macros'].append(macro_res)
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
                 vba_code_filtered = filter_vba(vba_code)
-                print '-'*79
-                print 'VBA MACRO %s ' % vba_filename
-                print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-                print '- '*39
+                macro_res['vba_filename'] = vba_filename
+                macro_res['subfilename'] = subfilename
+                macro_res['stream_path'] = repr(stream_path)
                 # detect empty macros:
                 if vba_code_filtered.strip() == '':
-                    print '(empty macro)'
+                    macro_res['vba_code'] = None
                 else:
                     # TODO: option to display code
-                    print vba_code_filtered
                     vba_code = vba_collapse_long_lines(vba_code)
+                    macro_res['vba_code'] = vba_code_filtered
                     all_code += '\n' + vba_code
-            print '-'*79
-            print 'EVALUATED VBA EXPRESSIONS:'
-            t = prettytable.PrettyTable(('Obfuscated expression', 'Evaluated value'))
+            t = prettytable.PrettyTable(
+                ('Obfuscated expression', 'Evaluated value'))
             t.align = 'l'
             t.max_width['Obfuscated expression'] = 36
             t.max_width['Evaluated value'] = 36
             for expression, expr_eval in scan_expressions(all_code):
                 t.add_row((repr(expression), repr(expr_eval)))
-            print t
+            results['expressions'] = t
 
-
-        else:
-            print 'No VBA macros found.'
     except: #TypeError:
         #raise
         #TODO: print more info if debug mode
         #print sys.exc_value
         # display the exception with full stack trace for debugging, but do not stop:
         traceback.print_exc()
-    print ''
+    return results
 
+
+def display_processing_results(results, out_fd=sys.stdout):
+    print results
+    out_fd.write('='*79 + '\n')
+    out_fd.write('FILE: %s\n' % results['display_filename'])
+    out_fd.write('Type: %s\n' % results['vba_type'])
+    if len(results['macros']) == 0:
+        out_fd.write('No VBA macros found.\n')
+    for macro_res in results['macros']:
+        out_fd.write('-'*79 + '\n')
+        out_fd.write('VBA MACRO %s \n' % macro_res['vba_filename'])
+        out_fd.write('in file: %s - OLE stream: %s\n' %
+                       (macro_res['subfilename'], macro_res['stream_path']))
+        out_fd.write('- '*39 + '\n')
+        vba_code = macro_res['vba_code']
+        if vba_code is None:
+            out_fd.write('(empty macro\n')
+        else:
+            out_fd.write('-'*79 + '\n')
+            out_fd.write('VBA CODE (with long lines collapsed):\n')
+            out_fd.write('%s\n' % vba_code)
+            out_fd.write('-'*79 + '\n')
+            out_fd.write('PARSING VBA CODE:\n')
+    if 'actions' in results:
+        out_fd.write('-'*79 + '\n')
+        out_fd.write('TRACING VBA CODE (entrypoint = Auto*):\n')
+        # print table of all recorded actions
+        out_fd.write('Recorded Actions:\n')
+        out_fd.write('%s\n' % results['actions'])
+    if 'expressions' in results:
+            out_fd.write('-'*79 + '\n')
+            out_fd.write('EVALUATED VBA EXPRESSIONS:\n')
+            out_fd.write('%s\n' % t)
 
 
 def main():
@@ -279,9 +306,11 @@ def main():
         if container and filename.endswith('/'):
             continue
         if options.scan_expressions:
-            process_file_scanexpr(container, filename, data)
+            results = process_file_scanexpr(container, filename, data)
         else:
-            process_file(container, filename, data)
+            results = process_file(container, filename, data)
+        display_processing_results(results)
+
 
 
 
