@@ -43,8 +43,10 @@ https://github.com/decalage2/ViperMonkey
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
+# 2016-10-10 v0.03 PL: - added multiplication operator * to expressions
+#                      - added floor division operator \ to expressions
 
-__version__ = '0.02'
+__version__ = '0.03'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -371,9 +373,9 @@ expression <<= infixNotation(expr_item,
                              [
                                  # ("^", 2, opAssoc.RIGHT), # Exponentiation
                                  # ("-", 1, opAssoc.LEFT), # Unary negation
-                                 # ("*", 2, opAssoc.LEFT),
+                                 ("*", 2, opAssoc.LEFT, Multiplication),
                                  ("/", 2, opAssoc.LEFT, Division),
-                                 # ("\\", 2, opAssoc.LEFT),
+                                 ("\\", 2, opAssoc.LEFT, FloorDivision),
                                  (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
                                  ("+", 2, opAssoc.LEFT, Sum),
                                  ("-", 2, opAssoc.LEFT, Subtraction),

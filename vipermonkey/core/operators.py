@@ -43,8 +43,9 @@ https://github.com/decalage2/ViperMonkey
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
+# 2016-10-10 v0.03 PL: - added Multiplication and FloorDivision operators
 
-__version__ = '0.02'
+__version__ = '0.03'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -111,6 +112,32 @@ class Subtraction(VBA_Object):
         return ' - '.join(map(repr, self.arg))
 
 
+# --- MULTIPLICATION: * OPERATOR ------------------------------------------------
+
+class Multiplication(VBA_Object):
+    """
+    VBA Multiplication using the binary operator *
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Multiplication, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the multiplication of all the arguments:
+        try:
+            return reduce(lambda x, y: x * y, eval_args(self.arg, context))
+        except TypeError:
+            log.error('Impossible to multiply arguments of different types')
+            # TODO
+            return 0
+
+    def __repr__(self):
+        return ' * '.join(map(repr, self.arg))
+
+
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
 class Division(VBA_Object):
@@ -125,7 +152,7 @@ class Division(VBA_Object):
         self.arg = tokens[0][::2]
 
     def eval(self, context, params=None):
-        # return the subtraction of all the arguments:
+        # return the division of all the arguments:
         try:
             return reduce(lambda x, y: x / y, eval_args(self.arg, context))
         except TypeError:
@@ -135,6 +162,32 @@ class Division(VBA_Object):
 
     def __repr__(self):
         return ' / '.join(map(repr, self.arg))
+
+
+# --- FLOOR DIVISION: \ OPERATOR ------------------------------------------------
+
+class FloorDivision(VBA_Object):
+    """
+    VBA Floor Division using the binary operator \
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(FloorDivision, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the floor division of all the arguments:
+        try:
+            return reduce(lambda x, y: x // y, eval_args(self.arg, context))
+        except TypeError:
+            log.error('Impossible to divide arguments of different types')
+            # TODO
+            return 0
+
+    def __repr__(self):
+        return ' \\ '.join(map(repr, self.arg))
 
 
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
