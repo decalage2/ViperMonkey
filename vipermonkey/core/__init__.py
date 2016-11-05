@@ -43,8 +43,9 @@ https://github.com/decalage2/ViperMonkey
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
+# 2016-11-05 v0.03 PL: - fixed issue #13 in scan_expressions, context was missing
 
-__version__ = '0.02'
+__version__ = '0.03'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -195,6 +196,8 @@ def scan_expressions(vba_code):
     :param vba_code: str, VBA source code
     :return: iterator, yield (expression, evaluated value)
     """
+    # context to evaluate expressions:
+    context = Context()
     for m in expr_const.scanString(vba_code):
         e = m[0][0]
         # only yield expressions which are not plain constants
@@ -202,7 +205,7 @@ def scan_expressions(vba_code):
         if hasattr(e, 'eval'):
             # print 'eval(%s) = %s' % (repr(e), repr(e.eval()))
             # print repr(e.eval())
-            yield (e, e.eval())
+            yield (e, e.eval(context))
 
 
 # Soundtrack: This code was developed while listening to The Chameleons "Monkeyland"
