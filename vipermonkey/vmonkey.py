@@ -98,7 +98,7 @@ except:
 
 # === MAIN (for tests) ===============================================================================================
 
-def process_file (container, filename, data):
+def process_file (container, filename, data, altparser=False):
     """
     Process a single file
 
@@ -141,7 +141,10 @@ def process_file (container, filename, data):
                     print '-'*79
                     print 'PARSING VBA CODE:'
                     try:
-                        vm.add_module(vba_code)
+                        if altparser:
+                            vm.add_module2(vba_code)
+                        else:
+                            vm.add_module(vba_code)
                     except ParseException as err:
                         print err.line
                         print " "*(err.column-1) + "^"
@@ -264,6 +267,8 @@ def main():
         help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
                             help="logging level debug/info/warning/error/critical (default=%default)")
+    parser.add_option("-a", action="store_true", dest="altparser",
+        help='Use the alternate line parser (experimental)')
 
     (options, args) = parser.parse_args()
 
@@ -285,7 +290,7 @@ def main():
         if options.scan_expressions:
             process_file_scanexpr(container, filename, data)
         else:
-            process_file(container, filename, data)
+            process_file(container, filename, data, altparser=options.altparser)
 
 
 

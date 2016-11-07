@@ -517,6 +517,11 @@ simple_for_statement.setParseAction(For_Statement)
 # for_statement = simple_for_statement | explicit_for_statement
 # for_statement.setParseAction(For_Statement)
 
+# For the line parser:
+for_start = for_clause + Suppress(EOL)
+for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
+
+
 # --- CALL statement ----------------------------------------------------------
 
 class Call_Statement(VBA_Object):
@@ -572,4 +577,6 @@ statement <<= dim_statement | let_statement | call_statement | simple_for_statem
 # TODO: use statement_block instead!
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
-
+# simple statement: fits on a single line (excluding for/if/do/etc blocks)
+simple_statement = dim_statement | let_statement | call_statement | unknown_statement
+simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()

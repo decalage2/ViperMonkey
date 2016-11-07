@@ -139,6 +139,43 @@ class ViperMonkey(object):
             print(" " * (err.column - 1) + "^")
             print(err)
 
+    def add_module2(self, vba_code):
+        """
+        add VBA code for a module and parse it using the alternate line parser
+        :param vba_code: str, VBA code
+        :return: None
+        """
+        # collapse long lines ending with " _"
+        vba_code = vba_collapse_long_lines(vba_code)
+        # log.debug('Parsing VBA Module:\n' + vba_code)
+        m = Module(original_str=vba_code, location=0, tokens=[])
+        # store the code in the module object:
+        m.code = vba_code
+        # parse lines one by one:
+        lines = vba_code.splitlines(True)
+        for i in range(len(lines)):
+            line = lines[i]
+            log.debug('Parsing line %d: %s' % (i, line))
+            try:
+                l = vba_line.parseString(line, parseAll=True)
+                print(l)
+            except ParseException as err:
+                print('*** PARSING ERROR ***')
+                print(err.line)
+                print(" " * (err.column - 1) + "^")
+                print(err)
+        # self.modules.append(m)
+        # # TODO: add all subs/functions and global variables to self.globals
+        # for name, _sub in m.subs.items():
+        #     log.debug('storing sub "%s" in globals' % name)
+        #     self.globals[name.lower()] = _sub
+        # for name, _function in m.functions.items():
+        #     log.debug('storing function "%s" in globals' % name)
+        #     self.globals[name.lower()] = _function
+        # for name, _function in m.external_functions.items():
+        #     log.debug('storing external function "%s" in globals' % name)
+        #     self.globals[name.lower()] = _function
+
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
         # Create the global context for the engine

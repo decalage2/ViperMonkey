@@ -54,10 +54,8 @@ __version__ = '0.02'
 from logger import log
 log.debug('importing vba_lines')
 
-# --- IMPORTS ------------------------------------------------------------------
-
-# TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
+
 
 # --- WSC = White Space Character --------------------------------------------
 
@@ -119,6 +117,8 @@ module_body_lines = Combine(ZeroOrMore(logical_line))  # .setDebug()
 
 # for m in line_continuation.scanString(vba):
 #     print m
+
+# === FUNCTIONS ==============================================================
 
 def vba_collapse_long_lines(vba_code):
     """

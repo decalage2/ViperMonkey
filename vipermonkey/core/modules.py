@@ -37,6 +37,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# For Python 2+3 support:
+from __future__ import print_function
 
 # ------------------------------------------------------------------------------
 # CHANGELOG:
@@ -84,18 +86,19 @@ class Module(VBA_Object):
             elif isinstance(token, Attribute_Statement):
                 self.attributes[token.name] = token.value
         self.name = self.attributes.get('VB_Name', None)
-        print self
+        # TODO: should not use print
+        print(self)
 
     # def trace(self, entrypoint='*auto'):
     #     print self.subs['AutoOpen'].eval()
 
     def __repr__(self):
         r = 'Module %r\n' % self.name
-        for sub in self.subs.itervalues():
+        for sub in self.subs.values():
             r += '  %r\n' % sub
-        for func in self.functions.itervalues():
+        for func in self.functions.values():
             r += '  %r\n' % func
-        for extfunc in self.external_functions.itervalues():
+        for extfunc in self.external_functions.values():
             r += '  %r\n' % extfunc
         return r
 
@@ -125,7 +128,7 @@ module_header = OneOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | external_function | unknown_statement
+declaration_statement = option_statement | dim_statement | external_function #| unknown_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -148,5 +151,20 @@ module.setParseAction(Module)
 
 
 # module = ZeroOrMore(sub | function | statements_line).setParseAction(Module)
+
+
+# === LINE PARSER ============================================================
+
+# Parser matching any line of VBA code:
+vba_line = declaration_statements_line \
+        | sub_start \
+        | sub_end \
+        | function_start \
+        | function_end \
+        | for_start \
+        | for_end \
+        | header_statements_line \
+        | simple_statements_line \
+        | empty_line
 
 
