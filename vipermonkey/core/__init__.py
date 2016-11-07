@@ -37,6 +37,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# For Python 2+3 support:
+from __future__ import print_function
 
 # ------------------------------------------------------------------------------
 # CHANGELOG:
@@ -132,10 +134,10 @@ class ViperMonkey(object):
                 log.debug('storing external function "%s" in globals' % name)
                 self.globals[name.lower()] = _function
         except ParseException as err:
-            print '*** PARSING ERROR ***'
-            print err.line
-            print " " * (err.column - 1) + "^"
-            print err
+            print('*** PARSING ERROR ***')
+            print(err.line)
+            print(" " * (err.column - 1) + "^")
+            print(err)
 
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
