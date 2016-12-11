@@ -11,7 +11,7 @@ from setuptools import setup
 
 setup(
     name="vipermonkey",
-    version="0.02",  # not compliant with PEP440, setuptools normalizes to 0.2
+    version="0.04",  # not compliant with PEP440, setuptools normalizes to 0.2
     description=(
         "ViperMonkey is a VBA Emulation engine written in Python, designed to "
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
