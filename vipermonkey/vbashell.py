@@ -44,20 +44,27 @@ from __future__ import print_function
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
+# 2016-12-11 v0.04 PL: - fixed relative import for vmonkey package (issue #17)
 
-__version__ = '0.02'
+__version__ = '0.04'
 
 # ------------------------------------------------------------------------------
 # TODO:
-
+# + use readline
 
 # --- IMPORTS ------------------------------------------------------------------
 
-import vmonkey, logging, optparse, sys
+import logging, optparse, sys, os
 
 import colorlog
 
+# add the vipermonkey folder to sys.path (absolute+normalized path):
+_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+if not _thismodule_dir in sys.path:
+    sys.path.insert(0, _thismodule_dir)
 
+# relative import of the vmonkey module:
+import vmonkey
 
 vm = vmonkey.ViperMonkey()
 

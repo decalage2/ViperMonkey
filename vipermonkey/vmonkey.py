@@ -43,8 +43,9 @@ https://github.com/decalage2/ViperMonkey
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many changes
 # 2016-10-06 v0.03 PL: - fixed vipermonkey.core import
+# 2016-12-11 v0.04 PL: - fixed relative import for core package (issue #17)
 
-__version__ = '0.03'
+__version__ = '0.04'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -80,7 +81,7 @@ __version__ = '0.03'
 
 import optparse
 import sys
-import pprint
+import os
 import traceback
 import logging
 import colorlog
@@ -89,10 +90,13 @@ from oletools.thirdparty.prettytable import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
 
-try:
-    from vipermonkey.core import *
-except:
-    from core import *
+# add the vipermonkey folder to sys.path (absolute+normalized path):
+_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+if not _thismodule_dir in sys.path:
+    sys.path.insert(0, _thismodule_dir)
+
+# relative import of core ViperMonkey modules:
+from core import *
 
 
 
