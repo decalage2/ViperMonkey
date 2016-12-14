@@ -1,13 +1,42 @@
 #!/usr/bin/env python
-"""Installs oletools using distutils
+"""
+Installs ViperMonkey using pip, setuptools or distutils
 
-Run:
+To install this package, run:
+    pip install -e .
+
+Or:
     python setup.py install
 
-to install this package.
+Installation using pip is recommended, to create scripts to run vmonkey
+and vbashell from any directory.
 """
 
-from setuptools import setup
+#--- CHANGELOG ----------------------------------------------------------------
+
+# 2016-12-14 v0.04 PL: - replaced scripts by entry points (issue #17)
+
+#--- TODO ---------------------------------------------------------------------
+
+
+#--- IMPORTS ------------------------------------------------------------------
+
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+# --- ENTRY POINTS ------------------------------------------------------------
+
+# Entry points to create convenient scripts automatically
+
+entry_points = {
+    'console_scripts': [
+        'vmonkey=vipermonkey.vmonkey:main',
+        'vbashell=vipermonkey.vbashell:main',
+    ],
+}
+
 
 setup(
     name="vipermonkey",
@@ -20,11 +49,10 @@ setup(
     install_requires=["oletools", "prettytable", "colorlog", "colorama",
                       "pyparsing"],
     packages=["vipermonkey", "vipermonkey.core"],
-    scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
+    #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
+    entry_points=entry_points,
     author="Philippe Lagadec",
-    url="http://decalage.info/vba_emulation",
-    license="BSD",  # not explicitly mentioned on the project page - but
-                    # similar "License" text as in the oletools project, which
-                    # has "BSD" as license in setup.py
+    url="https://github.com/decalage2/ViperMonkey",
+    license="BSD",
     download_url="https://github.com/decalage2/ViperMonkey",
 )
