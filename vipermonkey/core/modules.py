@@ -157,7 +157,7 @@ module.setParseAction(Module)
 
 # Parser matching any line of VBA code:
 vba_line = declaration_statements_line \
-        | sub_start \
+        | sub_start_line \
         | sub_end \
         | function_start \
         | function_end \

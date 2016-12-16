@@ -167,6 +167,11 @@ sub_end = (CaselessKeyword('End') + CaselessKeyword('Sub') + EOS).suppress()
 sub = sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end
 sub.setParseAction(Sub)
 
+# for line parser:
+sub_start_line = public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+                 + Optional(params_list_paren) + EOS.suppress()
+sub_start_line.setParseAction(Sub)
+
 
 # --- FUNCTION --------------------------------------------------------------------
 

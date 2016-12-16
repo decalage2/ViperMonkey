@@ -148,33 +148,47 @@ class ViperMonkey(object):
         # collapse long lines ending with " _"
         vba_code = vba_collapse_long_lines(vba_code)
         # log.debug('Parsing VBA Module:\n' + vba_code)
-        m = Module(original_str=vba_code, location=0, tokens=[])
-        # store the code in the module object:
-        m.code = vba_code
+        # m = Module(original_str=vba_code, location=0, tokens=[])
+        # # store the code in the module object:
+        # m.code = vba_code
         # parse lines one by one:
         lines = vba_code.splitlines(True)
-        for i in range(len(lines)):
-            line = lines[i]
-            log.debug('Parsing line %d: %s' % (i, line))
+        tokens = []
+        line_index = 0
+        while lines:
+            # extract first line
+            line = lines.pop(0)
+            log.debug('Parsing line %d: %s' % (line_index, line))
             try:
                 l = vba_line.parseString(line, parseAll=True)
                 print(l)
+                if isinstance(l[0], Sub):
+                    # parse statements
+                    pass
+                # l is a list of tokens: add it to the module tokens
+                tokens.extend(l)
             except ParseException as err:
                 print('*** PARSING ERROR ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
-        # self.modules.append(m)
+            line_index += 1
+        # Create the module object once we have all the tokens:
+        m = Module(original_str=vba_code, location=0, tokens=tokens)
+        self.modules.append(m)
         # # TODO: add all subs/functions and global variables to self.globals
-        # for name, _sub in m.subs.items():
-        #     log.debug('storing sub "%s" in globals' % name)
-        #     self.globals[name.lower()] = _sub
-        # for name, _function in m.functions.items():
-        #     log.debug('storing function "%s" in globals' % name)
-        #     self.globals[name.lower()] = _function
-        # for name, _function in m.external_functions.items():
-        #     log.debug('storing external function "%s" in globals' % name)
-        #     self.globals[name.lower()] = _function
+        for name, _sub in m.subs.items():
+            log.debug('storing sub "%s" in globals' % name)
+            self.globals[name.lower()] = _sub
+        for name, _function in m.functions.items():
+            log.debug('storing function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+        for name, _function in m.external_functions.items():
+            log.debug('storing external function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+
+    def parse_sub(self):
+        pass
 
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
