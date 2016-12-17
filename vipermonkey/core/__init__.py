@@ -46,8 +46,9 @@ from __future__ import print_function
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
 # 2016-11-05 v0.03 PL: - fixed issue #13 in scan_expressions, context was missing
+# 2016-12-17 v0.04 PL: - improved line-based parser (issue #2)
 
-__version__ = '0.03'
+__version__ = '0.04'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -158,13 +159,38 @@ class ViperMonkey(object):
         while lines:
             # extract first line
             line = lines.pop(0)
-            log.debug('Parsing line %d: %s' % (line_index, line))
+            log.debug('Parsing line %d: %s' % (line_index, line.rstrip()))
+            # extract first two keywords in lowercase, for quick matching
+            line_keywords = line.lower().split(None,2)
+            log.debug('line_keywords: %r' % line_keywords)
+            # ignore empty lines
+            if len(line_keywords)==0 or line_keywords[0].startswith("'"):
+                log.debug('Empty line or comment: ignored')
+                continue
             try:
-                l = vba_line.parseString(line, parseAll=True)
+                # flag set to True when line starts with "public" or "private":
+                pub_priv = False
+                if line_keywords[0] in ('public', 'private'):
+                    pub_priv = True
+                    # remove the public/private keyword:
+                    line_keywords = line_keywords[1:]
+                if line_keywords[0] == 'attribute':
+                    l = header_statements_line.parseString(line, parseAll=True)
+                elif line_keywords[0] in ('option', 'dim', 'declare'):
+                    log.debug('DECLARATION LINE')
+                    l = declaration_statements_line.parseString(line, parseAll=True)
+                elif line_keywords[0] == 'sub':
+                    log.debug('SUB')
+                    l = sub_start_line.parseString(line, parseAll=True)
+                elif line_keywords[0] == 'function':
+                    log.debug('FUNCTION')
+                    l = function_start.parseString(line, parseAll=True)
+                else:
+                    l = vba_line.parseString(line, parseAll=True)
                 print(l)
-                if isinstance(l[0], Sub):
-                    # parse statements
-                    pass
+                # if isinstance(l[0], Sub):
+                #     # parse statements
+                #     pass
                 # l is a list of tokens: add it to the module tokens
                 tokens.extend(l)
             except ParseException as err:
