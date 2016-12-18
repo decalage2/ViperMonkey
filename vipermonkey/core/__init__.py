@@ -47,6 +47,7 @@ from __future__ import print_function
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
 # 2016-11-05 v0.03 PL: - fixed issue #13 in scan_expressions, context was missing
 # 2016-12-17 v0.04 PL: - improved line-based parser (issue #2)
+# 2016-12-18       PL: - line parser: added support for sub/functions (issue #2)
 
 __version__ = '0.04'
 
@@ -153,18 +154,13 @@ class ViperMonkey(object):
         # # store the code in the module object:
         # m.code = vba_code
         # parse lines one by one:
-        lines = vba_code.splitlines(True)
+        self.lines = vba_code.splitlines(True)
         tokens = []
-        line_index = 0
-        while lines:
-            # extract first line
-            line = lines.pop(0)
-            log.debug('Parsing line %d: %s' % (line_index, line.rstrip()))
-            # extract first two keywords in lowercase, for quick matching
-            line_keywords = line.lower().split(None,2)
-            log.debug('line_keywords: %r' % line_keywords)
+        self.line_index = 0
+        while self.lines:
+            line_index, line, line_keywords = self.parse_next_line()
             # ignore empty lines
-            if len(line_keywords)==0 or line_keywords[0].startswith("'"):
+            if line_keywords is None:
                 log.debug('Empty line or comment: ignored')
                 continue
             try:
@@ -182,12 +178,14 @@ class ViperMonkey(object):
                 elif line_keywords[0] == 'sub':
                     log.debug('SUB')
                     l = sub_start_line.parseString(line, parseAll=True)
+                    l[0].statements = self.parse_block(end='end sub')
                 elif line_keywords[0] == 'function':
                     log.debug('FUNCTION')
-                    l = function_start.parseString(line, parseAll=True)
+                    l = function_start_line.parseString(line, parseAll=True)
+                    l[0].statements = self.parse_block(end='end function')
                 else:
                     l = vba_line.parseString(line, parseAll=True)
-                print(l)
+                log.debug(l)
                 # if isinstance(l[0], Sub):
                 #     # parse statements
                 #     pass
@@ -198,7 +196,7 @@ class ViperMonkey(object):
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
-            line_index += 1
+            self.line_index += 1
         # Create the module object once we have all the tokens:
         m = Module(original_str=vba_code, location=0, tokens=tokens)
         self.modules.append(m)
@@ -213,8 +211,49 @@ class ViperMonkey(object):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
 
-    def parse_sub(self):
-        pass
+    def parse_next_line(self):
+        # extract next line
+        line = self.lines.pop(0)
+        log.debug('Parsing line %d: %s' % (self.line_index, line.rstrip()))
+        self.line_index += 1
+        # extract first two keywords in lowercase, for quick matching
+        line_keywords = line.lower().split(None, 2)
+        log.debug('line_keywords: %r' % line_keywords)
+        # ignore empty lines
+        if len(line_keywords) == 0 or line_keywords[0].startswith("'"):
+            # log.debug('Empty line or comment: ignored')
+            return self.line_index-1, line, None
+        return self.line_index-1, line, line_keywords
+
+    def parse_block(self, end='end sub'):
+        """
+        Parse a block of statements, until reaching a line starting with the end string
+        :param end: string indicating the end of the block
+        :return: list of statements (excluding the last line matching end)
+        """
+        statements = []
+        line_index, line, line_keywords = self.parse_next_line()
+        if line_keywords is not None:
+            line2 = ' '.join(line_keywords)
+        else:
+            line2 = ''
+        while not line2.startswith(end):
+            try:
+                l = vba_line.parseString(line, parseAll=True)
+                log.debug(l)
+                statements.extend(l)
+            except ParseException as err:
+                print('*** PARSING ERROR ***')
+                print(err.line)
+                print(" " * (err.column - 1) + "^")
+                print(err)
+            line_index, line, line_keywords = self.parse_next_line()
+            if line_keywords is not None:
+                line2 = ' '.join(line_keywords)
+            else:
+                line2 = ''
+        return statements
+
 
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint

@@ -226,6 +226,11 @@ function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).supp
 function = function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + function_end
 function.setParseAction(Function)
 
+# for line parser:
+function_start_line = public_private + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
+                 + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+function_start_line.setParseAction(Function)
+
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
 
