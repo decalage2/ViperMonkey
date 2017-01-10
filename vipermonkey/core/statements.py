@@ -519,6 +519,8 @@ simple_for_statement.setParseAction(For_Statement)
 
 # For the line parser:
 for_start = for_clause + Suppress(EOL)
+for_start.setParseAction(For_Statement)
+
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
 
 

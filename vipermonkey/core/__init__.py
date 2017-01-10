@@ -96,7 +96,30 @@ import prettytable
 from logger import log
 
 
-# === VBA GRAMMAR =====================================================================================================
+# === FUNCTIONS ==============================================================
+
+def list_startswith(_list, lstart):
+    """
+    Check if a list (_list) starts with all the items from another list (lstart)
+    :param _list: list
+    :param lstart: list
+    :return: bool, True if _list starts with all the items of lstart.
+    """
+    # log.debug('list_startswith: %r <? %r' % (_list, lstart))
+    if _list is None:
+        return False
+    lenlist = len(_list)
+    lenstart = len(lstart)
+    if lenlist >= lenstart:
+        # if _list longer or as long as lstart, check 1st items:
+        # log.debug('_list[:lenstart] = %r' % _list[:lenstart])
+        return (_list[:lenstart] == lstart)
+    else:
+        # _list smaller than lstart: always false
+        return False
+
+
+# === VBA GRAMMAR ============================================================
 
 from vba_lines import *
 from modules import *
@@ -178,11 +201,16 @@ class ViperMonkey(object):
                 elif line_keywords[0] == 'sub':
                     log.debug('SUB')
                     l = sub_start_line.parseString(line, parseAll=True)
-                    l[0].statements = self.parse_block(end='end sub')
+                    l[0].statements = self.parse_block(end=['end', 'sub'])
                 elif line_keywords[0] == 'function':
                     log.debug('FUNCTION')
                     l = function_start_line.parseString(line, parseAll=True)
-                    l[0].statements = self.parse_block(end='end function')
+                    l[0].statements = self.parse_block(end=['end', 'function'])
+                elif line_keywords[0] == 'for':
+                    log.debug('FOR LOOP')
+                    # NOTE: a for clause may be followed by ":" and statements on the same line
+                    l = for_start.parseString(line) #, parseAll=True)
+                    l[0].statements = self.parse_block(end=['next'])
                 else:
                     l = vba_line.parseString(line, parseAll=True)
                 log.debug(l)
@@ -225,7 +253,7 @@ class ViperMonkey(object):
             return self.line_index-1, line, None
         return self.line_index-1, line, line_keywords
 
-    def parse_block(self, end='end sub'):
+    def parse_block(self, end=['end', 'sub']):
         """
         Parse a block of statements, until reaching a line starting with the end string
         :param end: string indicating the end of the block
@@ -233,11 +261,7 @@ class ViperMonkey(object):
         """
         statements = []
         line_index, line, line_keywords = self.parse_next_line()
-        if line_keywords is not None:
-            line2 = ' '.join(line_keywords)
-        else:
-            line2 = ''
-        while not line2.startswith(end):
+        while not list_startswith(line_keywords, end):
             try:
                 l = vba_line.parseString(line, parseAll=True)
                 log.debug(l)
@@ -248,10 +272,6 @@ class ViperMonkey(object):
                 print(" " * (err.column - 1) + "^")
                 print(err)
             line_index, line, line_keywords = self.parse_next_line()
-            if line_keywords is not None:
-                line2 = ' '.join(line_keywords)
-            else:
-                line2 = ''
         return statements
 
 
