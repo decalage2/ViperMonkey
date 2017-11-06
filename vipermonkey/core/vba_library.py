@@ -93,6 +93,8 @@ class Mid(object):
 
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
+        if ((len(params) > 0) and (params[0] == "ActiveDocument")):
+            params = params[1:]
         assert len(params) in (2,3)
         s = params[0]
         # "If String contains the data value Null, Null is returned."
@@ -127,7 +129,96 @@ class Mid(object):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
+class Left(object):
+    """
+    Left function.
+    """
 
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        if (len(params) > 2):
+            params = params[-2:]
+        assert len(params) == 2
+        s = params[0]
+        # "If String contains the data value Null, Null is returned."
+        if s == None: return None
+        if not isinstance(s, basestring):
+            s = str(s)
+        start = params[1]
+        assert isinstance(start, int)
+        # "If Start is greater than the number of characters in String,
+        # Left returns the whole string.
+        if start>len(s):
+            log.debug('Left: start>len(s) => return s')
+            return s
+        # Return empty string if start <= 0.
+        if start<=0:
+            return ""
+
+        # Return characters from start of string.
+        r = s[:start]
+        log.debug('Left: return s[0:%d]=%r' % (start, r))
+        return r
+
+class Right(object):
+    """
+    Right function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        if (len(params) > 2):
+            params = params[-2:]
+        assert len(params) == 2
+        s = params[0]
+        # "If String contains the data value Null, Null is returned."
+        if s == None: return None
+        if not isinstance(s, basestring):
+            s = str(s)
+        start = params[1]
+        assert isinstance(start, int)
+        # "If Start is greater than the number of characters in String,
+        # Right returns the whole string.
+        if start>len(s):
+            log.debug('Right: start>len(s) => return s')
+            return s
+        # Return empty string if start <= 0.
+        if start<=0:
+            return ""
+
+        # Return characters from end of string.
+        r = s[(len(s) - start):]
+        log.debug('Right: return s[%d:]=%r' % (start, r))
+        return r
+
+meta = None
+    
+class BuiltInDocumentProperties(object):
+    """
+    Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
+    """
+
+    def eval(self, context, params=None):
+
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) == 1
+        prop = params[0]
+
+        # Make sure we read in the metadata.
+        if (meta is None):
+            log.error("BuiltInDocumentProperties: Metadata not read.")
+            return ""
+                
+        # See if we can find the metadata attribute.
+        if (not hasattr(meta, prop.lower())):
+            log.error("BuiltInDocumentProperties: Metadata field '" + prop + "' not found.")
+            return ""
+
+        # We have the attribute. Return it.
+        r = getattr(meta, prop.lower())
+        log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
+        return r
+    
 class Shell(object):
     """
     6.1.2.8.1.15 Shell
@@ -146,8 +237,20 @@ class Shell(object):
         context.report_action('Execute Command', command, 'Shell function')
         return 0
 
+class Array(object):
+    """
+    Create an array.
+    """
 
-for _class in (MsgBox, Shell, Len, Mid):
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        r = []
+        for v in params:
+            r.append(v)
+        log.debug("Array: return %r" % r)
+        return r
+
+for _class in (MsgBox, Shell, Len, Mid, Left, Right, BuiltInDocumentProperties, Array):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

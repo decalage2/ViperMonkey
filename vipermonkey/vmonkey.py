@@ -89,6 +89,7 @@ import colorlog
 from oletools.thirdparty.prettytable import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
+import olefile
 
 # add the vipermonkey folder to sys.path (absolute+normalized path):
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
@@ -124,6 +125,11 @@ def process_file (container, filename, data, altparser=False):
         vba = VBA_Parser(filename, data)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
+
+            # Read in document metadata.
+            ole = olefile.OleFileIO(filename)
+            vba_library.meta = ole.get_metadata()
+            
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
@@ -196,6 +202,11 @@ def process_file_scanexpr (container, filename, data):
         vba = VBA_Parser(filename, data)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
+
+            # Read in document metadata.
+            ole = olefile.OleFileIO(filename)
+            vba_library.meta = ole.get_metadata()
+            
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:

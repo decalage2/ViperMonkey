@@ -371,6 +371,24 @@ dim_statement = local_variable_declaration
 #                 Optional(CaselessKeyword("Shared")).suppress() + parameters_list
 dim_statement.setParseAction(Dim_Statement)
 
+# --- Global_Var_Statement statement ----------------------------------------------------------
+
+class Global_Var_Statement(VBA_Object):
+    """
+    Dim statement
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Global_Var_Statement, self).__init__(original_str, location, tokens)
+        self.name = tokens[0]
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Global %r' % repr(self.tokens)
+
+global_variable_declaration = CaselessKeyword("Public").suppress() + Optional(
+    CaselessKeyword("Shared")).suppress() + variable_declaration_list
+global_variable_declaration.setParseAction(Global_Var_Statement)
 
 # --- LET STATEMENT --------------------------------------------------------------
 
@@ -407,6 +425,8 @@ class Let_Statement(VBA_Object):
 # previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
                 + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + expression('expression')
+#let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
+#                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + l_expression
 
 let_statement.setParseAction(Let_Statement)
 
@@ -553,7 +573,15 @@ class Call_Statement(VBA_Object):
             s = context.get(self.name)
             s.eval(context=context, params=call_params)
         except KeyError:
-            log.error('Procedure %r not found' % self.name)
+            try:
+                tmp_name = self.name.replace("$", "").replace("VBA.", "")
+                if ("." in tmp_name):
+                    tmp_name = self.name[tmp_name.rindex(".") + 1:]
+                log.debug("Looking for procedure %r" % tmp_name)
+                s = context.get(tmp_name)
+                s.eval(context=context, params=call_params)
+            except KeyError:
+                log.error('Procedure %r not found' % self.name)
 
 
 # TODO: 5.4.2.1 Call Statement

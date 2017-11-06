@@ -158,8 +158,11 @@ class ViperMonkey(object):
             for name, _function in m.external_functions.items():
                 log.debug('storing external function "%s" in globals' % name)
                 self.globals[name.lower()] = _function
+            for name, _var in m.global_vars.items():
+                log.debug('storing global var "%s" in globals' % name)
+                self.globals[name.lower()] = _var
         except ParseException as err:
-            print('*** PARSING ERROR ***')
+            print('*** PARSING ERROR (1) ***')
             print(err.line)
             print(" " * (err.column - 1) + "^")
             print(err)
@@ -220,7 +223,7 @@ class ViperMonkey(object):
                 # l is a list of tokens: add it to the module tokens
                 tokens.extend(l)
             except ParseException as err:
-                print('*** PARSING ERROR ***')
+                print('*** PARSING ERROR (2) ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
@@ -238,7 +241,9 @@ class ViperMonkey(object):
         for name, _function in m.external_functions.items():
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-
+        for name, _var in m.global_vars.items():
+                log.debug('storing global var "%s" in globals' % name)
+            
     def parse_next_line(self):
         # extract next line
         line = self.lines.pop(0)
@@ -267,7 +272,7 @@ class ViperMonkey(object):
                 log.debug(l)
                 statements.extend(l)
             except ParseException as err:
-                print('*** PARSING ERROR ***')
+                print('*** PARSING ERROR (3) ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
@@ -283,7 +288,7 @@ class ViperMonkey(object):
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
         # TODO: how to handle auto subs calling other auto subs?
-        for entry_point in ('autoopen', 'workbook_open', 'document_open'):
+        for entry_point in ('autoopen', 'workbook_open', 'document_open', 'autoclose'):
             if entry_point in self.globals:
                 self.globals[entry_point].eval(context=context)
 

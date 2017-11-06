@@ -73,18 +73,26 @@ class Module(VBA_Object):
         self.functions = {}
         self.external_functions = {}
         self.subs = {}
+        self.global_vars = {}
         # print tokens
         # print 'Module.init:'
         # pprint.pprint(tokens.asList())
         for token in tokens:
             if isinstance(token, Sub):
+                log.debug("saving sub decl: %r" % token.name)
                 self.subs[token.name] = token
             if isinstance(token, Function):
+                log.debug("saving func decl: %r" % token.name)
                 self.functions[token.name] = token
             if isinstance(token, External_Function):
+                log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
             elif isinstance(token, Attribute_Statement):
+                log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
+            if isinstance(token, Global_Var_Statement):
+                log.debug("saving global var decl: %r" % token.name)
+                self.global_vars[token.name] = token
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)
@@ -128,7 +136,7 @@ module_header = OneOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | external_function #| unknown_statement
+declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function #| unknown_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 

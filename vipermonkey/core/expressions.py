@@ -57,6 +57,7 @@ from identifiers import *
 from lib_functions import *
 from literals import *
 from operators import *
+import procedures
 
 from logger import log
 log.debug('importing expressions')
@@ -81,9 +82,14 @@ class SimpleNameExpression(VBA_Object):
         try:
             value = context.get(self.name)
             log.debug('get variable %r = %r' % (self.name, value))
+            if (isinstance(value, procedures.Function)):
+                log.debug('evaluating function %r' % value)
+                value = value.eval(context)
+                log.debug('evaluated function %r = %r' % (self.name, value))
             return value
         except KeyError:
             log.error('Variable %r not found' % self.name)
+            return ""
 
 
 # 5.6.10 Simple Name Expressions
@@ -149,7 +155,13 @@ log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
 l_expression = Forward()
 
-member_access_expression = l_expression + Combine(Suppress(".") + unrestricted_name)
+# ORIGINAL
+#member_access_expression = l_expression + Combine(Suppress(".") + unrestricted_name)
+
+# WARNING: This is not strictly correct. It accepts things like 'while.foo()'.
+function_call = Forward()
+member_object = function_call | unrestricted_name
+member_access_expression = Group( member_object + Suppress(".") + member_object ) 
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
@@ -194,7 +206,7 @@ argument_list = Optional(positional_or_named_argument_list)
 # argument list queue.
 # index-expression = l-expression "(" argument-list ")"
 
-# index_expression = l_expression + Suppress("(") + argument_list + Suppress(")")
+#index_expression = l_expression + Suppress("(") + argument_list + Suppress(")")
 index_expression = simple_name_expression + Suppress("(") + simple_name_expression + Suppress(")")
 
 # --- DICTIONARY ACCESS EXPRESSIONS ------------------------------------------------------
@@ -246,10 +258,9 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 log.debug('l_expression <<= index_expression | simple_name_expression')
 # TODO: should go from the most specific to least specific
 #l_expression <<= index_expression | simple_name_expression
-l_expression <<= simple_name_expression
-
-# | instance_expression | member_access_expression \
-# | dictionary_access_expression | with_expression
+#l_expression <<= simple_name_expression
+#l_expression << simple_name_expression
+l_expression << member_access_expression | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
 
 # TODO: Redesign l_expression to avoid recursion error...
 
@@ -277,6 +288,18 @@ class Function_Call(VBA_Object):
         log.info('calling Function: %s(%s)' % (self.name, repr(params)[1:-1]))
         try:
             f = context.get(self.name)
+
+            # Is this actually an array access?
+            if ((isinstance(f, list) and len(params) > 0)):
+                log.debug('Array Access: %r[%r]' % (f, params[0]))
+                try:
+                    index = int(params[0])
+                    r = f[index]
+                    log.debug('Returning: %r' % r)
+                    return r
+                except:
+                    log.error('Array Access Failed: %r[%r]' % (f, params[0]))
+                    return None
             log.debug('Calling: %r' % f)
             return f.eval(context=context, params=params)
         except KeyError:
@@ -290,7 +313,7 @@ class Function_Call(VBA_Object):
 expr_list = delimitedList(expression)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
-function_call = NotAny(reserved_keywords) + lex_identifier('name') + Suppress('(') + Optional(
+function_call << NotAny(reserved_keywords) + lex_identifier('name') + Suppress('(') + Optional(
     expr_list('params')) + Suppress(')')
 function_call.setParseAction(Function_Call)
 
@@ -354,7 +377,8 @@ function_call.setParseAction(Function_Call)
 # - then identifiers
 # - finally literals (strings, integers, etc)
 # expr_item = (chr_ | asc | strReverse | environ | literal | function_call | simple_name_expression)
-expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
+#expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
+expr_item = ( l_expression | function_call | simple_name_expression | chr_ | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -383,7 +407,6 @@ expression <<= infixNotation(expr_item,
                                  # (CaselessKeyword("xor"), 2, opAssoc.LEFT),
                              ])
 expression.setParseAction(lambda t: t[0])
-
 
 # TODO: constant expressions (used in some statements)
 # constant expression: expression without variables or function calls, that can be evaluated to a literal:
