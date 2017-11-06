@@ -161,7 +161,7 @@ l_expression = Forward()
 # WARNING: This is not strictly correct. It accepts things like 'while.foo()'.
 function_call = Forward()
 member_object = function_call | unrestricted_name
-member_access_expression = Group( member_object + Suppress(".") + member_object ) 
+member_access_expression = Group( member_object + OneOrMore( Suppress(".") + member_object ) )
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
