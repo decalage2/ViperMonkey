@@ -218,6 +218,12 @@ class BuiltInDocumentProperties(object):
         r = getattr(meta, prop.lower())
         log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
         return r
+
+class Item(BuiltInDocumentProperties):
+    """
+    Assumes that Item() is only called on BuiltInDocumentProperties.
+    """
+    pass
     
 class Shell(object):
     """
@@ -231,9 +237,13 @@ class Shell(object):
 
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
+        try:
+            params.remove('ThisDocument')
+            params.remove('BuiltInDocumentProperties')
+        except:
+            pass
         command = params[0]
-        win_style = params[1] if (len(params) > 1) else 2  # vbMinimizedFocus
-        log.info('Shell(%r, %s)' % (command, win_style))
+        log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function')
         return 0
 
@@ -334,9 +344,23 @@ class Int(object):
         log.debug("Int: return %r" % r)
         return r
 
+class StrReverse(object):
+    """
+    StrReverse() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        # TODO: Actually implement this properly.
+        string = params[0]
+        r = string[::-1]
+        log.debug("StrReverse: return %r" % r)
+        return r
+    
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
-               StrConv, Split, Int):
+               StrConv, Split, Int, Item, StrReverse):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
