@@ -250,7 +250,93 @@ class Array(object):
         log.debug("Array: return %r" % r)
         return r
 
-for _class in (MsgBox, Shell, Len, Mid, Left, Right, BuiltInDocumentProperties, Array):
+class UBound(object):
+    """
+    UBound() array function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        arr = params[0]
+        # TODO: Handle multidimensional arrays.
+        r = len(arr) - 1
+        log.debug("UBound: return %r" % r)
+        return r
+
+class LBound(object):
+    """
+    LBound() array function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        arr = params[0]
+        # TODO: Handle multidimensional arrays.
+        r = 0
+        log.debug("LBound: return %r" % r)
+        return r
+
+class Trim(object):
+    """
+    Trim() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        r = params[0].strip()
+        log.debug("Trim: return %r" % r)
+        return r
+
+class StrConv(object):
+    """
+    StrConv() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        # TODO: Actually implement this.
+        r = str(params[0])
+        log.debug("StrConv: return %r" % r)
+        return r
+
+class Split(object):
+    """
+    Split() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        # TODO: Actually implement this properly.
+        string = params[0]
+        sep = ","
+        if (len(params) > 1):
+            sep = params[1]        
+        r = string.split(sep)
+        log.debug("Split: return %r" % r)
+        return r
+
+class Int(object):
+    """
+    Int() function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        # TODO: Actually implement this properly.
+        val = params[0]
+        r = int(val)
+        log.debug("Int: return %r" % r)
+        return r
+
+for _class in (MsgBox, Shell, Len, Mid, Left, Right,
+               BuiltInDocumentProperties, Array, UBound, LBound, Trim,
+               StrConv, Split, Int):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

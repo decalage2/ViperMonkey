@@ -291,17 +291,25 @@ class Function_Call(VBA_Object):
 
             # Is this actually an array access?
             if ((isinstance(f, list) and len(params) > 0)):
-                log.debug('Array Access: %r[%r]' % (f, params[0]))
+                tmp = f
+                # Try to gues whether we are accessing a character in a string.
+                if ((len(f) == 1) and (isinstance(f[0], str))):
+                    tmp = f[0]
+                log.debug('Array Access: %r[%r]' % (tmp, params[0]))
+                index = int(params[0])
                 try:
-                    index = int(params[0])
-                    r = f[index]
+                    r = tmp[index]
                     log.debug('Returning: %r' % r)
                     return r
                 except:
-                    log.error('Array Access Failed: %r[%r]' % (f, params[0]))
+                    log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
                     return None
             log.debug('Calling: %r' % f)
-            return f.eval(context=context, params=params)
+            if (f is not None):
+                return f.eval(context=context, params=params)
+            else:
+                log.error('Function %r resolves to None' % self.name)
+                return None
         except KeyError:
             log.error('Function %r not found' % self.name)
             return None
@@ -313,8 +321,8 @@ class Function_Call(VBA_Object):
 expr_list = delimitedList(expression)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
-function_call << NotAny(reserved_keywords) + lex_identifier('name') + Suppress('(') + Optional(
-    expr_list('params')) + Suppress(')')
+function_call <<= CaselessKeyword("nothing") | (NotAny(reserved_keywords) + lex_identifier('name') + Suppress('(') + Optional(
+    expr_list('params')) + Suppress(')'))
 function_call.setParseAction(Function_Call)
 
 
@@ -378,7 +386,7 @@ function_call.setParseAction(Function_Call)
 # - finally literals (strings, integers, etc)
 # expr_item = (chr_ | asc | strReverse | environ | literal | function_call | simple_name_expression)
 #expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
-expr_item = ( l_expression | function_call | simple_name_expression | chr_ | asc | strReverse | literal )
+expr_item = ( l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 

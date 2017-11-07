@@ -109,8 +109,8 @@ class Chr(VBA_Object):
 # TODO: fix this like in olevba
 # chr_ = Suppress(Combine(CaselessLiteral('Chr') + Optional(Word('BbWw', max=1)) + Optional('$')) + '(') + expression + Suppress(')')
 chr_ = Suppress(Combine(
-    (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW'))
-    + Optional('$')) + '(') + expression + Suppress(')')
+                  (CaselessKeyword('Chr$') | CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW'))
+                  + Optional('$')) + '(') + expression + Suppress(')')
 chr_.setParseAction(Chr)
 
 

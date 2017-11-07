@@ -122,14 +122,17 @@ def process_file (container, filename, data, altparser=False):
     vm = ViperMonkey()
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
-        vba = VBA_Parser(filename, data)
+        vba = VBA_Parser(filename, data, relaxed=True)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
 
             # Read in document metadata.
-            ole = olefile.OleFileIO(filename)
-            vba_library.meta = ole.get_metadata()
-            
+            try:
+                ole = olefile.OleFileIO(filename)
+                vba_library.meta = ole.get_metadata()
+            except:
+                vba_library.meta = {}
+                
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
@@ -199,7 +202,7 @@ def process_file_scanexpr (container, filename, data):
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
-        vba = VBA_Parser(filename, data)
+        vba = VBA_Parser(filename, data, relaxed=True)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
 
