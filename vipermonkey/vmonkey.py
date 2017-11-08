@@ -254,6 +254,10 @@ def main():
     """
     Main function, called when vipermonkey is run from the command line
     """
+
+    # Increase recursion stack depth.
+    sys.setrecursionlimit(3000)
+    
     # print banner with version
     print ('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
     print ('THIS IS WORK IN PROGRESS - Check updates regularly!')

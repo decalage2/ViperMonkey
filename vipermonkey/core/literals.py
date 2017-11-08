@@ -76,7 +76,8 @@ boolean_literal.setParseAction(lambda t: bool(t[0].lower() == 'true'))
 # hex-digit = decimal-digit / %x0041-0046 / %x0061-0066 ;A-F / a-f
 
 # here Combine() is required to avoid spaces between elements:
-decimal_literal = Combine(Word(nums) + Suppress(Optional(Word('%&^', exact=1))))
+#decimal_literal = Combine(Word(nums) + Suppress(Optional(Word('%&^', exact=1))))
+decimal_literal = Combine(pyparsing_common.signed_integer + Suppress(Optional(Word('%&^', exact=1))))
 decimal_literal.setParseAction(lambda t: int(t[0]))
 
 octal_literal = Combine(Suppress(Literal('&') + Optional((CaselessLiteral('o')))) + Word(srange('[0-7]'))
