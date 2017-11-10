@@ -543,6 +543,93 @@ for_start.setParseAction(For_Statement)
 
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
 
+# --- IF-THEN-ELSE statement ----------------------------------------------------------
+
+class If_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(If_Statement, self).__init__(original_str, location, tokens)
+
+        # Save the boolean guard and body for each case in the if, in order.
+        self.pieces = []
+        for tok in tokens:
+            # If or ElseIf.
+            if (len(tok) == 2):
+                self.pieces.append({ 'guard' : tok[0], 'body' : tok[1]})
+            # Else.
+            elif (len(tok) == 1):
+                self.pieces.append({ 'guard' : None, 'body' : tok[0]})
+            # Bug.
+            else:
+                log.error('If part %r has wrong # elements.' % str(tok))
+
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = ""
+        first = True
+        for piece in self.pieces:
+
+            # Pick the right keyword for this piece of the if.
+            keyword = "If"
+            if (not first):
+                keyword = "ElseIf"
+            if (piece["guard"] is None):
+                keyword = "Else"
+            first = False
+            r += keyword + " "
+
+            # Add in the guard.
+            guard = ""
+            keyword = ""
+            if (piece["guard"] is not None):
+                guard = piece["guard"].__repr__()
+                if (len(guard) > 5):
+                    guard = guard[:6] + "..."
+            r += guard + " "
+            keyword = "Then "
+
+            # Add in the body.
+            r += keyword
+            body = piece["body"].__repr__().replace("\n", "; ")
+            if (len(body) > 5):
+                body = body[:6] + "..."
+
+        return r
+            
+    def eval(self, context, params=None):
+
+        # Walk through each case of the if, seeing which one applies (if any).
+        for piece in self.pieces:
+
+            # Evaluate the guard, if it has one. Else parts have no guard.
+            guard = True
+            if (piece["guard"] is not None):
+                guard = piece["guard"].eval(context)
+
+            # Does this case apply?
+            if (guard):
+
+                # Yes it does. Emulate the statements in the body.
+                for stmt in piece["body"]:
+                    stmt.eval(context)
+
+                # We have emulated the if.
+                break
+
+# Grammar element for IF statements.
+simple_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                             Group(statement_block('statements'))) + \
+                      ZeroOrMore(
+                          Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                 Group(statement_block('statements')))
+                      ) + \
+                      Optional(
+                          Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
+                                Group(statement_block('statements')))
+                      ) + \
+                      CaselessKeyword("End If").suppress() + FollowedBy(EOS)
+
+simple_if_statement.setParseAction(If_Statement)
 
 # --- CALL statement ----------------------------------------------------------
 
@@ -598,8 +685,8 @@ call_statement.setParseAction(Call_Statement)
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
 
-statement <<= dim_statement | option_statement | let_statement | call_statement | simple_for_statement \
-              | unknown_statement
+statement <<= dim_statement | option_statement | let_statement | call_statement | simple_for_statement |\
+              simple_if_statement# | unknown_statement
 # statement = attribute_statement | option_statement | dim_statement | let_statement | unknown_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL

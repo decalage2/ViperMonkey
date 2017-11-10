@@ -435,3 +435,151 @@ expr_const <<= infixNotation(expr_const_item,
                                  ("&", 2, opAssoc.LEFT, Concatenation),
                              ])
 
+# ----------------------------- BOOLEAN expressions --------------
+
+class BoolExprItem(VBA_Object):
+    """
+    A comparison expression or other item appearing in a boolean expression.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(BoolExprItem, self).__init__(original_str, location, tokens)
+        self.lhs = None
+        self.op = None
+        self.rhs = None
+        tokens = tokens[0]
+        if (len(tokens) == 3):
+            self.lhs = tokens[0]
+            self.op = tokens[1].replace("'", "")
+            self.rhs = tokens[2]
+        elif (len(tokens) == 1):
+            self.lhs = tokens[0]
+        else:
+            log.error("BoolExprItem: Unexpected # tokens in %r" % tokens)
+        log.debug('parsed %r as BoolExprItem' % self)
+
+    def __repr__(self):
+        if (self.op is not None):
+            return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+        elif (self.lhs is not None):
+            return self.lhs.__repr__()
+        else:
+            log.error("BoolExprItem: Improperly parsed.")
+            return ""
+
+    def eval(self, context, params=None):
+
+        # We always have a LHS. Evaluate that in the current context.
+        lhs = self.lhs
+        try:
+            lhs = self.lhs.eval(context)
+        except AttributeError:
+            pass
+
+        # Do we have an operator or just a variable reference?
+        if (self.op is None):
+
+            # Variable reference. Return its value.
+            return lhs
+
+        # We have an operator. Get the value of the RHS.
+        rhs = self.rhs
+        try:
+            rhs = self.rhs.eval(context)
+        except AttributeError:
+            pass
+        
+        # Evaluate the expression.
+        if (self.op == "="):
+            return lhs == rhs
+        elif (self.op == ">"):
+            return lhs > rhs
+        elif (self.op == "<"):
+            return lhs < rhs
+        elif (self.op == ">="):
+            return lhs >= rhs
+        elif (self.op == "<="):
+            return lhs <= rhs
+        else:
+            log.error("BoolExprItem: Unknown operator %r" % self.op)
+            return False
+
+bool_expr_item = infixNotation(expr_item,
+                               [
+                                   ("=", 2, opAssoc.LEFT),
+                                   (">", 2, opAssoc.LEFT),
+                                   ("<", 2, opAssoc.LEFT),
+                                   (">=", 2, opAssoc.LEFT),
+                                   ("<=", 2, opAssoc.LEFT)
+                               ])
+bool_expr_item.setParseAction(BoolExprItem)
+
+class BoolExpr(VBA_Object):
+    """
+    A boolean expression.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(BoolExpr, self).__init__(original_str, location, tokens)
+        self.lhs = None
+        self.op = None
+        self.rhs = None
+        #tokens = tokens[0]
+        if (len(tokens) == 3):
+            self.lhs = tokens[0]
+            self.op = tokens[1].replace("'", "")
+            self.rhs = tokens[2]
+        elif (len(tokens) == 1):
+            self.lhs = tokens[0]
+        else:
+            log.error("BoolExpr: Unexpected # tokens in %r" % tokens)
+        log.debug('parsed %r as BoolExpr' % self)
+
+    def __repr__(self):
+        if (self.op is not None):
+            return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+        elif (self.lhs is not None):
+            return self.lhs.__repr__()
+        else:
+            log.error("BoolExpr: Improperly parsed.")
+            return ""
+
+    def eval(self, context, params=None):
+
+        # We always have a LHS. Evaluate that in the current context.
+        lhs = self.lhs
+        try:
+            lhs = self.lhs.eval(context)
+        except AttributeError:
+            pass
+
+        # Do we have an operator or just a variable reference?
+        if (self.op is None):
+
+            # Variable reference. Return its value.
+            return lhs
+
+        # We have an operator. Get the value of the RHS.
+        rhs = self.rhs
+        try:
+            rhs = self.rhs.eval(context)
+        except AttributeError:
+            pass
+
+        # Evaluate the expression.
+        if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
+            return lhs and rhs
+        elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
+            return lhs or rhs
+        else:
+            log.error("BoolExpr: Unknown operator %r" % self.op)
+            return False
+    
+boolean_expression = infixNotation(bool_expr_item,
+                                   [
+                                       ("And", 2, opAssoc.LEFT),
+                                       ("AndAlso", 2, opAssoc.LEFT),
+                                       ("Or", 2, opAssoc.LEFT),
+                                       ("OrElse", 2, opAssoc.LEFT)
+                                   ])
+boolean_expression.setParseAction(BoolExpr)
