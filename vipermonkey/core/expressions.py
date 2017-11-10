@@ -500,6 +500,8 @@ class BoolExprItem(VBA_Object):
             return lhs >= rhs
         elif (self.op == "<="):
             return lhs <= rhs
+        elif (self.op == "<>"):
+            return lhs != rhs
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
@@ -510,7 +512,8 @@ bool_expr_item = infixNotation(expr_item,
                                    (">", 2, opAssoc.LEFT),
                                    ("<", 2, opAssoc.LEFT),
                                    (">=", 2, opAssoc.LEFT),
-                                   ("<=", 2, opAssoc.LEFT)
+                                   ("<=", 2, opAssoc.LEFT),
+                                   ("<>", 2, opAssoc.LEFT)
                                ])
 bool_expr_item.setParseAction(BoolExprItem)
 
