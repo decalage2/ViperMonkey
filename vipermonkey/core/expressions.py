@@ -521,18 +521,20 @@ class BoolExpr(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(BoolExpr, self).__init__(original_str, location, tokens)
-        self.lhs = None
+        tokens = tokens[0]
+        self.lhs = tokens
+        try:
+            self.lhs = tokens[0]
+        except:
+            pass
         self.op = None
         self.rhs = None
-        #tokens = tokens[0]
-        if (len(tokens) == 3):
-            self.lhs = tokens[0]
-            self.op = tokens[1].replace("'", "")
-            self.rhs = tokens[2]
-        elif (len(tokens) == 1):
-            self.lhs = tokens[0]
-        else:
-            log.error("BoolExpr: Unexpected # tokens in %r" % tokens)
+        try:
+            self.op = tokens[1]
+            self.rhs = BoolExpr(original_str, location, [tokens[2:], None])
+        except:
+            pass
+
         log.debug('parsed %r as BoolExpr' % self)
 
     def __repr__(self):
