@@ -141,7 +141,7 @@ class Option_Statement(VBA_Object):
         return 'Option %s' % (self.name)
 
 
-option_statement = CaselessKeyword('Option').suppress() + identifier('name')
+option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
 
 
@@ -598,7 +598,7 @@ call_statement.setParseAction(Call_Statement)
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
 
-statement <<= dim_statement | let_statement | call_statement | simple_for_statement \
+statement <<= dim_statement | option_statement | let_statement | call_statement | simple_for_statement \
               | unknown_statement
 # statement = attribute_statement | option_statement | dim_statement | let_statement | unknown_statement
 
