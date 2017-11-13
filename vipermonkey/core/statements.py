@@ -82,7 +82,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
                                   CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next') | \
                                   CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
-                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If')
+                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New')
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -274,7 +274,6 @@ statement = Forward()
 block_statement = rem_statement | statement | statement_label_definition
 statement_block = ZeroOrMore(block_statement + EOS.suppress())
 
-
 # --- DIM statement ----------------------------------------------------------
 
 class Dim_Statement(VBA_Object):
@@ -412,7 +411,6 @@ class Let_Statement(VBA_Object):
         log.debug('setting %s = %s' % (self.name, value))
         context.set(self.name, value)
 
-
 # 5.4.3.8   Let Statement
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
@@ -425,11 +423,8 @@ class Let_Statement(VBA_Object):
 # previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
                 + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + expression('expression')
-#let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-#                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + l_expression
 
 let_statement.setParseAction(Let_Statement)
-
 
 # --- FOR statement -----------------------------------------------------------
 

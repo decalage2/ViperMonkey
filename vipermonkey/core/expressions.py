@@ -255,12 +255,13 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # l-expression = simple-name-expression / instance-expression / member-access-expression /
 # index-expression / dictionary-access-expression / with-expression
 
+new_expression = Forward()
 log.debug('l_expression <<= index_expression | simple_name_expression')
 # TODO: should go from the most specific to least specific
 #l_expression <<= index_expression | simple_name_expression
 #l_expression <<= simple_name_expression
 #l_expression << simple_name_expression
-l_expression << member_access_expression | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
+l_expression << new_expression | member_access_expression | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
 
 # TODO: Redesign l_expression to avoid recursion error...
 
@@ -591,3 +592,21 @@ boolean_expression = infixNotation(bool_expr_item,
                                        ("OrElse", 2, opAssoc.LEFT)
                                    ])
 boolean_expression.setParseAction(BoolExpr)
+
+# --- NEW EXPRESSION --------------------------------------------------------------
+
+class New_Expression(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(New_Expression, self).__init__(original_str, location, tokens)
+        self.obj = tokens.expression
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return ('New %r' % self.obj)
+
+    def eval(self, context, params=None):
+        # TODO: Not sure how to handle this. For now just return what is being created.
+        return self.obj
+
+new_expression << CaselessKeyword('New').suppress() + expression('expression')
+new_expression.setParseAction(New_Expression)
