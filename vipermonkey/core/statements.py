@@ -78,15 +78,15 @@ class UnknownStatement(VBA_Object):
 
 # catch-all for unknown statements
 # Known keywords used at the beginning of statements
-known_keywords_statement_start = (
-                                     Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword(
-                                         'End'))
-                                     + (CaselessKeyword('Sub') | CaselessKeyword('Function'))) \
-                                 | CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next')
+known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('End')) + \
+                                  (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
+                                  CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next') | \
+                                  CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
+                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If')
 
-unknown_statement = NotAny(known_keywords_statement_start) \
-                    + Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
-                              adjacent=False).setResultsName('text')
+unknown_statement = NotAny(known_keywords_statement_start) + \
+                    Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
+                            adjacent=False).setResultsName('text')
 unknown_statement.setParseAction(UnknownStatement)
 
 
@@ -682,18 +682,16 @@ call_statement.setParseAction(Call_Statement)
 
 # --- STATEMENTS -------------------------------------------------------------
 
+# simple statement: fits on a single line (excluding for/if/do/etc blocks)
+simple_statement = dim_statement | option_statement | let_statement | call_statement | unknown_statement
+simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
+
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-
-statement <<= dim_statement | option_statement | let_statement | call_statement | simple_for_statement |\
-              simple_if_statement# | unknown_statement
-# statement = attribute_statement | option_statement | dim_statement | let_statement | unknown_statement
+statement <<= simple_for_statement | simple_if_statement | simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
 # TODO: use statement_block instead!
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
-# simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | let_statement | call_statement | unknown_statement
-simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
