@@ -359,7 +359,8 @@ as_clause = as_auto_object | as_type
 array_clause = array_dim + Optional(as_clause)
 untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
-variable_dcl = typed_variable_dcl | untyped_variable_dcl
+# TODO: Set the initial value of the global var in the context.
+variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(variable_dcl)
 local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(
     CaselessKeyword("Shared")).suppress() + variable_declaration_list
@@ -385,8 +386,10 @@ class Global_Var_Statement(VBA_Object):
     def __repr__(self):
         return 'Global %r' % repr(self.tokens)
 
-global_variable_declaration = CaselessKeyword("Public").suppress() + Optional(
-    CaselessKeyword("Shared")).suppress() + variable_declaration_list
+global_variable_declaration = CaselessKeyword("Public").suppress() + \
+                              Optional(CaselessKeyword("Shared")).suppress() + \
+                              Optional(CaselessKeyword("Const")).suppress() + \
+                              variable_declaration_list
 global_variable_declaration.setParseAction(Global_Var_Statement)
 
 # --- LET STATEMENT --------------------------------------------------------------

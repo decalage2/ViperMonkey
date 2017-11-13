@@ -161,7 +161,7 @@ l_expression = Forward()
 # WARNING: This is not strictly correct. It accepts things like 'while.foo()'.
 function_call = Forward()
 member_object = function_call | unrestricted_name
-member_access_expression = Group( member_object + OneOrMore( Suppress(".") + member_object ) )
+member_access_expression = Group( Group( member_object + OneOrMore( Suppress(".") + member_object ) ) )
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
@@ -261,7 +261,7 @@ log.debug('l_expression <<= index_expression | simple_name_expression')
 #l_expression <<= index_expression | simple_name_expression
 #l_expression <<= simple_name_expression
 #l_expression << simple_name_expression
-l_expression << new_expression | member_access_expression | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
+l_expression << (member_access_expression ^ new_expression) | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
 
 # TODO: Redesign l_expression to avoid recursion error...
 
