@@ -51,6 +51,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import math
+
 from vba_context import VBA_LIBRARY
 
 from logger import log
@@ -357,10 +359,95 @@ class StrReverse(object):
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
         return r
-    
+
+class Replace(object):
+    """
+    Replace() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) == 3
+        string = params[0]
+        pat = params[1]
+        rep = params[2]
+        r = string.replace(pat, rep)
+        log.debug("Replace: return %r" % r)
+        return r
+
+class InStr(object):
+    """
+    InStr() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) >= 2
+
+        # Were we given a start position?
+        start = 0
+        s1 = params[0]
+        s2 = params[1]
+        if (isinstance(params[0], int)):
+            start = params[0] - 1
+            if (start < 0):
+                start = 0
+            s1 = params[1]
+            s2 = params[2]
+
+        # Were we given a search type?
+        search_type = 1
+        if (isinstance(params[-1], int)):
+            search_type = params[-1]
+            if (search_type not in (0, 1)):
+                search_type = 1
+
+        # TODO: Figure out how VB binary search works. For now just do text search.
+        r = None
+        if (len(s1) == 0):
+            r = 0
+        elif (len(s2) == 0):
+            r = start
+        elif (start > len(s1)):
+            r = 0
+        else:
+            if (s2 in s1):
+                r = s1[start:].index(s2) + start + 1
+            else:
+                r = 0
+        log.debug("InStr: %r returns %r" % (self, r))
+        return r
+
+class Sgn(object):
+    """
+    Sgn() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1 and isinstance(params[0], int))
+        num = params[0]
+        r = int(math.copysign(1, num))
+        log.debug("Sgn: %r returns %r" % (self, r))
+        return r
+
+class Sqr(object):
+    """
+    Sqr() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = params[0]
+        r = math.sqrt(num)
+        log.debug("Sqr: %r returns %r" % (self, r))
+        return r
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
-               StrConv, Split, Int, Item, StrReverse):
+               StrConv, Split, Int, Item, StrReverse, InStr, Replace,
+               Sgn, Sqr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

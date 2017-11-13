@@ -448,14 +448,17 @@ class BoolExprItem(VBA_Object):
         self.op = None
         self.rhs = None
         tokens = tokens[0]
-        if (len(tokens) == 3):
-            self.lhs = tokens[0]
-            self.op = tokens[1].replace("'", "")
-            self.rhs = tokens[2]
-        elif (len(tokens) == 1):
-            self.lhs = tokens[0]
-        else:
-            log.error("BoolExprItem: Unexpected # tokens in %r" % tokens)
+        try:
+            if (len(tokens) == 3):
+                self.lhs = tokens[0]
+                self.op = tokens[1].replace("'", "")
+                self.rhs = tokens[2]
+            elif (len(tokens) == 1):
+                self.lhs = tokens[0]
+            else:
+                log.error("BoolExprItem: Unexpected # tokens in %r" % tokens)
+        except TypeError:
+            self.lhs = tokens
         log.debug('parsed %r as BoolExprItem' % self)
 
     def __repr__(self):
@@ -506,7 +509,7 @@ class BoolExprItem(VBA_Object):
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
 
-bool_expr_item = infixNotation(expr_item,
+bool_expr_item = infixNotation(expression,
                                [
                                    ("=", 2, opAssoc.LEFT),
                                    (">", 2, opAssoc.LEFT),
