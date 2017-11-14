@@ -33,6 +33,13 @@ miracles. Any help from you will be very appreciated!
 News
 ----
 
+- 2017-11-14:
+  - Added support for InStr, Replace, Sgn, Sqr, UBound, LBound, Trim, StrConv, Split, StrReverse, and Int VB functions.
+  - Added support for string character subscripting.
+  - Added support for negative integer literals.
+  - Added support for if-then-else statements.
+  - Added support for Const and initial values for global variable declarations.
+  - Handle assignments of boolean expressions to variables.
 - 2017-11-03:
   - Added support for Left(), Right(), Array(), and BuiltInDocumentProperties() functions.
   - Added support for global variables.

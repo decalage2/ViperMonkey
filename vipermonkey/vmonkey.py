@@ -256,7 +256,7 @@ def main():
     """
 
     # Increase recursion stack depth.
-    sys.setrecursionlimit(3000)
+    sys.setrecursionlimit(13000)
     
     # print banner with version
     print ('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
