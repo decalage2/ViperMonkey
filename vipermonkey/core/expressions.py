@@ -79,6 +79,7 @@ class SimpleNameExpression(VBA_Object):
         return '%s' % self.name
 
     def eval(self, context, params=None):
+        log.debug('try eval variable/function %r' % self.name)
         try:
             value = context.get(self.name)
             log.debug('get variable %r = %r' % (self.name, value))
@@ -151,6 +152,28 @@ instance_expression.setParseAction(InstanceExpression)
 
 # Examples: varname.attrname, varname(2).attrname, varname .attrname
 
+class MemberAccessExpression(VBA_Object):
+    """
+    Handle member access expressions.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(MemberAccessExpression, self).__init__(original_str, location, tokens)
+        log.debug("member: tokens = %r" % tokens)
+        tokens = tokens[0][0]
+        log.debug("member: tokens (1) = %r" % tokens)
+        self.rhs = tokens.rhs
+        self.lhs = tokens.lhs
+        log.debug('parsed %r as MemberAccessExpression' % self)
+
+    def __repr__(self):
+        return str(self.lhs) + "." + str(self.rhs)
+
+    def eval(self, context, params=None):
+        # TODO: Need to actually have some sort of object model. For now
+        # just try evaluating the item after the '.'.
+        return self.rhs.eval(context, params)
+
 log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
 l_expression = Forward()
@@ -161,7 +184,8 @@ l_expression = Forward()
 # WARNING: This is not strictly correct. It accepts things like 'while.foo()'.
 function_call = Forward()
 member_object = function_call | unrestricted_name
-member_access_expression = Group( Group( member_object + OneOrMore( Suppress(".") + member_object ) ) )
+member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
+member_access_expression.setParseAction(MemberAccessExpression)
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
@@ -322,7 +346,7 @@ class Function_Call(VBA_Object):
 expr_list = delimitedList(expression)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
-function_call <<= CaselessKeyword("nothing") | (NotAny(reserved_keywords) + lex_identifier('name') + Suppress('(') + Optional(
+function_call <<= CaselessKeyword("nothing") | (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(
     expr_list('params')) + Suppress(')'))
 function_call.setParseAction(Function_Call)
 
@@ -445,17 +469,19 @@ class BoolExprItem(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(BoolExprItem, self).__init__(original_str, location, tokens)
+        assert (len(tokens) > 0)
         self.lhs = None
         self.op = None
         self.rhs = None
         tokens = tokens[0]
         try:
+            self.lhs = tokens[0]
             if (len(tokens) == 3):
-                self.lhs = tokens[0]
                 self.op = tokens[1].replace("'", "")
                 self.rhs = tokens[2]
-            elif (len(tokens) == 1):
-                self.lhs = tokens[0]
+            elif (len(tokens) > 3):
+                self.op = tokens[1].replace("'", "")
+                self.rhs = BoolExprItem(original_str, location, [tokens[2:], None])
             else:
                 log.error("BoolExprItem: Unexpected # tokens in %r" % tokens)
         except TypeError:

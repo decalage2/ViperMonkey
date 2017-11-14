@@ -99,9 +99,11 @@ def eval_arg(arg, context):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
     """
+    log.debug("try eval arg: %s" % arg)
     if isinstance(arg, VBA_Object):
         return arg.eval(context=context)
     else:
+        log.debug("eval_arg: not a VBA_Object: %r" % arg)
         return arg
 
 

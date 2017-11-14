@@ -52,6 +52,8 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import sys
+
 from vba_object import *
 
 from logger import log
@@ -81,6 +83,9 @@ class Sum(VBA_Object):
             log.error('Impossible to sum arguments of different types')
             # TODO
             return 0
+        except RuntimeError:
+            log.error("overflow trying eval sum: %r" % self.arg)
+            sys.exit(1)
 
     def __repr__(self):
         return ' + '.join(map(repr, self.arg))

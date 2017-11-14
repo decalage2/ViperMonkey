@@ -408,6 +408,7 @@ class Let_Statement(VBA_Object):
 
     def eval(self, context, params=None):
         # evaluate value of right operand:
+        log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
         # set variable
@@ -425,7 +426,8 @@ class Let_Statement(VBA_Object):
 
 # previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + expression('expression')
+                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + \
+                (expression('expression') ^ boolean_expression('expression'))
 
 let_statement.setParseAction(Let_Statement)
 

@@ -52,6 +52,7 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 import math
+import base64
 
 from vba_context import VBA_LIBRARY
 
@@ -444,10 +445,23 @@ class Sqr(object):
         log.debug("Sqr: %r returns %r" % (self, r))
         return r
 
+class Base64Decode(object):
+    """
+    Base64Decode() function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        txt = params[0]
+        r = base64.b64decode(txt)
+        log.debug("Base64Decode: %r returns %r" % (self, r))
+        return r
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
-               Sgn, Sqr):
+               Sgn, Sqr, Base64Decode):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
