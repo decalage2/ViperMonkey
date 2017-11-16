@@ -163,7 +163,7 @@ params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppre
 
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
-sub_end = (CaselessKeyword('End') + CaselessKeyword('Sub') + EOS).suppress()
+sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
 sub = sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end
 sub.setParseAction(Sub)
 

@@ -76,7 +76,6 @@ boolean_literal.setParseAction(lambda t: bool(t[0].lower() == 'true'))
 # hex-digit = decimal-digit / %x0041-0046 / %x0061-0066 ;A-F / a-f
 
 # here Combine() is required to avoid spaces between elements:
-#decimal_literal = Combine(Word(nums) + Suppress(Optional(Word('%&^', exact=1))))
 decimal_literal = Combine(pyparsing_common.signed_integer + Suppress(Optional(Word('%&^', exact=1))))
 decimal_literal.setParseAction(lambda t: int(t[0]))
 
@@ -95,8 +94,6 @@ integer = decimal_literal | octal_literal | hex_literal
 # NOTE: here WordStart is to avoid matching a number preceded by letters (e.g. "VBT1"), when using scanString
 # TO DO: remove WordStart if scanString is not used
 
-# TODO: floating point numbers
-
 # FLOAT = (floating-point-literal [floating-point-type-suffix] ) / (decimal-literal floating-
 # point-type-suffix)
 # floating-point-literal = (integer-digits exponent) / (integer-digits "." [fractional-digits]
@@ -106,6 +103,11 @@ integer = decimal_literal | octal_literal | hex_literal
 # exponent = exponent-letter [sign] decimal-literal
 # exponent-letter = %x0044 / %x0045 / %x0064 / %x0065
 # floating-point-type-suffix = "!" / "#" / "@"
+
+# TODO: Handle exponents as needed.
+float_literal = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
+                Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
+float_literal.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
 
 # --- QUOTED STRINGS ---------------------------------------------------------
 
@@ -147,6 +149,6 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 
 # TODO: 5.6.5 Literal Expressions
 
-literal = boolean_literal | integer | quoted_string
+literal = boolean_literal | integer | quoted_string | float_literal
 literal.setParseAction(lambda t: t[0])
 
