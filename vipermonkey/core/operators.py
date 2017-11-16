@@ -80,9 +80,15 @@ class Sum(VBA_Object):
         try:
             return reduce(lambda x, y: x + y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to sum arguments of different types')
-            # TODO
-            return 0
+            # NOTE: In VB you are not supposed to be able to add integers and strings.
+            # However, there are maldocs that appear to do this. We will play loose with
+            # this requirement and add ints and strings as strings.
+            log.debug('Impossible to sum arguments of different types. Try as strings')
+            try:
+                return reduce(lambda x, y: str(x) + str(y), eval_args(self.arg, context))
+            except TypeError:
+                log.error('Impossible to sum arguments of different types.')
+                return 0
         except RuntimeError:
             log.error("overflow trying eval sum: %r" % self.arg)
             sys.exit(1)

@@ -126,7 +126,7 @@ header_statement = attribute_statement
 # TODO: can we have '::' with an empty statement?
 header_statements_line = (Optional(header_statement + ZeroOrMore(Suppress(':') + header_statement)) + EOL.suppress()) | \
                          simple_if_statement_macro
-module_header = OneOrMore(header_statements_line)
+module_header = ZeroOrMore(header_statements_line)
 
 # 5.1 Module Body Structure
 

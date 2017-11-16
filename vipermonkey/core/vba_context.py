@@ -107,6 +107,10 @@ class Context(object):
         else:
             self.engine = None
 
+        # Track whether nested loops are running with a stack of flags. If a loop is
+        # running its flag will be True.
+        self.loop_stack = []
+
     def get(self, name):
         # TODO: remove this check once everything works fine
         assert isinstance(name, basestring)

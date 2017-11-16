@@ -83,7 +83,8 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next') | \
                                   CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
                                   CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New') | \
-                                  CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If')
+                                  CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
+                                  CaselessKeyword('Exit')
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -462,17 +463,36 @@ class For_Statement(VBA_Object):
             log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+        
         # loop using xrange until end+1, because python stops when index>=end+1
         for val in xrange(start, end + 1, step):
             # TODO: what if name is already a global variable?
             # force a set_local?
             log.debug('FOR loop: %s = %r' % (self.name, val))
             context.set(self.name, val)
+            done = False
             for s in self.statements:
                 log.debug('FOR loop eval statement: %r' % s)
                 s.eval(context=context)
-            log.debug('FOR loop: end.')
 
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("FOR loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR loop: end.')
 
 # 5.6.16.6 Bound Variable Expressions
 # bound-variable-expression = l-expression
@@ -502,6 +522,7 @@ step_clause = CaselessKeyword('Step').suppress() + expression
 # TODO: bound_variable_expression instead of lex_identifier
 for_clause = CaselessKeyword("For").suppress() \
              + lex_identifier('name') \
+             + Suppress(Optional(CaselessKeyword("As") + type_expression)) \
              + Suppress("=") + expression('start_value') \
              + CaselessKeyword("To").suppress() + expression('end_value') \
              + Optional(step_clause('step_value'))
@@ -618,17 +639,21 @@ class If_Statement(VBA_Object):
                 break
 
 # Grammar element for IF statements.
-simple_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
-                             Group(statement_block('statements'))) + \
-                      ZeroOrMore(
-                          Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
-                                 Group(statement_block('statements')))
-                      ) + \
-                      Optional(
-                          Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
-                                Group(statement_block('statements')))
-                      ) + \
-                      CaselessKeyword("End If").suppress() + FollowedBy(EOS)
+multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                 Group(statement_block('statements'))) + \
+                                 ZeroOrMore(
+                                     Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                            Group(statement_block('statements')))
+                                 ) + \
+                                 Optional(
+                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
+                                           Group(statement_block('statements')))
+                                 ) + \
+                                 CaselessKeyword("End If").suppress() #+ FollowedBy(EOS)
+simple_statements_line = Forward()
+single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                  Group(simple_statements_line('statements')) ) #+ FollowedBy(EOS)
+simple_if_statement = multi_line_if_statement ^ single_line_if_statement
 
 simple_if_statement.setParseAction(If_Statement)
 
@@ -704,11 +729,31 @@ call_statement = NotAny(known_keywords_statement_start) \
                  + TODO_identifier_or_object_attrib('name') + Optional(call_params)
 call_statement.setParseAction(Call_Statement)
 
+# --- EXIT FOR statement ----------------------------------------------------------
+
+class Exit_For_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Exit_For_Statement, self).__init__(original_str, location, tokens)
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Exit For'
+
+    def eval(self, context, params=None):
+        # Update the loop stack to indicate that the current loop should exit.
+        context.loop_stack.pop()
+        context.loop_stack.append(False)
+
+# Break out of a loop.
+exit_for_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('For').suppress()
+exit_for_statement.setParseAction(Exit_For_Statement)
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | let_statement | call_statement | unknown_statement
-simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
+simple_statement = dim_statement | option_statement | let_statement | call_statement | exit_for_statement | unknown_statement
+#simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
+simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
