@@ -124,8 +124,8 @@ class Module(VBA_Object):
 
 header_statement = attribute_statement
 # TODO: can we have '::' with an empty statement?
-header_statements_line = Optional(header_statement + ZeroOrMore(Suppress(':') + header_statement)) + EOL.suppress()
-# module_header = ZeroOrMore(header_statements_line)
+header_statements_line = (Optional(header_statement + ZeroOrMore(Suppress(':') + header_statement)) + EOL.suppress()) | \
+                         simple_if_statement_macro
 module_header = OneOrMore(header_statements_line)
 
 # 5.1 Module Body Structure

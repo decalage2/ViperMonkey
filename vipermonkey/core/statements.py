@@ -82,7 +82,8 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
                                   CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next') | \
                                   CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
-                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New')
+                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New') | \
+                                  CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If')
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -631,6 +632,29 @@ simple_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expressi
 
 simple_if_statement.setParseAction(If_Statement)
 
+# --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
+
+class If_Statement_Macro(If_Statement):
+    def __init__(self, original_str, location, tokens):
+        super(If_Statement_Macro, self).__init__(original_str, location, tokens)
+        pass
+    # TODO: Need to figure out how to eval this.
+
+# Grammar element for #IF statements.
+simple_if_statement_macro = Group( CaselessKeyword("#If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                   Group(statement_block('statements'))) + \
+                                   ZeroOrMore(
+                                       Group( CaselessKeyword("#ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                              Group(statement_block('statements')))
+                                   ) + \
+                                   Optional(
+                                       Group(CaselessKeyword("#Else").suppress() + Suppress(EOS) + \
+                                             Group(statement_block('statements')))
+                                   ) + \
+                                   CaselessKeyword("#End If").suppress() + FollowedBy(EOS)
+
+simple_if_statement_macro.setParseAction(If_Statement_Macro)
+
 # --- CALL statement ----------------------------------------------------------
 
 class Call_Statement(VBA_Object):
@@ -688,7 +712,7 @@ simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + 
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= simple_for_statement | simple_if_statement | simple_statement
+statement <<= simple_for_statement | simple_if_statement | simple_if_statement_macro | simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
