@@ -428,7 +428,7 @@ class Let_Statement(VBA_Object):
         else:
 
             # Evaluate the index expression.
-            index = eval_arg(self.index, context=context)
+            index = int(eval_arg(self.index, context=context))
             log.debug('setting %s(%r) = %s' % (self.name, index, value))
 
             # Is array variable being set already represented as a list?
