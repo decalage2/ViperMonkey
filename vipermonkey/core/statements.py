@@ -401,22 +401,58 @@ class Let_Statement(VBA_Object):
         super(Let_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         self.expression = tokens.expression
-        # print 'Let_Statement.init:'
-        # pprint.pprint(tokens.asList())
+        self.index = None
+        if (tokens.index != ''):
+            self.index = tokens.index
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Let %s = %r' % (self.name, self.expression)
+        if (self.index is None):
+            return 'Let %s = %r' % (self.name, self.expression)
+        else:
+            return 'Let %s(%r) = %r' % (self.name, self.index, self.expression)
 
     def eval(self, context, params=None):
+
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
-        # set variable
-        log.debug('setting %s = %s' % (self.name, value))
-        context.set(self.name, value)
 
+        # set variable, non-array access.
+        if (self.index is None):
+            log.debug('setting %s = %s' % (self.name, value))
+            context.set(self.name, value)
+
+        # set variable, array access.
+        else:
+
+            # Evaluate the index expression.
+            index = eval_arg(self.index, context=context)
+            log.debug('setting %s(%r) = %s' % (self.name, index, value))
+
+            # Is array variable being set already represented as a list?
+            arr_var = None
+            try:
+                arr_var = context.get(self.name)
+            except KeyError:
+                log.error("WARNING: Cannot find array variable %s" % self.name)
+            if (not isinstance(arr_var, list)):
+
+                # We are wiping out whatever value this had.
+                arr_var = []
+
+            # Do we need to extend the length of the list to include the index?
+            if (index >= len(arr_var)):
+                arr_var.extend([None] * (index - len(arr_var)))
+                
+            # We now have a list with the proper # of elements. Set the
+            # array element to the proper value.
+            arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+
+            # Finally save the updated variable in the context.
+            context.set(self.name, arr_var)
+            
 # 5.4.3.8   Let Statement
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
@@ -427,8 +463,10 @@ class Let_Statement(VBA_Object):
 #                 + l_expression('name') + Literal('=').suppress() + expression('expression')
 
 # previous custom grammar (incomplete):
-let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + \
+let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
+                TODO_identifier_or_object_attrib('name') + \
+                Optional(Suppress('(') + expression('index') + Suppress(')')) + \
+                Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
 
 let_statement.setParseAction(Let_Statement)
@@ -751,7 +789,7 @@ exit_for_statement.setParseAction(Exit_For_Statement)
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | let_statement | call_statement | exit_for_statement | unknown_statement
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | unknown_statement
 #simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
