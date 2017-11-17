@@ -96,6 +96,32 @@ class Sum(VBA_Object):
     def __repr__(self):
         return ' + '.join(map(repr, self.arg))
 
+# --- XOR --------------------------------------------------------
+
+class Xor(VBA_Object):
+    """
+    VBA Xor operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Xor, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the xor of all the arguments:
+        try:
+            return reduce(lambda x, y: x ^ y, eval_args(self.arg, context))
+        except TypeError:
+            log.error('Impossible to xor arguments of different types.')
+            return 0
+        except RuntimeError:
+            log.error("overflow trying eval xor: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' ^ '.join(map(repr, self.arg))
 
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 

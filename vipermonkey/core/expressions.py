@@ -437,7 +437,7 @@ expression <<= infixNotation(expr_item,
                                  ("+", 2, opAssoc.LEFT, Sum),
                                  ("-", 2, opAssoc.LEFT, Subtraction),
                                  ("&", 2, opAssoc.LEFT, Concatenation),
-                                 # (CaselessKeyword("xor"), 2, opAssoc.LEFT),
+                                 (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                              ])
 expression.setParseAction(lambda t: t[0])
 
