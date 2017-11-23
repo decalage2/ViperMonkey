@@ -111,6 +111,12 @@ class Context(object):
         # running its flag will be True.
         self.loop_stack = []
 
+        # Track whether we have exited from the current function.
+        self.exit_func = False
+
+        # Add some attributes we are handling as global variables.
+        self.globals["vbDirectory"] = "vbDirectory"
+
     def get(self, name):
         # TODO: remove this check once everything works fine
         assert isinstance(name, basestring)

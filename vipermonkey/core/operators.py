@@ -86,9 +86,9 @@ class Sum(VBA_Object):
             log.debug('Impossible to sum arguments of different types. Try converting strings to ints.')
             try:
                 return reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
-            except TypeError:
-                log.error('Impossible to sum arguments of different types.')
-                return 0
+            except ValueError:
+                # Punt and sum all arguments as strings.
+                return reduce(lambda x, y: str(x) + str(y), eval_args(self.arg, context))
         except RuntimeError:
             log.error("overflow trying eval sum: %r" % self.arg)
             sys.exit(1)
@@ -114,8 +114,13 @@ class Xor(VBA_Object):
         try:
             return reduce(lambda x, y: x ^ y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to xor arguments of different types.')
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) ^ int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to xor arguments of different types.')
+                return 0
         except RuntimeError:
             log.error("overflow trying eval xor: %r" % self.arg)
             sys.exit(1)
@@ -141,9 +146,14 @@ class Subtraction(VBA_Object):
         try:
             return reduce(lambda x, y: x - y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to subtract arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to subtract arguments of different types')
+                # TODO
+                return 0
 
     def __repr__(self):
         return ' - '.join(map(repr, self.arg))
@@ -167,9 +177,13 @@ class Multiplication(VBA_Object):
         try:
             return reduce(lambda x, y: x * y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to multiply arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) * int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to multiply arguments of different types')
+                return 0
 
     def __repr__(self):
         return ' * '.join(map(repr, self.arg))
@@ -193,9 +207,14 @@ class Division(VBA_Object):
         try:
             return reduce(lambda x, y: x / y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to divide arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) / int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to divide arguments of different types')
+                # TODO
+                return 0
 
     def __repr__(self):
         return ' / '.join(map(repr, self.arg))
@@ -219,9 +238,14 @@ class FloorDivision(VBA_Object):
         try:
             return reduce(lambda x, y: x // y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to divide arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) // int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to divide arguments of different types')
+                # TODO
+                return 0
 
     def __repr__(self):
         return ' \\ '.join(map(repr, self.arg))

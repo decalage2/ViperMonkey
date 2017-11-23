@@ -128,7 +128,7 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        return ord(eval_arg(self.arg, context))
+        return ord(eval_arg(self.arg, context)[0])
 
     def __repr__(self):
         return 'Asc(%s)' % repr(self.arg)

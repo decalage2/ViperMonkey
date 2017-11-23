@@ -59,6 +59,9 @@ class VBA_Object(object):
     Base class for all VBA objects that can be evaluated.
     """
 
+    # Upper bound for loop iterations. 0 or less means unlimited.
+    loop_upper_bound = 1000
+    
     def __init__(self, original_str, location, tokens):
         """
         VBA_Object constructor, to be called as a parse action by a pyparsing parser

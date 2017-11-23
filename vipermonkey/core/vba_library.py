@@ -53,6 +53,7 @@ __version__ = '0.02'
 
 import math
 import base64
+import re
 
 from vba_context import VBA_LIBRARY
 
@@ -104,8 +105,11 @@ class Mid(object):
         if s == None: return None
         if not isinstance(s, basestring):
             s = str(s)
-        start = params[1]
-        assert isinstance(start, int)
+        start = 0
+        try:
+            start = int(params[1])
+        except:
+            pass
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
         if start>len(s):
@@ -118,8 +122,11 @@ class Mid(object):
         if len(params) == 2:
             log.debug('Mid: no length specified, return s[%d:]=%r' % (start-1, s[start-1:]))
             return s[start-1:]
-        length = params[2]
-        assert isinstance(length, int)
+        length = 0
+        try:
+            length = int(params[2])
+        except:
+            pass
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
@@ -147,8 +154,11 @@ class Left(object):
         if s == None: return None
         if not isinstance(s, basestring):
             s = str(s)
-        start = params[1]
-        assert isinstance(start, int)
+        start = 0
+        try:
+            start = int(params[1])
+        except:
+            pass
         # "If Start is greater than the number of characters in String,
         # Left returns the whole string.
         if start>len(s):
@@ -178,8 +188,11 @@ class Right(object):
         if s == None: return None
         if not isinstance(s, basestring):
             s = str(s)
-        start = params[1]
-        assert isinstance(start, int)
+        start = 0
+        try:
+            start = int(params[1])
+        except:
+            pass
         # "If Start is greater than the number of characters in String,
         # Right returns the whole string.
         if start>len(s):
@@ -357,6 +370,8 @@ class StrReverse(object):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]
+        if (string is None):
+            string = ''
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
         return r
@@ -370,8 +385,14 @@ class Replace(object):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) == 3
         string = params[0]
+        if (string is None):
+            string = ''
         pat = params[1]
+        if (pat is None):
+            pat = ''
         rep = params[2]
+        if (rep is None):
+            rep = ''
         r = string.replace(pat, rep)
         log.debug("Replace: return %r" % r)
         return r
@@ -388,7 +409,11 @@ class InStr(object):
         # Were we given a start position?
         start = 0
         s1 = params[0]
+        if (s1 is None):
+            s1 = ''
         s2 = params[1]
+        if (s2 is None):
+            s2 = ''
         if (isinstance(params[0], int)):
             start = params[0] - 1
             if (start < 0):
@@ -426,11 +451,16 @@ class Sgn(object):
 
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
-        assert (len(params) == 1 and isinstance(params[0], int))
+        assert (len(params) == 1)
         num = params[0]
-        r = int(math.copysign(1, num))
-        log.debug("Sgn: %r returns %r" % (self, r))
-        return r
+        try:
+            r = int(math.copysign(1, num))
+            log.debug("Sgn: %r returns %r" % (self, r))
+            return r
+        except:
+            r = ''
+            log.error("Sgn: %r returns %r" % (self, r))
+            return r
 
 class Sqr(object):
     """
@@ -440,11 +470,266 @@ class Sqr(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = params[0]
-        r = math.sqrt(num)
+        num = int(params[0]) + 0.0
+        r = ''
+        try:
+            r = math.sqrt(num)
+        except ValueError:
+            pass
         log.debug("Sqr: %r returns %r" % (self, r))
         return r
 
+class Abs(object):
+    """
+    Abs() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = int(params[0])
+        r = abs(num)
+        log.debug("Abs: %r returns %r" % (self, r))
+        return r
+
+class Fix(object):
+    """
+    Fix() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        r = math.floor(num)
+        log.debug("Fix: %r returns %r" % (self, r))
+        return r
+
+class Hex(object):
+    """
+    Hex() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = int(params[0])
+        r = hex(num).replace("0x","").upper()
+        log.debug("Hex: %r returns %r" % (self, r))
+        return r
+
+class CByte(object):
+    """
+    CByte() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        tmp = params[0]
+        if (tmp.startswith("&H")):
+            tmp = tmp.replace("&H", "0x")
+            tmp = int(tmp, 16)
+        num = int(round(float(tmp)))
+        r = num
+        if (r > 255):
+            r = 255
+        log.debug("CByte: %r returns %r" % (self, r))
+        return r
+
+class Atn(object):
+    """
+    Atn() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        try:
+            r = math.atan(num)
+            log.debug("Atn: %r returns %r" % (self, r))
+            return r
+        except:
+            r = ''
+            log.error("Atn: %r returns %r" % (self, r))
+            return r
+
+class Cos(object):
+    """
+    Cos() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        try:
+            r = math.cos(num)
+            log.debug("Cos: %r returns %r" % (self, r))
+            return r
+        except:
+            r = ''
+            log.error("Cos: %r returns %r" % (self, r))
+            return r
+            
+class Log(object):
+    """
+    Log() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        r = ''
+        try:
+            r = math.log(num)
+        except ValueError:
+            pass
+        log.debug("Log: %r returns %r" % (self, r))
+        return r
+    
+class String(object):
+    """
+    String() repeated character string creation function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 2)
+        num = int(params[0])
+        char = params[1]
+        r = char * num
+        log.debug("String: %r returns %r" % (self, r))
+        return r
+
+class Dir(object):
+    """
+    Dir() file/directory finding function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) >= 1)
+        pat = params[0]
+        attrib = None
+        # TODO: Handle multiple attributes.
+        if (len(params) > 1):
+            attrib = params[1]
+        r = ""
+        # TODO: Figure out how to simulate actual file searches.            
+        log.debug("Dir: %r returns %r" % (self, r))
+        return r
+
+class RGB(object):
+    """
+    RGB() color function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 3)
+        red = int(params[0])
+        green = int(params[1])
+        blue = int(params[2])
+        r = red + (green * 256) + (blue * 65536)
+        # TODO: Figure out how to simulate actual file searches.            
+        log.debug("RGB: %r returns %r" % (self, r))
+        return r
+
+class Exp(object):
+    """
+    Exp() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        try:
+            r = math.exp(num)
+            log.debug("Exp: %r returns %r" % (self, r))
+            return r
+        except:
+            r = ''
+            log.error("Exp: %r returns %r" % (self, r))
+            return r
+            
+class Sin(object):
+    """
+    Sin() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        try:
+            r = math.sin(num)
+            log.debug("Sin: %r returns %r" % (self, r))
+            return r
+        except:
+            r = ''
+            log.error("Sin: %r returns %r" % (self, r))
+            return r
+            
+class Str(object):
+    """
+    Str() convert number to string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        r = str(params[0])
+        log.debug("Str: %r returns %r" % (self, r))
+        return r
+
+class Val(object):
+    """
+    Val() convert string to number function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+
+        # Sanity check.
+        if ((params[0] is None) or (not isinstance(params[0], str))):
+            r = ''
+            log.debug("Str: %r returns %r" % (self, r))
+            return r
+        
+        # Ignore whitespace.
+        tmp = params[0].strip().replace(" ", "")
+
+        # The VB Val() function is ugly. Look for VB hex encoding.
+        nums = re.compile(r"&H[0-9A-Fa-f]+")
+        matches = nums.search(tmp)
+        if (hasattr(matches, "group")):
+            tmp = nums.search(tmp).group(0).replace("&H", "0x")
+            r = float(int(tmp, 16))
+            log.debug("Val: %r returns %r" % (self, r))
+            return r
+        
+        # The VB Val() function is ugly. Try to use a regular expression to pick out
+        # the 1st valid number string.
+        nums = re.compile(r"[+-]?\d+(?:\.\d+)?")
+        matches = nums.search(tmp)
+        if (hasattr(matches, "group")):
+            tmp = nums.search(tmp).group(0)
+
+            # Convert this to a float.
+            r = float(tmp)
+            log.debug("Val: %r returns %r" % (self, r))
+            return r
+
+        # Can't find a valid number to convert. This is probably incorrect behavior.
+        r = 0
+        log.debug("Val: Invalid Value: %r returns %r" % (self, r))
+        return r
+    
 class Base64Decode(object):
     """
     Base64Decode() function.
@@ -454,6 +739,8 @@ class Base64Decode(object):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         txt = params[0]
+        if (txt is None):
+            txt = ''
         r = base64.b64decode(txt)
         log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
@@ -461,7 +748,8 @@ class Base64Decode(object):
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
-               Sgn, Sqr, Base64Decode):
+               Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
+               Dir, RGB, Log, Cos, Exp, Sin, Str, Val):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -208,7 +208,13 @@ class Function(VBA_Object):
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             s.eval(context=context)
+
+            # Have we exited from the function with 'Exit Function'?
+            if (context.exit_func):
+                break
+            
         # TODO: get result from context.locals
+        context.exit_func = False
         return_value = context.get(self.name)
         log.debug('Function %s: return value = %r' % (self.name, return_value))
         return return_value

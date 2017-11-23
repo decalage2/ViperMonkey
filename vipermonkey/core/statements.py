@@ -388,7 +388,7 @@ class Global_Var_Statement(VBA_Object):
     def __repr__(self):
         return 'Global %r' % repr(self.tokens)
 
-global_variable_declaration = CaselessKeyword("Public").suppress() + \
+global_variable_declaration = Optional(CaselessKeyword("Public").suppress()) + \
                               Optional(CaselessKeyword("Shared")).suppress() + \
                               Optional(CaselessKeyword("Const")).suppress() + \
                               variable_declaration_list
@@ -464,7 +464,7 @@ class Let_Statement(VBA_Object):
 
 # previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
-                TODO_identifier_or_object_attrib('name') + \
+                Optional(Suppress('Const')) + TODO_identifier_or_object_attrib('name') + \
                 Optional(Suppress('(') + expression('index') + Suppress(')')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
@@ -496,6 +496,9 @@ class For_Statement(VBA_Object):
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
         end = eval_arg(self.end_value, context=context)
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
+            end = VBA_Object.loop_upper_bound
+            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
@@ -786,10 +789,28 @@ class Exit_For_Statement(VBA_Object):
 exit_for_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('For').suppress()
 exit_for_statement.setParseAction(Exit_For_Statement)
 
+# --- EXIT FUNCTION statement ----------------------------------------------------------
+
+class Exit_Function_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Exit_Function_Statement, self).__init__(original_str, location, tokens)
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Exit Function'
+
+    def eval(self, context, params=None):
+        # Mark that we should return from the current function.
+        context.exit_func = True
+
+# Return from a function.
+exit_func_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()
+exit_func_statement.setParseAction(Exit_Function_Statement)
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | unknown_statement
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement | unknown_statement
 #simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
