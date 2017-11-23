@@ -58,6 +58,7 @@ from lib_functions import *
 from literals import *
 from operators import *
 import procedures
+from vba_object import eval_arg
 
 from logger import log
 log.debug('importing expressions')
@@ -172,7 +173,7 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
         # TODO: Need to actually have some sort of object model. For now
         # just try evaluating the item after the '.'.
-        return self.rhs.eval(context, params)
+        return eval_arg(self.rhs, context)
 
 log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
@@ -502,7 +503,7 @@ class BoolExprItem(VBA_Object):
         # We always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
         try:
-            lhs = self.lhs.eval(context)
+            lhs = eval_arg(self.lhs, context)
         except AttributeError:
             pass
 
@@ -515,7 +516,7 @@ class BoolExprItem(VBA_Object):
         # We have an operator. Get the value of the RHS.
         rhs = self.rhs
         try:
-            rhs = self.rhs.eval(context)
+            rhs = eval_arg(self.rhs, context)
         except AttributeError:
             pass
         
@@ -584,7 +585,7 @@ class BoolExpr(VBA_Object):
         # We always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
         try:
-            lhs = self.lhs.eval(context)
+            lhs = eval_arg(self.lhs, context)
         except AttributeError:
             pass
 
@@ -597,7 +598,7 @@ class BoolExpr(VBA_Object):
         # We have an operator. Get the value of the RHS.
         rhs = self.rhs
         try:
-            rhs = self.rhs.eval(context)
+            rhs = eval_arg(self.rhs, context)
         except AttributeError:
             pass
 

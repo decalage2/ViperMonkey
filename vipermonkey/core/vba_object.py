@@ -107,6 +107,17 @@ def eval_arg(arg, context):
         return arg.eval(context=context)
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
+
+        # This is a hack to get values saved in the .text field of objects.
+        # To do this properly we need to save "FOO.text" as a variable and
+        # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
+        if (isinstance(arg, str) and (arg == "nodeTypedValue")):
+            try:
+                return context.get(".text")
+            except KeyError:
+                pass
+
+        # The .text hack did not work.
         return arg
 
 
