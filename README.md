@@ -33,6 +33,11 @@ miracles. Any help from you will be very appreciated!
 News
 ----
 
+- 2017-11-23:
+  - Added VBA functions Abs, Fix, Hex, String, CByte, Atn, Dir, RGB, Log, Cos, Exp, Sin, Str, and Val.
+  - Added support for 'Exit Function' operator.
+  - Changed math operators to also work with string representations of integers.
+  - Added a configurable iteration limit on loops.
 - 2017-11-14:
   - Added support for InStr, Replace, Sgn, Sqr, UBound, LBound, Trim, StrConv, Split, StrReverse, and Int VB functions.
   - Added support for string character subscripting.
