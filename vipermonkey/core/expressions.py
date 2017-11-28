@@ -298,6 +298,9 @@ class Function_Call(VBA_Object):
     Function call within a VBA expression
     """
 
+    # List of interesting functions to log calls to.
+    log_funcs = ["CreateProcessA", "CreateProcessW"]
+    
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -312,6 +315,8 @@ class Function_Call(VBA_Object):
     def eval(self, context, params=None):
         params = eval_args(self.params, context=context)
         log.info('calling Function: %s(%s)' % (self.name, repr(params)[1:-1]))
+        if (self.name in Function_Call.log_funcs):
+            context.report_action(self.name, repr(params)[1:-1], 'Interesting Function Call')
         try:
             f = context.get(self.name)
 
