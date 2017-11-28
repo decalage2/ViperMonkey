@@ -51,6 +51,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import base64
 from logger import log
 log.debug('importing vba_object')
 
@@ -115,7 +116,17 @@ def eval_arg(arg, context):
             try:
                 tmp = arg.lower().replace(".nodetypedvalue", ".text")
                 log.debug("eval_arg: Try to get as " + tmp + "...")
-                return context.get(tmp)
+                val = context.get(tmp)
+
+                # It looks like maybe this magically does base64 decode? Try that.
+                try:
+                    log.debug("eval_arg: Try base64 decode of '" + val + "'...")
+                    val_decode = base64.b64decode(str(val)).replace(chr(0), "")
+                    log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                    return val_decode
+                except Exception as e:
+                    log.debug("eval_arg: Base64 decode fail. " + str(e))
+                    return val
             except KeyError:
                 log.debug("eval_arg: Not found as .text.")
                 pass
