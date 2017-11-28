@@ -526,7 +526,7 @@ class CByte(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        tmp = params[0]
+        tmp = params[0].upper()
         if (tmp.startswith("&H")):
             tmp = tmp.replace("&H", "0x")
             tmp = int(tmp, 16)

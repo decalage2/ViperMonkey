@@ -84,7 +84,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
                                   CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New') | \
                                   CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
-                                  CaselessKeyword('Exit')
+                                  CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As')
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -155,6 +155,16 @@ option_statement.setParseAction(Option_Statement)
 
 # TODO: for now we use a generic syntax
 type_expression = lex_identifier
+
+# --- TYPE DECLARATIONS -------------------------------------------------------
+
+type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
+                             lex_identifier + Suppress(EOS) + \
+                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
+                             CaselessKeyword('End') + CaselessKeyword('Type')
+
+# TODO: Add in simple type declarations.
+type_declaration = type_declaration_composite
 
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
 
@@ -816,7 +826,7 @@ simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= simple_for_statement | simple_if_statement | simple_if_statement_macro | simple_statement
+statement <<= type_declaration | simple_for_statement | simple_if_statement | simple_if_statement_macro | simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
