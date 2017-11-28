@@ -111,10 +111,13 @@ def eval_arg(arg, context):
         # This is a hack to get values saved in the .text field of objects.
         # To do this properly we need to save "FOO.text" as a variable and
         # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
-        if (isinstance(arg, str) and (arg == "nodeTypedValue")):
+        if (isinstance(arg, str) and (".nodetypedvalue" in arg.lower())):
             try:
-                return context.get(".text")
+                tmp = arg.lower().replace(".nodetypedvalue", ".text")
+                log.debug("eval_arg: Try to get as " + tmp + "...")
+                return context.get(tmp)
             except KeyError:
+                log.debug("eval_arg: Not found as .text.")
                 pass
 
         # The .text hack did not work.

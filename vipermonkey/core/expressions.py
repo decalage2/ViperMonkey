@@ -172,8 +172,10 @@ class MemberAccessExpression(VBA_Object):
 
     def eval(self, context, params=None):
         # TODO: Need to actually have some sort of object model. For now
-        # just try evaluating the item after the '.'.
-        return eval_arg(self.rhs, context)
+        # just treat this as a variable access.
+        tmp_lhs = eval_arg(self.lhs, context)
+        tmp_rhs = eval_arg(self.rhs, context)
+        return eval_arg(str(tmp_lhs) + "." + str(tmp_rhs), context)
 
 log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
@@ -299,7 +301,7 @@ class Function_Call(VBA_Object):
     """
 
     # List of interesting functions to log calls to.
-    log_funcs = ["CreateProcessA", "CreateProcessW"]
+    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -315,7 +317,12 @@ class Function_Call(VBA_Object):
     def eval(self, context, params=None):
         params = eval_args(self.params, context=context)
         log.info('calling Function: %s(%s)' % (self.name, repr(params)[1:-1]))
-        if (self.name in Function_Call.log_funcs):
+        save = False
+        for func in Function_Call.log_funcs:
+            if (self.name.lower().endswith(func.lower())):
+                save = True
+                break
+        if (save):
             context.report_action(self.name, repr(params)[1:-1], 'Interesting Function Call')
         try:
             f = context.get(self.name)
