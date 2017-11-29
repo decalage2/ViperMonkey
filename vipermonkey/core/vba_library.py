@@ -326,6 +326,17 @@ class StrConv(object):
         assert len(params) > 0
         # TODO: Actually implement this.
         r = str(params[0])
+        if (len(params) > 1):
+            conv = int(params[1])
+            if (conv == 1):
+                r = r.upper()
+            if (conv == 2):
+                r = r.lower()
+            if (conv == 64):
+                padded = ""
+                for c in r:
+                    padded += c + "\0"
+                r = padded
         log.debug("StrConv: return %r" % r)
         return r
 
@@ -792,7 +803,7 @@ for name, value in (
         ('vbNullChar', '\x00'),
         ('vbTab', '\t'),
         ('vbVerticalTab', '\v'),
-        ('vbNullString', None),
+        ('vbNullString', ''),
         ('vbObjectError', -2147221504),
 ):
     VBA_LIBRARY[name.lower()] = value

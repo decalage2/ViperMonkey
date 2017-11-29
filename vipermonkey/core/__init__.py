@@ -288,7 +288,7 @@ class ViperMonkey(object):
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
         # TODO: how to handle auto subs calling other auto subs?
-        for entry_point in ('autoopen', 'workbook_open', 'document_open', 'autoclose'):
+        for entry_point in ('autoopen', 'workbook_open', 'document_open', 'autoclose', 'document_close'):
             if entry_point in self.globals:
                 self.globals[entry_point].eval(context=context)
 

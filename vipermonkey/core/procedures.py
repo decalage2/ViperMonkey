@@ -87,6 +87,14 @@ class Sub(VBA_Object):
             log.debug('Sub %s eval statement: %s' % (self.name, s))
             s.eval(context=context)
 
+        # Handle subs with no return values.
+        try:
+            context.get(self.name)
+        except KeyError:
+
+            # No return value explicitly set. It looks like VBA uses an empty string as
+            # these funcion values.
+            context.set(self.name, '')
 
 # 5.3.1.1 Procedure Scope
 # procedure-scope = ["global" / "public" / "private" / "friend"]
@@ -215,9 +223,18 @@ class Function(VBA_Object):
             
         # TODO: get result from context.locals
         context.exit_func = False
-        return_value = context.get(self.name)
-        log.debug('Function %s: return value = %r' % (self.name, return_value))
-        return return_value
+        try:
+            return_value = context.get(self.name)
+            if (return_value is None):
+                context.set(self.name, '')
+                return_value = ''
+            log.debug('Function %s: return value = %r' % (self.name, return_value))
+            return return_value
+        except KeyError:
+
+            # No return value explicitly set. It looks like VBA uses an empty string as
+            # these funcion values.
+            context.set(self.name, '')
 
 
 # TODO 5.3.1.4 Function Type Declarations

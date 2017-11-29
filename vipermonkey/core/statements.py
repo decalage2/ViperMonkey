@@ -248,7 +248,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 
 
 
-parameter = Optional(parameter_mechanism).suppress() + lex_identifier('name') \
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + lex_identifier('name') \
             + Optional(CaselessKeyword('as').suppress() + Word(alphas).setResultsName('type'))
 parameter.setParseAction(Parameter)
 
@@ -517,13 +517,15 @@ class For_Statement(VBA_Object):
 
         # Track that the current loop is running.
         context.loop_stack.append(True)
-        
-        # loop using xrange until end+1, because python stops when index>=end+1
-        for val in xrange(start, end + 1, step):
-            # TODO: what if name is already a global variable?
-            # force a set_local?
-            log.debug('FOR loop: %s = %r' % (self.name, val))
-            context.set(self.name, val)
+
+        # Set the loop index variable to the start value.
+        context.set(self.name, start)
+
+        # Loop until the loop is broken out of or we hit the last index.
+        while (context.get(self.name) <= end):
+
+            # Execute the loop body.
+            log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
             done = False
             for s in self.statements:
                 log.debug('FOR loop eval statement: %r' % s)
@@ -541,6 +543,10 @@ class For_Statement(VBA_Object):
             if (done):
                 break
 
+            # Increment the loop counter by the step.
+            val = context.get(self.name)
+            context.set(self.name, val + step)
+        
         # Remove tracking of this loop.
         context.loop_stack.pop()
         log.debug('FOR loop: end.')
@@ -749,26 +755,27 @@ class Call_Statement(VBA_Object):
         call_params = eval_args(self.params, context=context)
         log.info('Calling Procedure: %s(%r)' % (self.name, call_params))
         # Handle VBA functions:
-        if self.name.lower() == 'msgbox':
+        func_name = str(self.name)
+        if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
             context.report_action('Display Message', repr(call_params[0]), 'MsgBox')
             # vbOK = 1
             return 1
-        elif '.' in self.name:
-            context.report_action('Object.Method Call', repr(call_params), self.name)
+        elif '.' in func_name:
+            context.report_action('Object.Method Call', repr(call_params), func_name)
         try:
-            s = context.get(self.name)
+            s = context.get(func_name)
             s.eval(context=context, params=call_params)
         except KeyError:
             try:
-                tmp_name = self.name.replace("$", "").replace("VBA.", "")
+                tmp_name = func_name.replace("$", "").replace("VBA.", "")
                 if ("." in tmp_name):
-                    tmp_name = self.name[tmp_name.rindex(".") + 1:]
+                    tmp_name = func_name[tmp_name.rindex(".") + 1:]
                 log.debug("Looking for procedure %r" % tmp_name)
                 s = context.get(tmp_name)
                 s.eval(context=context, params=call_params)
             except KeyError:
-                log.error('Procedure %r not found' % self.name)
+                log.error('Procedure %r not found' % func_name)
 
 
 # TODO: 5.4.2.1 Call Statement
@@ -777,7 +784,7 @@ class Call_Statement(VBA_Object):
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | expr_list('params')
 call_statement = NotAny(known_keywords_statement_start) \
                  + Optional(CaselessKeyword('Call').suppress()) \
-                 + TODO_identifier_or_object_attrib('name') + Optional(call_params)
+                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib('name')) + Optional(call_params)
 call_statement.setParseAction(Call_Statement)
 
 # --- EXIT FOR statement ----------------------------------------------------------
@@ -820,6 +827,7 @@ exit_func_statement.setParseAction(Exit_Function_Statement)
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
+#simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement | unknown_statement
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement | unknown_statement
 #simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)

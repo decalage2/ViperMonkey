@@ -181,14 +181,16 @@ log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
 l_expression = Forward()
 
-# ORIGINAL
-#member_access_expression = l_expression + Combine(Suppress(".") + unrestricted_name)
-
-# WARNING: This is not strictly correct. It accepts things like 'while.foo()'.
+function_call_limited = Forward()
 function_call = Forward()
-member_object = function_call | unrestricted_name
+member_object = function_call_limited | unrestricted_name
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
 member_access_expression.setParseAction(MemberAccessExpression)
+
+# TODO: 
+member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + unrestricted_name("rhs") ) )
+#member_access_expression_limited = Group( Group( function_call_limited("lhs") + Suppress(".") + unrestricted_name("rhs") ) )
+member_access_expression_limited.setParseAction(MemberAccessExpression)
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
@@ -305,14 +307,21 @@ class Function_Call(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
-        self.name = tokens.name
+        self.name = str(tokens.name)
         log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)
         self.params = tokens.params
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return '%s(%r)' % (self.name, self.params)
+        parms = ""
+        first = True
+        for parm in self.params:
+            if (not first):
+                parms += ", "
+            first = False
+            parms += str(parm)
+        return '%s(%r)' % (self.name, parms)
 
     def eval(self, context, params=None):
         params = eval_args(self.params, context=context)
@@ -341,10 +350,25 @@ class Function_Call(VBA_Object):
                     return r
                 except:
                     log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
-                    return None
+                    return ""
             log.debug('Calling: %r' % f)
             if (f is not None):
-                return f.eval(context=context, params=params)
+                if (not(isinstance(f, str)) and
+                    not(isinstance(f, list)) and
+                    not(isinstance(f, unicode))):
+                    return f.eval(context=context, params=params)
+                elif (len(params) > 0):
+
+                    # Looks like this is actually an array access.
+                    log.debug("Looks like array access.")
+                    try:
+                        i = int(params[0])
+                        return f[i]
+                    except:
+                        log.error("Array access %r[%r] failed." % (f, params[0]))
+                    else:
+                        log.error("Improper type for function.")
+                        return None
             else:
                 log.error('Function %r resolves to None' % self.name)
                 return None
@@ -359,10 +383,13 @@ class Function_Call(VBA_Object):
 expr_list = delimitedList(expression)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
-function_call <<= CaselessKeyword("nothing") | (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(
-    expr_list('params')) + Suppress(')'))
+function_call <<= CaselessKeyword("nothing") | \
+                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') | lex_identifier('name')) + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
 function_call.setParseAction(Function_Call)
 
+function_call_limited <<= CaselessKeyword("nothing") | \
+                          (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+function_call_limited.setParseAction(Function_Call)
 
 # --- EXPRESSION ----------------------------------------------------------------------
 
