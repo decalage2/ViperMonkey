@@ -775,6 +775,25 @@ class Call_Statement(VBA_Object):
                 s = context.get(tmp_name)
                 s.eval(context=context, params=call_params)
             except KeyError:
+
+                # If something like Application.Run("foo", 12) is called, foo(12) will be run.
+                # Try to handle that.
+                if (func_name == "Application.Run"):
+
+                    # Pull the name of what is being run from the 1st arg.
+                    new_func = call_params[0]
+
+                    # The remaining params are passed as arguments to the other function.
+                    new_params = call_params[1:]
+
+                    # See if we can run the other function.
+                    log.debug("Try indirect run of function '" + new_func + "'")
+                    try:
+                        s = context.get(new_func)
+                        s.eval(context=context, params=new_params)
+                        return
+                    except KeyError:
+                        pass
                 log.error('Procedure %r not found' % func_name)
 
 
