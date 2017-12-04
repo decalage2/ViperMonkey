@@ -371,6 +371,12 @@ class Int(object):
         log.debug("Int: return %r" % r)
         return r
 
+class CInt(Int):
+    """
+    Same as Int() for our purposes.
+    """
+    pass
+    
 class StrReverse(object):
     """
     StrReverse() string function.
@@ -760,7 +766,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
-               Dir, RGB, Log, Cos, Exp, Sin, Str, Val):
+               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
