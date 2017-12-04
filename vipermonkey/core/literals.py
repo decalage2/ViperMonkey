@@ -115,7 +115,6 @@ float_literal.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
 # STRING = double-quote *string-character (double-quote / line-continuation / LINE-END)
 # double-quote = %x0022 ; "
 # string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
-
 quoted_string = QuotedString('"', escQuote='""')
 quoted_string.setParseAction(lambda t: str(t[0]))
 
@@ -145,10 +144,14 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 # time-separator = *WSC (":" / ".") *WSC
 # ampm = *WSC ("am" / "pm" / "a" / "p")
 
+# TODO: For now just handle a date literal as a string.
+date_string = QuotedString('#')
+date_string.setParseAction(lambda t: str(t[0]))
+
 # --- LITERALS ---------------------------------------------------------------
 
 # TODO: 5.6.5 Literal Expressions
 
-literal = boolean_literal | integer | quoted_string | float_literal
+literal = boolean_literal | integer | quoted_string | date_string | float_literal
 literal.setParseAction(lambda t: t[0])
 

@@ -84,7 +84,9 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
                                   CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New') | \
                                   CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
-                                  CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As')
+                                  CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As') | CaselessKeyword("ByVal") | \
+                                  CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
+                                  CaselessKeyword('Case')
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -584,23 +586,11 @@ for_clause = CaselessKeyword("For").suppress() \
              + CaselessKeyword("To").suppress() + expression('end_value') \
              + Optional(step_clause('step_value'))
 
-# def log_for_clause(s=None,l=None,t=None):
-#     print('FOR CLAUSE: loc=%d tokens=%r original=%r' % (l,t,s))
-# for_clause.setParseAction(log_for_clause)
-
-# def log_EOS(s=None,l=None,t=None):
-#     print('EOS: loc=%d tokens=%r original=%r' % (l,t,s))
-# EOS.setParseAction(log_EOS)
-
-# def log_statement_block(s=None,l=None,t=None):
-#     print('statement_block: loc=%d tokens=%r original=%r' % (l,t,s))
-# statement_block.setParseAction(log_statement_block)
-
 simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
                        + CaselessKeyword("Next").suppress() \
                        + Optional(lex_identifier) \
                        + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
-# + Optional(matchPreviousExpr(lex_identifier)) \
+
 simple_for_statement.setParseAction(For_Statement)
 
 
@@ -621,6 +611,169 @@ for_start = for_clause + Suppress(EOL)
 for_start.setParseAction(For_Statement)
 
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
+
+# --- WHILE statement -----------------------------------------------------------
+
+class While_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(For_Statement, self).__init__(original_str, location, tokens)
+        self.name = tokens.name
+        self.start_value = tokens.start_value
+        self.end_value = tokens.end_value
+        self.step_value = tokens.get('step_value', 1)
+        if self.step_value != 1:
+            self.step_value = self.step_value[0]
+        self.statements = tokens.statements
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        return 'For %s = %r to %r step %r' % (self.name,
+                                              self.start_value, self.end_value, self.step_value)
+
+    def eval(self, context, params=None):
+        # evaluate values:
+        log.debug('FOR loop: evaluating start, end, step')
+        start = eval_arg(self.start_value, context=context)
+        log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
+        end = eval_arg(self.end_value, context=context)
+        log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
+            end = VBA_Object.loop_upper_bound
+            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+        if self.step_value != 1:
+            step = eval_arg(self.step_value, context=context)
+            log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
+        else:
+            step = 1
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Set the loop index variable to the start value.
+        context.set(self.name, start)
+
+        # Loop until the loop is broken out of or we hit the last index.
+        while (context.get(self.name) <= end):
+
+            # Execute the loop body.
+            log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
+            done = False
+            for s in self.statements:
+                log.debug('FOR loop eval statement: %r' % s)
+                s.eval(context=context)
+
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("FOR loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+
+            # Increment the loop counter by the step.
+            val = context.get(self.name)
+            context.set(self.name, val + step)
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR loop: end.')
+
+while_type = CaselessKeyword("While") | CaselessKeyword("Until")
+        
+while_clause = CaselessKeyword("Do").suppress() + while_type("type") \
+               + boolean_expression("guard")
+
+simple_while_statement = while_clause + Suppress(EOS) + Group(statement_block('statements')) \
+                       + CaselessKeyword("Loop").suppress()
+
+#simple_for_statement.setParseAction(While_Statement)
+
+# --- SELECT statement -----------------------------------------------------------
+
+class Select_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(For_Statement, self).__init__(original_str, location, tokens)
+        self.name = tokens.name
+        self.start_value = tokens.start_value
+        self.end_value = tokens.end_value
+        self.step_value = tokens.get('step_value', 1)
+        if self.step_value != 1:
+            self.step_value = self.step_value[0]
+        self.statements = tokens.statements
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        return 'For %s = %r to %r step %r' % (self.name,
+                                              self.start_value, self.end_value, self.step_value)
+
+    def eval(self, context, params=None):
+        # evaluate values:
+        log.debug('FOR loop: evaluating start, end, step')
+        start = eval_arg(self.start_value, context=context)
+        log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
+        end = eval_arg(self.end_value, context=context)
+        log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
+            end = VBA_Object.loop_upper_bound
+            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+        if self.step_value != 1:
+            step = eval_arg(self.step_value, context=context)
+            log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
+        else:
+            step = 1
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Set the loop index variable to the start value.
+        context.set(self.name, start)
+
+        # Loop until the loop is broken out of or we hit the last index.
+        while (context.get(self.name) <= end):
+
+            # Execute the loop body.
+            log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
+            done = False
+            for s in self.statements:
+                log.debug('FOR loop eval statement: %r' % s)
+                s.eval(context=context)
+
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("FOR loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+
+            # Increment the loop counter by the step.
+            val = context.get(self.name)
+            context.set(self.name, val + step)
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR loop: end.')
+
+select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").suppress() \
+                + expression("select_val")
+
+case_clause = CaselessKeyword("Case").suppress() + expression("case_val")
+
+select_case = case_clause("case_val") + Suppress(EOS) + statement_block('statements')
+
+simple_select_statement = select_clause + Suppress(EOS) + OneOrMore(select_case + Suppress(EOS)) \
+                          + CaselessKeyword("End").suppress() + CaselessKeyword("Select")
+
+#simple_for_statement.setParseAction(While_Statement)
+
 
 # --- IF-THEN-ELSE statement ----------------------------------------------------------
 
@@ -768,7 +921,7 @@ class Call_Statement(VBA_Object):
             s.eval(context=context, params=call_params)
         except KeyError:
             try:
-                tmp_name = func_name.replace("$", "").replace("VBA.", "")
+                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "")
                 if ("." in tmp_name):
                     tmp_name = func_name[tmp_name.rindex(".") + 1:]
                 log.debug("Looking for procedure %r" % tmp_name)
@@ -846,14 +999,13 @@ exit_func_statement.setParseAction(Exit_Function_Statement)
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-#simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement | unknown_statement
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement | unknown_statement
-#simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement# | unknown_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= type_declaration | simple_for_statement | simple_if_statement | simple_if_statement_macro | simple_statement
+statement <<= type_declaration | simple_for_statement | simple_if_statement | \
+              simple_if_statement_macro | simple_while_statement | simple_select_statement | simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?

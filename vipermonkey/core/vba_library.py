@@ -522,6 +522,19 @@ class Fix(object):
         log.debug("Fix: %r returns %r" % (self, r))
         return r
 
+class Round(object):
+    """
+    Round() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        num = float(params[0])
+        r = round(num)
+        log.debug("Round: %r returns %r" % (self, r))
+        return r
+
 class Hex(object):
     """
     Hex() math function.
@@ -762,11 +775,116 @@ class Base64Decode(object):
         log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
 
+class Pmt(object):
+    """
+    Pmt() payment computation function.
+
+    Returns a Double specifying the payment for an annuity based on
+    periodic, fixed payments and a fixed interest rate.
+
+    Pmt(rate, nper, pv [, fv [, type ]] ) 
+
+    The Pmt function has these named arguments:
+
+    rate Required. Double specifying interest rate per period. For
+    example, if you get a car loan at an annual percentage rate (APR)
+    of 10 percent and make monthly payments, the rate per period is
+    0.1/12, or 0.0083.
+
+    nper Required. Integer specifying total number of payment periods
+    in the annuity. For example, if you make monthly payments on a
+    four-year car loan, your loan has a total of 4 * 12 (or 48)
+    payment periods.
+
+    pv Required. Double specifying present value (or lump sum) that a
+    series of payments to be paid in the future is worth now. For
+    example, when you borrow money to buy a car, the loan amount is
+    the present value to the lender of the monthly car payments you
+    will make.
+
+    fv Optional. Variant specifying future value or cash balance you
+    want after you've made the final payment. For example, the future
+    value of a loan is $0 because that's its value after the final
+    payment. However, if you want to save $50,000 over 18 years for
+    your child's education, then $50,000 is the future value. If
+    omitted, 0 is assumed.
+
+    type Optional. Variant specifying when payments are due. Use 0 if
+    payments are due at the end of the payment period, or use 1 if
+    payments are due at the beginning of the period. If omitted, 0 is
+    assumed.
+
+    '               This function, together with the four following
+    '               it (Pv, Fv, NPer and Rate), can calculate
+    '               a certain value associated with a regular series of
+    '               equal-sized payments.  This series can be fully described
+    '               by these values:
+    '                     Pv   - present value
+    '                     Fv   - future value (at end of series)
+    '                     PMT  - the regular payment
+    '                     nPer - the number of 'periods' over which the
+    '                            money is paid
+    '                     Rate - the interest rate per period.
+    '                            (type - payments at beginning (1) or end (0) of
+    '                            the period).
+    '               Each function can determine one of the values, given the others.
+    '
+    '               General Function for the above values:
+    '
+    '                                                      (1+rate)^nper - 1
+    '               pv * (1+rate)^nper + PMT*(1+rate*type)*----------------- + fv  = 0
+    '                                                            rate
+    '               rate == 0  ->  pv + PMT*nper + fv = 0
+    '
+    '               Thus:
+    '                     (-fv - pv*(1+rate)^nper) * rate
+    '               PMT = -------------------------------------
+    '                     (1+rate*type) * ( (1+rate)^nper - 1 )
+    '
+    '               PMT = (-fv - pv) / nper    : if rate == 0
+    """
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) >= 3)
+
+        # Pull out the arguments.
+        rate = float(params[0])
+        nper = int(params[1])
+        pv = float(params[2])
+        fv = 0
+        if (len(params) >= 4):
+            fv = float(params[3])
+        typ = 0
+        if (len(params) >= 5):
+            typ = float(params[4])
+
+        # Compute the payments.
+        r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
+        
+        log.debug("Pmt: %r returns %r" % (self, r))
+        return r
+
+class Day(object):
+    """
+    Day() function. This is currently stubbed out.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        txt = params[0]
+        if (txt is None):
+            txt = ''
+        r = str(txt)
+        log.debug("Day: %r returns %r" % (self, r))
+        return r
+
+    
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
-               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt):
+               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

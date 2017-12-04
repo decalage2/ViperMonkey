@@ -101,7 +101,7 @@ class SimpleNameExpression(VBA_Object):
 
 # TODO:
 # simple_name_expression = entity_name('name')
-simple_name_expression = TODO_identifier_or_object_attrib('name')
+simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + TODO_identifier_or_object_attrib('name')
 simple_name_expression.setParseAction(SimpleNameExpression)
 
 
@@ -390,57 +390,6 @@ function_call.setParseAction(Function_Call)
 function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
 function_call_limited.setParseAction(Function_Call)
-
-# --- EXPRESSION ----------------------------------------------------------------------
-
-# --- SHELL Function ----------------------------------------------------------
-
-# class Shell(VBA_Object):
-#
-#     def __init__(self, original_str, location, tokens):
-#         super(Shell, self).__init__(original_str, location, tokens)
-#         self.command = tokens.command
-#         self.win_style = tokens.win_style
-#         log.debug('parsed %r' % self)
-#
-#     def __repr__(self):
-#         return 'Shell(%r, %s)' % (self.command, self.win_style)
-#
-#     def eval(self, context, params=None):
-#         log.info('Eval Params before calling Shell(%r, %s)' % (self.command, self.win_style))
-#         #TODO eval command and win_style
-#         command = eval_arg(self.command, context=context)
-#         win_style = eval_arg(self.win_style, context=context)
-#         log.info('Shell(%r, %s)' % (command, win_style))
-#         context.report_action('Execute Command', command, 'Shell function')
-#         return 0
-#
-#
-#
-# # 6.1.2.8.1.15 Shell
-# shell = CaselessKeyword('Shell').suppress() + Suppress('(') + expression('command') \
-#                   + Optional(Suppress(',') + expression('win_style')) + Suppress(')')
-# shell.setParseAction(Shell)
-
-
-# class Expression(VBA_Object):
-#     """
-#     VBA Expression
-#     """
-#
-#     def __init__(self, original_str, location, tokens):
-#         super(Expression, self).__init__(original_str, location, tokens)
-#         # extract argument from the tokens:
-#         # Here the arg is expected to be either a literal or a VBA_Object
-#         self.arg = tokens[0]
-#         log.debug('Expression.init: ' + pprint.pformat(tokens.asList()))
-#
-#     def eval(self, context, params=None):
-#         return eval_arg(self.arg)
-#
-#     def __repr__(self):
-#         return repr(self.arg)
-
 
 # --- EXPRESSION ITEM --------------------------------------------------------
 
