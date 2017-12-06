@@ -164,11 +164,6 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 #       [procedure-body EOS]
 #       [end-label] "end" "property" procedure-tail
 
-
-public_private = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')).suppress()
-
-params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
-
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
@@ -238,9 +233,6 @@ class Function(VBA_Object):
 
 
 # TODO 5.3.1.4 Function Type Declarations
-function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
-                 + Optional(Literal('(') + Literal(')')).suppress()
-
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
@@ -254,69 +246,3 @@ function.setParseAction(Function)
 function_start_line = public_private + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 function_start_line.setParseAction(Function)
-
-
-# --- EXTERNAL FUNCTION ------------------------------------------------------
-
-
-class External_Function(VBA_Object):
-    """
-    External Function from a DLL
-    """
-
-    def __init__(self, original_str, location, tokens):
-        super(External_Function, self).__init__(original_str, location, tokens)
-        self.name = tokens.function_name
-        self.params = tokens.params
-        self.lib_name = tokens.lib_name
-        # normalize lib name: remove quotes, lowercase, add .dll if no extension
-        if isinstance(self.lib_name, basestring):
-            self.lib_name = tokens.lib_name.strip('"').lower()
-            if '.' not in self.lib_name:
-                self.lib_name += '.dll'
-        self.alias_name = tokens.alias_name
-        if isinstance(self.alias_name, basestring):
-            # TODO: this might not be necessary if alias is parsed as quoted string
-            self.alias_name = self.alias_name.strip('"')
-        self.return_type = tokens.return_type
-        self.vars = {}
-        log.debug('parsed %r' % self)
-
-    def __repr__(self):
-        return 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
-
-    def eval(self, context, params=None):
-        # create a new context for this execution:
-        caller_context = context
-        context = Context(context=caller_context)
-        # TODO: use separate classes for each known DLL and methods for functions?
-        # TODO: use the alias name instead of the name!
-        if self.alias_name:
-            function_name = self.alias_name
-        else:
-            function_name = self.name
-        log.debug('evaluating External Function %s(%r)' % (function_name, params))
-        function_name = function_name.lower()
-        if self.lib_name.startswith('urlmon'):
-            if function_name.startswith('urldownloadtofile'):
-                context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
-                context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
-                # return 0 when no error occurred:
-                return 0
-        # TODO: return result according to the known DLLs and functions
-        log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
-        return None
-
-
-# 5.2.3.5 External Procedure Declaration
-lib_info = CaselessKeyword('Lib').suppress() + quoted_string('lib_name') \
-           + Optional(CaselessKeyword('Alias') + quoted_string('alias_name'))
-
-# TODO: identifier or lex_identifier
-external_function = public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe'))
-                                              + CaselessKeyword('Function')) + lex_identifier(
-    'function_name') + lib_info \
-                    + Optional(params_list_paren) + Optional(function_type)
-external_function.setParseAction(External_Function)
-
-

@@ -312,7 +312,11 @@ class Trim(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
-        r = params[0].strip()
+        r = None
+        if (isinstance(params[0], int)):
+            r = str(params[0])
+        else:
+            r = params[0].strip()
         log.debug("Trim: return %r" % r)
         return r
 
@@ -849,7 +853,7 @@ class Pmt(object):
 
         # Pull out the arguments.
         rate = float(params[0])
-        nper = int(params[1])
+        nper = int(params[1]) + 0.0
         pv = float(params[2])
         fv = 0
         if (len(params) >= 4):
@@ -859,8 +863,11 @@ class Pmt(object):
             typ = float(params[4])
 
         # Compute the payments.
-        r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
-        
+        if (((1 + rate * typ) * (pow(1 + rate, nper) - 1)) != 0):
+            r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
+        else:
+            r = 0
+            
         log.debug("Pmt: %r returns %r" % (self, r))
         return r
 
