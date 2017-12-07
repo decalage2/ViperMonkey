@@ -79,6 +79,7 @@ __version__ = '0.04'
 
 #--- IMPORTS ------------------------------------------------------------------
 
+import multiprocessing
 import optparse
 import sys
 import os
@@ -99,9 +100,89 @@ if not _thismodule_dir in sys.path:
 # relative import of core ViperMonkey modules:
 from core import *
 
-
-
 # === MAIN (for tests) ===============================================================================================
+
+def parse_stream(subfilename, stream_path=None, vba_filename=None, vba_code=None):
+
+    # Are the arguments all in a single tuple?
+    if (stream_path is None):
+        subfilename, stream_path, vba_filename, vba_code = subfilename
+        
+    # Filter cruft from the VBA.
+    vba_code_filtered = filter_vba(vba_code)
+    print '-'*79
+    print 'VBA MACRO %s ' % vba_filename
+    print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
+    print '- '*39
+
+    # Parse the macro.
+    m = None
+    if vba_code_filtered.strip() == '':
+        print '(empty macro)'
+    else:
+        vba_code = vba_collapse_long_lines(vba_code)
+        print '-'*79
+        print 'VBA CODE (with long lines collapsed):'
+        print vba_code
+        print '-'*79
+        print 'PARSING VBA CODE:'
+        try:
+            m = module.parseString(vba_code, parseAll=True)[0]
+            m.code = vba_code
+        except ParseException as err:
+            print err.line
+            print " "*(err.column-1) + "^"
+            print err
+
+    # Return the parsed macro.
+    return m
+
+def parse_streams_serial(vba):
+    """
+    Parse all the VBA streams and return list of parsed module objects (serial version).
+    """
+    r = []
+    for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        m = parse_stream(subfilename, stream_path, vba_filename, vba_code)
+        r.append(m)
+    return r
+
+def parse_streams_parallel(vba):
+    """
+    Parse all the VBA streams and return list of parsed module objects (parallel version).
+    """
+
+    # Use all the cores.
+    num_cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(num_cores)
+
+    # Construct the argument list.
+    args = []
+    for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        args.append((subfilename, stream_path, vba_filename, vba_code))
+
+    # Kick off the parallel jobs, collecting the results.
+    r = pool.map(parse_stream, args)
+
+    # Shut down the processes.
+    pool.close()
+    pool.terminate()
+    
+    # Done.
+    return r
+
+# Whether to parse each macro stream in a seperate process.
+parallel = True
+
+def parse_streams(vba):
+    """
+    Parse all the VBA streams, in parallel if the global parallel variable is 
+    true.
+    """
+    if parallel:
+        return parse_streams_parallel(vba)
+    else:
+        return parse_streams_serial(vba)
 
 def process_file (container, filename, data, altparser=False):
     """
@@ -132,37 +213,11 @@ def process_file (container, filename, data, altparser=False):
                 vba_library.meta = ole.get_metadata()
             except:
                 vba_library.meta = {}
-                
-            #print 'Contains VBA Macros:'
-            for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
-                # hide attribute lines:
-                #TODO: option to disable attribute filtering
-                vba_code_filtered = filter_vba(vba_code)
-                print '-'*79
-                print 'VBA MACRO %s ' % vba_filename
-                print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-                print '- '*39
-                # detect empty macros:
-                if vba_code_filtered.strip() == '':
-                    print '(empty macro)'
-                else:
-                    # TODO: option to display code
-                    vba_code = vba_collapse_long_lines(vba_code)
-                    print '-'*79
-                    print 'VBA CODE (with long lines collapsed):'
-                    print vba_code
-                    print '-'*79
-                    print 'PARSING VBA CODE:'
-                    try:
-                        if altparser:
-                            vm.add_module2(vba_code)
-                        else:
-                            vm.add_module(vba_code)
-                    except ParseException as err:
-                        print err.line
-                        print " "*(err.column-1) + "^"
-                        print err
 
+            # Parse the VBA streams.
+            comp_modules = parse_streams(vba)
+            for m in comp_modules:
+                vm.add_compiled_module(m)
 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
@@ -170,7 +225,6 @@ def process_file (container, filename, data, altparser=False):
             # print table of all recorded actions
             print('Recorded Actions:')
             print(vm.dump_actions())
-
 
         else:
             print 'No VBA macros found.'
