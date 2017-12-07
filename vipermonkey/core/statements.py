@@ -248,10 +248,8 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # typed_name_param_dcl = TYPED_NAME [array_designator]
 
-
-
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + lex_identifier('name') \
-            + Optional(CaselessKeyword('as').suppress() + Word(alphas).setResultsName('type'))
+            + Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -888,10 +886,20 @@ simple_if_statement.setParseAction(If_Statement)
 # --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
 
 class If_Statement_Macro(If_Statement):
+
     def __init__(self, original_str, location, tokens):
         super(If_Statement_Macro, self).__init__(original_str, location, tokens)
         pass
-    # TODO: Need to figure out how to eval this.
+
+    def eval(self, context, params=None):
+
+        # TODO: Properly evaluating this will involve supporting compile time variables
+        # that can be set via options when running ViperMonkey. For now just run the then
+        # block.
+        log.debug("eval: " + str(self))
+        then_part = self.pieces[0]
+        for stmt in then_part["body"]:
+            stmt.eval(context)
 
 # Grammar element for #IF statements.
 simple_if_statement_macro = Group( CaselessKeyword("#If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \

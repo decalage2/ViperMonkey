@@ -139,28 +139,38 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+    def add_compiled_module(self, m):
+        """
+        Add an already parsed and processed module.
+        """
+        if (m is None):
+            return
+        self.modules.append(m)
+        for name, _sub in m.subs.items():
+            log.debug('storing sub "%s" in globals' % name)
+            self.globals[name.lower()] = _sub
+        for name, _function in m.functions.items():
+            log.debug('storing function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+        for name, _function in m.external_functions.items():
+            log.debug('storing external function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+        for name, _var in m.global_vars.items():
+            log.debug('storing global var "%s" in globals' % name)
+            self.globals[name.lower()] = _var
+        
     def add_module(self, vba_code):
+
         # collapse long lines ending with " _"
         vba_code = vba_collapse_long_lines(vba_code)
-        # log.debug('Parsing VBA Module:\n' + vba_code)
+
+        # Parse the VBA.
         try:
             m = module.parseString(vba_code, parseAll=True)[0]
             # store the code in the module object:
             m.code = vba_code
-            self.modules.append(m)
-            # TODO: add all subs/functions and global variables to self.globals
-            for name, _sub in m.subs.items():
-                log.debug('storing sub "%s" in globals' % name)
-                self.globals[name.lower()] = _sub
-            for name, _function in m.functions.items():
-                log.debug('storing function "%s" in globals' % name)
-                self.globals[name.lower()] = _function
-            for name, _function in m.external_functions.items():
-                log.debug('storing external function "%s" in globals' % name)
-                self.globals[name.lower()] = _function
-            for name, _var in m.global_vars.items():
-                log.debug('storing global var "%s" in globals' % name)
-                self.globals[name.lower()] = _var
+            self.add_compiled_module(m)
+
         except ParseException as err:
             print('*** PARSING ERROR (1) ***')
             print(err.line)
