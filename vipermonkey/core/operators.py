@@ -59,6 +59,16 @@ from vba_object import *
 from logger import log
 log.debug('importing operators')
 
+def debug_repr(op, args):
+    r = "("
+    first = True
+    for arg in args:
+        if (not first):
+            r += " " + op + " "
+        first = False
+        r += str(arg)
+    r += ")"
+    return r
 
 # --- SUM: + OPERATOR --------------------------------------------------------
 
@@ -94,6 +104,7 @@ class Sum(VBA_Object):
             sys.exit(1)
 
     def __repr__(self):
+        return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
 
 # --- XOR --------------------------------------------------------
@@ -126,6 +137,7 @@ class Xor(VBA_Object):
             sys.exit(1)
 
     def __repr__(self):
+        return debug_repr("^", self.arg)
         return ' ^ '.join(map(repr, self.arg))
 
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
@@ -150,12 +162,13 @@ class Subtraction(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to subtract arguments of different types')
+            except Exception as e:
+                log.error('Impossible to subtract arguments of different types. ' + str(e))
                 # TODO
                 return 0
 
     def __repr__(self):
+        return debug_repr("-", self.arg)
         return ' - '.join(map(repr, self.arg))
 
 
@@ -181,11 +194,12 @@ class Multiplication(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) * int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to multiply arguments of different types')
+            except Exception as e:
+                log.error('Impossible to multiply arguments of different types. ' + str(e))
                 return 0
 
     def __repr__(self):
+        return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
 
 
@@ -211,12 +225,13 @@ class Division(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) / int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to divide arguments of different types')
+            except Exception as e:
+                log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
 
     def __repr__(self):
+        return debug_repr("/", self.arg)
         return ' / '.join(map(repr, self.arg))
 
 
@@ -242,12 +257,13 @@ class FloorDivision(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) // int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to divide arguments of different types')
+            except Exception as e:
+                log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
 
     def __repr__(self):
+        return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
 
 
@@ -274,12 +290,13 @@ class Concatenation(VBA_Object):
             eval_params = coerce_args_to_str(eval_params)
             log.debug('Concatenation after eval: %r' % eval_params)
             return ''.join(eval_params)
-        except TypeError:
-            log.exception('Impossible to concatenate non-string arguments')
+        except TypeError as e:
+            log.exception('Impossible to concatenate non-string arguments. ' + str(e))
             # TODO
             return ''
 
     def __repr__(self):
+        return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
 
@@ -302,6 +319,7 @@ class Mod(VBA_Object):
         return reduce(lambda x, y: x % y, eval_args(self.arg, context))
 
     def __repr__(self):
+        return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
 
 

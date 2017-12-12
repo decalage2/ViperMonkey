@@ -957,7 +957,7 @@ class Call_Statement(VBA_Object):
 
                 # If something like Application.Run("foo", 12) is called, foo(12) will be run.
                 # Try to handle that.
-                if (func_name == "Application.Run"):
+                if ((func_name == "Application.Run") or (func_name == "Run")):
 
                     # Pull the name of what is being run from the 1st arg.
                     new_func = call_params[0]

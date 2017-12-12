@@ -873,7 +873,7 @@ class Pmt(object):
 
 class Day(object):
     """
-    Day() function. This is currently stubbed out.
+    Day() function. This is currently partially implemented.
     """
 
     def eval(self, context, params=None):
@@ -883,15 +883,36 @@ class Day(object):
         if (txt is None):
             txt = ''
         r = str(txt)
+
+        # It looks like this should pull the day out of a date string. See if we can
+        # handle a simple date string.
+        f = r.split("/")
+        if (len(f) == 3):
+            try:
+                r = int(f[1])
+            except:
+                pass
+
         log.debug("Day: %r returns %r" % (self, r))
         return r
 
+class UCase(object):
+    """
+    UCase() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        r = str(params[0]).upper()
+        log.debug("UCase: %r returns %r" % (self, r))
+        return r
     
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
-               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round):
+               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
+               UCase):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

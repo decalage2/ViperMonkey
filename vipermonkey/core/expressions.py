@@ -175,7 +175,14 @@ class MemberAccessExpression(VBA_Object):
         # just treat this as a variable access.
         tmp_lhs = eval_arg(self.lhs, context)
         tmp_rhs = eval_arg(self.rhs, context)
-        return eval_arg(str(tmp_lhs) + "." + str(tmp_rhs), context)
+
+        # If the final element in the member expression is a function call,
+        # the result should be the result of the function call. Otherwise treat
+        # it as a fancy variable access.
+        if (isinstance(self.rhs, Function_Call)):
+            return tmp_rhs
+        else:
+            return eval_arg(str(tmp_lhs) + "." + str(tmp_rhs), context)
 
 log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
@@ -372,10 +379,29 @@ class Function_Call(VBA_Object):
             else:
                 log.error('Function %r resolves to None' % self.name)
                 return None
+
         except KeyError:
+
+            # If something like Application.Run("foo", 12) is called, foo(12) will be run.
+            # Try to handle that.
+            func_name = str(self.name)
+            if ((func_name == "Application.Run") or (func_name == "Run")):
+
+                # Pull the name of what is being run from the 1st arg.
+                new_func = params[0]
+
+                # The remaining params are passed as arguments to the other function.
+                new_params = params[1:]
+
+                # See if we can run the other function.
+                log.debug("Try indirect run of function '" + new_func + "'")
+                try:
+                    s = context.get(new_func)
+                    return s.eval(context=context, params=new_params)
+                except KeyError:
+                    pass
             log.error('Function %r not found' % self.name)
             return None
-
 
 # generic function call, avoiding known function names:
 
@@ -415,19 +441,19 @@ expr_item = ( float_literal | l_expression | chr_ | function_call | simple_name_
 # operator (if present) is right-associative. Any assignment operators are
 # also typically right-associative."
 
-expression <<= infixNotation(expr_item,
-                             [
-                                 # ("^", 2, opAssoc.RIGHT), # Exponentiation
-                                 # ("-", 1, opAssoc.LEFT), # Unary negation
-                                 ("*", 2, opAssoc.LEFT, Multiplication),
-                                 ("/", 2, opAssoc.LEFT, Division),
-                                 ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                 (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
-                                 ("+", 2, opAssoc.LEFT, Sum),
-                                 ("-", 2, opAssoc.LEFT, Subtraction),
-                                 ("&", 2, opAssoc.LEFT, Concatenation),
-                                 (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
-                             ])
+expression <<= operatorPrecedence(expr_item,
+                                  [
+                                      # ("^", 2, opAssoc.RIGHT), # Exponentiation
+                                      # ("-", 1, opAssoc.LEFT), # Unary negation
+                                      ("*", 2, opAssoc.LEFT, Multiplication),
+                                      ("/", 2, opAssoc.LEFT, Division),
+                                      ("\\", 2, opAssoc.LEFT, FloorDivision),
+                                      (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                      ("-", 2, opAssoc.LEFT, Subtraction),
+                                      ("+", 2, opAssoc.LEFT, Sum),
+                                      ("&", 2, opAssoc.LEFT, Concatenation),
+                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
+                                  ])
 expression.setParseAction(lambda t: t[0])
 
 # TODO: constant expressions (used in some statements)

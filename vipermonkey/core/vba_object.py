@@ -109,27 +109,42 @@ def eval_arg(arg, context):
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
 
-        # This is a hack to get values saved in the .text field of objects.
-        # To do this properly we need to save "FOO.text" as a variable and
-        # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
-        if (isinstance(arg, str) and (".nodetypedvalue" in arg.lower())):
-            try:
-                tmp = arg.lower().replace(".nodetypedvalue", ".text")
-                log.debug("eval_arg: Try to get as " + tmp + "...")
-                val = context.get(tmp)
-
-                # It looks like maybe this magically does base64 decode? Try that.
+        # Might this be a special type of variable lookup?
+        if (isinstance(arg, str)):
+            
+            # This is a hack to get values saved in the .text field of objects.
+            # To do this properly we need to save "FOO.text" as a variable and
+            # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
+            if (".nodetypedvalue" in arg.lower()):
                 try:
-                    log.debug("eval_arg: Try base64 decode of '" + val + "'...")
-                    val_decode = base64.b64decode(str(val)).replace(chr(0), "")
-                    log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
-                    return val_decode
-                except Exception as e:
-                    log.debug("eval_arg: Base64 decode fail. " + str(e))
+                    tmp = arg.lower().replace(".nodetypedvalue", ".text")
+                    log.debug("eval_arg: Try to get as " + tmp + "...")
+                    val = context.get(tmp)
+    
+                    # It looks like maybe this magically does base64 decode? Try that.
+                    try:
+                        log.debug("eval_arg: Try base64 decode of '" + val + "'...")
+                        val_decode = base64.b64decode(str(val)).replace(chr(0), "")
+                        log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                        return val_decode
+                    except Exception as e:
+                        log.debug("eval_arg: Base64 decode fail. " + str(e))
+                        return val
+                except KeyError:
+                    log.debug("eval_arg: Not found as .text.")
+                    pass
+
+            # This is a hack to get values saved in the .rapt.Value field of objects.
+            elif (".selecteditem" in arg.lower()):
+                try:
+                    tmp = arg.lower().replace(".selecteditem", ".rapt.value")
+                    log.debug("eval_arg: Try to get as " + tmp + "...")
+                    val = context.get(tmp)
                     return val
-            except KeyError:
-                log.debug("eval_arg: Not found as .text.")
-                pass
+
+                except KeyError:
+                    log.debug("eval_arg: Not found as .rapt.value.")
+                    pass
 
         # The .text hack did not work.
         return arg
