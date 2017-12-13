@@ -141,6 +141,8 @@ TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
                                            Optional(Optional(entity_name) + Literal('.')) +
                                            Optional(entity_name + Literal('.')) +
                                            entity_name +
+                                           # Looks like variables can end in $
+                                           Optional(CaselessLiteral('$')) +
                                            # Looks like variables can end in '()'.
                                            Suppress(Optional(CaselessLiteral('()'))))
 

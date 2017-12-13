@@ -248,7 +248,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # typed_name_param_dcl = TYPED_NAME [array_designator]
 
-parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + lex_identifier('name') \
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') \
             + Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
@@ -475,8 +475,9 @@ class Let_Statement(VBA_Object):
 
 # previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
-                Optional(Suppress('Const')) + TODO_identifier_or_object_attrib('name') + \
-                Optional(Suppress('(') + expression('index') + Suppress(')')) + \
+                Optional(Suppress('Const')) + \
+                ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + expression('index') + Suppress(')'))) ^ \
+                 member_access_expression('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
 
@@ -1085,6 +1086,7 @@ class Exit_Function_Statement(VBA_Object):
 
 # Return from a function.
 exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()) | \
+                      (CaselessKeyword('Exit').suppress() + CaselessKeyword('Sub').suppress()) | \
                       (CaselessKeyword('Return').suppress())
 exit_func_statement.setParseAction(Exit_Function_Statement)
 

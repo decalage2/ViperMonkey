@@ -53,6 +53,7 @@ __version__ = '0.02'
 
 from vba_context import *
 from statements import *
+from identifiers import *
 
 from logger import log
 log.debug('importing procedures')
@@ -233,7 +234,7 @@ class Function(VBA_Object):
 
 
 # TODO 5.3.1.4 Function Type Declarations
-function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
+function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
