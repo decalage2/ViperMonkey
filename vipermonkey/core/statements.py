@@ -753,7 +753,11 @@ class Case_Clause(VBA_Object):
         self.case_val = tokens.case_val
         self.test_range = ((tokens.lbound != "") and (tokens.lbound != ""))
         self.test_set = (not self.test_range) and (len(self.case_val) > 1)
-        self.is_else = ("Else" in self.case_val)
+        self.is_else = False
+        for v in self.case_val:
+            if (str(v).lower() == "else"):
+                self.is_else = True
+                break
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -815,7 +819,7 @@ class Case_Clause(VBA_Object):
             return (test_val in expected_vals)
 
         # We just have a regular test.
-        expected_val = eval_arg(self.case_val[0])
+        expected_val = eval_arg(self.case_val[0], context)
         return (test_val == expected_val)
 
 class Select_Case(VBA_Object):
