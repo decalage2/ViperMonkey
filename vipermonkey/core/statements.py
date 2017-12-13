@@ -1084,7 +1084,8 @@ class Exit_Function_Statement(VBA_Object):
         context.exit_func = True
 
 # Return from a function.
-exit_func_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()
+exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()) | \
+                      (CaselessKeyword('Return').suppress())
 exit_func_statement.setParseAction(Exit_Function_Statement)
 
 # --- STATEMENTS -------------------------------------------------------------
