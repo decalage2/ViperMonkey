@@ -713,17 +713,17 @@ class Select_Statement(VBA_Object):
 
         # Get the current value of the guard expression for the select.
         log.debug("eval select: " + str(self))
-        select_guard_val = self.select_val.select_val.eval(context, params)
+        select_guard_val = self.select_val.eval(context, params)
 
         # Loop through each case, seeing which one applies.
         for case in self.cases:
 
-            # Get the guard value for this case.
-            case_guard_val = case.case_val.case_val.eval(context, params)
+            # Get the case guard statement.
+            case_guard = case.case_val
 
             # Is this the case we should take?
-            log.debug("eval select: checking '" + str(select_guard_val) + " == " + str(case_guard_val) + "'")
-            if (select_guard_val == case_guard_val):
+            log.debug("eval select: checking '" + str(select_guard_val) + " == " + str(case_guard) + "'")
+            if (case_guard.eval(context, [select_guard_val])):
 
                 # Evaluate the body of this case.
                 log.debug("eval select: take case " + str(case))
@@ -736,7 +736,7 @@ class Select_Statement(VBA_Object):
 class Select_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
-        self.select_val = tokens.select_val
+        self.select_val = tokens.select_val[0]
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -745,21 +745,78 @@ class Select_Clause(VBA_Object):
         return r
 
     def eval(self, context, params=None):
-        pass
+        return self.select_val.eval(context, params)
 
 class Case_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Case_Clause, self).__init__(original_str, location, tokens)
         self.case_val = tokens.case_val
+        self.test_range = ((tokens.lbound != "") and (tokens.lbound != ""))
+        self.test_set = (not self.test_range) and (len(self.case_val) > 1)
+        self.is_else = ("Else" in self.case_val)
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        r = ""
-        r += "Case " + str(self.case_val) + "\\n " 
+        r = "Case "
+        if (self.test_range):
+            r += str(self.case_val[0]) + " To " + str(self.case_val[1])
+        elif (self.test_set):
+            first = True
+            for val in self.case_val:
+                if (not first):
+                    r += ", "
+                first = False
+                r += str(val)
+        else:            
+            r += str(self.case_val[0])
+        r += "\\n"
         return r
 
     def eval(self, context, params=None):
-        pass
+        """
+        Evaluate the guard of this case against the given value.
+        """
+
+        # Get the value against which to test the guard. This must already be
+        # evaluated.
+        test_val = params[0]
+
+        # Is this the default case?
+        if (self.is_else):
+            return True
+        
+        # Are we testing to see if this is in a range of values?
+        if (self.test_range):
+
+            # Eval the start and end of the range.
+            start = None
+            end = None
+            try:
+                start = int(eval_arg(self.case_val[0], context))
+                end = int(eval_arg(self.case_val[1], context)) + 1
+            except:
+                return False                
+
+            # Is the test val in the range?
+            return (test_val in range(start, end))
+
+        # Are we testing to see if this is in a set of values?
+        if (self.test_set):
+
+            # Construct the set of values against which to test.
+            expected_vals = set()
+            for val in self.case_val:
+                try:
+                    expected_vals.add(eval_arg(val, context))
+                except:
+                    return False
+
+            # Is the test val in the set?
+            return (test_val in expected_vals)
+
+        # We just have a regular test.
+        expected_val = eval_arg(self.case_val[0])
+        return (test_val == expected_val)
 
 class Select_Case(VBA_Object):
     def __init__(self, original_str, location, tokens):
@@ -780,7 +837,11 @@ select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").s
                 + expression("select_val")
 select_clause.setParseAction(Select_Clause)
 
-case_clause = CaselessKeyword("Case").suppress() + expression("case_val")
+case_clause = CaselessKeyword("Case").suppress() + \
+              ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
+               (CaselessKeyword("Else")) | \
+               (expression("case_val") + ZeroOrMore(Suppress(",") + expression)))
+                             
 case_clause.setParseAction(Case_Clause)
 
 select_case = case_clause("case_val") + Suppress(EOS) + Group(statement_block('statements'))("body")
