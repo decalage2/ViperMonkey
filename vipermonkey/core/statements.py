@@ -616,81 +616,65 @@ for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppre
 
 class While_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
-        super(For_Statement, self).__init__(original_str, location, tokens)
-        self.name = tokens.name
-        self.start_value = tokens.start_value
-        self.end_value = tokens.end_value
-        self.step_value = tokens.get('step_value', 1)
-        if self.step_value != 1:
-            self.step_value = self.step_value[0]
-        self.statements = tokens.statements
+        super(While_Statement, self).__init__(original_str, location, tokens)
+        self.loop_type = tokens.clause.type
+        self.guard = tokens.clause.guard
+        self.body = tokens[2]
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        return 'For %s = %r to %r step %r' % (self.name,
-                                              self.start_value, self.end_value, self.step_value)
+        r = "Do " + str(self.loop_type) + " " + str(self.guard) + "\\n"
+        r += str(self.body) + "\\nLoop"
+        return r
 
     def eval(self, context, params=None):
-        # evaluate values:
-        log.debug('FOR loop: evaluating start, end, step')
-        start = eval_arg(self.start_value, context=context)
-        log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
-        end = eval_arg(self.end_value, context=context)
-        log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
-        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
-            end = VBA_Object.loop_upper_bound
-            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
-        if self.step_value != 1:
-            step = eval_arg(self.step_value, context=context)
-            log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
-        else:
-            step = 1
 
+        log.debug('DO loop: start: ' + str(self))
+        
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
-        # Set the loop index variable to the start value.
-        context.set(self.name, start)
+        # Loop until the loop is broken out of or we violate the loop guard.
+        while (True):
 
-        # Loop until the loop is broken out of or we hit the last index.
-        while (context.get(self.name) <= end):
-
+            # Test the loop guard to see if we should exit the loop.
+            guard_val = eval_arg(self.guard, context)
+            if (self.loop_type.lower() == "until"):
+                guard_val = (not guard_val)
+            if (not guard_val):
+                break
+            
             # Execute the loop body.
-            log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
             done = False
-            for s in self.statements:
-                log.debug('FOR loop eval statement: %r' % s)
+            for s in self.body:
+                log.debug('DO loop eval statement: %r' % s)
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
                 if (not context.loop_stack[-1]):
 
                     # Yes we have. Stop this loop.
-                    log.debug("FOR loop: exited loop with 'Exit For'")
+                    log.debug("Do loop: exited loop with 'Exit For'")
                     done = True
                     break
 
             # Finished with the loop due to 'Exit For'?
             if (done):
                 break
-
-            # Increment the loop counter by the step.
-            val = context.get(self.name)
-            context.set(self.name, val + step)
         
         # Remove tracking of this loop.
         context.loop_stack.pop()
-        log.debug('FOR loop: end.')
+        log.debug('DO loop: end.')
 
 while_type = CaselessKeyword("While") | CaselessKeyword("Until")
         
 while_clause = CaselessKeyword("Do").suppress() + while_type("type") \
                + boolean_expression("guard")
 
-simple_while_statement = while_clause + Suppress(EOS) + Group(statement_block('statements')) \
+simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
                        + CaselessKeyword("Loop").suppress()
 
-#simple_for_statement.setParseAction(While_Statement)
+simple_while_statement.setParseAction(While_Statement)
 
 # --- SELECT statement -----------------------------------------------------------
 
