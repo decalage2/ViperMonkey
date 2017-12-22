@@ -127,6 +127,11 @@ def parse_stream(subfilename, stream_path=None, vba_filename=None, vba_code=None
         print '-'*79
         print 'PARSING VBA CODE:'
         try:
+
+            # Enable PackRat for better performance:
+            # (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
+            ParserElement.enablePackrat()
+            
             m = module.parseString(vba_code, parseAll=True)[0]
             m.code = vba_code
         except ParseException as err:

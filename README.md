@@ -1,13 +1,11 @@
 ViperMonkey
 ===========
 
-This is a fork of Philippe Lagadec's (http://www.decalage.info) ViperMonkey.
-
 ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
-See Philippe's article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
 
 **DISCLAIMER**:
@@ -33,6 +31,15 @@ miracles. Any help from you will be very appreciated!
 News
 ----
 
+- 2017-12-15:
+  - Added support for Select and Do loops.
+  - Added support for 'End Sub' and 0 argument return statements.
+  - Added support for #if constructs.
+  - Each VBA stream is now parsed in a separate thread (up to the # of machine cores).
+- 2017-11-28:
+  - Added parsing for private type declarations.
+  - Report calls to CreateProcessA in final report.
+  - Handle Application.Run() of locally defined methods.
 - 2017-11-23:
   - Added VBA functions Abs, Fix, Hex, String, CByte, Atn, Dir, RGB, Log, Cos, Exp, Sin, Str, and Val.
   - Added support for 'Exit Function' operator.
@@ -61,7 +68,7 @@ Download and Install:
 
 For now, there is no package on PyPI for automated installation. It must be done manually:
 
-- Download the archive from the repository: https://github.com/kirk-sayre-work/ViperMonkey/archive/master.zip
+- Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
 - Extract it in the folder of your choice
 - Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
 or `pip install -U -r requirements.txt` on Windows
@@ -81,6 +88,28 @@ If the output is too verbose and too slow, you may reduce the logging level usin
 ```text
 python vmonkey.py -l warning <file>
 ```
+
+
+Documentation:
+--------------
+
+Winter is coming.
+
+
+How to Suggest Improvements, Report Issues or Contribute:
+---------------------------------------------------------
+
+This is a personal open-source project, developed on my spare time. Any contribution, suggestion, feedback or bug
+report is welcome.
+
+To suggest improvements, report a bug or any issue, please use the
+[issue reporting page](https://github.com/decalage2/ViperMonkey/issues), providing all the
+information and files to reproduce the problem.
+
+You may also [contact the author](http://decalage.info/contact) directly to provide feedback.
+
+The code is available in [a GitHub repository](https://github.com/decalage2/ViperMonkey). You may use it
+to submit enhancements using forks and pull requests.
 
 License
 -------
@@ -111,4 +140,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
