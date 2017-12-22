@@ -906,13 +906,22 @@ class UCase(object):
         r = str(params[0]).upper()
         log.debug("UCase: %r returns %r" % (self, r))
         return r
+
+class Randomize(object):
+    """
+    Randomize RNG function.
+    """
+
+    def eval(self, context, params=None):
+        log.debug("Randomize: Stubbed out as NOP")
+        return r
     
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase):
+               UCase, Randomize):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

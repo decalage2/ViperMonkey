@@ -406,7 +406,9 @@ class Function_Call(VBA_Object):
 # generic function call, avoiding known function names:
 
 # comma-separated list of parameters, each of them can be an expression:
-expr_list = delimitedList(expression)
+boolean_expression = Forward()
+expr_list_item = boolean_expression ^ expression
+expr_list = delimitedList(expr_list_item)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
@@ -441,7 +443,7 @@ expr_item = ( float_literal | l_expression | chr_ | function_call | simple_name_
 # operator (if present) is right-associative. Any assignment operators are
 # also typically right-associative."
 
-expression <<= operatorPrecedence(expr_item,
+expression <<= (operatorPrecedence(expr_item,
                                   [
                                       # ("^", 2, opAssoc.RIGHT), # Exponentiation
                                       # ("-", 1, opAssoc.LEFT), # Unary negation
@@ -453,7 +455,7 @@ expression <<= operatorPrecedence(expr_item,
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
                                       (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
-                                  ])
+                                  ]))
 expression.setParseAction(lambda t: t[0])
 
 # TODO: constant expressions (used in some statements)
@@ -625,13 +627,13 @@ class BoolExpr(VBA_Object):
             log.error("BoolExpr: Unknown operator %r" % self.op)
             return False
     
-boolean_expression = infixNotation(bool_expr_item,
-                                   [
-                                       ("And", 2, opAssoc.LEFT),
-                                       ("AndAlso", 2, opAssoc.LEFT),
-                                       ("Or", 2, opAssoc.LEFT),
-                                       ("OrElse", 2, opAssoc.LEFT)
-                                   ])
+boolean_expression <<= infixNotation(bool_expr_item,
+                                     [
+                                         ("And", 2, opAssoc.LEFT),
+                                         ("AndAlso", 2, opAssoc.LEFT),
+                                         ("Or", 2, opAssoc.LEFT),
+                                         ("OrElse", 2, opAssoc.LEFT)
+                                     ])
 boolean_expression.setParseAction(BoolExpr)
 
 # --- NEW EXPRESSION --------------------------------------------------------------

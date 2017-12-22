@@ -1074,16 +1074,97 @@ exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Fun
                       (CaselessKeyword('Return').suppress())
 exit_func_statement.setParseAction(Exit_Function_Statement)
 
+# --- REDIM statement ----------------------------------------------------------
+
+class Redim_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Redim_Statement, self).__init__(original_str, location, tokens)
+        self.item = tokens.item
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'ReDim ' + str(self.item)
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+# Array redim statement
+redim_statement = CaselessKeyword('ReDim').suppress() + expression('item')
+redim_statement.setParseAction(Redim_Statement)
+
+# --- WITH statement ----------------------------------------------------------
+
+class With_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(With_Statement, self).__init__(original_str, location, tokens)
+        self.body = tokens.body
+        self.env = tokens.env
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'With ' + str(self.env) + "\\n" + str(self.body) + " End With"
+
+    def eval(self, context, params=None):
+        # TODO: Currently stubbed out. Need to track the containing environment object name(s) in a stack
+        # and append them to the names of variables like ".foo" when referencing variables in the With.
+        return
+
+# With statement
+with_statement = CaselessKeyword('With').suppress() + lex_identifier('env') + Suppress(EOS) + \
+                 Group(statement_block('body')) + \
+                 CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
+with_statement.setParseAction(With_Statement)
+
+# --- GOTO statement ----------------------------------------------------------
+
+class Goto_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Goto_Statement, self).__init__(original_str, location, tokens)
+        self.label = tokens.label
+        log.debug('parsed %r as Goto_Statement' % self)
+
+    def __repr__(self):
+        return 'Goto ' + str(self.label)
+
+    def eval(self, context, params=None):
+        # TODO: Currently stubbed out. Need to tie this label to the following statements somehow.
+        return
+
+# Goto statement
+goto_statement = CaselessKeyword('Goto').suppress() + lex_identifier('label')
+goto_statement.setParseAction(Goto_Statement)
+
+# --- GOTO LABEL statement ----------------------------------------------------------
+
+class Label_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Label_Statement, self).__init__(original_str, location, tokens)
+        self.label = tokens.label
+        log.debug('parsed %r as Label_Statement' % self)
+
+    def __repr__(self):
+        return str(self.label) + ':'
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+# Goto label statement
+label_statement = lex_identifier('label') + Suppress(':')
+label_statement.setParseAction(Label_Statement)
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement) | exit_for_statement | exit_func_statement# | unknown_statement
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_for_statement | \
+                   exit_func_statement | redim_statement | goto_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
 statement <<= type_declaration | simple_for_statement | simple_if_statement | \
-              simple_if_statement_macro | simple_while_statement | simple_select_statement | simple_statement
+              simple_if_statement_macro | simple_while_statement | simple_select_statement | with_statement| simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
