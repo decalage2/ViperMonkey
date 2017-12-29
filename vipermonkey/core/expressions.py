@@ -407,7 +407,7 @@ class Function_Call(VBA_Object):
 
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
-expr_list_item = boolean_expression ^ expression
+expr_list_item = expression ^ boolean_expression
 expr_list = delimitedList(expr_list_item)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
@@ -629,10 +629,10 @@ class BoolExpr(VBA_Object):
     
 boolean_expression <<= infixNotation(bool_expr_item,
                                      [
-                                         ("And", 2, opAssoc.LEFT),
-                                         ("AndAlso", 2, opAssoc.LEFT),
-                                         ("Or", 2, opAssoc.LEFT),
-                                         ("OrElse", 2, opAssoc.LEFT)
+                                         (CaselessKeyword("And"), 2, opAssoc.LEFT),
+                                         (CaselessKeyword("AndAlso"), 2, opAssoc.LEFT),
+                                         (CaselessKeyword("Or"), 2, opAssoc.LEFT),
+                                         (CaselessKeyword("OrElse"), 2, opAssoc.LEFT)
                                      ])
 boolean_expression.setParseAction(BoolExpr)
 
