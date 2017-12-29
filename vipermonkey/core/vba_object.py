@@ -146,6 +146,18 @@ def eval_arg(arg, context):
                     log.debug("eval_arg: Not found as .rapt.value.")
                     pass
 
+            # Is this trying to access some VBA form variable?
+            elif ("." in arg.lower()):
+                try:
+                    tmp = arg.lower()
+                    log.debug("eval_arg: Try to load as variable " + tmp + "...")
+                    val = context.get(tmp)
+                    return val
+
+                except KeyError:
+                    log.debug("eval_arg: Not found as variable")
+                    pass
+
         # The .text hack did not work.
         return arg
 

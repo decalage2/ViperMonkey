@@ -91,7 +91,11 @@ class Chr(VBA_Object):
         # First, eval the argument:
         param = eval_arg(self.arg, context)
         if isinstance (param, int):
-            return chr(param)
+            try:
+                return chr(param)
+            except Exception as e:
+                log.error("%r is not a valid chr() value. Returning '??'." % param)
+                return "??"
         elif isinstance(param, basestring):
             log.debug('Chr: converting string %r to integer' % param)
             param_int = integer.parseString(param.strip())[0]
@@ -128,7 +132,9 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        return ord(eval_arg(self.arg, context)[0])
+        r = ord(eval_arg(self.arg, context)[0])
+        log.debug("Asc(%r): return %r" % (self.arg, r))
+        return r
 
     def __repr__(self):
         return 'Asc(%s)' % repr(self.arg)
