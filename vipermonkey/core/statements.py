@@ -1090,7 +1090,8 @@ class Redim_Statement(VBA_Object):
         return
 
 # Array redim statement
-redim_statement = CaselessKeyword('ReDim').suppress() + expression('item')
+redim_statement = CaselessKeyword('ReDim').suppress() + expression('item') + \
+                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress()
 redim_statement.setParseAction(Redim_Statement)
 
 # --- WITH statement ----------------------------------------------------------
@@ -1151,7 +1152,7 @@ class Label_Statement(VBA_Object):
         return
 
 # Goto label statement
-label_statement = lex_identifier('label') + Suppress(':')
+label_statement = identifier('label') + Suppress(':')
 label_statement.setParseAction(Label_Statement)
 
 # --- STATEMENTS -------------------------------------------------------------
