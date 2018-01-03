@@ -86,7 +86,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
                                   CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As') | CaselessKeyword("ByVal") | \
                                   CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
-                                  CaselessKeyword('Case')
+                                  CaselessKeyword('Case') | CaselessKeyword('On') 
 
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
@@ -1155,11 +1155,32 @@ class Label_Statement(VBA_Object):
 label_statement = identifier('label') + Suppress(':')
 label_statement.setParseAction(Label_Statement)
 
+# --- ON ERROR STATEMENT -------------------------------------------------------------
+
+class On_Error_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(On_Error_Statement, self).__init__(original_str, location, tokens)
+        self.tokens = tokens
+        log.debug('parsed %r as On_Error_Statement' % self)
+
+    def __repr__(self):
+        return str(self.tokens)
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
+                     ((CaselessKeyword('Goto') + (decimal_literal | lex_identifier)) |
+                      (CaselessKeyword('Resume') + CaselessKeyword('Next')))
+
+on_error_statement.setParseAction(On_Error_Statement)
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_for_statement | \
-                   exit_func_statement | redim_statement | goto_statement
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use

@@ -474,15 +474,14 @@ class Sgn(object):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         num = params[0]
+        r = ''
         try:
-            r = int(math.copysign(1, num))
-            log.debug("Sgn: %r returns %r" % (self, r))
-            return r
+            r = int(math.copysign(1, int(num)))
         except:
-            r = ''
-            log.error("Sgn: %r returns %r" % (self, r))
-            return r
-
+            pass
+        log.debug("Sgn: %r returns %r" % (self, r))
+        return r
+        
 class Sqr(object):
     """
     Sqr() math function.
@@ -491,11 +490,11 @@ class Sqr(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = int(params[0]) + 0.0
         r = ''
         try:
+            num = int(params[0]) + 0.0
             r = math.sqrt(num)
-        except ValueError:
+        except:
             pass
         log.debug("Sqr: %r returns %r" % (self, r))
         return r
@@ -508,8 +507,12 @@ class Abs(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = int(params[0])
-        r = abs(num)
+        r = ''
+        try:
+            num = int(params[0])
+            r = abs(num)
+        except:
+            pass
         log.debug("Abs: %r returns %r" % (self, r))
         return r
 
@@ -521,8 +524,12 @@ class Fix(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
-        r = math.floor(num)
+        r = ''
+        try:
+            num = float(params[0])
+            r = math.floor(num)
+        except:
+            pass
         log.debug("Fix: %r returns %r" % (self, r))
         return r
 
@@ -534,8 +541,12 @@ class Round(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
-        r = round(num)
+        r = ''
+        try:
+            num = float(params[0])
+            r = round(num)
+        except:
+            pass
         log.debug("Round: %r returns %r" % (self, r))
         return r
 
@@ -547,8 +558,12 @@ class Hex(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = int(params[0])
-        r = hex(num).replace("0x","").upper()
+        r = ''
+        try:
+            num = int(params[0])
+            r = hex(num).replace("0x","").upper()
+        except:
+            pass
         log.debug("Hex: %r returns %r" % (self, r))
         return r
 
@@ -560,17 +575,47 @@ class CByte(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        tmp = params[0].upper()
-        if (tmp.startswith("&H")):
-            tmp = tmp.replace("&H", "0x")
-            tmp = int(tmp, 16)
-        num = int(round(float(tmp)))
-        r = num
-        if (r > 255):
-            r = 255
+        r = ''
+        try:
+            tmp = params[0].upper()
+            if (tmp.startswith("&H")):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+            num = int(round(float(tmp)))
+            r = num
+            if (r > 255):
+                r = 255
+        except:
+            pass 
         log.debug("CByte: %r returns %r" % (self, r))
         return r
 
+class CBool(object):
+    """
+    CBool() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        val = params[0]
+        r = 0
+        if ((val == True) or (val == 1)):
+            r = 1
+        log.debug("CBool: %r returns %r" % (self, r))
+        return r
+
+class CDate(object):
+    """
+    CDate() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        # TODO: For now this is stubbed out. Handling dates correctly is hard.
+        r = 12345
+        log.debug("CDate: %r returns %r" % (self, r))
+        return r
+    
 class Atn(object):
     """
     Atn() math function.
@@ -579,16 +624,15 @@ class Atn(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
+        r = ''
         try:
+            num = float(params[0])
             r = math.atan(num)
-            log.debug("Atn: %r returns %r" % (self, r))
-            return r
         except:
-            r = ''
-            log.error("Atn: %r returns %r" % (self, r))
-            return r
-
+            pass
+        log.debug("Atn: %r returns %r" % (self, r))
+        return r
+        
 class Cos(object):
     """
     Cos() math function.
@@ -597,16 +641,15 @@ class Cos(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
+        r = ''
         try:
+            num = float(params[0])
             r = math.cos(num)
-            log.debug("Cos: %r returns %r" % (self, r))
-            return r
         except:
-            r = ''
-            log.error("Cos: %r returns %r" % (self, r))
-            return r
-            
+            pass
+        log.debug("Cos: %r returns %r" % (self, r))
+        return r
+        
 class Log(object):
     """
     Log() math function.
@@ -615,9 +658,9 @@ class Log(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
         r = ''
         try:
+            num = float(params[0])
             r = math.log(num)
         except ValueError:
             pass
@@ -632,9 +675,13 @@ class String(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 2)
-        num = int(params[0])
-        char = params[1]
-        r = char * num
+        r = ''
+        try:
+            num = int(params[0])
+            char = params[1]
+            r = char * num
+        except:
+            pass
         log.debug("String: %r returns %r" % (self, r))
         return r
 
@@ -664,11 +711,14 @@ class RGB(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 3)
-        red = int(params[0])
-        green = int(params[1])
-        blue = int(params[2])
-        r = red + (green * 256) + (blue * 65536)
-        # TODO: Figure out how to simulate actual file searches.            
+        r = ''
+        try:
+            red = int(params[0])
+            green = int(params[1])
+            blue = int(params[2])
+            r = red + (green * 256) + (blue * 65536)
+        except:
+            pass
         log.debug("RGB: %r returns %r" % (self, r))
         return r
 
@@ -680,15 +730,14 @@ class Exp(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
+        r = ''
         try:
+            num = float(params[0])
             r = math.exp(num)
-            log.debug("Exp: %r returns %r" % (self, r))
-            return r
         except:
-            r = ''
-            log.error("Exp: %r returns %r" % (self, r))
-            return r
+            pass
+        log.error("Exp: %r returns %r" % (self, r))
+        return r
             
 class Sin(object):
     """
@@ -698,15 +747,14 @@ class Sin(object):
     def eval(self, context, params=None):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
-        num = float(params[0])
+        r = ''
         try:
+            num = float(params[0])
             r = math.sin(num)
-            log.debug("Sin: %r returns %r" % (self, r))
-            return r
         except:
-            r = ''
-            log.error("Sin: %r returns %r" % (self, r))
-            return r
+            pass
+        log.error("Sin: %r returns %r" % (self, r))
+        return r
             
 class Str(object):
     """
@@ -848,26 +896,29 @@ class Pmt(object):
     '               PMT = (-fv - pv) / nper    : if rate == 0
     """
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) >= 3)
 
-        # Pull out the arguments.
-        rate = float(params[0])
-        nper = int(params[1]) + 0.0
-        pv = float(params[2])
-        fv = 0
-        if (len(params) >= 4):
-            fv = float(params[3])
-        typ = 0
-        if (len(params) >= 5):
-            typ = float(params[4])
+        r = ''
+        try:
+            # Pull out the arguments.
+            rate = float(params[0])
+            nper = int(params[1]) + 0.0
+            pv = float(params[2])
+            fv = 0
+            if (len(params) >= 4):
+                fv = float(params[3])
+            typ = 0
+            if (len(params) >= 5):
+                typ = float(params[4])
 
-        # Compute the payments.
-        if (((1 + rate * typ) * (pow(1 + rate, nper) - 1)) != 0):
-            r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
-        else:
-            r = 0
-            
+            # Compute the payments.
+            if (((1 + rate * typ) * (pow(1 + rate, nper) - 1)) != 0):
+                r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
+            else:
+                r = 0
+        except:
+            pass
+        
         log.debug("Pmt: %r returns %r" % (self, r))
         return r
 
@@ -921,7 +972,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase, Randomize):
+               UCase, Randomize, CBool, CDate):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
