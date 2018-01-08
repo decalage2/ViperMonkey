@@ -229,6 +229,9 @@ class Division(VBA_Object):
                 log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
+        except ZeroDivisionError:
+            log.error("Division by 0 error. Returning ''.")
+            return ''
 
     def __repr__(self):
         return debug_repr("/", self.arg)

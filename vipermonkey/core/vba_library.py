@@ -371,9 +371,13 @@ class Int(object):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         val = params[0]
-        r = int(val)
-        log.debug("Int: return %r" % r)
-        return r
+        try:
+            r = int(val)
+            log.debug("Int: return %r" % r)
+            return r
+        except:
+            log.error("Int(): Invalid call int(%r). Returning ''." % val)
+            return ''
 
 class CInt(Int):
     """
@@ -615,6 +619,18 @@ class CDate(object):
         r = 12345
         log.debug("CDate: %r returns %r" % (self, r))
         return r
+
+class CStr(object):
+    """
+    CStr() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        val = params[0]
+        r = str(val)
+        log.debug("CStr: %r returns %r" % (self, r))
+        return r
     
 class Atn(object):
     """
@@ -736,7 +752,7 @@ class Exp(object):
             r = math.exp(num)
         except:
             pass
-        log.error("Exp: %r returns %r" % (self, r))
+        log.debug("Exp: %r returns %r" % (self, r))
         return r
             
 class Sin(object):
@@ -972,7 +988,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase, Randomize, CBool, CDate):
+               UCase, Randomize, CBool, CDate, CStr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -94,12 +94,16 @@ class Chr(VBA_Object):
             try:
                 return chr(param)
             except Exception as e:
-                log.error("%r is not a valid chr() value. Returning '??'." % param)
-                return "??"
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ""
         elif isinstance(param, basestring):
             log.debug('Chr: converting string %r to integer' % param)
-            param_int = integer.parseString(param.strip())[0]
-            return chr(param_int)
+            try:
+                param_int = integer.parseString(param.strip())[0]
+                return chr(param_int)
+            except:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ''
         else:
             raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
 
