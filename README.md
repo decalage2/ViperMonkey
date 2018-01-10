@@ -1,22 +1,58 @@
 ViperMonkey
 ===========
 
+This is a fork of Philippe Lagadec's (http://www.decalage.info) ViperMonkey.
+
 ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
-See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+See Philippe's article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
 
 **DISCLAIMER**:
-- ViperMonkey is a *very* incomplete and experimental VBA Engine. For now it will NOT
-handle most real-life macros without errors.
-- VBA parsing and emulation is *extremely* slow for now.
+- ViperMonkey is an experimental VBA Engine targeted at analyzing maldocs It works on some but not all maldocs. 
+- VBA parsing and emulation is *extremely* slow for now (see the speedup section for how to improve the speed).
 - VBA Emulation is hard and complex, because of all the features of the VBA language, of Microsoft
 Office applications, and all the DLLs and ActiveX objects that can be called from VBA.
 - This open-source project is only developed on my scarce spare time, so do not expect
 miracles. Any help from you will be very appreciated!
 
+**oletools Version**
+
+ViperMonkey requires the most recent version of (oletools
+https://github.com/decalage2/oletools), not the version downloaded
+pip. Make sure to either install the most recent oletools version by
+running the oletools 'setup.py install' or by making sure the most
+recent oletools install directory appears in PYTHONPATH.
+
+**Speedup**
+
+***pypy***
+
+The parsing library used by default in ViperMonkey can take a long
+time to parse some samples. ViperMonkey can be sped up considerably (~5
+times faster) by running ViperMonkey using (pypy https://pypy.org/)
+rather than the regular Python interpreter. To use pypy do the
+following:
+
+1. Install pypy following the instructions (here https://pypy.org/download.html).
+2. Install the following Python packages. This can be done by
+   downloading the .tar.gz for each package and running 'sudo pypy
+   setup.py install' (note the use of pypy rather than python) for
+   each package.
+   a. (setuptools https://pypi.python.org/pypi/setuptools)
+   b. (colorlog https://pypi.python.org/pypi/colorlog)
+   c. (olefile https://pypi.python.org/pypi/olefile)
+   d. (prettytable https://pypi.python.org/pypi/PrettyTable)
+   e. (pyparsing https://pypi.python.org/pypi/pyparsing/2.2.0)
+
+***Stripping Useless Statements***
+
+The "-s" ViperMonkey command line option tells VipeMonkey to strip out
+useless statements from the Visual Basic macro code prior to parsing
+and emulation. For some maldocs this can significantly speed up
+analysis.
 
 **Quick links:**
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
@@ -61,14 +97,12 @@ News
 - 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
 - see changelog in source code for more info.
 
-
-
 Download and Install:
 ---------------------
 
 For now, there is no package on PyPI for automated installation. It must be done manually:
 
-- Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+- Download the archive from the repository: https://github.com/kirk-sayre-work/ViperMonkey/archive/master.zip
 - Extract it in the folder of your choice
 - Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
 or `pip install -U -r requirements.txt` on Windows
@@ -82,34 +116,18 @@ To parse and interpret VBA macros from a document, use the vmonkey script:
 python vmonkey.py <file>
 ```
 
+To make analysis faster (see the Speedup section), do:
+
+```text
+pypy vmonkey.py -s <file>
+```
+
 If the output is too verbose and too slow, you may reduce the logging level using the
 -l option:
 
 ```text
 python vmonkey.py -l warning <file>
 ```
-
-
-Documentation:
---------------
-
-Winter is coming.
-
-
-How to Suggest Improvements, Report Issues or Contribute:
----------------------------------------------------------
-
-This is a personal open-source project, developed on my spare time. Any contribution, suggestion, feedback or bug
-report is welcome.
-
-To suggest improvements, report a bug or any issue, please use the
-[issue reporting page](https://github.com/decalage2/ViperMonkey/issues), providing all the
-information and files to reproduce the problem.
-
-You may also [contact the author](http://decalage.info/contact) directly to provide feedback.
-
-The code is available in [a GitHub repository](https://github.com/decalage2/ViperMonkey). You may use it
-to submit enhancements using forks and pull requests.
 
 License
 -------
@@ -140,3 +158,4 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
