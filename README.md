@@ -11,7 +11,7 @@ See Philippe's article "[Using VBA Emulation to Analyze Obfuscated Macros](http:
 for real-life examples of malware deobfucation with ViperMonkey.
 
 **DISCLAIMER**:
-- ViperMonkey is an experimental VBA Engine targeted at analyzing maldocs It works on some but not all maldocs. 
+- ViperMonkey is an experimental VBA Engine targeted at analyzing maldocs. It works on some but not all maldocs. 
 - VBA parsing and emulation is *extremely* slow for now (see the speedup section for how to improve the speed).
 - VBA Emulation is hard and complex, because of all the features of the VBA language, of Microsoft
 Office applications, and all the DLLs and ActiveX objects that can be called from VBA.
@@ -20,8 +20,8 @@ miracles. Any help from you will be very appreciated!
 
 **oletools Version**
 
-ViperMonkey requires the most recent version of (oletools
-https://github.com/decalage2/oletools), not the version downloaded
+ViperMonkey requires the most recent version of [oletools]
+(https://github.com/decalage2/oletools), not the version downloaded
 pip. Make sure to either install the most recent oletools version by
 running the oletools 'setup.py install' or by making sure the most
 recent oletools install directory appears in PYTHONPATH.
@@ -32,20 +32,20 @@ recent oletools install directory appears in PYTHONPATH.
 
 The parsing library used by default in ViperMonkey can take a long
 time to parse some samples. ViperMonkey can be sped up considerably (~5
-times faster) by running ViperMonkey using (pypy https://pypy.org/)
+times faster) by running ViperMonkey using [pypy] (https://pypy.org/)
 rather than the regular Python interpreter. To use pypy do the
 following:
 
-1. Install pypy following the instructions (here https://pypy.org/download.html).
+1. Install pypy following the instructions [here] (https://pypy.org/download.html).
 2. Install the following Python packages. This can be done by
    downloading the .tar.gz for each package and running 'sudo pypy
    setup.py install' (note the use of pypy rather than python) for
    each package.
-   a. (setuptools https://pypi.python.org/pypi/setuptools)
-   b. (colorlog https://pypi.python.org/pypi/colorlog)
-   c. (olefile https://pypi.python.org/pypi/olefile)
-   d. (prettytable https://pypi.python.org/pypi/PrettyTable)
-   e. (pyparsing https://pypi.python.org/pypi/pyparsing/2.2.0)
+   1. [setuptools] (https://pypi.python.org/pypi/setuptools)
+   2. [colorlog] (https://pypi.python.org/pypi/colorlog)
+   3. [olefile] (https://pypi.python.org/pypi/olefile)
+   4. [prettytable] (https://pypi.python.org/pypi/PrettyTable)
+   5. [pyparsing] (https://pypi.python.org/pypi/pyparsing/2.2.0)
 
 ***Stripping Useless Statements***
 
