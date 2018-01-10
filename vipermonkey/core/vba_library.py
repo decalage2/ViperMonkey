@@ -384,7 +384,23 @@ class CInt(Int):
     Same as Int() for our purposes.
     """
     pass
-    
+
+class Oct(object):
+    """
+    Oct() function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        val = params[0]
+        try:
+            r = oct(val)
+            log.debug("Oct: return %r" % r)
+            return r
+        except:
+            log.error("Oct(): Invalid call oct(%r). Returning ''." % val)
+            return ''
+
 class StrReverse(object):
     """
     StrReverse() string function.
@@ -631,6 +647,25 @@ class CStr(object):
         r = str(val)
         log.debug("CStr: %r returns %r" % (self, r))
         return r
+
+class CSng(object):
+    """
+    CSng() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        r = ''
+        try:
+            tmp = params[0].upper()
+            if (tmp.startswith("&H")):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+            r = float(tmp)
+        except:
+            pass 
+        log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
+        return r
     
 class Atn(object):
     """
@@ -647,6 +682,23 @@ class Atn(object):
         except:
             pass
         log.debug("Atn: %r returns %r" % (self, r))
+        return r
+
+class Tan(object):
+    """
+    Tan() math function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 1)
+        r = ''
+        try:
+            num = float(params[0])
+            r = math.tan(num)
+        except:
+            pass
+        log.debug("Tan: %r returns %r" % (self, r))
         return r
         
 class Cos(object):
@@ -980,15 +1032,24 @@ class Randomize(object):
     """
 
     def eval(self, context, params=None):
-        log.debug("Randomize: Stubbed out as NOP")
-        return r
+        log.debug("Randomize(): Stubbed out as NOP")
+        return ''
+
+class Rnd(object):
+    """
+    Rnd() RNG function.
+    """
+
+    def eval(self, context, params=None):
+        log.debug("Rnd(): Stubbed out as NOP")
+        return ''
     
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase, Randomize, CBool, CDate, CStr):
+               UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
