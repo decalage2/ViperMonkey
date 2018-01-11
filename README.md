@@ -20,9 +20,11 @@ miracles. Any help from you will be very appreciated!
 
 ViperMonkey requires the most recent version of
 [oletools](https://github.com/decalage2/oletools), not the version
-downloaded by pip. Make sure to either install the most recent oletools
-version by running the oletools 'setup.py install' or by making sure
-the most recent oletools install directory appears in PYTHONPATH.
+downloaded by the standard pip install. Make sure to either install the most recent oletools
+version by running the oletools 'setup.py install', or make sure
+the most recent oletools install directory appears in PYTHONPATH, or
+install the most recent version of oletools using pip as described
+[here](https://github.com/decalage2/oletools/wiki/Install#how-to-install-the-latest-development-version). 
 
 **Speedup**
 
