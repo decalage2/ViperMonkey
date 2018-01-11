@@ -443,7 +443,7 @@ expr_item = ( float_literal | l_expression | chr_ | function_call | simple_name_
 # operator (if present) is right-associative. Any assignment operators are
 # also typically right-associative."
 
-expression <<= (operatorPrecedence(expr_item,
+expression <<= (infixNotation(expr_item,
                                   [
                                       # ("^", 2, opAssoc.RIGHT), # Exponentiation
                                       # ("-", 1, opAssoc.LEFT), # Unary negation
@@ -572,24 +572,35 @@ class BoolExpr(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(BoolExpr, self).__init__(original_str, location, tokens)
         tokens = tokens[0]
-        self.lhs = tokens
-        try:
-            self.lhs = tokens[0]
-        except:
-            pass
-        self.op = None
-        self.rhs = None
-        try:
-            self.op = tokens[1]
-            self.rhs = BoolExpr(original_str, location, [tokens[2:], None])
-        except:
-            pass
+        # Binary boolean operator.
+        if ((not hasattr(tokens, "length")) or (len(tokens) > 2)):
+            self.lhs = tokens
+            try:
+                self.lhs = tokens[0]
+            except:
+                pass
+            self.op = None
+            self.rhs = None
+            try:
+                self.op = tokens[1]
+                self.rhs = BoolExpr(original_str, location, [tokens[2:], None])
+            except:
+                pass
 
+        # Unary boolean operator.
+        else:
+            self.op = tokens[0]
+            self.rhs = tokens[1]
+            self.lhs = None
+            
         log.debug('parsed %r as BoolExpr' % self)
 
     def __repr__(self):
         if (self.op is not None):
-            return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+            if (self.lhs is not None):
+                return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+            else:
+                return self.op + " " + self.rhs.__repr__()
         elif (self.lhs is not None):
             return self.lhs.__repr__()
         else:
@@ -598,7 +609,25 @@ class BoolExpr(VBA_Object):
 
     def eval(self, context, params=None):
 
-        # We always have a LHS. Evaluate that in the current context.
+        # Unary operator?
+        if (self.lhs is None):
+
+            # We have only a RHS. Evaluate it.
+            rhs = None
+            try:
+                rhs = eval_arg(self.rhs, context)
+            except:
+                log.error("Boolxpr: Cannot eval " + self.__repr__() + ".")
+                return ''
+
+            # Evalue the unary expression.
+            if (self.op.lower() == "not"):
+                return (not rhs)
+            else:
+                log.error("BoolExpr: Unknown unary op " + str(self.op))
+                return ''
+                
+        # If we get here we always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
         try:
             lhs = eval_arg(self.lhs, context)
@@ -629,6 +658,7 @@ class BoolExpr(VBA_Object):
     
 boolean_expression <<= infixNotation(bool_expr_item,
                                      [
+                                         (CaselessKeyword("Not"), 1, opAssoc.RIGHT),
                                          (CaselessKeyword("And"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("AndAlso"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("Or"), 2, opAssoc.LEFT),

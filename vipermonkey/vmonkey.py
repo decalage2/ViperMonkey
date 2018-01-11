@@ -292,9 +292,6 @@ def process_file (container, filename, data,
                 vm.add_compiled_module(m)
 
             # Pull out form variables.
-            for attr in dir(vba):
-                if hasattr( vba, attr ):
-                    print( "vba.%s = %s" % (attr, getattr(vba, attr)))
             for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
                 if form_variables is not None:
                     var_name = form_variables['name']

@@ -399,7 +399,8 @@ class Global_Var_Statement(VBA_Object):
     def __repr__(self):
         return 'Global %r' % repr(self.tokens)
 
-global_variable_declaration = Optional(CaselessKeyword("Public").suppress()) + \
+public_private = Forward()
+global_variable_declaration = Suppress(Optional(public_private)) + \
                               Optional(CaselessKeyword("Shared")).suppress() + \
                               Optional(CaselessKeyword("Const")).suppress() + \
                               variable_declaration_list
@@ -1246,7 +1247,7 @@ class External_Function(VBA_Object):
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
                  + Optional(Literal('(') + Literal(')')).suppress()
 
-public_private = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')).suppress()
+public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private')).suppress()
 
 params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
 

@@ -1,13 +1,11 @@
 ViperMonkey
 ===========
 
-This is a fork of Philippe Lagadec's (http://www.decalage.info) ViperMonkey.
-
 ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
-See Philippe's article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
 
 **DISCLAIMER**:
@@ -102,7 +100,7 @@ Download and Install:
 
 For now, there is no package on PyPI for automated installation. It must be done manually:
 
-- Download the archive from the repository: https://github.com/kirk-sayre-work/ViperMonkey/archive/master.zip
+- Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
 - Extract it in the folder of your choice
 - Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
 or `pip install -U -r requirements.txt` on Windows
@@ -128,6 +126,27 @@ If the output is too verbose and too slow, you may reduce the logging level usin
 ```text
 python vmonkey.py -l warning <file>
 ```
+
+Documentation:
+--------------
+
+Winter is coming.
+
+
+How to Suggest Improvements, Report Issues or Contribute:
+---------------------------------------------------------
+
+This is a personal open-source project, developed on my spare time. Any contribution, suggestion, feedback or bug
+report is welcome.
+
+To suggest improvements, report a bug or any issue, please use the
+[issue reporting page](https://github.com/decalage2/ViperMonkey/issues), providing all the
+information and files to reproduce the problem.
+
+You may also [contact the author](http://decalage.info/contact) directly to provide feedback.
+
+The code is available in [a GitHub repository](https://github.com/decalage2/ViperMonkey). You may use it
+to submit enhancements using forks and pull requests.
 
 License
 -------

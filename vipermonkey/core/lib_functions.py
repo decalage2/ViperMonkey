@@ -79,7 +79,7 @@ class Chr(VBA_Object):
         # extract argument from the tokens:
         # Here the arg is expected to be either an int or a VBA_Object
         self.arg = tokens[0]
-        # print '__init__', repr(self)
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer
@@ -111,14 +111,13 @@ class Chr(VBA_Object):
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)
 
-
 # Chr, Chr$, ChrB, ChrW()
 # TODO: see 6.1.2.11.1.4 p241 => Chr[BW]?[$]?
 # TODO: fix this like in olevba
-# chr_ = Suppress(Combine(CaselessLiteral('Chr') + Optional(Word('BbWw', max=1)) + Optional('$')) + '(') + expression + Suppress(')')
-chr_ = Suppress(Combine(
-                  (CaselessKeyword('Chr$') | CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW'))
-                  + Optional('$')) + '(') + expression + Suppress(')')
+chr_ = Suppress(Combine(( CaselessKeyword('Chr$') | CaselessKeyword('Chr') | \
+                          CaselessKeyword('ChrB$') | CaselessKeyword('ChrB') | \
+                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrB')))) + \
+       Suppress('(') + expression + Suppress(')')
 chr_.setParseAction(Chr)
 
 
