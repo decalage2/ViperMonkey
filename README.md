@@ -67,6 +67,7 @@ analysis.
 News
 ----
 
+- **2018-01-12 v0.05**: a lot of new features and bug fixes contributed by Kirk Sayre
 - 2017-12-15:
   - Added support for Select and Do loops.
   - Added support for 'End Sub' and 0 argument return statements.
@@ -93,7 +94,7 @@ News
   - Added support for global variables.
   - Fixed some parse errors.
   - Added analysis of AutoClose() functions.
-- **2016-09-26 v0.02**: First published version
+- 2016-09-26 v0.02: First published version
 - 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
 - see changelog in source code for more info.
 
