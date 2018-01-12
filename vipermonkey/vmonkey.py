@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 #=== LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -44,8 +44,9 @@ https://github.com/decalage2/ViperMonkey
 # 2015-2016        PL: - many changes
 # 2016-10-06 v0.03 PL: - fixed vipermonkey.core import
 # 2016-12-11 v0.04 PL: - fixed relative import for core package (issue #17)
+# 2018-01-12 v0.05 KS: - lots of bug fixes and additions by Kirk Sayre (PR #23)
 
-__version__ = '0.04'
+__version__ = '0.05'
 
 #------------------------------------------------------------------------------
 # TODO:
