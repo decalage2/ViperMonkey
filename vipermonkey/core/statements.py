@@ -594,24 +594,87 @@ simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements'
 
 simple_for_statement.setParseAction(For_Statement)
 
-
-# This does not work with pyparsing, need to be a bit smarter:
-# explicit_for_statement = Forward()
-#
-# nested_for_statement = explicit_for_statement #| explicit_for_each_statement
-#
-# explicit_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
-#     + (CaselessKeyword("Next").suppress() | (nested_for_statement + Literal(","))) \
-#     + bound_variable_expression('next_name')
-#
-# for_statement = simple_for_statement | explicit_for_statement
-# for_statement.setParseAction(For_Statement)
-
 # For the line parser:
 for_start = for_clause + Suppress(EOL)
 for_start.setParseAction(For_Statement)
 
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
+
+# --- FOR EACH statement -----------------------------------------------------------
+
+class For_Each_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(For_Each_Statement, self).__init__(original_str, location, tokens)
+        self.statements = tokens.statements
+        self.item = tokens.clause.item
+        self.container = tokens.clause.container
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        return 'For Each %r In %r ...' % (self.item, self.container)
+
+    def eval(self, context, params=None):
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Get the container of values we are iterating through.
+
+        # Might be an expression.
+        container = eval_arg(self.container, context=context)
+        try:
+            # Could be a variable.
+            container = context.get(self.container)
+        except KeyError:
+            pass
+
+        # Try iterating over the values in the container.
+        try:
+            for item_val in container:
+
+                # Set the loop item variable in the context.
+                context.set(self.item, item_val)
+                
+                # Execute the loop body.
+                log.debug('FOR EACH loop: %r = %r' % (self.item, context.get(self.item)))
+                done = False
+                for s in self.statements:
+                    log.debug('FOR EACH loop eval statement: %r' % s)
+                    s.eval(context=context)
+
+                    # Has 'Exit For' been called?
+                    if (not context.loop_stack[-1]):
+
+                        # Yes we have. Stop this loop.
+                        log.debug("FOR EACH loop: exited loop with 'Exit For'")
+                        done = True
+                        break
+
+                # Finished with the loop due to 'Exit For'?
+                if (done):
+                    break
+
+        except:
+
+            # The data type for the container may not be iterable. Do nothing.
+            pass
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR EACH loop: end.')
+
+for_each_clause = CaselessKeyword("For").suppress() \
+                  + CaselessKeyword("Each").suppress() \
+                  + lex_identifier("item") \
+                  + CaselessKeyword("In").suppress() \
+                  + lex_identifier("container") \
+
+simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') \
+                            + CaselessKeyword("Next").suppress() \
+                            + Optional(lex_identifier) \
+                            + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
+
+simple_for_each_statement.setParseAction(For_Each_Statement)
 
 # --- WHILE statement -----------------------------------------------------------
 
@@ -669,11 +732,10 @@ class While_Statement(VBA_Object):
 
 while_type = CaselessKeyword("While") | CaselessKeyword("Until")
         
-while_clause = CaselessKeyword("Do").suppress() + while_type("type") \
-               + boolean_expression("guard")
+while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
 
 simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
-                       + CaselessKeyword("Loop").suppress()
+                       + (CaselessKeyword("Loop").suppress() | CaselessKeyword("Wend").suppress())
 
 simple_while_statement.setParseAction(While_Statement)
 
@@ -1186,7 +1248,7 @@ simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= type_declaration | simple_for_statement | simple_if_statement | \
+statement <<= type_declaration | simple_for_statement | simple_for_each_statement | simple_if_statement | \
               simple_if_statement_macro | simple_while_statement | simple_select_statement | with_statement| simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL

@@ -159,8 +159,8 @@ def eval_arg(arg, context):
                     pass
 
         # The .text hack did not work.
+        log.debug("eval_arg: return " + str(arg))
         return arg
-
 
 def eval_args(args, context):
     """
