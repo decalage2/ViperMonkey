@@ -1043,13 +1043,41 @@ class Rnd(object):
     def eval(self, context, params=None):
         log.debug("Rnd(): Stubbed out as NOP")
         return ''
+
+class Environ(object):
+    """
+    Environ() function for getting environment variable values.
+    """
+
+    def eval(self, context, params=None):
+        # TODO: Actually simulate getting common environment variable values.
+        r = "%" + str(params[0]).upper() + "%"
+        log.debug("Environ: %r returns %r" % (self, r))
+        return r
+
+class IIf(object):
+    """
+    IIf() if-like function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert (len(params) == 3)
+        guard = params[0]
+        true_part = params[1]
+        false_part = params[2]
+        if (guard):
+            return true_part
+        else:
+            return false_part
     
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct):
+               UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
+               Environ, IIf):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

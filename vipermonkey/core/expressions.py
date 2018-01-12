@@ -428,7 +428,7 @@ function_call_limited.setParseAction(Function_Call)
 # - finally literals (strings, integers, etc)
 # expr_item = (chr_ | asc | strReverse | environ | literal | function_call | simple_name_expression)
 #expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
-expr_item = ( float_literal | l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
+expr_item = Optional(CaselessKeyword("ByVal").suppress()) + ( float_literal | l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 

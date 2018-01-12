@@ -152,6 +152,7 @@ date_string.setParseAction(lambda t: str(t[0]))
 
 # TODO: 5.6.5 Literal Expressions
 
+#literal = boolean_literal | pointer | integer | quoted_string | date_string | float_literal
 literal = boolean_literal | integer | quoted_string | date_string | float_literal
 literal.setParseAction(lambda t: t[0])
 
