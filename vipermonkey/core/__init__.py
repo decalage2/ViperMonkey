@@ -139,27 +139,40 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+    def add_compiled_module(self, m):
+        """
+        Add an already parsed and processed module.
+        """
+        if (m is None):
+            return
+        self.modules.append(m)
+        for name, _sub in m.subs.items():
+            log.debug('storing sub "%s" in globals' % name)
+            self.globals[name.lower()] = _sub
+        for name, _function in m.functions.items():
+            log.debug('storing function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+        for name, _function in m.external_functions.items():
+            log.debug('storing external function "%s" in globals' % name)
+            self.globals[name.lower()] = _function
+        for name, _var in m.global_vars.items():
+            log.debug('storing global var "%s" in globals' % name)
+            self.globals[name.lower()] = _var
+        
     def add_module(self, vba_code):
+
         # collapse long lines ending with " _"
         vba_code = vba_collapse_long_lines(vba_code)
-        # log.debug('Parsing VBA Module:\n' + vba_code)
+
+        # Parse the VBA.
         try:
             m = module.parseString(vba_code, parseAll=True)[0]
             # store the code in the module object:
             m.code = vba_code
-            self.modules.append(m)
-            # TODO: add all subs/functions and global variables to self.globals
-            for name, _sub in m.subs.items():
-                log.debug('storing sub "%s" in globals' % name)
-                self.globals[name.lower()] = _sub
-            for name, _function in m.functions.items():
-                log.debug('storing function "%s" in globals' % name)
-                self.globals[name.lower()] = _function
-            for name, _function in m.external_functions.items():
-                log.debug('storing external function "%s" in globals' % name)
-                self.globals[name.lower()] = _function
+            self.add_compiled_module(m)
+
         except ParseException as err:
-            print('*** PARSING ERROR ***')
+            print('*** PARSING ERROR (1) ***')
             print(err.line)
             print(" " * (err.column - 1) + "^")
             print(err)
@@ -220,7 +233,7 @@ class ViperMonkey(object):
                 # l is a list of tokens: add it to the module tokens
                 tokens.extend(l)
             except ParseException as err:
-                print('*** PARSING ERROR ***')
+                print('*** PARSING ERROR (2) ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
@@ -238,7 +251,9 @@ class ViperMonkey(object):
         for name, _function in m.external_functions.items():
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-
+        for name, _var in m.global_vars.items():
+                log.debug('storing global var "%s" in globals' % name)
+            
     def parse_next_line(self):
         # extract next line
         line = self.lines.pop(0)
@@ -267,7 +282,7 @@ class ViperMonkey(object):
                 log.debug(l)
                 statements.extend(l)
             except ParseException as err:
-                print('*** PARSING ERROR ***')
+                print('*** PARSING ERROR (3) ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
@@ -283,7 +298,7 @@ class ViperMonkey(object):
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
         # TODO: how to handle auto subs calling other auto subs?
-        for entry_point in ('autoopen', 'workbook_open', 'document_open'):
+        for entry_point in ('autoopen', 'workbook_open', 'document_open', 'autoclose', 'document_close'):
             if entry_point in self.globals:
                 self.globals[entry_point].eval(context=context)
 

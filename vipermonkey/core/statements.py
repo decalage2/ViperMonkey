@@ -78,15 +78,19 @@ class UnknownStatement(VBA_Object):
 
 # catch-all for unknown statements
 # Known keywords used at the beginning of statements
-known_keywords_statement_start = (
-                                     Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword(
-                                         'End'))
-                                     + (CaselessKeyword('Sub') | CaselessKeyword('Function'))) \
-                                 | CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next')
+known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('End')) + \
+                                  (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
+                                  CaselessKeyword('Set') | CaselessKeyword('For') | CaselessKeyword('Next') | \
+                                  CaselessKeyword('If') | CaselessKeyword('Then') | CaselessKeyword('Else') | \
+                                  CaselessKeyword('ElseIf') | CaselessKeyword('End If') | CaselessKeyword('New') | \
+                                  CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
+                                  CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As') | CaselessKeyword("ByVal") | \
+                                  CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
+                                  CaselessKeyword('Case') | CaselessKeyword('On') 
 
-unknown_statement = NotAny(known_keywords_statement_start) \
-                    + Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
-                              adjacent=False).setResultsName('text')
+unknown_statement = NotAny(known_keywords_statement_start) + \
+                    Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
+                            adjacent=False).setResultsName('text')
 unknown_statement.setParseAction(UnknownStatement)
 
 
@@ -141,7 +145,7 @@ class Option_Statement(VBA_Object):
         return 'Option %s' % (self.name)
 
 
-option_statement = CaselessKeyword('Option').suppress() + identifier('name')
+option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
 
 
@@ -153,6 +157,16 @@ option_statement.setParseAction(Option_Statement)
 
 # TODO: for now we use a generic syntax
 type_expression = lex_identifier
+
+# --- TYPE DECLARATIONS -------------------------------------------------------
+
+type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
+                             lex_identifier + Suppress(EOS) + \
+                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
+                             CaselessKeyword('End') + CaselessKeyword('Type')
+
+# TODO: Add in simple type declarations.
+type_declaration = type_declaration_composite
 
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
 
@@ -234,10 +248,8 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # typed_name_param_dcl = TYPED_NAME [array_designator]
 
-
-
-parameter = Optional(parameter_mechanism).suppress() + lex_identifier('name') \
-            + Optional(CaselessKeyword('as').suppress() + Word(alphas).setResultsName('type'))
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') \
+            + Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -269,11 +281,11 @@ statement_label_list = delimitedList(statement_label, delim=',')
 
 # need to declare statement beforehand:
 statement = Forward()
+external_function = Forward()
 
 # NOTE: statements should NOT include EOS
-block_statement = rem_statement | statement | statement_label_definition
+block_statement = rem_statement | external_function | statement | statement_label_definition
 statement_block = ZeroOrMore(block_statement + EOS.suppress())
-
 
 # --- DIM statement ----------------------------------------------------------
 
@@ -360,7 +372,8 @@ as_clause = as_auto_object | as_type
 array_clause = array_dim + Optional(as_clause)
 untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
-variable_dcl = typed_variable_dcl | untyped_variable_dcl
+# TODO: Set the initial value of the global var in the context.
+variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(variable_dcl)
 local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(
     CaselessKeyword("Shared")).suppress() + variable_declaration_list
@@ -371,6 +384,27 @@ dim_statement = local_variable_declaration
 #                 Optional(CaselessKeyword("Shared")).suppress() + parameters_list
 dim_statement.setParseAction(Dim_Statement)
 
+# --- Global_Var_Statement statement ----------------------------------------------------------
+
+class Global_Var_Statement(VBA_Object):
+    """
+    Dim statement
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Global_Var_Statement, self).__init__(original_str, location, tokens)
+        self.name = tokens[0]
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Global %r' % repr(self.tokens)
+
+public_private = Forward()
+global_variable_declaration = Suppress(Optional(public_private)) + \
+                              Optional(CaselessKeyword("Shared")).suppress() + \
+                              Optional(CaselessKeyword("Const")).suppress() + \
+                              variable_declaration_list
+global_variable_declaration.setParseAction(Global_Var_Statement)
 
 # --- LET STATEMENT --------------------------------------------------------------
 
@@ -379,22 +413,58 @@ class Let_Statement(VBA_Object):
         super(Let_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         self.expression = tokens.expression
-        # print 'Let_Statement.init:'
-        # pprint.pprint(tokens.asList())
+        self.index = None
+        if (tokens.index != ''):
+            self.index = tokens.index
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Let %s = %r' % (self.name, self.expression)
+        if (self.index is None):
+            return 'Let %s = %r' % (self.name, self.expression)
+        else:
+            return 'Let %s(%r) = %r' % (self.name, self.index, self.expression)
 
     def eval(self, context, params=None):
+
         # evaluate value of right operand:
+        log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
-        # set variable
-        log.debug('setting %s = %s' % (self.name, value))
-        context.set(self.name, value)
 
+        # set variable, non-array access.
+        if (self.index is None):
+            log.debug('setting %s = %s' % (self.name, value))
+            context.set(self.name, value)
 
+        # set variable, array access.
+        else:
+
+            # Evaluate the index expression.
+            index = int(eval_arg(self.index, context=context))
+            log.debug('setting %s(%r) = %s' % (self.name, index, value))
+
+            # Is array variable being set already represented as a list?
+            arr_var = None
+            try:
+                arr_var = context.get(self.name)
+            except KeyError:
+                log.error("WARNING: Cannot find array variable %s" % self.name)
+            if (not isinstance(arr_var, list)):
+
+                # We are wiping out whatever value this had.
+                arr_var = []
+
+            # Do we need to extend the length of the list to include the index?
+            if (index >= len(arr_var)):
+                arr_var.extend([None] * (index - len(arr_var)))
+                
+            # We now have a list with the proper # of elements. Set the
+            # array element to the proper value.
+            arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+
+            # Finally save the updated variable in the context.
+            context.set(self.name, arr_var)
+            
 # 5.4.3.8   Let Statement
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
@@ -405,11 +475,14 @@ class Let_Statement(VBA_Object):
 #                 + l_expression('name') + Literal('=').suppress() + expression('expression')
 
 # previous custom grammar (incomplete):
-let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-                + TODO_identifier_or_object_attrib('name') + Literal('=').suppress() + expression('expression')
+let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
+                Optional(Suppress('Const')) + \
+                ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + expression('index') + Suppress(')'))) ^ \
+                 member_access_expression('name')) + \
+                Literal('=').suppress() + \
+                (expression('expression') ^ boolean_expression('expression'))
 
 let_statement.setParseAction(Let_Statement)
-
 
 # --- FOR statement -----------------------------------------------------------
 
@@ -436,22 +509,50 @@ class For_Statement(VBA_Object):
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
         end = eval_arg(self.end_value, context=context)
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
+            end = VBA_Object.loop_upper_bound
+            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
-        # loop using xrange until end+1, because python stops when index>=end+1
-        for val in xrange(start, end + 1, step):
-            # TODO: what if name is already a global variable?
-            # force a set_local?
-            log.debug('FOR loop: %s = %r' % (self.name, val))
-            context.set(self.name, val)
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Set the loop index variable to the start value.
+        context.set(self.name, start)
+
+        # Loop until the loop is broken out of or we hit the last index.
+        while (context.get(self.name) <= end):
+
+            # Execute the loop body.
+            log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
+            done = False
             for s in self.statements:
                 log.debug('FOR loop eval statement: %r' % s)
                 s.eval(context=context)
-            log.debug('FOR loop: end.')
 
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("FOR loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+
+            # Increment the loop counter by the step.
+            val = context.get(self.name)
+            context.set(self.name, val + step)
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR loop: end.')
 
 # 5.6.16.6 Bound Variable Expressions
 # bound-variable-expression = l-expression
@@ -481,27 +582,16 @@ step_clause = CaselessKeyword('Step').suppress() + expression
 # TODO: bound_variable_expression instead of lex_identifier
 for_clause = CaselessKeyword("For").suppress() \
              + lex_identifier('name') \
+             + Suppress(Optional(CaselessKeyword("As") + type_expression)) \
              + Suppress("=") + expression('start_value') \
              + CaselessKeyword("To").suppress() + expression('end_value') \
              + Optional(step_clause('step_value'))
-
-# def log_for_clause(s=None,l=None,t=None):
-#     print('FOR CLAUSE: loc=%d tokens=%r original=%r' % (l,t,s))
-# for_clause.setParseAction(log_for_clause)
-
-# def log_EOS(s=None,l=None,t=None):
-#     print('EOS: loc=%d tokens=%r original=%r' % (l,t,s))
-# EOS.setParseAction(log_EOS)
-
-# def log_statement_block(s=None,l=None,t=None):
-#     print('statement_block: loc=%d tokens=%r original=%r' % (l,t,s))
-# statement_block.setParseAction(log_statement_block)
 
 simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
                        + CaselessKeyword("Next").suppress() \
                        + Optional(lex_identifier) \
                        + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
-# + Optional(matchPreviousExpr(lex_identifier)) \
+
 simple_for_statement.setParseAction(For_Statement)
 
 
@@ -523,6 +613,359 @@ for_start.setParseAction(For_Statement)
 
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
 
+# --- WHILE statement -----------------------------------------------------------
+
+class While_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(While_Statement, self).__init__(original_str, location, tokens)
+        self.loop_type = tokens.clause.type
+        self.guard = tokens.clause.guard
+        self.body = tokens[2]
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = "Do " + str(self.loop_type) + " " + str(self.guard) + "\\n"
+        r += str(self.body) + "\\nLoop"
+        return r
+
+    def eval(self, context, params=None):
+
+        log.debug('DO loop: start: ' + str(self))
+        
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Loop until the loop is broken out of or we violate the loop guard.
+        while (True):
+
+            # Test the loop guard to see if we should exit the loop.
+            guard_val = eval_arg(self.guard, context)
+            if (self.loop_type.lower() == "until"):
+                guard_val = (not guard_val)
+            if (not guard_val):
+                break
+            
+            # Execute the loop body.
+            done = False
+            for s in self.body:
+                log.debug('DO loop eval statement: %r' % s)
+                s.eval(context=context)
+
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("Do loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('DO loop: end.')
+
+while_type = CaselessKeyword("While") | CaselessKeyword("Until")
+        
+while_clause = CaselessKeyword("Do").suppress() + while_type("type") \
+               + boolean_expression("guard")
+
+simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
+                       + CaselessKeyword("Loop").suppress()
+
+simple_while_statement.setParseAction(While_Statement)
+
+# --- SELECT statement -----------------------------------------------------------
+
+class Select_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Select_Statement, self).__init__(original_str, location, tokens)
+        self.select_val = tokens.select_val
+        self.cases = tokens.cases
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = ""
+        r += str(self.select_val)
+        for case in self.cases:
+            r += str(case)
+        r += "End Select"
+        print r
+        return r
+
+    def eval(self, context, params=None):
+
+        # Get the current value of the guard expression for the select.
+        log.debug("eval select: " + str(self))
+        select_guard_val = self.select_val.eval(context, params)
+
+        # Loop through each case, seeing which one applies.
+        for case in self.cases:
+
+            # Get the case guard statement.
+            case_guard = case.case_val
+
+            # Is this the case we should take?
+            log.debug("eval select: checking '" + str(select_guard_val) + " == " + str(case_guard) + "'")
+            if (case_guard.eval(context, [select_guard_val])):
+
+                # Evaluate the body of this case.
+                log.debug("eval select: take case " + str(case))
+                for statement in case.body:
+                    statement.eval(context, params)
+
+                # Done with the select.
+                break
+
+class Select_Clause(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Select_Clause, self).__init__(original_str, location, tokens)
+        self.select_val = tokens.select_val[0]
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = ""
+        r += "Select Case " + str(self.select_val) + "\\n " 
+        return r
+
+    def eval(self, context, params=None):
+        return self.select_val.eval(context, params)
+
+class Case_Clause(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Case_Clause, self).__init__(original_str, location, tokens)
+        self.case_val = tokens.case_val
+        self.test_range = ((tokens.lbound != "") and (tokens.lbound != ""))
+        self.test_set = (not self.test_range) and (len(self.case_val) > 1)
+        self.is_else = False
+        for v in self.case_val:
+            if (str(v).lower() == "else"):
+                self.is_else = True
+                break
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = "Case "
+        if (self.test_range):
+            r += str(self.case_val[0]) + " To " + str(self.case_val[1])
+        elif (self.test_set):
+            first = True
+            for val in self.case_val:
+                if (not first):
+                    r += ", "
+                first = False
+                r += str(val)
+        else:            
+            r += str(self.case_val[0])
+        r += "\\n"
+        return r
+
+    def eval(self, context, params=None):
+        """
+        Evaluate the guard of this case against the given value.
+        """
+
+        # Get the value against which to test the guard. This must already be
+        # evaluated.
+        test_val = params[0]
+
+        # Is this the default case?
+        if (self.is_else):
+            return True
+        
+        # Are we testing to see if this is in a range of values?
+        if (self.test_range):
+
+            # Eval the start and end of the range.
+            start = None
+            end = None
+            try:
+                start = int(eval_arg(self.case_val[0], context))
+                end = int(eval_arg(self.case_val[1], context)) + 1
+            except:
+                return False                
+
+            # Is the test val in the range?
+            return (test_val in range(start, end))
+
+        # Are we testing to see if this is in a set of values?
+        if (self.test_set):
+
+            # Construct the set of values against which to test.
+            expected_vals = set()
+            for val in self.case_val:
+                try:
+                    expected_vals.add(eval_arg(val, context))
+                except:
+                    return False
+
+            # Is the test val in the set?
+            return (test_val in expected_vals)
+
+        # We just have a regular test.
+        expected_val = eval_arg(self.case_val[0], context)
+        return (test_val == expected_val)
+
+class Select_Case(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Select_Case, self).__init__(original_str, location, tokens)
+        self.case_val = tokens.case_val
+        self.body = tokens.body
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = ""
+        r += str(self.case_val) + str(self.body)
+        return r
+
+    def eval(self, context, params=None):
+        pass
+    
+select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").suppress() \
+                + expression("select_val")
+select_clause.setParseAction(Select_Clause)
+
+case_clause = CaselessKeyword("Case").suppress() + \
+              ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
+               (CaselessKeyword("Else")) | \
+               (expression("case_val") + ZeroOrMore(Suppress(",") + expression)))
+                             
+case_clause.setParseAction(Case_Clause)
+
+select_case = case_clause("case_val") + Suppress(EOS) + Group(statement_block('statements'))("body")
+select_case.setParseAction(Select_Case)
+
+simple_select_statement = select_clause("select_val") + Suppress(EOS) + Group(OneOrMore(select_case))("cases") \
+                          + CaselessKeyword("End").suppress() + CaselessKeyword("Select").suppress()
+simple_select_statement.setParseAction(Select_Statement)
+
+
+# --- IF-THEN-ELSE statement ----------------------------------------------------------
+
+class If_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(If_Statement, self).__init__(original_str, location, tokens)
+
+        # Save the boolean guard and body for each case in the if, in order.
+        self.pieces = []
+        for tok in tokens:
+            # If or ElseIf.
+            if (len(tok) == 2):
+                self.pieces.append({ 'guard' : tok[0], 'body' : tok[1]})
+            # Else.
+            elif (len(tok) == 1):
+                self.pieces.append({ 'guard' : None, 'body' : tok[0]})
+            # Bug.
+            else:
+                log.error('If part %r has wrong # elements.' % str(tok))
+
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = ""
+        first = True
+        for piece in self.pieces:
+
+            # Pick the right keyword for this piece of the if.
+            keyword = "If"
+            if (not first):
+                keyword = "ElseIf"
+            if (piece["guard"] is None):
+                keyword = "Else"
+            first = False
+            r += keyword + " "
+
+            # Add in the guard.
+            guard = ""
+            keyword = ""
+            if (piece["guard"] is not None):
+                guard = piece["guard"].__repr__()
+                if (len(guard) > 5):
+                    guard = guard[:6] + "..."
+            r += guard + " "
+            keyword = "Then "
+
+            # Add in the body.
+            r += keyword
+            body = piece["body"].__repr__().replace("\n", "; ")
+            if (len(body) > 5):
+                body = body[:6] + "..."
+
+        return r
+            
+    def eval(self, context, params=None):
+
+        # Walk through each case of the if, seeing which one applies (if any).
+        for piece in self.pieces:
+
+            # Evaluate the guard, if it has one. Else parts have no guard.
+            guard = True
+            if (piece["guard"] is not None):
+                guard = piece["guard"].eval(context)
+
+            # Does this case apply?
+            if (guard):
+
+                # Yes it does. Emulate the statements in the body.
+                for stmt in piece["body"]:
+                    stmt.eval(context)
+
+                # We have emulated the if.
+                break
+
+# Grammar element for IF statements.
+multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                 Group(statement_block('statements'))) + \
+                                 ZeroOrMore(
+                                     Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                            Group(statement_block('statements')))
+                                 ) + \
+                                 Optional(
+                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
+                                           Group(statement_block('statements')))
+                                 ) + \
+                                 CaselessKeyword("End If").suppress() #+ FollowedBy(EOS)
+simple_statements_line = Forward()
+single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                  Group(simple_statements_line('statements')) ) #+ FollowedBy(EOS)
+simple_if_statement = multi_line_if_statement ^ single_line_if_statement
+
+simple_if_statement.setParseAction(If_Statement)
+
+# --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
+
+class If_Statement_Macro(If_Statement):
+
+    def __init__(self, original_str, location, tokens):
+        super(If_Statement_Macro, self).__init__(original_str, location, tokens)
+        pass
+
+    def eval(self, context, params=None):
+
+        # TODO: Properly evaluating this will involve supporting compile time variables
+        # that can be set via options when running ViperMonkey. For now just run the then
+        # block.
+        log.debug("eval: " + str(self))
+        then_part = self.pieces[0]
+        for stmt in then_part["body"]:
+            stmt.eval(context)
+
+# Grammar element for #IF statements.
+simple_if_statement_macro = Group( CaselessKeyword("#If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                   Group(statement_block('statements'))) + \
+                                   ZeroOrMore(
+                                       Group( CaselessKeyword("#ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                              Group(statement_block('statements')))
+                                   ) + \
+                                   Optional(
+                                       Group(CaselessKeyword("#Else").suppress() + Suppress(EOS) + \
+                                             Group(statement_block('statements')))
+                                   ) + \
+                                   CaselessKeyword("#End If").suppress() + FollowedBy(EOS)
+
+simple_if_statement_macro.setParseAction(If_Statement_Macro)
 
 # --- CALL statement ----------------------------------------------------------
 
@@ -542,18 +985,46 @@ class Call_Statement(VBA_Object):
         call_params = eval_args(self.params, context=context)
         log.info('Calling Procedure: %s(%r)' % (self.name, call_params))
         # Handle VBA functions:
-        if self.name.lower() == 'msgbox':
+        func_name = str(self.name)
+        if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
             context.report_action('Display Message', repr(call_params[0]), 'MsgBox')
             # vbOK = 1
             return 1
-        elif '.' in self.name:
-            context.report_action('Object.Method Call', repr(call_params), self.name)
+        elif '.' in func_name:
+            context.report_action('Object.Method Call', repr(call_params), func_name)
         try:
-            s = context.get(self.name)
+            s = context.get(func_name)
             s.eval(context=context, params=call_params)
         except KeyError:
-            log.error('Procedure %r not found' % self.name)
+            try:
+                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "")
+                if ("." in tmp_name):
+                    tmp_name = func_name[tmp_name.rindex(".") + 1:]
+                log.debug("Looking for procedure %r" % tmp_name)
+                s = context.get(tmp_name)
+                s.eval(context=context, params=call_params)
+            except KeyError:
+
+                # If something like Application.Run("foo", 12) is called, foo(12) will be run.
+                # Try to handle that.
+                if ((func_name == "Application.Run") or (func_name == "Run")):
+
+                    # Pull the name of what is being run from the 1st arg.
+                    new_func = call_params[0]
+
+                    # The remaining params are passed as arguments to the other function.
+                    new_params = call_params[1:]
+
+                    # See if we can run the other function.
+                    log.debug("Try indirect run of function '" + new_func + "'")
+                    try:
+                        s = context.get(new_func)
+                        s.eval(context=context, params=new_params)
+                        return
+                    except KeyError:
+                        pass
+                log.error('Procedure %r not found' % func_name)
 
 
 # TODO: 5.4.2.1 Call Statement
@@ -562,23 +1033,232 @@ class Call_Statement(VBA_Object):
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | expr_list('params')
 call_statement = NotAny(known_keywords_statement_start) \
                  + Optional(CaselessKeyword('Call').suppress()) \
-                 + TODO_identifier_or_object_attrib('name') + Optional(call_params)
+                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib('name')) + Optional(call_params)
 call_statement.setParseAction(Call_Statement)
+
+# --- EXIT FOR statement ----------------------------------------------------------
+
+class Exit_For_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Exit_For_Statement, self).__init__(original_str, location, tokens)
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Exit For'
+
+    def eval(self, context, params=None):
+        # Update the loop stack to indicate that the current loop should exit.
+        context.loop_stack.pop()
+        context.loop_stack.append(False)
+
+# Break out of a loop.
+exit_for_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('For').suppress()
+exit_for_statement.setParseAction(Exit_For_Statement)
+
+# --- EXIT FUNCTION statement ----------------------------------------------------------
+
+class Exit_Function_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Exit_Function_Statement, self).__init__(original_str, location, tokens)
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Exit Function'
+
+    def eval(self, context, params=None):
+        # Mark that we should return from the current function.
+        context.exit_func = True
+
+# Return from a function.
+exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()) | \
+                      (CaselessKeyword('Exit').suppress() + CaselessKeyword('Sub').suppress()) | \
+                      (CaselessKeyword('Return').suppress())
+exit_func_statement.setParseAction(Exit_Function_Statement)
+
+# --- REDIM statement ----------------------------------------------------------
+
+class Redim_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Redim_Statement, self).__init__(original_str, location, tokens)
+        self.item = tokens.item
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'ReDim ' + str(self.item)
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+# Array redim statement
+redim_statement = CaselessKeyword('ReDim').suppress() + expression('item') + \
+                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress()
+redim_statement.setParseAction(Redim_Statement)
+
+# --- WITH statement ----------------------------------------------------------
+
+class With_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(With_Statement, self).__init__(original_str, location, tokens)
+        self.body = tokens.body
+        self.env = tokens.env
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'With ' + str(self.env) + "\\n" + str(self.body) + " End With"
+
+    def eval(self, context, params=None):
+        # TODO: Currently stubbed out. Need to track the containing environment object name(s) in a stack
+        # and append them to the names of variables like ".foo" when referencing variables in the With.
+        return
+
+# With statement
+with_statement = CaselessKeyword('With').suppress() + lex_identifier('env') + Suppress(EOS) + \
+                 Group(statement_block('body')) + \
+                 CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
+with_statement.setParseAction(With_Statement)
+
+# --- GOTO statement ----------------------------------------------------------
+
+class Goto_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Goto_Statement, self).__init__(original_str, location, tokens)
+        self.label = tokens.label
+        log.debug('parsed %r as Goto_Statement' % self)
+
+    def __repr__(self):
+        return 'Goto ' + str(self.label)
+
+    def eval(self, context, params=None):
+        # TODO: Currently stubbed out. Need to tie this label to the following statements somehow.
+        return
+
+# Goto statement
+goto_statement = CaselessKeyword('Goto').suppress() + lex_identifier('label')
+goto_statement.setParseAction(Goto_Statement)
+
+# --- GOTO LABEL statement ----------------------------------------------------------
+
+class Label_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Label_Statement, self).__init__(original_str, location, tokens)
+        self.label = tokens.label
+        log.debug('parsed %r as Label_Statement' % self)
+
+    def __repr__(self):
+        return str(self.label) + ':'
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+# Goto label statement
+label_statement = identifier('label') + Suppress(':')
+label_statement.setParseAction(Label_Statement)
+
+# --- ON ERROR STATEMENT -------------------------------------------------------------
+
+class On_Error_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(On_Error_Statement, self).__init__(original_str, location, tokens)
+        self.tokens = tokens
+        log.debug('parsed %r as On_Error_Statement' % self)
+
+    def __repr__(self):
+        return str(self.tokens)
+
+    def eval(self, context, params=None):
+        # Currently stubbed out.
+        return
+
+on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
+                     ((CaselessKeyword('Goto') + (decimal_literal | lex_identifier)) |
+                      (CaselessKeyword('Resume') + CaselessKeyword('Next')))
+
+on_error_statement.setParseAction(On_Error_Statement)
 
 # --- STATEMENTS -------------------------------------------------------------
 
+# simple statement: fits on a single line (excluding for/if/do/etc blocks)
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_for_statement | \
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement
+simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
+
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-
-statement <<= dim_statement | let_statement | call_statement | simple_for_statement \
-              | unknown_statement
-# statement = attribute_statement | option_statement | dim_statement | let_statement | unknown_statement
+statement <<= type_declaration | simple_for_statement | simple_if_statement | \
+              simple_if_statement_macro | simple_while_statement | simple_select_statement | with_statement| simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
 # TODO: use statement_block instead!
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
-# simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | let_statement | call_statement | unknown_statement
-simple_statements_line = Optional(simple_statement + ZeroOrMore(Suppress(':') + simple_statement)) + EOS.suppress()
+# --- EXTERNAL FUNCTION ------------------------------------------------------
+
+class External_Function(VBA_Object):
+    """
+    External Function from a DLL
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(External_Function, self).__init__(original_str, location, tokens)
+        self.name = tokens.function_name
+        self.params = tokens.params
+        self.lib_name = tokens.lib_name
+        # normalize lib name: remove quotes, lowercase, add .dll if no extension
+        if isinstance(self.lib_name, basestring):
+            self.lib_name = tokens.lib_name.strip('"').lower()
+            if '.' not in self.lib_name:
+                self.lib_name += '.dll'
+        self.alias_name = tokens.alias_name
+        if isinstance(self.alias_name, basestring):
+            # TODO: this might not be necessary if alias is parsed as quoted string
+            self.alias_name = self.alias_name.strip('"')
+        self.return_type = tokens.return_type
+        self.vars = {}
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
+
+    def eval(self, context, params=None):
+        # create a new context for this execution:
+        caller_context = context
+        context = Context(context=caller_context)
+        # TODO: use separate classes for each known DLL and methods for functions?
+        # TODO: use the alias name instead of the name!
+        if self.alias_name:
+            function_name = self.alias_name
+        else:
+            function_name = self.name
+        log.debug('evaluating External Function %s(%r)' % (function_name, params))
+        function_name = function_name.lower()
+        if self.lib_name.startswith('urlmon'):
+            if function_name.startswith('urldownloadtofile'):
+                context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
+                context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
+                # return 0 when no error occurred:
+                return 0
+        # TODO: return result according to the known DLLs and functions
+        log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
+        return None
+
+function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
+                 + Optional(Literal('(') + Literal(')')).suppress()
+
+public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private')).suppress()
+
+params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
+
+# 5.2.3.5 External Procedure Declaration
+lib_info = CaselessKeyword('Lib').suppress() + quoted_string('lib_name') \
+           + Optional(CaselessKeyword('Alias') + quoted_string('alias_name'))
+
+# TODO: identifier or lex_identifier
+external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe'))
+                                                + CaselessKeyword('Function')) + lex_identifier('function_name') + lib_info \
+                                                + Optional(params_list_paren) + Optional(function_type2)
+external_function.setParseAction(External_Function)
+
+

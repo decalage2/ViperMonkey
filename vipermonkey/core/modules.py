@@ -54,6 +54,7 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from procedures import *
+from statements import *
 
 from logger import log
 log.debug('importing modules')
@@ -73,18 +74,26 @@ class Module(VBA_Object):
         self.functions = {}
         self.external_functions = {}
         self.subs = {}
+        self.global_vars = {}
         # print tokens
         # print 'Module.init:'
         # pprint.pprint(tokens.asList())
         for token in tokens:
             if isinstance(token, Sub):
+                log.debug("saving sub decl: %r" % token.name)
                 self.subs[token.name] = token
             if isinstance(token, Function):
+                log.debug("saving func decl: %r" % token.name)
                 self.functions[token.name] = token
             if isinstance(token, External_Function):
+                log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
             elif isinstance(token, Attribute_Statement):
+                log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
+            if isinstance(token, Global_Var_Statement):
+                log.debug("saving global var decl: %r" % token.name)
+                self.global_vars[token.name] = token
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)
@@ -116,9 +125,11 @@ class Module(VBA_Object):
 
 header_statement = attribute_statement
 # TODO: can we have '::' with an empty statement?
-header_statements_line = Optional(header_statement + ZeroOrMore(Suppress(':') + header_statement)) + EOL.suppress()
-# module_header = ZeroOrMore(header_statements_line)
-module_header = OneOrMore(header_statements_line)
+header_statements_line = (Optional(header_statement + ZeroOrMore(Suppress(':') + header_statement)) + EOL.suppress()) | \
+                         option_statement | \
+                         type_declaration | \
+                         simple_if_statement_macro
+module_header = ZeroOrMore(header_statements_line)
 
 # 5.1 Module Body Structure
 
@@ -128,7 +139,7 @@ module_header = OneOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | external_function #| unknown_statement
+declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function #| unknown_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -142,7 +153,7 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 empty_line = EOL.suppress()
 
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(sub | function | empty_line)  # + ZeroOrMore(empty_line)
+module_code = ZeroOrMore(option_statement | sub | function | empty_line)  # + ZeroOrMore(empty_line)
 
 module_body = module_declaration + module_code
 

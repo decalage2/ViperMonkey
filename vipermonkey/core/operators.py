@@ -52,11 +52,23 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import sys
+
 from vba_object import *
 
 from logger import log
 log.debug('importing operators')
 
+def debug_repr(op, args):
+    r = "("
+    first = True
+    for arg in args:
+        if (not first):
+            r += " " + op + " "
+        first = False
+        r += str(arg)
+    r += ")"
+    return r
 
 # --- SUM: + OPERATOR --------------------------------------------------------
 
@@ -78,13 +90,55 @@ class Sum(VBA_Object):
         try:
             return reduce(lambda x, y: x + y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to sum arguments of different types')
-            # TODO
-            return 0
+            # NOTE: In VB you are not supposed to be able to add integers and strings.
+            # However, there are maldocs that do this. If the strings are integer strings,
+            # integer addition is performed.
+            log.debug('Impossible to sum arguments of different types. Try converting strings to ints.')
+            try:
+                return reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
+            except ValueError:
+                # Punt and sum all arguments as strings.
+                return reduce(lambda x, y: str(x) + str(y), eval_args(self.arg, context))
+        except RuntimeError:
+            log.error("overflow trying eval sum: %r" % self.arg)
+            sys.exit(1)
 
     def __repr__(self):
+        return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
 
+# --- XOR --------------------------------------------------------
+
+class Xor(VBA_Object):
+    """
+    VBA Xor operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Xor, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the xor of all the arguments:
+        try:
+            return reduce(lambda x, y: x ^ y, eval_args(self.arg, context))
+        except TypeError:
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) ^ int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to xor arguments of different types.')
+                return 0
+        except RuntimeError:
+            log.error("overflow trying eval xor: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return debug_repr("^", self.arg)
+        return ' ^ '.join(map(repr, self.arg))
 
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
@@ -104,11 +158,17 @@ class Subtraction(VBA_Object):
         try:
             return reduce(lambda x, y: x - y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to subtract arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to subtract arguments of different types. ' + str(e))
+                # TODO
+                return 0
 
     def __repr__(self):
+        return debug_repr("-", self.arg)
         return ' - '.join(map(repr, self.arg))
 
 
@@ -130,11 +190,16 @@ class Multiplication(VBA_Object):
         try:
             return reduce(lambda x, y: x * y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to multiply arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) * int(y), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to multiply arguments of different types. ' + str(e))
+                return 0
 
     def __repr__(self):
+        return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
 
 
@@ -156,11 +221,20 @@ class Division(VBA_Object):
         try:
             return reduce(lambda x, y: x / y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to divide arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) / int(y), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to divide arguments of different types. ' + str(e))
+                # TODO
+                return 0
+        except ZeroDivisionError:
+            log.error("Division by 0 error. Returning ''.")
+            return ''
 
     def __repr__(self):
+        return debug_repr("/", self.arg)
         return ' / '.join(map(repr, self.arg))
 
 
@@ -182,11 +256,17 @@ class FloorDivision(VBA_Object):
         try:
             return reduce(lambda x, y: x // y, eval_args(self.arg, context))
         except TypeError:
-            log.error('Impossible to divide arguments of different types')
-            # TODO
-            return 0
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) // int(y), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to divide arguments of different types. ' + str(e))
+                # TODO
+                return 0
 
     def __repr__(self):
+        return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
 
 
@@ -213,12 +293,13 @@ class Concatenation(VBA_Object):
             eval_params = coerce_args_to_str(eval_params)
             log.debug('Concatenation after eval: %r' % eval_params)
             return ''.join(eval_params)
-        except TypeError:
-            log.exception('Impossible to concatenate non-string arguments')
+        except TypeError as e:
+            log.exception('Impossible to concatenate non-string arguments. ' + str(e))
             # TODO
             return ''
 
     def __repr__(self):
+        return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
 
@@ -241,6 +322,7 @@ class Mod(VBA_Object):
         return reduce(lambda x, y: x % y, eval_args(self.arg, context))
 
     def __repr__(self):
+        return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
 
 

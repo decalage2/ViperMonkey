@@ -136,10 +136,11 @@ reserved_keywords = (  # WordStart() + (
 # TODO: temporary hack to support any single identifier or object.attrib
 # TODO: support several dots? (object.attrib1.attrib2 etc)
 
-# TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords)
-#     + (Combine(Optional(unrestricted_name) + Literal('.') + unrestricted_name) | entity_name))
-
 # TODO: simplified version, using only entity_name
-TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords)
-    + Optional(Optional(entity_name) + Literal('.')) + Optional(entity_name + Literal('.')) + entity_name)
+TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
+                                           Optional(Optional(entity_name) + Literal('.')) +
+                                           Optional(entity_name + Literal('.')) +
+                                           entity_name +
+                                           # Looks like variables can end in $
+                                           Optional(CaselessLiteral('$')))
 

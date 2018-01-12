@@ -79,16 +79,19 @@ __version__ = '0.04'
 
 #--- IMPORTS ------------------------------------------------------------------
 
+import multiprocessing
 import optparse
 import sys
 import os
 import traceback
 import logging
 import colorlog
+import re
 
 from oletools.thirdparty.prettytable import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
+import olefile
 
 # add the vipermonkey folder to sys.path (absolute+normalized path):
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
@@ -98,11 +101,162 @@ if not _thismodule_dir in sys.path:
 # relative import of core ViperMonkey modules:
 from core import *
 
-
-
 # === MAIN (for tests) ===============================================================================================
 
-def process_file (container, filename, data, altparser=False):
+def strip_useless_code(vba_code):
+    """
+    Strip statements that have no usefull effect from the given VB. The
+    stripped statements are commented out.
+    """
+
+    # Find all assigned variables and track what line the variable was assigned on.
+    assign_re = re.compile("\s*(\w+)\s*=\s*.+")
+    assigns = {}
+    line_num = 0
+    for line in vba_code.split("\n"):
+
+        # Is there an assignment on this line?
+        line_num += 1
+        match = assign_re.match(line)
+        if (match is not None):
+
+            # Yes, there is an assignment. Save the assigned variable and line #
+            var = match.groups(0)[0]
+            if (var not in assigns):
+                assigns[var] = set()
+            assigns[var].add(line_num)
+
+    # Now do a very loose check to see if the assigned variable is referenced anywhere else.
+    refs = {}
+    for var in assigns.keys():
+        refs[var] = False
+    line_num = 0
+    for line in vba_code.split("\n"):
+
+        # Mark all the variables that MIGHT be referenced on this line.
+        line_num += 1
+        for var in assigns.keys():
+
+            # Skip variable references on the lines where the current variable was assigned.
+            if (line_num in assigns[var]):
+                continue
+
+            # Could the current variable be used on this line?
+            if (var in line):
+
+                # Maybe. Count this as a reference.
+                refs[var] = True
+
+    # Now comment out all useless assignments.
+    comment_lines = set()
+    for var in refs.keys():
+        if (not refs[var]):
+            for num in assigns[var]:
+                comment_lines.add(num)
+    r = ""
+    line_num = 0
+    for line in vba_code.split("\n"):
+
+        # Does this line get commented out?
+        line_num += 1
+        if (line_num in comment_lines):
+            continue
+        r += line + "\n"
+
+    return r
+    
+def parse_stream(subfilename, stream_path=None,
+                 vba_filename=None, vba_code=None, strip_useless=False):
+
+    # Are the arguments all in a single tuple?
+    if (stream_path is None):
+        subfilename, stream_path, vba_filename, vba_code = subfilename
+        
+    # Filter cruft from the VBA.
+    vba_code_filtered = filter_vba(vba_code)
+    if (strip_useless):
+        vba_code_filtered = strip_useless_code(vba_code_filtered)
+    print '-'*79
+    print 'VBA MACRO %s ' % vba_filename
+    print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
+    print '- '*39
+
+    # Parse the macro.
+    m = None
+    if vba_code_filtered.strip() == '':
+        print '(empty macro)'
+    else:
+        vba_code = vba_collapse_long_lines(vba_code_filtered)
+        print '-'*79
+        print 'VBA CODE (with long lines collapsed):'
+        print vba_code
+        print '-'*79
+        print 'PARSING VBA CODE:'
+        try:
+
+            # Enable PackRat for better performance:
+            # (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
+            ParserElement.enablePackrat()
+            
+            m = module.parseString(vba_code, parseAll=True)[0]
+            m.code = vba_code
+        except ParseException as err:
+            print err.line
+            print " "*(err.column-1) + "^"
+            print err
+
+    # Return the parsed macro.
+    return m
+
+def parse_streams_serial(vba, strip_useless=False):
+    """
+    Parse all the VBA streams and return list of parsed module objects (serial version).
+    """
+    r = []
+    for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless)
+        r.append(m)
+    return r
+
+def parse_streams_parallel(vba, strip_useless=False):
+    """
+    Parse all the VBA streams and return list of parsed module objects (parallel version).
+    """
+
+    # Use all the cores.
+    num_cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(num_cores)
+
+    # Construct the argument list.
+    args = []
+    for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        args.append((subfilename, stream_path, vba_filename, vba_code, strip_useless))
+
+    # Kick off the parallel jobs, collecting the results.
+    r = pool.map(parse_stream, args)
+
+    # Shut down the processes.
+    pool.close()
+    pool.terminate()
+    
+    # Done.
+    return r
+
+# Whether to parse each macro stream in a seperate process.
+parallel = False
+
+def parse_streams(vba, strip_useless=False):
+    """
+    Parse all the VBA streams, in parallel if the global parallel variable is 
+    true.
+    """
+    if parallel:
+        return parse_streams_parallel(vba, strip_useless)
+    else:
+        return parse_streams_serial(vba, strip_useless)
+
+def process_file (container, filename, data,
+                  altparser=False, strip_useless=False):
     """
     Process a single file
 
@@ -121,47 +275,41 @@ def process_file (container, filename, data, altparser=False):
     vm = ViperMonkey()
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
-        vba = VBA_Parser(filename, data)
+        vba = VBA_Parser(filename, data, relaxed=True)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
-            #print 'Contains VBA Macros:'
-            for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
-                # hide attribute lines:
-                #TODO: option to disable attribute filtering
-                vba_code_filtered = filter_vba(vba_code)
-                print '-'*79
-                print 'VBA MACRO %s ' % vba_filename
-                print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-                print '- '*39
-                # detect empty macros:
-                if vba_code_filtered.strip() == '':
-                    print '(empty macro)'
-                else:
-                    # TODO: option to display code
-                    vba_code = vba_collapse_long_lines(vba_code)
-                    print '-'*79
-                    print 'VBA CODE (with long lines collapsed):'
-                    print vba_code
-                    print '-'*79
-                    print 'PARSING VBA CODE:'
-                    try:
-                        if altparser:
-                            vm.add_module2(vba_code)
-                        else:
-                            vm.add_module(vba_code)
-                    except ParseException as err:
-                        print err.line
-                        print " "*(err.column-1) + "^"
-                        print err
 
+            # Read in document metadata.
+            try:
+                ole = olefile.OleFileIO(filename)
+                vba_library.meta = ole.get_metadata()
+            except:
+                vba_library.meta = {}
 
+            # Parse the VBA streams.
+            comp_modules = parse_streams(vba, strip_useless)
+            for m in comp_modules:
+                vm.add_compiled_module(m)
+
+            # Pull out form variables.
+            for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
+                if form_variables is not None:
+                    var_name = form_variables['name']
+                    macro_name = stream_path
+                    if ("/" in macro_name):
+                        start = macro_name.rindex("/") + 1
+                        macro_name = macro_name[start:]
+                    global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
+                    val = form_variables['value']
+                    vm.globals[global_var_name.lower()] = val
+                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+                
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
             vm.trace()
             # print table of all recorded actions
             print('Recorded Actions:')
             print(vm.dump_actions())
-
 
         else:
             print 'No VBA macros found.'
@@ -193,9 +341,14 @@ def process_file_scanexpr (container, filename, data):
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
-        vba = VBA_Parser(filename, data)
+        vba = VBA_Parser(filename, data, relaxed=True)
         print 'Type:', vba.type
         if vba.detect_vba_macros():
+
+            # Read in document metadata.
+            ole = olefile.OleFileIO(filename)
+            vba_library.meta = ole.get_metadata()
+            
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
@@ -240,6 +393,10 @@ def main():
     """
     Main function, called when vipermonkey is run from the command line
     """
+
+    # Increase recursion stack depth.
+    sys.setrecursionlimit(13000)
+    
     # print banner with version
     print ('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
     print ('THIS IS WORK IN PROGRESS - Check updates regularly!')
@@ -273,6 +430,8 @@ def main():
                             help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
         help='Use the alternate line parser (experimental)')
+    parser.add_option("-s", action="store_true", dest="strip_useless_code",
+        help='Strip useless VB code from macros prior to parsing.')
 
     (options, args) = parser.parse_args()
 
@@ -294,7 +453,7 @@ def main():
         if options.scan_expressions:
             process_file_scanexpr(container, filename, data)
         else:
-            process_file(container, filename, data, altparser=options.altparser)
+            process_file(container, filename, data, altparser=options.altparser, strip_useless=options.strip_useless_code)
 
 
 

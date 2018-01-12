@@ -79,7 +79,7 @@ class Chr(VBA_Object):
         # extract argument from the tokens:
         # Here the arg is expected to be either an int or a VBA_Object
         self.arg = tokens[0]
-        # print '__init__', repr(self)
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer
@@ -91,11 +91,19 @@ class Chr(VBA_Object):
         # First, eval the argument:
         param = eval_arg(self.arg, context)
         if isinstance (param, int):
-            return chr(param)
+            try:
+                return chr(param)
+            except Exception as e:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ""
         elif isinstance(param, basestring):
             log.debug('Chr: converting string %r to integer' % param)
-            param_int = integer.parseString(param.strip())[0]
-            return chr(param_int)
+            try:
+                param_int = integer.parseString(param.strip())[0]
+                return chr(param_int)
+            except:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ''
         else:
             raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
 
@@ -103,14 +111,13 @@ class Chr(VBA_Object):
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)
 
-
 # Chr, Chr$, ChrB, ChrW()
 # TODO: see 6.1.2.11.1.4 p241 => Chr[BW]?[$]?
 # TODO: fix this like in olevba
-# chr_ = Suppress(Combine(CaselessLiteral('Chr') + Optional(Word('BbWw', max=1)) + Optional('$')) + '(') + expression + Suppress(')')
-chr_ = Suppress(Combine(
-    (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW'))
-    + Optional('$')) + '(') + expression + Suppress(')')
+chr_ = Suppress(Combine(( CaselessKeyword('Chr$') | CaselessKeyword('Chr') | \
+                          CaselessKeyword('ChrB$') | CaselessKeyword('ChrB') | \
+                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrB')))) + \
+       Suppress('(') + expression + Suppress(')')
 chr_.setParseAction(Chr)
 
 
@@ -128,7 +135,9 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        return ord(eval_arg(self.arg, context))
+        r = ord(eval_arg(self.arg, context)[0])
+        log.debug("Asc(%r): return %r" % (self.arg, r))
+        return r
 
     def __repr__(self):
         return 'Asc(%s)' % repr(self.arg)
