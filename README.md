@@ -156,7 +156,7 @@ License
 This license applies to the ViperMonkey package, apart from the thirdparty folder which contains third-party files
 published with their own license.
 
-The ViperMonkey package is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+The ViperMonkey package is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
 
 All rights reserved.
 
