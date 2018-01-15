@@ -408,7 +408,8 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = delimitedList(expr_list_item)
+#expr_list = delimitedList(expr_list_item)
+expr_list = expr_list_item + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
@@ -428,7 +429,8 @@ function_call_limited.setParseAction(Function_Call)
 # - finally literals (strings, integers, etc)
 # expr_item = (chr_ | asc | strReverse | environ | literal | function_call | simple_name_expression)
 #expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
-expr_item = Optional(CaselessKeyword("ByVal").suppress()) + ( float_literal | l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
+expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
+            ( float_literal | l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 

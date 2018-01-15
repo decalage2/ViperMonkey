@@ -53,6 +53,7 @@ __version__ = '0.02'
 
 from comments_eol import *
 from expressions import *
+from vba_context import *
 
 from logger import log
 log.debug('importing statements')
@@ -1113,9 +1114,20 @@ class Exit_For_Statement(VBA_Object):
         context.loop_stack.pop()
         context.loop_stack.append(False)
 
-# Break out of a loop.
+class Exit_While_Statement(Exit_For_Statement):
+    def __repr__(self):
+        return 'Exit Do'
+
+# Break out of a For loop.
 exit_for_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('For').suppress()
 exit_for_statement.setParseAction(Exit_For_Statement)
+
+# Break out of a While Do loop.
+exit_while_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('Do').suppress()
+exit_while_statement.setParseAction(Exit_While_Statement)
+
+# Break out of a loop.
+exit_loop_statement = exit_for_statement | exit_while_statement
 
 # --- EXIT FUNCTION statement ----------------------------------------------------------
 
@@ -1154,7 +1166,8 @@ class Redim_Statement(VBA_Object):
 
 # Array redim statement
 redim_statement = CaselessKeyword('ReDim').suppress() + expression('item') + \
-                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress()
+                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress() + \
+                  Optional(CaselessKeyword('As') + lex_identifier).suppress()
 redim_statement.setParseAction(Redim_Statement)
 
 # --- WITH statement ----------------------------------------------------------
@@ -1242,7 +1255,7 @@ on_error_statement.setParseAction(On_Error_Statement)
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_for_statement | \
+simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
@@ -1302,6 +1315,11 @@ class External_Function(VBA_Object):
                 context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
                 # return 0 when no error occurred:
                 return 0
+        if function_name.lower().startswith('shellexecute'):
+            cmd = str(params[2]) + str(params[3])
+            context.report_action('Run Command', cmd, function_name)
+            # return 0 when no error occurred:
+            return 0
         # TODO: return result according to the known DLLs and functions
         log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
         return None
