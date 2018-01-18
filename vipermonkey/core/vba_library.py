@@ -610,6 +610,29 @@ class CByte(object):
         log.debug("CByte: %r returns %r" % (self, r))
         return r
 
+class CLng(object):
+    """
+    CLng() math function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        r = ''
+        try:
+            tmp = params[0]
+            if (isinstance(tmp, str)):
+                tmp = params[0].upper()
+                if (tmp.startswith("&H")):
+                    tmp = tmp.replace("&H", "0x")
+                    tmp = int(tmp, 16)
+                elif (len(tmp) == 1):
+                    tmp = ord(tmp)
+            r = int(tmp)
+        except:
+            pass 
+        log.debug("CLng: %r returns %r" % (self, r))
+        return r
+    
 class CBool(object):
     """
     CBool() type conversion function.
@@ -882,7 +905,7 @@ class Val(object):
     
 class Base64Decode(object):
     """
-    Base64Decode() function.
+    Base64Decode() function used by some malware. Note that this is not part of Visual Basic.
     """
 
     def eval(self, context, params=None):
@@ -895,6 +918,9 @@ class Base64Decode(object):
         log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
 
+class Base64DecodeString(Base64Decode):
+    pass
+    
 class Pmt(object):
     """
     Pmt() payment computation function.
@@ -1077,7 +1103,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf):
+               Environ, IIf, Base64DecodeString, CLng):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -93,7 +93,7 @@ class Module(VBA_Object):
                 self.attributes[token.name] = token.value
             if isinstance(token, Global_Var_Statement):
                 log.debug("saving global var decl: %r" % token.name)
-                self.global_vars[token.name] = token
+                self.global_vars[token.name] = token.value
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)

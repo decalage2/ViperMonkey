@@ -114,6 +114,9 @@ class Context(object):
         # Track whether we have exited from the current function.
         self.exit_func = False
 
+        # Track variable types, if known.
+        self.types = {}
+        
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"
         self.globals["vbKeyLButton".lower()] = 1
@@ -250,9 +253,15 @@ class Context(object):
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
 
+    def get_type(self, var):
+        var = var.lower()
+        if (var not in self.types):
+            return None
+        return self.types[var]
+            
     # TODO: set_global?
 
-    def set(self, name, value):
+    def set(self, name, value, var_type=None):
         # convert to lowercase
         name = name.lower()
         # raise exception if name in VBA library:
@@ -267,6 +276,10 @@ class Context(object):
             # new name, always stored in locals:
             self.locals[name] = value
 
+        # If we know the type of the variable, save it.
+        if (var_type is not None):
+            self.types[name] = var_type
+            
     def report_action(self, action, params=None, description=None):
         self.engine.report_action(action, params, description)
 

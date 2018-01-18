@@ -104,8 +104,6 @@ class Attribute_Statement(VBA_Object):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         self.value = tokens.value
-        # print 'Attribute_Statement.init:'
-        # pprint.pprint(tokens.asList())
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -249,8 +247,9 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # typed_name_param_dcl = TYPED_NAME [array_designator]
 
-parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') \
-            + Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
+            Optional("(").suppress() + Optional(")").suppress() + \
+            Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -297,14 +296,87 @@ class Dim_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
-        # print 'Dim_Statement.init:'
-        # pprint.pprint(tokens.asList())
-        log.debug('parsed %r' % self)
+
+        # [['b1', '(', ')', 'Byte']]
+        # [['b7', '(', ')', 'Byte', '=', s]]
+        # [['l', 'Long']]
+        # [['b2', '(', ')'], ['b3'], ['b4', '(', ')', 'Byte']]
+        
+        # Get the type (if there is one) of the declared variable.
+        self.type = None
+        last_var = tokens[len(tokens) - 1]
+        if (len(last_var) > 1):
+
+            # If this is a typed array declaration the type will be the
+            # 4th element.
+            if ((last_var[1] == '(') and
+                (len(last_var) > 3) and
+                (last_var[3] != '=')):
+                self.type = last_var[3]
+
+            # If this is a typed non-array decl the type will be the 2nd
+            # element.
+            elif (len(last_var) == 2):
+                self.type = last_var[1]
+                
+        # Track the initial value of the variable.
+        self.init_val = None
+        if ((len(last_var) >= 3) and
+            (last_var[len(last_var) - 2] == '=')):
+            self.init_val = last_var[len(last_var) - 1]
+                
+        # Track each variable being declared.
+        self.variables = []
+        for var in tokens:
+
+            # Is this an array?
+            is_array = False
+            if ((len(var) > 1) and (var[1] == '(')):
+                is_array = True
+            self.variables.append((var[0], is_array))
+        
+        log.debug('parsed %r' % str(self))
 
     def __repr__(self):
-        return 'Dim %r' % repr(self.tokens)
+        r = "Dim "
+        first = True
+        for var in self.variables:
+            if (not first):
+                r += ", "
+            first = False
+            r += str(var[0])
+            if (var[1]):
+                r += "()"
+        if (self.type is not None):
+            r += " As " + str(self.type)
+        if (self.init_val is not None):
+            r += " = " + str(self.init_val)
+        return r
 
+    def eval(self, context, params=None):
 
+        # Evaluate the initial variable value(s).
+        init_val = ''
+        if (self.init_val is not None):
+            init_val = eval_arg(self.init_val, context=context)
+        elif ((self.type == "Long") or (self.type == "Integer")):
+            init_val = 0
+            
+        # Track each declared variable.
+        for var in self.variables:
+
+            # Do we know the variable type?
+            curr_type = None
+            if (self.type is not None):
+                curr_type = str(self.type)
+
+                # Is this variable an array?
+                if (var[1]):
+                    curr_type += " Array"
+
+            # Set the initial value of the declared variable.
+            context.set(var[0], init_val, curr_type)
+    
 # 5.4.3.1 Local Variable Declarations
 # local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
 # static-variable-declaration = "Static" variable-declaration-list
@@ -360,7 +432,7 @@ lower_bound = constant_expression + CaselessKeyword('to').suppress()
 upper_bound = constant_expression
 dim_spec = Optional(lower_bound) + upper_bound
 bounds_list = delimitedList(dim_spec)
-array_dim = Suppress('(') + Optional(bounds_list) + Suppress(')')
+array_dim = '(' + Optional(bounds_list).suppress() + ')'
 constant_name = simple_name_expression
 string_length = constant_name | integer
 fixed_length_string_spec = CaselessKeyword("string").suppress() + Suppress("*") + string_length
@@ -375,7 +447,7 @@ untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
-variable_declaration_list = delimitedList(variable_dcl)
+variable_declaration_list = delimitedList(Group(variable_dcl))
 local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(
     CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
@@ -394,7 +466,8 @@ class Global_Var_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Global_Var_Statement, self).__init__(original_str, location, tokens)
-        self.name = tokens[0]
+        self.name = tokens[0][0]
+        self.value = ''
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -434,6 +507,30 @@ class Let_Statement(VBA_Object):
 
         # set variable, non-array access.
         if (self.index is None):
+
+            # Handle conversion of strings to byte arrays, if needed.
+            if ((context.get_type(self.name) == "Byte Array") and
+                (isinstance(value, str))):
+                tmp = []
+                for c in value:
+                    tmp.append(ord(c))
+                    tmp.append(0)
+                value = tmp
+
+            # Handle conversion of byte arrays to strings, if needed.
+            if ((context.get_type(self.name) == "String") and
+                (isinstance(value, list))):
+                try:
+                    tmp = ""
+                    pos = 0
+                    # TODO: Only handles ASCII strings.
+                    while (pos < len(value)):
+                        tmp += chr(value[pos])
+                        pos += 2
+                    value = tmp
+                except:
+                    pass
+                    
             log.debug('setting %s = %s' % (self.name, value))
             context.set(self.name, value)
 
@@ -755,7 +852,6 @@ class Select_Statement(VBA_Object):
         for case in self.cases:
             r += str(case)
         r += "End Select"
-        print r
         return r
 
     def eval(self, context, params=None):
@@ -989,10 +1085,18 @@ multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expr
                                      Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
                                            Group(statement_block('statements')))
                                  ) + \
-                                 CaselessKeyword("End If").suppress() #+ FollowedBy(EOS)
+                                 CaselessKeyword("End If").suppress()
 simple_statements_line = Forward()
 single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
-                                  Group(simple_statements_line('statements')) ) #+ FollowedBy(EOS)
+                                  Group(simple_statements_line('statements')) )  + \
+                                  ZeroOrMore(
+                                      Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                             Group(simple_statements_line('statements')))
+                                  ) + \
+                                  Optional(
+                                      Group(CaselessKeyword("Else").suppress() + \
+                                            Group(simple_statements_line('statements')))
+                                  )
 simple_if_statement = multi_line_if_statement ^ single_line_if_statement
 
 simple_if_statement.setParseAction(If_Statement)

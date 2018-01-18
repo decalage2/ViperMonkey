@@ -457,7 +457,25 @@ expression <<= (infixNotation(expr_item,
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
                                       (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
+                                      (CaselessKeyword("and"), 2, opAssoc.LEFT, And),
+                                      (CaselessKeyword("or"), 2, opAssoc.LEFT, Or),
                                   ]))
+expression.setParseAction(lambda t: t[0])
+
+# Used in boolean expressions to limit confusion with boolean and/or and bitwise and/or.
+limited_expression = (infixNotation(expr_item,
+                                    [
+                                        # ("^", 2, opAssoc.RIGHT), # Exponentiation
+                                        # ("-", 1, opAssoc.LEFT), # Unary negation
+                                        ("*", 2, opAssoc.LEFT, Multiplication),
+                                        ("/", 2, opAssoc.LEFT, Division),
+                                        ("\\", 2, opAssoc.LEFT, FloorDivision),
+                                        (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                        ("-", 2, opAssoc.LEFT, Subtraction),
+                                        ("+", 2, opAssoc.LEFT, Sum),
+                                        ("&", 2, opAssoc.LEFT, Concatenation),
+                                        (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
+                                    ]))
 expression.setParseAction(lambda t: t[0])
 
 # TODO: constant expressions (used in some statements)
@@ -489,22 +507,12 @@ class BoolExprItem(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(BoolExprItem, self).__init__(original_str, location, tokens)
         assert (len(tokens) > 0)
-        self.lhs = None
+        self.lhs = tokens[0]
         self.op = None
         self.rhs = None
-        tokens = tokens[0]
-        try:
-            self.lhs = tokens[0]
-            if (len(tokens) == 3):
-                self.op = tokens[1].replace("'", "")
-                self.rhs = tokens[2]
-            elif (len(tokens) > 3):
-                self.op = tokens[1].replace("'", "")
-                self.rhs = BoolExprItem(original_str, location, [tokens[2:], None])
-            else:
-                log.error("BoolExprItem: Unexpected # tokens in %r" % tokens)
-        except TypeError:
-            self.lhs = tokens
+        if (len(tokens) == 3):
+            self.op = tokens[1]
+            self.rhs = tokens[2]        
         log.debug('parsed %r as BoolExprItem' % self)
 
     def __repr__(self):
@@ -555,15 +563,19 @@ class BoolExprItem(VBA_Object):
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
 
-bool_expr_item = infixNotation(expression,
-                               [
-                                   ("=", 2, opAssoc.LEFT),
-                                   (">", 2, opAssoc.LEFT),
-                                   ("<", 2, opAssoc.LEFT),
-                                   (">=", 2, opAssoc.LEFT),
-                                   ("<=", 2, opAssoc.LEFT),
-                                   ("<>", 2, opAssoc.LEFT)
-                               ])
+#bool_expr_item = infixNotation(expression,
+#                               [
+#                                   ("=", 2, opAssoc.LEFT),
+#                                   (">", 2, opAssoc.LEFT),
+#                                   ("<", 2, opAssoc.LEFT),
+#                                   (">=", 2, opAssoc.LEFT),
+#                                   ("<=", 2, opAssoc.LEFT),
+#                                   ("<>", 2, opAssoc.LEFT)
+#                               ])
+bool_expr_item = (limited_expression + \
+                  (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<")) + \
+                  limited_expression) | \
+                  limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
 
 class BoolExpr(VBA_Object):

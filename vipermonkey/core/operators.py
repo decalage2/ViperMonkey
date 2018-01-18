@@ -137,9 +137,68 @@ class Xor(VBA_Object):
             sys.exit(1)
 
     def __repr__(self):
-        return debug_repr("^", self.arg)
         return ' ^ '.join(map(repr, self.arg))
 
+# --- AND --------------------------------------------------------
+
+class And(VBA_Object):
+    """
+    VBA And operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(And, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            return reduce(lambda x, y: x & y, eval_args(self.arg, context))
+        except TypeError:
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) & int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to and arguments of different types.')
+                return 0
+        except RuntimeError:
+            log.error("overflow trying eval and: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' & '.join(map(repr, self.arg))
+
+# --- OR --------------------------------------------------------
+
+class Or(VBA_Object):
+    """
+    VBA Or operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Or, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            return reduce(lambda x, y: x | y, eval_args(self.arg, context))
+        except TypeError:
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) | int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to or arguments of different types.')
+                return 0
+        except RuntimeError:
+            log.error("overflow trying eval or: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' | '.join(map(repr, self.arg))
+    
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
 class Subtraction(VBA_Object):

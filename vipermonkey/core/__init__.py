@@ -157,7 +157,11 @@ class ViperMonkey(object):
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
             log.debug('storing global var "%s" in globals' % name)
-            self.globals[name.lower()] = _var
+            if (isinstance(name, str)):
+                self.globals[name.lower()] = _var
+            if (isinstance(name, list)):
+                self.globals[name[0].lower()] = _var
+                self.types[name[0].lower()] = name[1]
         
     def add_module(self, vba_code):
 
