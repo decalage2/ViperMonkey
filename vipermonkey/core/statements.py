@@ -520,16 +520,38 @@ class Let_Statement(VBA_Object):
             # Handle conversion of byte arrays to strings, if needed.
             if ((context.get_type(self.name) == "String") and
                 (isinstance(value, list))):
-                try:
+
+                # Do we have a list of integers?
+                all_ints = True
+                for i in value:
+                    if (not isinstance(i, int)):
+                        all_ints = False
+                        break
+                if (all_ints):
+                    try:
+                        tmp = ""
+                        pos = 0
+                        # TODO: Only handles ASCII strings.
+                        while (pos < len(value)):
+                            tmp += chr(value[pos])
+                            pos += 2
+                        value = tmp
+                    except:
+                        pass
+
+                # Do we have a list of characters?
+                all_chars = True
+                for i in value:
+                    if ((i is not None) and
+                        ((not isinstance(i, str)) or (len(i) > 1))):
+                        all_chars = False
+                        break
+                if (all_chars):
                     tmp = ""
-                    pos = 0
-                    # TODO: Only handles ASCII strings.
-                    while (pos < len(value)):
-                        tmp += chr(value[pos])
-                        pos += 2
+                    for i in value:
+                        if (i is not None):
+                            tmp += i
                     value = tmp
-                except:
-                    pass
                     
             log.debug('setting %s = %s' % (self.name, value))
             context.set(self.name, value)
