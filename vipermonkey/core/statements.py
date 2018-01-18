@@ -248,7 +248,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # typed_name_param_dcl = TYPED_NAME [array_designator]
 
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
-            Optional("(").suppress() + Optional(")").suppress() + \
+            Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
             Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
