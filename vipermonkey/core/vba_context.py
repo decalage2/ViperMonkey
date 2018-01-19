@@ -232,8 +232,8 @@ class Context(object):
         self.globals["vbFromUnicode".lower()] = 128
         
     def get(self, name):
-        # TODO: remove this check once everything works fine
-        assert isinstance(name, basestring)
+        if (not isinstance(name, basestring)):
+            raise KeyError('Object %r not found' % name)
         # convert to lowercase
         name = name.lower()
         # first, search in the global VBA library:
@@ -254,6 +254,8 @@ class Context(object):
             # TODO: raise a custom VBA exception?
 
     def get_type(self, var):
+        if (not isinstance(var, basestring)):
+            return None
         var = var.lower()
         if (var not in self.types):
             return None
@@ -262,6 +264,8 @@ class Context(object):
     # TODO: set_global?
 
     def set(self, name, value, var_type=None):
+        if (not isinstance(name, basestring)):
+            return
         # convert to lowercase
         name = name.lower()
         # raise exception if name in VBA library:

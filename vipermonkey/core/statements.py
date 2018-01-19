@@ -747,6 +747,8 @@ class For_Each_Statement(VBA_Object):
             container = context.get(self.container)
         except KeyError:
             pass
+        except AssertionError:
+            pass
 
         # Try iterating over the values in the container.
         try:
@@ -787,7 +789,7 @@ for_each_clause = CaselessKeyword("For").suppress() \
                   + CaselessKeyword("Each").suppress() \
                   + lex_identifier("item") \
                   + CaselessKeyword("In").suppress() \
-                  + lex_identifier("container") \
+                  + expression("container") \
 
 simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') \
                             + CaselessKeyword("Next").suppress() \
