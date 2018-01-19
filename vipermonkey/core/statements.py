@@ -576,7 +576,7 @@ class Let_Statement(VBA_Object):
 
             # Do we need to extend the length of the list to include the index?
             if (index >= len(arr_var)):
-                arr_var.extend([None] * (index - len(arr_var)))
+                arr_var.extend([0] * (index - len(arr_var)))
                 
             # We now have a list with the proper # of elements. Set the
             # array element to the proper value.

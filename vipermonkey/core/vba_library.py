@@ -329,18 +329,43 @@ class StrConv(object):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this.
-        r = str(params[0])
-        if (len(params) > 1):
-            conv = int(params[1])
-            if (conv == 1):
-                r = r.upper()
-            if (conv == 2):
-                r = r.lower()
-            if (conv == 64):
-                padded = ""
-                for c in r:
-                    padded += c + "\0"
-                r = padded
+        r = params[0]
+        if (isinstance(r, str)):
+            if (len(params) > 1):
+                conv = int(params[1])
+                if (conv == 1):
+                    r = r.upper()
+                if (conv == 2):
+                    r = r.lower()
+                if (conv == 64):
+                    padded = ""
+                    for c in r:
+                        padded += c + "\0"
+                    r = padded
+
+        elif (isinstance(r, list)):
+
+            # Handle list of ASCII values.
+            all_int = True
+            for i in r:
+                if (not isinstance(i, int)):
+                    all_int = False
+                    break
+            if (all_int):
+                tmp = ""
+                for i in r:
+                    if (i <= 0):
+                        continue
+                    try:
+                        tmp += chr(i)
+                    except:
+                        pass
+                r = tmp
+
+            else:
+                log.error("StrConv: Unhandled type.")
+                r = ''
+                        
         log.debug("StrConv: return %r" % r)
         return r
 

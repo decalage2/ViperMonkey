@@ -420,17 +420,54 @@ function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
 function_call_limited.setParseAction(Function_Call)
 
+# --- ARRAY ACCESS OF FUNCTION CALL --------------------------------------------------------
+
+class Function_Call_Array_Access(VBA_Object):
+    """
+    Array access of the return value of a function call.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Function_Call_Array_Access, self).__init__(original_str, location, tokens)
+        self.array = tokens.array
+        self.index = tokens.index
+        log.debug('parsed %r as Function_Call_Array_Access' % self)
+
+    def __repr__(self):
+        r = str(self.array) + "(" + str(self.index) + ")"
+        return r
+
+    def eval(self, context, params=None):
+
+        # Evaluate the value of the function returing the array.
+        array_val = eval_arg(self.array, context=context)
+        # Evaluate the index to read.
+        array_index = eval_arg(self.index, context=context)
+
+        # Do we have a list to read from?
+        if (not isinstance(array_val, list)):
+            log.error("%r is not a list. Cannot perform array access." % array_val)
+            return ''
+
+        # Do we have a valid index?
+        if (not isinstance(array_index, int)):
+            log.error("Index %r is not an integer. Cannot perform array access." % array_index)
+            return ''
+        if ((array_index >= len(array_val)) or (array_index < 0)):
+            log.error("Index %r is outside array bounds. Cannot perform array access." % array_index)
+            return ''
+
+        # Everything is valid. Return the array element.
+        return array_val[array_index]
+            
+func_call_array_access = function_call("array") + Suppress("(") + expression("index") + Suppress(")")
+func_call_array_access.setParseAction(Function_Call_Array_Access)
+
 # --- EXPRESSION ITEM --------------------------------------------------------
 
 # expression item:
-# - known functions first
-# - then generic function call
-# - then identifiers
-# - finally literals (strings, integers, etc)
-# expr_item = (chr_ | asc | strReverse | environ | literal | function_call | simple_name_expression)
-#expr_item = (chr_ | asc | strReverse | literal | function_call | simple_name_expression)
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
-            ( float_literal | l_expression | chr_ | function_call | simple_name_expression | asc | strReverse | literal )
+            ( float_literal | l_expression | chr_ | (function_call ^ func_call_array_access) | simple_name_expression | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
