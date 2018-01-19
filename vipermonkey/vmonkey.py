@@ -204,6 +204,8 @@ def parse_stream(subfilename, stream_path=None,
             print err.line
             print " "*(err.column-1) + "^"
             print err
+            print "Parse Error. Processing Aborted."
+            sys.exit(1)
 
     # Return the parsed macro.
     return m
@@ -313,12 +315,9 @@ def process_file (container, filename, data,
 
         else:
             print 'No VBA macros found.'
-    except: #TypeError:
-        #raise
-        #TODO: print more info if debug mode
-        #print sys.exc_value
-        # display the exception with full stack trace for debugging, but do not stop:
-        traceback.print_exc()
+    except Exception as e:
+        if ("SystemExit" not in str(e)):
+            traceback.print_exc()
     print ''
 
 
