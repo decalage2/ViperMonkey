@@ -564,24 +564,48 @@ class Let_Statement(VBA_Object):
             log.debug('setting %s(%r) = %s' % (self.name, index, value))
 
             # Is array variable being set already represented as a list?
+            # Or a string?
             arr_var = None
             try:
                 arr_var = context.get(self.name)
             except KeyError:
                 log.error("WARNING: Cannot find array variable %s" % self.name)
-            if (not isinstance(arr_var, list)):
+            if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.
                 arr_var = []
 
-            # Do we need to extend the length of the list to include the index?
-            if (index >= len(arr_var)):
-                arr_var.extend([0] * (index - len(arr_var)))
+            # Handle lists
+            if (isinstance(arr_var, list)):
+            
+                # Do we need to extend the length of the list to include the index?
+                if (index >= len(arr_var)):
+                    arr_var.extend([0] * (index - len(arr_var)))
                 
-            # We now have a list with the proper # of elements. Set the
-            # array element to the proper value.
-            arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                # We now have a list with the proper # of elements. Set the
+                # array element to the proper value.
+                arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
 
+            # Handle strings.
+            if (isinstance(arr_var, str)):
+
+                # Do we need to extend the length of the string to include the index?
+                if (index >= len(arr_var)):
+                    arr_var += "\0"*(index - len(arr_var))
+                
+                # We now have a string with the proper # of elements. Set the
+                # array element to the proper value.
+                if (isinstance(value, str)):
+                    arr_var = arr_var[:index] + value + arr_var[(index + 1):]
+                elif (isinstance(value, int)):
+                    try:
+                        arr_var = arr_var[:index] + chr(value) + arr_var[(index + 1):]
+                    except Exception as e:
+                        log.error(str(e))
+                        log.error(str(value) + " cannot be converted to ASCII.")
+                else:
+                    log.error("Unhandled value type " + str(type(value)) + " for array update.")
+                        
             # Finally save the updated variable in the context.
             context.set(self.name, arr_var)
             
@@ -1221,7 +1245,7 @@ class Call_Statement(VBA_Object):
 # TODO: 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
-call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | expr_list('params')
+call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
 call_statement = NotAny(known_keywords_statement_start) \
                  + Optional(CaselessKeyword('Call').suppress()) \
                  + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib('name')) + Optional(call_params)

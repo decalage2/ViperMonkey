@@ -370,7 +370,11 @@ class Function_Call(VBA_Object):
                     log.debug("Looks like array access.")
                     try:
                         i = int(params[0])
-                        return f[i]
+                        r = f[i]
+                        if (isinstance(f, str)):
+                            r = ord(r)
+                        log.debug("Return " + str(r))
+                        return r
                     except:
                         log.error("Array access %r[%r] failed." % (f, params[0]))
                     else:

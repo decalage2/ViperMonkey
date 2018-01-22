@@ -222,9 +222,25 @@ class Subtraction(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
             except Exception as e:
-                log.error('Impossible to subtract arguments of different types. ' + str(e))
-                # TODO
-                return 0
+
+                # Are we doing math on character ordinals?
+                l1 = []
+                orig = eval_args(self.arg, context)
+                for v in orig:
+                    if (isinstance(v, int)):
+                        l1.append(v)
+                        continue
+                    if (isinstance(v, str) and (len(v) == 1)):
+                        l1.append(ord(v))
+                        continue
+
+                # Do we have something that we can do math on?
+                if (len(orig) != len(l1)):                
+                    log.error('Impossible to subtract arguments of different types. ' + str(e))
+                    return 0
+
+                # Try subtracting based on character ordinals.
+                return reduce(lambda x, y: int(x) - int(y), l1)
 
     def __repr__(self):
         return debug_repr("-", self.arg)
