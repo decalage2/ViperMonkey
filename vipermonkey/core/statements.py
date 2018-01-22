@@ -366,6 +366,7 @@ class Dim_Statement(VBA_Object):
         for var in self.variables:
 
             # Do we know the variable type?
+            curr_init_val = init_val
             curr_type = None
             if (self.type is not None):
                 curr_type = str(self.type)
@@ -373,9 +374,10 @@ class Dim_Statement(VBA_Object):
                 # Is this variable an array?
                 if (var[1]):
                     curr_type += " Array"
+                    curr_init_val = []
 
             # Set the initial value of the declared variable.
-            context.set(var[0], init_val, curr_type)
+            context.set(var[0], curr_init_val, curr_type)
     
 # 5.4.3.1 Local Variable Declarations
 # local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
