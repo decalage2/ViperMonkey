@@ -471,7 +471,7 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 # expression item:
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
-            ( float_literal | l_expression | chr_ | (function_call ^ func_call_array_access) | simple_name_expression | asc | strReverse | literal )
+            ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | simple_name_expression | asc | strReverse | literal )
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 

@@ -116,7 +116,7 @@ class Chr(VBA_Object):
 # TODO: fix this like in olevba
 chr_ = Suppress(Combine(( CaselessKeyword('Chr$') | CaselessKeyword('Chr') | \
                           CaselessKeyword('ChrB$') | CaselessKeyword('ChrB') | \
-                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrB')))) + \
+                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrW')))) + \
        Suppress('(') + expression + Suppress(')')
 chr_.setParseAction(Chr)
 
