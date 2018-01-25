@@ -51,9 +51,11 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import array
 import math
 import base64
 import re
+from hashlib import sha256
 
 from vba_context import VBA_LIBRARY
 
@@ -1121,14 +1123,94 @@ class IIf(object):
             return true_part
         else:
             return false_part
-    
+
+class Close(object):
+    """
+    File Close statement.
+    """
+
+    def eval(self, context, params=None):
+
+        # Are we closing a file pointer?
+        if ((len(params) != 1) or (not params[0].startswith('#'))):
+
+            # No actions to do here.
+            return
+
+        # We are actually closing a file.
+        
+        # Get the name of the file being closed.
+        file_id = params[0]
+        name = context.open_files[file_id]["name"]
+
+        # Get the data written to the file and track it.
+        data = context.open_files[file_id]["contents"]
+        context.closed_files[name] = data
+
+        # Clear the file out of the open files.
+        del context.open_files[file_id]
+
+        # Save the hash of the written file.
+        raw_data = array.array('B', data).tostring()
+        h = sha256()
+        h.update(raw_data)
+        file_hash = h.hexdigest()
+        context.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
+
+        # TODO: Set a flag to control whether to dump file contents.
+
+        # Dump out the file.
+        try:
+            short_name = name
+            if ('\\' in short_name):
+                start = short_name.rindex('\\') + 1
+                short_name = short_name[start:].strip()
+            f = open(short_name, 'wb')
+            f.write(raw_data)
+            f.close()
+            log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+        except Exception as e:
+            log.error("Writing file " + short_name + " failed. " + str(e))
+
+class Put(object):
+    """
+    File Put statement.
+    """
+
+    def eval(self, context, params=None):
+        assert ((len(params) == 2) or (len(params) == 3))
+
+        # Get the ID of the file.
+        file_id = params[0]
+
+        # TODO: Handle writing at a given file position.
+
+        # Get the data.
+        data = params[1]
+        if (len(params) == 3):
+            data = params[2]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
+                
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf, Base64DecodeString, CLng):
+               Environ, IIf, Base64DecodeString, CLng, Close, Put):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

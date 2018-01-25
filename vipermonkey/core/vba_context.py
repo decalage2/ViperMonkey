@@ -116,6 +116,12 @@ class Context(object):
 
         # Track variable types, if known.
         self.types = {}
+
+        # Track open files.
+        self.open_files = {}
+
+        # Track the final contents of written files.
+        self.closed_files = {}
         
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"
@@ -236,18 +242,21 @@ class Context(object):
             raise KeyError('Object %r not found' % name)
         # convert to lowercase
         name = name.lower()
-        # first, search in the global VBA library:
-        if name in VBA_LIBRARY:
-            log.debug('Found %r in VBA Library' % name)
-            return VBA_LIBRARY[name]
-        # second, search in locals:
+
+        # First, search in locals. This handles variables whose name overrides
+        # a system function.
         if name in self.locals:
             log.debug('Found %r in locals' % name)
             return self.locals[name]
-        # third, in globals:
+        # second, in globals:
         elif name in self.globals:
             log.debug('Found %r in globals' % name)
             return self.globals[name]
+        # finally, search in the global VBA library:
+        elif name in VBA_LIBRARY:
+            log.debug('Found %r in VBA Library' % name)
+            return VBA_LIBRARY[name]
+        # Unknown symbol.
         else:
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
@@ -269,8 +278,9 @@ class Context(object):
         # convert to lowercase
         name = name.lower()
         # raise exception if name in VBA library:
-        if name in VBA_LIBRARY:
-            raise ValueError('%r cannot be modified, it is part of the VBA Library.' % name)
+        # Commented out since it looks like you can have local variables named things like str.
+        #if name in VBA_LIBRARY:
+        #    raise ValueError('%r cannot be modified, it is part of the VBA Library.' % name)
         if name in self.locals:
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:

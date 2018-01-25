@@ -54,6 +54,7 @@ __version__ = '0.02'
 from comments_eol import *
 from expressions import *
 from vba_context import *
+from literals import file_pointer
 
 from logger import log
 log.debug('importing statements')
@@ -108,7 +109,6 @@ class Attribute_Statement(VBA_Object):
 
     def __repr__(self):
         return 'Attribute %s = %r' % (self.name, self.value)
-
 
 # procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
 # class-module-header = 1*class-attr
@@ -1406,11 +1406,58 @@ on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
 
 on_error_statement.setParseAction(On_Error_Statement)
 
+# --- FILE OPEN -------------------------------------------------------------
+
+class File_Open(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(File_Open, self).__init__(original_str, location, tokens)
+        self.file_name = tokens.file_name
+        self.file_id = tokens.file_id
+        self.file_mode = tokens.type.mode
+        self.file_access = None
+        if (hasattr(tokens.type, "access")):
+            self.file_access = tokens.type.access
+        log.debug('parsed %r as File_Open' % self)
+
+    def __repr__(self):
+        r = "Open " + str(self.file_name) + " For " + str(self.file_mode)
+        if (self.file_access is not None):
+            r += " Access " + str(self.file_access)
+        r += " As " + str(self.file_id)
+        return r
+
+    def eval(self, context, params=None):
+
+        # Get the file name.
+
+        # Might be an expression.
+        name = eval_arg(self.file_name, context=context)
+        try:
+            # Could be a variable.
+            name = context.get(self.file_name)
+        except KeyError:
+            pass
+        except AssertionError:
+            pass
+
+        # Save that the file is opened.
+        context.open_files[self.file_id] = {}
+        context.open_files[self.file_id]["name"] = name
+        context.open_files[self.file_id]["contents"] = []
+    
+file_type = Suppress(CaselessKeyword("For")) + \
+            (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
+            Optional(Suppress(CaselessKeyword("Access")) + \
+                     (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
+file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement.setParseAction(File_Open)
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use

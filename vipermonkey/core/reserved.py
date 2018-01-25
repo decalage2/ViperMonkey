@@ -77,12 +77,12 @@ def caselessKeywordsList(keywords):
 # A <Statement-keyword> is a <reserved-identifier> that is the first syntactic item of a statement or
 # declaration.
 statement_keyword = caselessKeywordsList(
-    ("Call", "Close", "Const", "Declare", "DefBool", "DefByte",
+    ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
      "Enum", "Erase", "Event", "Exit", "For", "Friend", "Function", "Get", "Global",
      "GoSub", "GoTo", "If", "Implements", "Input", "Let", "Lock", "Loop", "LSet", "Next",
-     "On", "Open", "Option", "Print", "Private", "Public", "Put", "RaiseEvent", "ReDim",
+     "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub", "Type",
      "Unlock", "Wend", "While", "With", "Write"))
 

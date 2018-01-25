@@ -126,7 +126,7 @@ reserved_keywords = (  # WordStart() + (
     # Combine(CaselessLiteral('Chr') + Optional(Word('BbWw', max=1))) # + Optional('$'))
     CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
     | CaselessKeyword('Asc')
-    | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub') | CaselessKeyword('SetAttr')
+    | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
     | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
     | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
     # TODO: re-enable Environ when fixed

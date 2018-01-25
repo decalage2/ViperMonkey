@@ -165,24 +165,36 @@ class MemberAccessExpression(VBA_Object):
         log.debug("member: tokens (1) = %r" % tokens)
         self.rhs = tokens.rhs
         self.lhs = tokens.lhs
+        self.rhs1 = ""
+        if (hasattr(tokens, "rhs1")):
+            self.rhs1 = tokens.rhs1
         log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
-        return str(self.lhs) + "." + str(self.rhs)
+        r = str(self.lhs) + "." + str(self.rhs)
+        if (len(self.rhs1) > 0):
+            r += "." + str(self.rhs1)
+        return r
 
     def eval(self, context, params=None):
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
         tmp_lhs = eval_arg(self.lhs, context)
-        tmp_rhs = eval_arg(self.rhs, context)
-
+        tmp_rhs = None
+        rhs = None
+        if (len(self.rhs1) > 0):
+            rhs = self.rhs1
+        else:
+            self.rhs
+        tmp_rhs = eval_arg(rhs, context)
+            
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
-        if (isinstance(self.rhs, Function_Call)):
+        if (isinstance(rhs, Function_Call)):
             return tmp_rhs
         else:
-            return eval_arg(str(tmp_lhs) + "." + str(tmp_rhs), context)
+            return eval_arg(self.__repr__(), context)
 
 log.debug('l_expression = Forward()')
 # need to use Forward(), because the definition of l-expression is recursive:
@@ -194,8 +206,9 @@ member_object = function_call_limited | unrestricted_name
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
 member_access_expression.setParseAction(MemberAccessExpression)
 
-# TODO: 
-member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + unrestricted_name("rhs") ) )
+# TODO: Figure out how to have unlimited member accesses.
+member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + unrestricted_name("rhs") + \
+                                                 Optional(Suppress(".") + unrestricted_name("rhs1")) ) )
 #member_access_expression_limited = Group( Group( function_call_limited("lhs") + Suppress(".") + unrestricted_name("rhs") ) )
 member_access_expression_limited.setParseAction(MemberAccessExpression)
 
