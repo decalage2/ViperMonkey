@@ -54,7 +54,6 @@ __version__ = '0.02'
 from comments_eol import *
 from expressions import *
 from vba_context import *
-from literals import file_pointer
 
 from logger import log
 log.debug('importing statements')
@@ -1250,7 +1249,7 @@ class Call_Statement(VBA_Object):
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
 call_statement = NotAny(known_keywords_statement_start) \
                  + Optional(CaselessKeyword('Call').suppress()) \
-                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib('name')) + Optional(call_params)
+                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib_loose('name')) + Optional(call_params)
 call_statement.setParseAction(Call_Statement)
 
 # --- EXIT FOR statement ----------------------------------------------------------
@@ -1444,11 +1443,12 @@ class File_Open(VBA_Object):
         context.open_files[self.file_id] = {}
         context.open_files[self.file_id]["name"] = name
         context.open_files[self.file_id]["contents"] = []
-    
+
 file_type = Suppress(CaselessKeyword("For")) + \
             (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
             Optional(Suppress(CaselessKeyword("Access")) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
+
 file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)

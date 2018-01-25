@@ -63,6 +63,11 @@ from vba_object import eval_arg
 from logger import log
 log.debug('importing expressions')
 
+# --- FILE POINTER -------------------------------------------------
+
+file_pointer = Suppress('#') + (decimal_literal | lex_identifier)
+file_pointer.setParseAction(lambda t: "#" + str(t[0]))
+
 # --- SIMPLE NAME EXPRESSION -------------------------------------------------
 
 class SimpleNameExpression(VBA_Object):
@@ -202,14 +207,15 @@ l_expression = Forward()
 
 function_call_limited = Forward()
 function_call = Forward()
-member_object = function_call_limited | unrestricted_name
+member_object = function_call_limited | \
+                Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
 member_access_expression.setParseAction(MemberAccessExpression)
 
 # TODO: Figure out how to have unlimited member accesses.
-member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + unrestricted_name("rhs") + \
-                                                 Optional(Suppress(".") + unrestricted_name("rhs1")) ) )
-#member_access_expression_limited = Group( Group( function_call_limited("lhs") + Suppress(".") + unrestricted_name("rhs") ) )
+member_object_limited = Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
+member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + member_object_limited("rhs") + \
+                                                 Optional(Suppress(".") + member_object_limited("rhs1")) ) )
 member_access_expression_limited.setParseAction(MemberAccessExpression)
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
@@ -430,7 +436,8 @@ expr_list = expr_list_item + Optional(Suppress(",") + delimitedList(Optional(exp
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
-                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') | lex_identifier('name')) + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + Suppress(Optional('$')) + \
+                   Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
 function_call.setParseAction(Function_Call)
 
 function_call_limited <<= CaselessKeyword("nothing") | \
@@ -484,7 +491,8 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 # expression item:
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
-            ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | simple_name_expression | asc | strReverse | literal )
+            ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
+              simple_name_expression | asc | strReverse | literal | file_pointer)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 

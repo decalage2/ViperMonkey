@@ -148,16 +148,10 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 date_string = QuotedString('#')
 date_string.setParseAction(lambda t: str(t[0]))
 
-# --- FILE POINTER ---------------------------------------------------------------
-
-file_pointer = Suppress('#') + decimal_literal
-file_pointer.setParseAction(lambda t: "#" + str(t[0]))
-
 # --- LITERALS ---------------------------------------------------------------
 
 # TODO: 5.6.5 Literal Expressions
 
-#literal = boolean_literal | pointer | integer | quoted_string | date_string | float_literal
-literal = boolean_literal | integer | quoted_string | date_string | float_literal | file_pointer
+literal = boolean_literal | integer | quoted_string | date_string | float_literal
 literal.setParseAction(lambda t: t[0])
 
