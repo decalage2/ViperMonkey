@@ -56,6 +56,7 @@ import math
 import base64
 import re
 from hashlib import sha256
+import os
 
 from vba_context import VBA_LIBRARY
 
@@ -1124,6 +1125,8 @@ class IIf(object):
         else:
             return false_part
 
+out_dir = None
+        
 class Close(object):
     """
     File Close statement.
@@ -1160,18 +1163,25 @@ class Close(object):
         # TODO: Set a flag to control whether to dump file contents.
 
         # Dump out the file.
-        try:
-            short_name = name
-            if ('\\' in short_name):
-                start = short_name.rindex('\\') + 1
-                short_name = short_name[start:].strip()
-            f = open(short_name, 'wb')
-            f.write(raw_data)
-            f.close()
-            log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
-        except Exception as e:
-            log.error("Writing file " + short_name + " failed. " + str(e))
+        if (out_dir is not None):
 
+            # Make the dropped file directory if needed.
+            if (not os.path.isdir(out_dir)):
+                os.makedirs(out_dir)
+
+            # Dump the file.
+            try:
+                short_name = name
+                if ('\\' in short_name):
+                    start = short_name.rindex('\\') + 1
+                    short_name = out_dir + short_name[start:].strip()
+                    f = open(short_name, 'wb')
+                    f.write(raw_data)
+                    f.close()
+                    log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+            except Exception as e:
+                log.error("Writing file " + short_name + " failed. " + str(e))
+                
 class Put(object):
     """
     File Put statement.
