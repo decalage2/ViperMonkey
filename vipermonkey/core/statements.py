@@ -1214,9 +1214,10 @@ class Call_Statement(VBA_Object):
             s.eval(context=context, params=call_params)
         except KeyError:
             try:
-                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "")
+                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "").\
+                           replace("[", "").replace("]", "").replace("'", "").replace('"', '')
                 if ("." in tmp_name):
-                    tmp_name = func_name[tmp_name.rindex(".") + 1:]
+                    tmp_name = tmp_name[tmp_name.rindex(".") + 1:]
                 log.debug("Looking for procedure %r" % tmp_name)
                 s = context.get(tmp_name)
                 s.eval(context=context, params=call_params)
