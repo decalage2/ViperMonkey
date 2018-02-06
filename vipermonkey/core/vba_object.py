@@ -160,6 +160,18 @@ def eval_arg(arg, context):
                     log.debug("eval_arg: Not found as variable")
                     pass
 
+                # Try it as a function
+                func_name = arg.lower()
+                func_name = func_name[func_name.rindex(".")+1:]
+                try:
+                    log.debug("eval_arg: Try to run as function " + func_name + "...")
+                    func = context.get(func_name)
+                    return func.eval(context=context)
+
+                except KeyError:
+                    log.debug("eval_arg: Not found as function")
+                    pass
+
                 # Are we trying to load some document meta data?
                 if (tmp.startswith("activedocument.item(")):
 
@@ -180,6 +192,9 @@ def eval_arg(arg, context):
                     r = getattr(meta, prop.lower())
                     log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
+
+                # None of those worked. We can't find the data.
+                return "??"
                 
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))

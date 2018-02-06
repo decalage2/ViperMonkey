@@ -653,6 +653,8 @@ class For_Statement(VBA_Object):
         start = eval_arg(self.start_value, context=context)
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
         end = eval_arg(self.end_value, context=context)
+        if (not isinstance(end, int)):
+            end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
             end = VBA_Object.loop_upper_bound
@@ -1454,11 +1456,15 @@ file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_n
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)
 
+# --- DOEVENTS STATEMENT -------------------------------------------------------------
+
+doevents_statement = Suppress(CaselessKeyword("DoEvents"))
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use

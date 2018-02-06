@@ -1213,6 +1213,29 @@ class Put(object):
         # Unhandled.
         else:
             log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
+
+class Run(object):
+    """
+    Application.Run() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the name of the function to call.
+        func_name = params[0]
+
+        # Get any parameters to pass to the function to call.
+        call_params = None
+        if (len(params) > 1):
+            call_params = params[1:]
+        
+        # Can we find the function to call?
+        try:
+            s = context.get(func_name)
+            return s.eval(context=context, params=call_params)
+        except KeyError:
+            log.error("Application.Run() failed. Cannot find function " + func_name + ".")
                 
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -1220,7 +1243,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf, Base64DecodeString, CLng, Close, Put):
+               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
