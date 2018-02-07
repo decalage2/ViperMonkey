@@ -57,6 +57,7 @@ import base64
 import re
 from hashlib import sha256
 import os
+import random
 
 from vba_context import VBA_LIBRARY
 
@@ -70,7 +71,13 @@ log.debug('importing vba_library')
 # TODO: Excel
 # TODO: other MS Office apps?
 
-class MsgBox(object):
+class VbaLibraryFunc(object):
+    """
+    Marker class to tell if a class implements a VBA function.
+    """
+    pass
+    
+class MsgBox(VbaLibraryFunc):
     """
     6.1.2.8.1.13 MsgBox
     """
@@ -81,7 +88,7 @@ class MsgBox(object):
         return 1  # vbOK
 
 
-class Len(object):
+class Len(VbaLibraryFunc):
     """
     TODO: Len
     """
@@ -91,7 +98,7 @@ class Len(object):
         return len(params[0])
 
 
-class Mid(object):
+class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
 
@@ -142,7 +149,7 @@ class Mid(object):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
-class Left(object):
+class Left(VbaLibraryFunc):
     """
     Left function.
     """
@@ -176,7 +183,7 @@ class Left(object):
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
-class Right(object):
+class Right(VbaLibraryFunc):
     """
     Right function.
     """
@@ -212,7 +219,7 @@ class Right(object):
 
 meta = None
     
-class BuiltInDocumentProperties(object):
+class BuiltInDocumentProperties(VbaLibraryFunc):
     """
     Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
     """
@@ -244,7 +251,7 @@ class Item(BuiltInDocumentProperties):
     """
     pass
     
-class Shell(object):
+class Shell(VbaLibraryFunc):
     """
     6.1.2.8.1.15 Shell
     Function Shell(PathName As Variant, Optional WindowStyle As VbAppWinStyle = vbMinimizedFocus)
@@ -266,7 +273,7 @@ class Shell(object):
         context.report_action('Execute Command', command, 'Shell function')
         return 0
 
-class Array(object):
+class Array(VbaLibraryFunc):
     """
     Create an array.
     """
@@ -279,7 +286,7 @@ class Array(object):
         log.debug("Array: return %r" % r)
         return r
 
-class UBound(object):
+class UBound(VbaLibraryFunc):
     """
     UBound() array function.
     """
@@ -293,7 +300,7 @@ class UBound(object):
         log.debug("UBound: return %r" % r)
         return r
 
-class LBound(object):
+class LBound(VbaLibraryFunc):
     """
     LBound() array function.
     """
@@ -307,7 +314,7 @@ class LBound(object):
         log.debug("LBound: return %r" % r)
         return r
 
-class Trim(object):
+class Trim(VbaLibraryFunc):
     """
     Trim() string function.
     """
@@ -323,7 +330,7 @@ class Trim(object):
         log.debug("Trim: return %r" % r)
         return r
 
-class StrConv(object):
+class StrConv(VbaLibraryFunc):
     """
     StrConv() string function.
     """
@@ -372,7 +379,7 @@ class StrConv(object):
         log.debug("StrConv: return %r" % r)
         return r
 
-class Split(object):
+class Split(VbaLibraryFunc):
     """
     Split() string function.
     """
@@ -389,7 +396,7 @@ class Split(object):
         log.debug("Split: return %r" % r)
         return r
 
-class Int(object):
+class Int(VbaLibraryFunc):
     """
     Int() function.
     """
@@ -413,7 +420,7 @@ class CInt(Int):
     """
     pass
 
-class Oct(object):
+class Oct(VbaLibraryFunc):
     """
     Oct() function.
     """
@@ -429,7 +436,7 @@ class Oct(object):
             log.error("Oct(): Invalid call oct(%r). Returning ''." % val)
             return ''
 
-class StrReverse(object):
+class StrReverse(VbaLibraryFunc):
     """
     StrReverse() string function.
     """
@@ -445,7 +452,7 @@ class StrReverse(object):
         log.debug("StrReverse: return %r" % r)
         return r
 
-class Replace(object):
+class Replace(VbaLibraryFunc):
     """
     Replace() string function.
     """
@@ -466,7 +473,7 @@ class Replace(object):
         log.debug("Replace: return %r" % r)
         return r
 
-class InStr(object):
+class InStr(VbaLibraryFunc):
     """
     InStr() string function.
     """
@@ -513,7 +520,7 @@ class InStr(object):
         log.debug("InStr: %r returns %r" % (self, r))
         return r
 
-class Sgn(object):
+class Sgn(VbaLibraryFunc):
     """
     Sgn() math function.
     """
@@ -530,7 +537,7 @@ class Sgn(object):
         log.debug("Sgn: %r returns %r" % (self, r))
         return r
         
-class Sqr(object):
+class Sqr(VbaLibraryFunc):
     """
     Sqr() math function.
     """
@@ -547,7 +554,7 @@ class Sqr(object):
         log.debug("Sqr: %r returns %r" % (self, r))
         return r
 
-class Abs(object):
+class Abs(VbaLibraryFunc):
     """
     Abs() math function.
     """
@@ -564,7 +571,7 @@ class Abs(object):
         log.debug("Abs: %r returns %r" % (self, r))
         return r
 
-class Fix(object):
+class Fix(VbaLibraryFunc):
     """
     Fix() math function.
     """
@@ -581,7 +588,7 @@ class Fix(object):
         log.debug("Fix: %r returns %r" % (self, r))
         return r
 
-class Round(object):
+class Round(VbaLibraryFunc):
     """
     Round() math function.
     """
@@ -598,7 +605,7 @@ class Round(object):
         log.debug("Round: %r returns %r" % (self, r))
         return r
 
-class Hex(object):
+class Hex(VbaLibraryFunc):
     """
     Hex() math function.
     """
@@ -615,7 +622,7 @@ class Hex(object):
         log.debug("Hex: %r returns %r" % (self, r))
         return r
 
-class CByte(object):
+class CByte(VbaLibraryFunc):
     """
     CByte() math function.
     """
@@ -638,7 +645,7 @@ class CByte(object):
         log.debug("CByte: %r returns %r" % (self, r))
         return r
 
-class CLng(object):
+class CLng(VbaLibraryFunc):
     """
     CLng() math function.
     """
@@ -661,7 +668,7 @@ class CLng(object):
         log.debug("CLng: %r returns %r" % (self, r))
         return r
     
-class CBool(object):
+class CBool(VbaLibraryFunc):
     """
     CBool() type conversion function.
     """
@@ -675,7 +682,7 @@ class CBool(object):
         log.debug("CBool: %r returns %r" % (self, r))
         return r
 
-class CDate(object):
+class CDate(VbaLibraryFunc):
     """
     CDate() type conversion function.
     """
@@ -687,7 +694,7 @@ class CDate(object):
         log.debug("CDate: %r returns %r" % (self, r))
         return r
 
-class CStr(object):
+class CStr(VbaLibraryFunc):
     """
     CStr() type conversion function.
     """
@@ -699,7 +706,7 @@ class CStr(object):
         log.debug("CStr: %r returns %r" % (self, r))
         return r
 
-class CSng(object):
+class CSng(VbaLibraryFunc):
     """
     CSng() type conversion function.
     """
@@ -718,7 +725,7 @@ class CSng(object):
         log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
     
-class Atn(object):
+class Atn(VbaLibraryFunc):
     """
     Atn() math function.
     """
@@ -735,7 +742,7 @@ class Atn(object):
         log.debug("Atn: %r returns %r" % (self, r))
         return r
 
-class Tan(object):
+class Tan(VbaLibraryFunc):
     """
     Tan() math function.
     """
@@ -752,7 +759,7 @@ class Tan(object):
         log.debug("Tan: %r returns %r" % (self, r))
         return r
         
-class Cos(object):
+class Cos(VbaLibraryFunc):
     """
     Cos() math function.
     """
@@ -769,7 +776,7 @@ class Cos(object):
         log.debug("Cos: %r returns %r" % (self, r))
         return r
         
-class Log(object):
+class Log(VbaLibraryFunc):
     """
     Log() math function.
     """
@@ -786,7 +793,7 @@ class Log(object):
         log.debug("Log: %r returns %r" % (self, r))
         return r
     
-class String(object):
+class String(VbaLibraryFunc):
     """
     String() repeated character string creation function.
     """
@@ -804,7 +811,7 @@ class String(object):
         log.debug("String: %r returns %r" % (self, r))
         return r
 
-class Dir(object):
+class Dir(VbaLibraryFunc):
     """
     Dir() file/directory finding function.
     """
@@ -822,7 +829,7 @@ class Dir(object):
         log.debug("Dir: %r returns %r" % (self, r))
         return r
 
-class RGB(object):
+class RGB(VbaLibraryFunc):
     """
     RGB() color function.
     """
@@ -841,7 +848,7 @@ class RGB(object):
         log.debug("RGB: %r returns %r" % (self, r))
         return r
 
-class Exp(object):
+class Exp(VbaLibraryFunc):
     """
     Exp() math function.
     """
@@ -858,7 +865,7 @@ class Exp(object):
         log.debug("Exp: %r returns %r" % (self, r))
         return r
             
-class Sin(object):
+class Sin(VbaLibraryFunc):
     """
     Sin() math function.
     """
@@ -875,7 +882,7 @@ class Sin(object):
         log.error("Sin: %r returns %r" % (self, r))
         return r
             
-class Str(object):
+class Str(VbaLibraryFunc):
     """
     Str() convert number to string function.
     """
@@ -887,7 +894,7 @@ class Str(object):
         log.debug("Str: %r returns %r" % (self, r))
         return r
 
-class Val(object):
+class Val(VbaLibraryFunc):
     """
     Val() convert string to number function.
     """
@@ -931,7 +938,7 @@ class Val(object):
         log.debug("Val: Invalid Value: %r returns %r" % (self, r))
         return r
     
-class Base64Decode(object):
+class Base64Decode(VbaLibraryFunc):
     """
     Base64Decode() function used by some malware. Note that this is not part of Visual Basic.
     """
@@ -949,7 +956,7 @@ class Base64Decode(object):
 class Base64DecodeString(Base64Decode):
     pass
     
-class Pmt(object):
+class Pmt(VbaLibraryFunc):
     """
     Pmt() payment computation function.
 
@@ -1044,7 +1051,7 @@ class Pmt(object):
         log.debug("Pmt: %r returns %r" % (self, r))
         return r
 
-class Day(object):
+class Day(VbaLibraryFunc):
     """
     Day() function. This is currently partially implemented.
     """
@@ -1069,7 +1076,7 @@ class Day(object):
         log.debug("Day: %r returns %r" % (self, r))
         return r
 
-class UCase(object):
+class UCase(VbaLibraryFunc):
     """
     UCase() string function.
     """
@@ -1080,7 +1087,7 @@ class UCase(object):
         log.debug("UCase: %r returns %r" % (self, r))
         return r
 
-class Randomize(object):
+class Randomize(VbaLibraryFunc):
     """
     Randomize RNG function.
     """
@@ -1089,16 +1096,15 @@ class Randomize(object):
         log.debug("Randomize(): Stubbed out as NOP")
         return ''
 
-class Rnd(object):
+class Rnd(VbaLibraryFunc):
     """
     Rnd() RNG function.
     """
 
     def eval(self, context, params=None):
-        log.debug("Rnd(): Stubbed out as NOP")
-        return ''
+        return random.random()
 
-class Environ(object):
+class Environ(VbaLibraryFunc):
     """
     Environ() function for getting environment variable values.
     """
@@ -1109,7 +1115,7 @@ class Environ(object):
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
-class IIf(object):
+class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
     """
@@ -1127,7 +1133,7 @@ class IIf(object):
 
 out_dir = None
         
-class Close(object):
+class Close(VbaLibraryFunc):
     """
     File Close statement.
     """
@@ -1182,7 +1188,7 @@ class Close(object):
             except Exception as e:
                 log.error("Writing file " + short_name + " failed. " + str(e))
                 
-class Put(object):
+class Put(VbaLibraryFunc):
     """
     File Put statement.
     """
@@ -1214,7 +1220,7 @@ class Put(object):
         else:
             log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
-class Run(object):
+class Run(VbaLibraryFunc):
     """
     Application.Run() function.
     """

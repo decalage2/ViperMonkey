@@ -194,7 +194,7 @@ def eval_arg(arg, context):
                     return r
 
                 # None of those worked. We can't find the data.
-                return "??"
+                #return "??"
                 
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))

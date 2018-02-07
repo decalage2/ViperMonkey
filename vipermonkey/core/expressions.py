@@ -59,6 +59,7 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_library import VbaLibraryFunc
 
 from logger import log
 log.debug('importing expressions')
@@ -89,7 +90,8 @@ class SimpleNameExpression(VBA_Object):
         try:
             value = context.get(self.name)
             log.debug('get variable %r = %r' % (self.name, value))
-            if (isinstance(value, procedures.Function)):
+            if (isinstance(value, procedures.Function) or
+                isinstance(value, VbaLibraryFunc)):
                 log.debug('evaluating function %r' % value)
                 value = value.eval(context)
                 log.debug('evaluated function %r = %r' % (self.name, value))
