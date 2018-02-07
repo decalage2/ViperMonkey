@@ -1544,9 +1544,9 @@ lib_info = CaselessKeyword('Lib').suppress() + quoted_string('lib_name') \
            + Optional(CaselessKeyword('Alias') + quoted_string('alias_name'))
 
 # TODO: identifier or lex_identifier
-external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe'))
-                                                + CaselessKeyword('Function')) + lex_identifier('function_name') + lib_info \
-                                                + Optional(params_list_paren) + Optional(function_type2)
+external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe')) + \
+                                                (CaselessKeyword('Function') | CaselessKeyword('Sub'))) + \
+                                                lex_identifier('function_name') + lib_info + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)
 
 
