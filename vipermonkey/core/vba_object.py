@@ -170,7 +170,9 @@ def eval_arg(arg, context):
 
                 except KeyError:
                     log.debug("eval_arg: Not found as function")
-                    pass
+
+                except Exception as e:
+                    log.debug("eval_arg: Failed. Not a function. " + str(e))
 
                 # Are we trying to load some document meta data?
                 if (tmp.startswith("activedocument.item(")):
