@@ -192,7 +192,7 @@ class MemberAccessExpression(VBA_Object):
         if (len(self.rhs1) > 0):
             rhs = self.rhs1
         else:
-            self.rhs
+            rhs = self.rhs
         tmp_rhs = eval_arg(rhs, context)
             
         # If the final element in the member expression is a function call,
