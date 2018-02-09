@@ -167,10 +167,11 @@ class MemberAccessExpression(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(MemberAccessExpression, self).__init__(original_str, location, tokens)
-        log.debug("member: tokens = %r" % tokens)
         tokens = tokens[0][0]
-        log.debug("member: tokens (1) = %r" % tokens)
-        self.rhs = tokens.rhs
+        #log.debug("member: tokens = %r" % tokens)
+        #log.debug("member: lhs (%r) = %r" % (type(tokens.lhs), tokens.lhs))
+        #log.debug("member: rhs (%r) = %r" % (type(tokens.rhs), tokens.rhs))
+        self.rhs = tokens[1:]
         self.lhs = tokens.lhs
         self.rhs1 = ""
         if (hasattr(tokens, "rhs1")):
@@ -178,7 +179,9 @@ class MemberAccessExpression(VBA_Object):
         log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
-        r = str(self.lhs) + "." + str(self.rhs)
+        r = str(self.lhs)
+        for t in self.rhs:
+            r += "." + str(t)
         if (len(self.rhs1) > 0):
             r += "." + str(self.rhs1)
         return r

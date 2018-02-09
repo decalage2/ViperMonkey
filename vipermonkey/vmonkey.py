@@ -120,6 +120,10 @@ def strip_useless_code(vba_code):
         match = assign_re.match(line)
         if (match is not None):
 
+            # Skip lines that end with a continuation character.
+            if (line.strip().endswith("_")):
+                continue
+            
             # Yes, there is an assignment. Save the assigned variable and line #
             var = match.groups(0)[0]
             if (var not in assigns):
@@ -325,8 +329,15 @@ def process_file (container, filename, data,
                         macro_name = macro_name[start:]
                     global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
                     val = form_variables['value']
-                    vm.globals[global_var_name.lower()] = val
+                    if (val is None):
+                        val = ''
+                    name = global_var_name.lower()
+                    vm.globals[name] = val
                     log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+                    vm.globals[name + ".tag"] = val
+                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
+                    vm.globals[name + ".text"] = val
+                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'

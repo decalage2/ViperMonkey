@@ -1331,7 +1331,8 @@ redim_statement.setParseAction(Redim_Statement)
 class With_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(With_Statement, self).__init__(original_str, location, tokens)
-        self.body = tokens.body
+        log.debug("tokens = " + str(tokens))
+        self.body = tokens[1]
         self.env = tokens.env
         log.debug('parsed %r' % self)
 
@@ -1339,8 +1340,26 @@ class With_Statement(VBA_Object):
         return 'With ' + str(self.env) + "\\n" + str(self.body) + " End With"
 
     def eval(self, context, params=None):
-        # TODO: Currently stubbed out. Need to track the containing environment object name(s) in a stack
-        # and append them to the names of variables like ".foo" when referencing variables in the With.
+
+        # Track the with prefix.
+        if (len(context.with_prefix) > 0):
+            context.with_prefix += "." + str(self.env)
+        else:
+            context.with_prefix = str(self.env)
+            
+        # Evaluate each statement in the with block.
+        log.debug("START WITH")
+        for s in self.body:
+            s.eval(context)
+        log.debug("END WITH")
+            
+        # Remove the current with prefix.
+        if ("." not in context.with_prefix):
+            context.with_prefix = ""
+        else:
+            end = context.with_prefix.rindex(".")
+            context.with_prefix = context.with_prefix[:end]
+            
         return
 
 # With statement
@@ -1464,7 +1483,8 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
+                   rem_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use

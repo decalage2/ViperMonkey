@@ -122,6 +122,9 @@ class Context(object):
 
         # Track the final contents of written files.
         self.closed_files = {}
+
+        # Track the current with prefix for with statements.
+        self.with_prefix = ""
         
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"
@@ -237,12 +240,15 @@ class Context(object):
         self.globals["vbUnicode".lower()] = 64
         self.globals["vbFromUnicode".lower()] = 128
         
-    def get(self, name):
+    def _get(self, name):
+
         if (not isinstance(name, basestring)):
             raise KeyError('Object %r not found' % name)
+
         # convert to lowercase
         name = name.lower()
-
+        log.debug("Looking for var '" + name + "'...")
+        
         # First, search in locals. This handles variables whose name overrides
         # a system function.
         if name in self.locals:
@@ -257,11 +263,23 @@ class Context(object):
             log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]
         # Unknown symbol.
-        else:
+        else:            
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
 
+    def get(self, name):
+
+        # First try to get the item using the current with context.
+        tmp_name = self.with_prefix + name
+        try:
+            return self._get(tmp_name)
+        except KeyError:
+            pass
+
+        # Now try it without the current with context.
+        return self._get(name)
+            
     def get_type(self, var):
         if (not isinstance(var, basestring)):
             return None
