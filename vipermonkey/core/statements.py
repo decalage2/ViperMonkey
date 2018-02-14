@@ -842,7 +842,7 @@ class While_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
-        log.debug('DO loop: start: ' + str(self))
+        log.debug('WHILE loop: start: ' + str(self))
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -856,6 +856,62 @@ class While_Statement(VBA_Object):
                 guard_val = (not guard_val)
             if (not guard_val):
                 break
+            
+            # Execute the loop body.
+            done = False
+            for s in self.body:
+                log.debug('WHILE loop eval statement: %r' % s)
+                s.eval(context=context)
+
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("WHILE loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('WHILE loop: end.')
+
+while_type = CaselessKeyword("While") | CaselessKeyword("Until")
+        
+while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
+
+simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
+                       + (CaselessKeyword("Loop").suppress() | CaselessKeyword("Wend").suppress())
+
+simple_while_statement.setParseAction(While_Statement)
+
+# --- DO statement -----------------------------------------------------------
+
+class Do_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Do_Statement, self).__init__(original_str, location, tokens)
+        self.loop_type = tokens.type
+        self.guard = tokens.guard
+        self.body = tokens[0]
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = "Do\\n" + str(self.body) + "\\n"
+        r += "Loop " + str(self.loop_type) + " " + str(self.guard)
+        return r
+
+    def eval(self, context, params=None):
+
+        log.debug('DO loop: start: ' + str(self))
+        
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Loop until the loop is broken out of or we violate the loop guard.
+        while (True):
             
             # Execute the loop body.
             done = False
@@ -874,19 +930,24 @@ class While_Statement(VBA_Object):
             # Finished with the loop due to 'Exit For'?
             if (done):
                 break
-        
+
+            # Test the loop guard to see if we should exit the loop.
+            guard_val = eval_arg(self.guard, context)
+            if (self.loop_type.lower() == "until"):
+                guard_val = (not guard_val)
+            if (not guard_val):
+                break
+            
         # Remove tracking of this loop.
         context.loop_stack.pop()
         log.debug('DO loop: end.')
 
-while_type = CaselessKeyword("While") | CaselessKeyword("Until")
-        
-while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
+simple_do_statement = Suppress(CaselessKeyword("Do")) + Suppress(EOS) + \
+                      Group(statement_block('body')) + \
+                      Suppress(CaselessKeyword("Loop")) + while_type("type") + boolean_expression("guard")
 
-simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
-                       + (CaselessKeyword("Loop").suppress() | CaselessKeyword("Wend").suppress())
+simple_do_statement.setParseAction(Do_Statement)
 
-simple_while_statement.setParseAction(While_Statement)
 
 # --- SELECT statement -----------------------------------------------------------
 
@@ -1490,7 +1551,8 @@ simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
 statement <<= type_declaration | simple_for_statement | simple_for_each_statement | simple_if_statement | \
-              simple_if_statement_macro | simple_while_statement | simple_select_statement | with_statement| simple_statement
+              simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+              with_statement| simple_statement
 
 # TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
 # TODO: can we have '::' with an empty statement?
