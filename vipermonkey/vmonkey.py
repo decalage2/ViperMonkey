@@ -98,6 +98,17 @@ _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 if not _thismodule_dir in sys.path:
     sys.path.insert(0, _thismodule_dir)
 
+# The version of pyparsing in the thirdparty directory of oletools is not
+# compatible with the version of pyparsing used in ViperMonkey. Make sure
+# the oletools thirdparty directory is not in the import path.
+item = None
+for p in sys.path:
+    if (p.endswith("oletools/thirdparty")):
+        item = p
+        break
+if (item is not None):
+    sys.path.remove(item)
+    
 # relative import of core ViperMonkey modules:
 from core import *
     

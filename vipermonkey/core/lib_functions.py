@@ -52,6 +52,7 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from pyparsing import *
+
 from vba_object import *
 from literals import *
 
