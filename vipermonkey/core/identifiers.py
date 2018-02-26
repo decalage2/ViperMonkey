@@ -137,16 +137,28 @@ reserved_keywords = (  # WordStart() + (
 # TODO: support several dots? (object.attrib1.attrib2 etc)
 
 # TODO: simplified version, using only entity_name
-TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
-                                           Optional(Optional(entity_name) + Literal('.')) +
-                                           Optional(entity_name + Literal('.')) +
-                                           entity_name +
-                                           # Looks like variables can end in $
+#TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
+#                                           Optional(Optional(entity_name) + Literal('.')) +
+#                                           Optional(entity_name + Literal('.')) +
+#                                           entity_name +
+#                                           # Looks like variables can end in $
+#                                           Optional(CaselessLiteral('$')))
+TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
+                                           Combine(Literal('.') + lex_identifier) | \
+                                           Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
                                            Optional(CaselessLiteral('$')))
+#TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
+#                                           Optional(entity_name) +
+#                                           (Combine(Literal('.') + lex_identifier) | entity_name) +
+#                                           # Looks like variables can end in $
+#                                           Optional(CaselessLiteral('$')))
 
-TODO_identifier_or_object_attrib_loose = Combine(Optional(Optional(entity_name) + Literal('.')) +
-                                                 Optional(entity_name + Literal('.')) +
-                                                 entity_name +
-                                                 # Looks like variables can end in $
+TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
+                                                 Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
                                                  Optional(CaselessLiteral('$')))
+#TODO_identifier_or_object_attrib_loose = Combine(Optional(Optional(entity_name) + Literal('.')) +
+#                                                 Optional(entity_name + Literal('.')) +
+#                                                 entity_name +
+#                                                 # Looks like variables can end in $
+#                                                 Optional(CaselessLiteral('$')))
 

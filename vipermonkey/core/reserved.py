@@ -104,7 +104,7 @@ operator_identifier = caselessKeywordsList(
 # A <reserved-name> is a <reserved-identifier> that is used within expressions
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
-    "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
+    "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Date", "Debug",
     "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
 

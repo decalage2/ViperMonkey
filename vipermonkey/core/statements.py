@@ -186,13 +186,13 @@ class Parameter(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Parameter, self).__init__(original_str, location, tokens)
         self.name = tokens.name
-        self.type = tokens.type
+        self.my_type = tokens.type
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        r = self.name
-        if self.type:
-            r += ' as %s' % self.type
+        r = str(self.name)
+        if self.my_type:
+            r += ' as ' + str(self.my_type)
         return r
 
 
@@ -301,25 +301,9 @@ class Dim_Statement(VBA_Object):
         # [['l', 'Long']]
         # [['b2', '(', ')'], ['b3'], ['b4', '(', ')', 'Byte']]
         
-        # Get the type (if there is one) of the declared variable.
-        self.type = None
-        last_var = tokens[len(tokens) - 1]
-        if (len(last_var) > 1):
-
-            # If this is a typed array declaration the type will be the
-            # 4th element.
-            if ((last_var[1] == '(') and
-                (len(last_var) > 3) and
-                (last_var[3] != '=')):
-                self.type = last_var[3]
-
-            # If this is a typed non-array decl the type will be the 2nd
-            # element.
-            elif (len(last_var) == 2):
-                self.type = last_var[1]
-                
         # Track the initial value of the variable.
         self.init_val = None
+        last_var = tokens[-1:][0]
         if ((len(last_var) >= 3) and
             (last_var[len(last_var) - 2] == '=')):
             self.init_val = last_var[len(last_var) - 1]
@@ -332,7 +316,14 @@ class Dim_Statement(VBA_Object):
             is_array = False
             if ((len(var) > 1) and (var[1] == '(')):
                 is_array = True
-            self.variables.append((var[0], is_array))
+
+            # Do we have a type for the variable?
+            curr_type = None
+            if ((len(var) > 1) and (var[-1:][0] != ")")):
+                curr_type = var[-1:][0]
+
+            # Save the variable info.
+            self.variables.append((var[0], is_array, curr_type))
         
         log.debug('parsed %r' % str(self))
 
@@ -346,8 +337,8 @@ class Dim_Statement(VBA_Object):
             r += str(var[0])
             if (var[1]):
                 r += "()"
-        if (self.type is not None):
-            r += " As " + str(self.type)
+            if (var[2]):
+                r += " As " + var[2]
         if (self.init_val is not None):
             r += " = " + str(self.init_val)
         return r
@@ -358,18 +349,21 @@ class Dim_Statement(VBA_Object):
         init_val = ''
         if (self.init_val is not None):
             init_val = eval_arg(self.init_val, context=context)
-        elif ((self.type == "Long") or (self.type == "Integer")):
-            init_val = 0
             
         # Track each declared variable.
         for var in self.variables:
 
             # Do we know the variable type?
             curr_init_val = init_val
-            curr_type = None
-            if (self.type is not None):
-                curr_type = str(self.type)
+            curr_type = var[2]
+            if (curr_type is not None):
 
+                # Get the initial value.
+                if ((curr_type == "Long") or (curr_type == "Integer")):
+                    curr_init_val = 0
+                if (curr_type == "String"):
+                    curr_init_val = ''
+                
                 # Is this variable an array?
                 if (var[1]):
                     curr_type += " Array"
@@ -469,6 +463,8 @@ class Global_Var_Statement(VBA_Object):
         super(Global_Var_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens[0][0]
         self.value = ''
+        if (len(tokens[0]) >= 3):
+            self.value = tokens[0][2]
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -513,6 +509,7 @@ class Let_Statement(VBA_Object):
             if ((context.get_type(self.name) == "Byte Array") and
                 (isinstance(value, str))):
                 tmp = []
+                print "FOO: Adding padding (byte array)"
                 for c in value:
                     tmp.append(ord(c))
                     tmp.append(0)

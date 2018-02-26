@@ -342,6 +342,7 @@ class Function_Call(VBA_Object):
         log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)
         self.params = tokens.params
+        log.debug('Function_Call.params = %r' % self.params)
         log.debug('parsed %r' % self)
 
     def __repr__(self):

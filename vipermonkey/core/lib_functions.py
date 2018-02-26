@@ -146,7 +146,7 @@ class Asc(VBA_Object):
 
 # Asc()
 # TODO: see MS-VBAL 6.1.2.11.1.1 page 240 => AscB, AscW
-asc = Suppress(CaselessKeyword('Asc') + '(') + expression + Suppress(')')
+asc = Suppress((CaselessKeyword('Asc') | CaselessKeyword('AscW'))  + '(') + expression + Suppress(')')
 asc.setParseAction(Asc)
 
 

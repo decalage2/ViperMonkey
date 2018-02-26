@@ -330,6 +330,56 @@ class Trim(VbaLibraryFunc):
         log.debug("Trim: return %r" % r)
         return r
 
+class RTrim(VbaLibraryFunc):
+    """
+    RTrim() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        r = None
+        if (isinstance(params[0], int)):
+            r = str(params[0])
+        else:
+            r = params[0].rstrip()
+        log.debug("RTrim: return %r" % r)
+        return r
+
+class LTrim(VbaLibraryFunc):
+    """
+    LTrim() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) > 0
+        r = None
+        if (isinstance(params[0], int)):
+            r = str(params[0])
+        else:
+            r = params[0].lstrip()
+        log.debug("LTrim: return %r" % r)
+        return r
+
+class AscW(VbaLibraryFunc):
+    """
+    AscW() character function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) == 1
+        c = params[0]
+        if (isinstance(c, int)):
+            r = c
+        else:
+            r = ord(str(c)[0])
+        log.debug("AscW: return %r" % r)
+        return r
+
+class AscB(AscW):
+    pass
+
 class StrConv(VbaLibraryFunc):
     """
     StrConv() string function.
@@ -339,19 +389,29 @@ class StrConv(VbaLibraryFunc):
         # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this.
+
+        # Get the conversion type to perform.
+        conv = None
+        if (len(params) > 1):
+            conv = int(params[1])
+
+        # Do the conversion.
         r = params[0]
+        print "FOO: type " + str(type(r))    
         if (isinstance(r, str)):
-            if (len(params) > 1):
-                conv = int(params[1])
+            if (conv):
                 if (conv == 1):
                     r = r.upper()
                 if (conv == 2):
                     r = r.lower()
                 if (conv == 64):
+                    print "FOO: Adding padding (str)"
                     padded = ""
                     for c in r:
                         padded += c + "\0"
                     r = padded
+                if (conv == 128):
+                    pass
 
         elif (isinstance(r, list)):
 
@@ -368,6 +428,8 @@ class StrConv(VbaLibraryFunc):
                         continue
                     try:
                         tmp += chr(i)
+                        #if (conv == 64):
+                        #    tmp += "\0"
                     except:
                         pass
                 r = tmp
@@ -520,6 +582,54 @@ class InStr(VbaLibraryFunc):
         log.debug("InStr: %r returns %r" % (self, r))
         return r
 
+class InStrRev(VbaLibraryFunc):
+    """
+    InStrRev() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        assert len(params) >= 2
+
+        # Were we given a start position?
+        start = 0
+        s1 = params[0]
+        if (s1 is None):
+            s1 = ''
+        s2 = params[1]
+        if (s2 is None):
+            s2 = ''
+        if (isinstance(params[0], int)):
+            start = params[0] - 1
+            if (start < 0):
+                start = 0
+            s1 = params[1]
+            s2 = params[2]
+
+        # Were we given a search type?
+        search_type = 1
+        if (isinstance(params[-1], int)):
+            search_type = params[-1]
+            if (search_type not in (0, 1)):
+                search_type = 1
+
+        # TODO: Figure out how VB binary search works. For now just do text search.
+        r = None
+        if (len(s1) == 0):
+            r = 0
+        elif (len(s2) == 0):
+            r = start
+        elif (start > len(s1)):
+            r = 0
+        else:
+            if (s2 in s1):
+                r = s1[start:].rindex(s2) + start + 1
+            else:
+                r = 0
+        log.debug("InStr: %r returns %r" % (self, r))
+        return r
+
+    
 class Sgn(VbaLibraryFunc):
     """
     Sgn() math function.
@@ -1087,6 +1197,17 @@ class UCase(VbaLibraryFunc):
         log.debug("UCase: %r returns %r" % (self, r))
         return r
 
+class LCase(VbaLibraryFunc):
+    """
+    LCase() string function.
+    """
+
+    def eval(self, context, params=None):
+        # assumption: here the params have already been evaluated by Call_Function beforehand
+        r = str(params[0]).lower()
+        log.debug("LCase: %r returns %r" % (self, r))
+        return r
+
 class Randomize(VbaLibraryFunc):
     """
     Randomize RNG function.
@@ -1249,7 +1370,8 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run):
+               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+               LCase, RTrim, LTrim, AscW, AscB):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
