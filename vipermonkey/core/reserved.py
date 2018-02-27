@@ -134,8 +134,9 @@ variant_literal_identifier = CaselessKeyword("empty") | CaselessKeyword("null")
 
 # A <literal-identifier> is a <reserved-identifier> that represents a specific distinguished data value
 # (section 2.1).
-literal_identifier = boolean_literal_identifier | object_literal_identifier \
-                     | variant_literal_identifier
+#literal_identifier = boolean_literal_identifier | object_literal_identifier \
+#                     | variant_literal_identifier
+literal_identifier = boolean_literal_identifier | object_literal_identifier
 
 # A <reserved-for-implementation-use> is a <reserved-identifier> that currently has no defined
 # meaning to the VBA language but is reserved for use by language implementers.
