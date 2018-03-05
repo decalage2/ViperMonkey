@@ -325,7 +325,6 @@ l_expression << (member_access_expression ^ new_expression) | instance_expressio
 
 # TODO: Redesign l_expression to avoid recursion error...
 
-
 # --- FUNCTION CALL ---------------------------------------------------------
 
 class Function_Call(VBA_Object):
@@ -527,6 +526,7 @@ expression <<= (infixNotation(expr_item,
                                       (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                       (CaselessKeyword("and"), 2, opAssoc.LEFT, And),
                                       (CaselessKeyword("or"), 2, opAssoc.LEFT, Or),
+                                      (CaselessKeyword("eqv"), 2, opAssoc.LEFT, Eqv),
                                   ]))
 expression.setParseAction(lambda t: t[0])
 
@@ -734,6 +734,8 @@ class BoolExpr(VBA_Object):
             return lhs and rhs
         elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
             return lhs or rhs
+        elif (self.op.lower() == "eqv"):
+            return (lhs == rhs)
         else:
             log.error("BoolExpr: Unknown operator %r" % self.op)
             return False
@@ -744,7 +746,8 @@ boolean_expression <<= infixNotation(bool_expr_item,
                                          (CaselessKeyword("And"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("AndAlso"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("Or"), 2, opAssoc.LEFT),
-                                         (CaselessKeyword("OrElse"), 2, opAssoc.LEFT)
+                                         (CaselessKeyword("OrElse"), 2, opAssoc.LEFT),
+                                         (CaselessKeyword("Eqv"), 2, opAssoc.LEFT),
                                      ])
 boolean_expression.setParseAction(BoolExpr)
 

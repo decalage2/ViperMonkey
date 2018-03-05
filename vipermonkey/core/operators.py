@@ -107,6 +107,31 @@ class Sum(VBA_Object):
         return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
 
+# --- EQV --------------------------------------------------------
+
+class Eqv(VBA_Object):
+    """
+    VBA Eqv operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Eqv, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the eqv of all the arguments:
+        try:
+            return reduce(lambda a, b: (a & b) | ~(a | b), eval_args(self.arg, context))
+        except TypeError:
+            log.error('Impossible to Eqv arguments of different types.')
+            return 0
+        except RuntimeError:
+            log.error("overflow trying eval Eqv: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' Eqv '.join(map(repr, self.arg))
+    
 # --- XOR --------------------------------------------------------
 
 class Xor(VBA_Object):

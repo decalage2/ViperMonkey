@@ -1268,7 +1268,15 @@ class Call_Statement(VBA_Object):
             # vbOK = 1
             return 1
         elif '.' in func_name:
-            context.report_action('Object.Method Call', repr(call_params), func_name)
+            tmp_call_params = call_params
+            if (func_name.endswith(".Write")):
+                tmp_call_params = []
+                for p in call_params:
+                    if (isinstance(p, str)):
+                        tmp_call_params.append(p.replace("\x00", ""))
+                    else:
+                        tmp_call_params.append(p)
+            context.report_action('Object.Method Call', repr(tmp_call_params), func_name)
         try:
             s = context.get(func_name)
             s.eval(context=context, params=call_params)
