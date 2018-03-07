@@ -271,7 +271,7 @@ class Context(object):
     def get(self, name):
 
         # First try to get the item using the current with context.
-        tmp_name = self.with_prefix + name
+        tmp_name = str(self.with_prefix) + str(name)
         try:
             return self._get(tmp_name)
         except KeyError:

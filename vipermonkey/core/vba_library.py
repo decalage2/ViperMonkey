@@ -1341,6 +1341,14 @@ class Put(VbaLibraryFunc):
         else:
             log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
+class CurDir(VbaLibraryFunc):
+    """
+    CurDir() function.
+    """
+
+    def eval(self, context, params=None):
+        return "~"
+            
 class Run(VbaLibraryFunc):
     """
     Application.Run() function.
@@ -1371,7 +1379,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB):
+               LCase, RTrim, LTrim, AscW, AscB, CurDir):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

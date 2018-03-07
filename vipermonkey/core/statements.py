@@ -1542,6 +1542,44 @@ file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_n
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)
 
+# --- PRINT -------------------------------------------------------------
+
+class Print_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Print_Statement, self).__init__(original_str, location, tokens)
+        self.file_id = tokens.file_id
+        self.value = tokens.value
+        log.debug('parsed %r as Print_Statement' % self)
+
+    def __repr__(self):
+        r = "Print " + str(self.file_id) + ", " + str(self.value)
+        return r
+
+    def eval(self, context, params=None):
+
+        # Get the ID of the file.
+        file_id = eval_arg(self.file_id, context=context)
+
+        # Get the data.
+        data = eval_arg(self.value, context=context)
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
+
+print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value")
+print_statement.setParseAction(Print_Statement)
+
 # --- DOEVENTS STATEMENT -------------------------------------------------------------
 
 doevents_statement = Suppress(CaselessKeyword("DoEvents"))
@@ -1551,7 +1589,7 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-                   rem_statement
+                   rem_statement | print_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
