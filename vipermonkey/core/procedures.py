@@ -66,6 +66,9 @@ class Sub(VBA_Object):
         self.name = tokens.sub_name
         self.params = tokens.params
         self.statements = tokens.statements
+        self.bogus_if = None
+        if (len(tokens.bogus_if) > 0):
+            self.bogus_if = tokens.bogus_if
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -88,6 +91,10 @@ class Sub(VBA_Object):
             log.debug('Sub %s eval statement: %s' % (self.name, s))
             s.eval(context=context)
 
+        # Handle trailing if's with no end if.
+        if (self.bogus_if is not None):
+            self.bogus_if.eval(context=context)
+            
         # Handle subs with no return values.
         try:
             context.get(self.name)
@@ -168,7 +175,8 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
-sub = sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end
+sub = (sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + bad_if_statement('bogus_if') + sub_end) | \
+      (sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end)
 sub.setParseAction(Sub)
 
 # for line parser:
@@ -189,6 +197,9 @@ class Function(VBA_Object):
         self.statements = tokens.statements
         self.return_type = tokens.return_type
         self.vars = {}
+        self.bogus_if = None
+        if (len(tokens.bogus_if) > 0):
+            self.bogus_if = tokens.bogus_if
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -216,6 +227,10 @@ class Function(VBA_Object):
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):
                 break
+
+        # Handle trailing if's with no end if.
+        if (self.bogus_if is not None):
+            self.bogus_if.eval(context=context)
             
         # TODO: get result from context.locals
         context.exit_func = False
@@ -240,7 +255,8 @@ function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
 #Function vQes9u(QGQEbuhT) As String
-function = function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + function_end
+function = (function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + bad_if_statement('bogus_if') + function_end) | \
+           (function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + function_end)
 function.setParseAction(Function)
 
 # for line parser:

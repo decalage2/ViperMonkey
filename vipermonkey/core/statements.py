@@ -1194,7 +1194,17 @@ multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expr
                                      Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
                                            Group(statement_block('statements')))
                                  ) + \
-                                 CaselessKeyword("End If").suppress()
+                                 CaselessKeyword("End").suppress() + CaselessKeyword("If").suppress()
+bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                          Group(statement_block('statements'))) + \
+                          ZeroOrMore(
+                              Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                     Group(statement_block('statements')))
+                          ) + \
+                          Optional(
+                              Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
+                                    Group(statement_block('statements')))
+                          )
 simple_statements_line = Forward()
 single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
                                   Group(simple_statements_line('statements')) )  + \
