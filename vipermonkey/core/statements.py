@@ -626,6 +626,25 @@ let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppre
 
 let_statement.setParseAction(Let_Statement)
 
+# --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
+
+class Prop_Assign_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Prop_Assign_Statement, self).__init__(original_str, location, tokens)
+        self.prop = tokens.prop
+        self.param = tokens.param
+        self.value = tokens.value
+        log.debug('parsed %r as Prop_Assign_Statement' % self)
+
+    def __repr__(self):
+        return str(self.prop) + " " + str(self.param) + ":=" + str(self.value)
+
+    def eval(self, context, params=None):
+        pass
+
+prop_assign_statement = member_access_expression("prop") + lex_identifier('param') + Suppress(CaselessKeyword(':=')) + expression('value')
+prop_assign_statement.setParseAction(Prop_Assign_Statement)
+
 # --- FOR statement -----------------------------------------------------------
 
 class For_Statement(VBA_Object):
@@ -737,6 +756,8 @@ simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements'
                        + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
 
 simple_for_statement.setParseAction(For_Statement)
+
+bad_next_statement = CaselessKeyword("Next") + Suppress(EOS)
 
 # For the line parser:
 for_start = for_clause + Suppress(EOL)
@@ -1263,7 +1284,7 @@ class Call_Statement(VBA_Object):
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Procedure Call: %s(%r)' % (self.name, self.params)
+        return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
     def eval(self, context, params=None):
         log.info('Eval Params before calling Procedure: %s(%r)' % (self.name, self.params))
@@ -1597,7 +1618,7 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_loop_statement | \
+simple_statement = dim_statement | option_statement | (let_statement ^ prop_assign_statement ^ expression ^ call_statement ^ label_statement) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
                    rem_statement | print_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)

@@ -175,8 +175,11 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
-sub = (sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + bad_if_statement('bogus_if') + sub_end) | \
-      (sub_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + sub_end)
+sub = (sub_start + \
+       Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+       Optional(bad_if_statement('bogus_if')) + \
+       Suppress(Optional(bad_next_statement)) + \
+       sub_end)
 sub.setParseAction(Sub)
 
 # for line parser:
@@ -255,8 +258,12 @@ function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
 #Function vQes9u(QGQEbuhT) As String
-function = (function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + bad_if_statement('bogus_if') + function_end) | \
-           (function_start + Group(ZeroOrMore(statements_line)).setResultsName('statements') + function_end)
+function = (function_start + \
+            Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+            Optional(bad_if_statement('bogus_if')) + \
+            Suppress(Optional(bad_next_statement)) + \
+            function_end)
+            
 function.setParseAction(Function)
 
 # for line parser:

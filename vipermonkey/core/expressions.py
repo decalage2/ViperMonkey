@@ -641,7 +641,8 @@ class BoolExprItem(VBA_Object):
 #                                   ("<>", 2, opAssoc.LEFT)
 #                               ])
 bool_expr_item = (limited_expression + \
-                  (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<")) + \
+                  (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | \
+                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
