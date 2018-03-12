@@ -121,25 +121,29 @@ def strip_useless_code(vba_code):
     """
 
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+)\s*=\s*.+")
+    assign_re = re.compile("\s*(\w+)\s*=\s*")
     assigns = {}
     line_num = 0
     for line in vba_code.split("\n"):
 
         # Is there an assignment on this line?
         line_num += 1
-        match = assign_re.match(line)
-        if (match is not None):
+        match = assign_re.findall(line)
+        if (len(match) > 0):
 
+            log.debug("SKIP: Assign line: " + line)
+            
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
+                log.debug("SKIP: Continuation line. Keep it.")
                 continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
-            var = match.groups(0)[0]
-            if (var not in assigns):
-                assigns[var] = set()
-            assigns[var].add(line_num)
+            log.debug("SKIP: Assigned vars = " + str(match))
+            for var in match:
+                if (var not in assigns):
+                    assigns[var] = set()
+                assigns[var].add(line_num)
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
@@ -160,6 +164,7 @@ def strip_useless_code(vba_code):
             if (var in line):
 
                 # Maybe. Count this as a reference.
+                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
                 refs[var] = True
 
     # Now comment out all useless assignments.
@@ -175,6 +180,7 @@ def strip_useless_code(vba_code):
         # Does this line get commented out?
         line_num += 1
         if (line_num in comment_lines):
+            log.debug("STRIP: Stripping Line: " + line)
             continue
         r += line + "\n"
 
@@ -186,11 +192,14 @@ def parse_stream(subfilename, stream_path=None,
     # Are the arguments all in a single tuple?
     if (stream_path is None):
         subfilename, stream_path, vba_filename, vba_code = subfilename
+
+    # Collapse long lines.
+    vba_code = vba_collapse_long_lines(vba_code)
         
     # Filter cruft from the VBA.
-    vba_code_filtered = filter_vba(vba_code)
+    vba_code = filter_vba(vba_code)
     if (strip_useless):
-        vba_code_filtered = strip_useless_code(vba_code_filtered)
+        vba_code = strip_useless_code(vba_code)
     print '-'*79
     print 'VBA MACRO %s ' % vba_filename
     print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
@@ -198,11 +207,10 @@ def parse_stream(subfilename, stream_path=None,
 
     # Parse the macro.
     m = None
-    if vba_code_filtered.strip() == '':
+    if vba_code.strip() == '':
         print '(empty macro)'
         m = "empty"
     else:
-        vba_code = vba_collapse_long_lines(vba_code_filtered)
         print '-'*79
         print 'VBA CODE (with long lines collapsed):'
         print vba_code
@@ -399,17 +407,17 @@ def process_file_scanexpr (container, filename, data):
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
-                vba_code_filtered = filter_vba(vba_code)
+                vba_code = filter_vba(vba_code)
                 print '-'*79
                 print 'VBA MACRO %s ' % vba_filename
                 print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
                 print '- '*39
                 # detect empty macros:
-                if vba_code_filtered.strip() == '':
+                if vba_code.strip() == '':
                     print '(empty macro)'
                 else:
                     # TODO: option to display code
-                    print vba_code_filtered
+                    print vba_code
                     vba_code = vba_collapse_long_lines(vba_code)
                     all_code += '\n' + vba_code
             print '-'*79
