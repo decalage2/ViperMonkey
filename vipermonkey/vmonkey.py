@@ -167,12 +167,27 @@ def strip_useless_code(vba_code):
                 log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
                 refs[var] = True
 
-    # Now comment out all useless assignments.
+
+    # Figure out what asignemnts to trip and keep.
     comment_lines = set()
+    keep_lines = set()
     for var in refs.keys():
         if (not refs[var]):
             for num in assigns[var]:
                 comment_lines.add(num)
+        else:
+            for num in assigns[var]:
+                keep_lines.add(num)
+
+    # Multiple variables can be assigned on 1 line (a = b = 12). If any of the variables
+    # on this assignment line are used, keep it.
+    tmp = set()
+    for l in comment_lines:
+        if (l not in keep_lines):
+            tmp.add(l)
+    comment_lines = tmp
+    
+    # Now strip out all useless assignments.            
     r = ""
     line_num = 0
     for line in vba_code.split("\n"):
