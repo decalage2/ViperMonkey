@@ -153,7 +153,7 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 empty_line = EOL.suppress()
 
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | empty_line)  # + ZeroOrMore(empty_line)
+module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line))  # + ZeroOrMore(empty_line)
 
 module_body = module_declaration + module_code
 

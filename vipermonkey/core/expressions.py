@@ -91,6 +91,7 @@ class SimpleNameExpression(VBA_Object):
             value = context.get(self.name)
             log.debug('get variable %r = %r' % (self.name, value))
             if (isinstance(value, procedures.Function) or
+                isinstance(value, procedures.Sub) or
                 isinstance(value, VbaLibraryFunc)):
                 log.debug('evaluating function %r' % value)
                 value = value.eval(context)
@@ -295,7 +296,7 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # with-member-access-expression = "." unrestricted-name
 # with-dictionary-access-expression = "!" unrestricted-name
 
-with_member_access_expression = Suppress(".") + unrestricted_name
+with_member_access_expression = Suppress(".") + (unrestricted_name ^ function_call_limited)
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
 
@@ -316,12 +317,7 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # index-expression / dictionary-access-expression / with-expression
 
 new_expression = Forward()
-log.debug('l_expression <<= index_expression | simple_name_expression')
-# TODO: should go from the most specific to least specific
-#l_expression <<= index_expression | simple_name_expression
-#l_expression <<= simple_name_expression
-#l_expression << simple_name_expression
-l_expression << (member_access_expression ^ new_expression) | instance_expression | dictionary_access_expression | with_expression | simple_name_expression
+l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | dictionary_access_expression | simple_name_expression
 
 # TODO: Redesign l_expression to avoid recursion error...
 
