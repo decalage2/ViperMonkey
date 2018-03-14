@@ -139,6 +139,9 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # List of entry point functions to emulate.
+        self.entry_points = ['autoopen', 'workbook_open', 'document_open', 'autoclose', 'document_close', 'auto_open']
+
     def add_compiled_module(self, m):
         """
         Add an already parsed and processed module.
@@ -302,9 +305,13 @@ class ViperMonkey(object):
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
         # TODO: how to handle auto subs calling other auto subs?
-        for entry_point in ('autoopen', 'workbook_open', 'document_open', 'autoclose', 'document_close', 'auto_open'):
+        for entry_point in self.entry_points:
+            entry_point = entry_point.lower()
+            log.debug("Trying entry point " + entry_point)
             if entry_point in self.globals:
                 self.globals[entry_point].eval(context=context)
+            else:
+                log.debug("Not found in " + str(self.globals.keys()))
 
     def eval(self, expr):
         """

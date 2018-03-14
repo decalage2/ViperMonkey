@@ -236,8 +236,7 @@ def parse_stream(subfilename, stream_path=None,
             # Enable PackRat for better performance:
             # (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
             ParserElement.enablePackrat()
-            
-            m = module.parseString(vba_code, parseAll=True)[0]
+            m = module.parseString(vba_code + "\n", parseAll=True)[0]
             m.code = vba_code
         except ParseException as err:
             print err.line
@@ -300,7 +299,7 @@ def parse_streams(vba, strip_useless=False):
 
 # === Top level Programatic Interface ================================================================================    
 def process_file (container, filename, data,
-                  altparser=False, strip_useless=False):
+                  altparser=False, strip_useless=False, entry_point=None):
     """
     Process a single file
 
@@ -320,6 +319,8 @@ def process_file (container, filename, data,
     print '='*79
     print 'FILE:', display_filename
     vm = ViperMonkey()
+    if (entry_point is not None):
+        vm.entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
@@ -354,27 +355,32 @@ def process_file (container, filename, data,
                     vm.add_compiled_module(m)
 
             # Pull out form variables.
-            for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
-                if form_variables is not None:
-                    var_name = form_variables['name']
-                    macro_name = stream_path
-                    if ("/" in macro_name):
-                        start = macro_name.rindex("/") + 1
-                        macro_name = macro_name[start:]
-                    global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
-                    val = form_variables['value']
-                    if (val is None):
-                        val = ''
-                    name = global_var_name.lower()
-                    vm.globals[name] = val
-                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
-                    vm.globals[name + ".tag"] = val
-                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
-                    vm.globals[name + ".text"] = val
-                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+            try:
+                for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
+                    if form_variables is not None:
+                        var_name = form_variables['name']
+                        macro_name = stream_path
+                        if ("/" in macro_name):
+                            start = macro_name.rindex("/") + 1
+                            macro_name = macro_name[start:]
+                        global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
+                        val = form_variables['value']
+                        if (val is None):
+                            val = ''
+                        name = global_var_name.lower()
+                        vm.globals[name] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+                        vm.globals[name + ".tag"] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
+                        vm.globals[name + ".text"] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+            except Exception as e:
+                log.error("Cannot read form strings. " + str(e))
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
+            if (entry_point is not None):
+                log.info("Starting emulation from function " + entry_point)
             vm.trace()
             # print table of all recorded actions
             print('Recorded Actions:')
@@ -499,8 +505,10 @@ def main():
                             help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
         help='Use the alternate line parser (experimental)')
-    parser.add_option("-s", action="store_true", dest="strip_useless_code",
+    parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
         help='Strip useless VB code from macros prior to parsing.')
+    parser.add_option('-i', '--init', dest="entry_point", action="store", default=None,
+                      help="Emulate starting at the given function name.")
 
     (options, args) = parser.parse_args()
 
@@ -509,7 +517,7 @@ def main():
         print __doc__
         parser.print_help()
         sys.exit()
-
+        
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
@@ -522,7 +530,12 @@ def main():
         if options.scan_expressions:
             process_file_scanexpr(container, filename, data)
         else:
-            process_file(container, filename, data, altparser=options.altparser, strip_useless=options.strip_useless_code)
+            process_file(container,
+                         filename,
+                         data,
+                         altparser=options.altparser,
+                         strip_useless=options.strip_useless_code,
+                         entry_point=options.entry_point)
 
 
 
