@@ -124,6 +124,7 @@ def strip_useless_code(vba_code):
     assign_re = re.compile("\s*(\w+)\s*=\s*")
     assigns = {}
     line_num = 0
+    bool_statements = set(["If", "For", "Do"])
     for line in vba_code.split("\n"):
 
         # Is there an assignment on this line?
@@ -136,6 +137,16 @@ def strip_useless_code(vba_code):
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
                 log.debug("SKIP: Continuation line. Keep it.")
+                continue
+
+            # Skip lines where the '=' is part of a boolean expression.
+            strip_line = line.strip()            
+            skip = False
+            for bool_statement in bool_statements:
+                if (strip_line.startswith(bool_statement + " ")):
+                    skip = True
+                    break
+            if (skip):
                 continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
