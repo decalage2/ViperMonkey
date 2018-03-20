@@ -310,7 +310,7 @@ def parse_streams(vba, strip_useless=False):
 
 # === Top level Programatic Interface ================================================================================    
 def process_file (container, filename, data,
-                  altparser=False, strip_useless=False, entry_point=None):
+                  altparser=False, strip_useless=False, entry_points=None):
     """
     Process a single file
 
@@ -330,8 +330,9 @@ def process_file (container, filename, data,
     print '='*79
     print 'FILE:', display_filename
     vm = ViperMonkey()
-    if (entry_point is not None):
-        vm.entry_points.append(entry_point)
+    if (entry_points is not None):
+        for entry_point in entry_points:
+            vm.entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
@@ -390,8 +391,8 @@ def process_file (container, filename, data,
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
-            if (entry_point is not None):
-                log.info("Starting emulation from function " + entry_point)
+            if (entry_points is not None):
+                log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
             # print table of all recorded actions
             print('Recorded Actions:')
@@ -518,8 +519,8 @@ def main():
         help='Use the alternate line parser (experimental)')
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
         help='Strip useless VB code from macros prior to parsing.')
-    parser.add_option('-i', '--init', dest="entry_point", action="store", default=None,
-                      help="Emulate starting at the given function name.")
+    parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
+                      help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
 
     (options, args) = parser.parse_args()
 
@@ -541,14 +542,15 @@ def main():
         if options.scan_expressions:
             process_file_scanexpr(container, filename, data)
         else:
+            entry_points = None
+            if (options.entry_points is not None):
+                entry_points = options.entry_points.split(",")
             process_file(container,
                          filename,
                          data,
                          altparser=options.altparser,
                          strip_useless=options.strip_useless_code,
-                         entry_point=options.entry_point)
-
-
+                         entry_points=entry_points)
 
 if __name__ == '__main__':
     main()

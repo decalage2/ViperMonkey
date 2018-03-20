@@ -37,13 +37,6 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
 
 # ------------------------------------------------------------------------------
@@ -56,16 +49,11 @@ from pyparsing import *
 from reserved import *
 
 from logger import log
-log.debug('importing identifiers')
 
 # --- IDENTIFIER -------------------------------------------------------------
 
 # TODO: see MS-VBAL 3.3.5 page 33
 # 3.3.5 Identifier Tokens
-# Latin-identifier = first-Latin-identifier-character *subsequent-Latin-identifier-character
-# first-Latin-identifier-character = (%x0041-005A / %x0061-007A) ; A-Z / a-z
-# subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
-# identifier = expression
 latin_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
 
 # lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
@@ -84,16 +72,12 @@ identifier.setParseAction(lambda t: t[0])
 # --- ENTITY NAMES -----------------------------------------------------------
 
 # 3.3.5.3 Special Identifier Forms
-# FOREIGN-NAME = "[" foreign-identifier "]"
-# foreign-identifier = 1*non-line-termination-character
 # A <FOREIGN-NAME> is a token (section 3.3) that represents a text sequence that is used as if it
 # was an identifier but which does not conform to the VBA rules for forming an identifier. Typically, a
 # <FOREIGN-NAME> is used to refer to an entity (section 2.2) that is created using some
 # programming language other than VBA.
 foreign_name = Literal('[') + CharsNotIn('\x0D\x0A') + Literal(']')
 
-# BUILTIN-TYPE = reserved-type-identifier / ("[" reserved-type-identifier "]")
-#                / "object" / "[object]"
 builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identifier + Suppress("]")) \
                | CaselessKeyword("object") | CaselessLiteral("[object]")
 
@@ -122,43 +106,19 @@ unrestricted_name = entity_name | reserved_identifier
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
 # TODO: reduce this list when corresponding statements are implemented
-reserved_keywords = (  # WordStart() + (
-    # Combine(CaselessLiteral('Chr') + Optional(Word('BbWw', max=1))) # + Optional('$'))
-    CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
-    | CaselessKeyword('Asc')
-    | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
-    | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
-    | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
-    # TODO: re-enable Environ when fixed
-    | CaselessKeyword('Function')  # | CaselessKeyword('Environ')
-)  # + WordEnd(printables)  #+'$')
+reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
+                     | CaselessKeyword('Asc')
+                     | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
+                     | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
+                     | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
+                     | CaselessKeyword('Function'))
 
-# TODO: temporary hack to support any single identifier or object.attrib
-# TODO: support several dots? (object.attrib1.attrib2 etc)
-
-# TODO: simplified version, using only entity_name
-#TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
-#                                           Optional(Optional(entity_name) + Literal('.')) +
-#                                           Optional(entity_name + Literal('.')) +
-#                                           entity_name +
-#                                           # Looks like variables can end in $
-#                                           Optional(CaselessLiteral('$')))
 TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
                                            Combine(Literal('.') + lex_identifier) | \
                                            Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
                                            Optional(CaselessLiteral('$')))
-#TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) +
-#                                           Optional(entity_name) +
-#                                           (Combine(Literal('.') + lex_identifier) | entity_name) +
-#                                           # Looks like variables can end in $
-#                                           Optional(CaselessLiteral('$')))
 
 TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
                                                  Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
                                                  Optional(CaselessLiteral('$')))
-#TODO_identifier_or_object_attrib_loose = Combine(Optional(Optional(entity_name) + Literal('.')) +
-#                                                 Optional(entity_name + Literal('.')) +
-#                                                 entity_name +
-#                                                 # Looks like variables can end in $
-#                                                 Optional(CaselessLiteral('$')))
 

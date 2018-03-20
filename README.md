@@ -64,38 +64,40 @@ analysis.
 [//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
 [//]: # (Download/Install https://github.com/decalage2/ViperMonkey/wiki/Install)
 
+***Emulating File Writes***
+
+ViperMonkey emulates some file writing behavior. The SHA256 hash of
+dropped files is reported in the ViperMonkey analysis results and the
+actual dropped files are saved in the directory MALDOC_artifacts/,
+where MALDOC is the name of the analyzed maldoc file.
+
+***Emulating Specific VBA Functions***
+
+By default ViperMonkey emulates maldoc behavior starting from standard
+macro auto run function (like AutoOpen, Document_Open, Document_Close,
+etc.). In some cases you may want to emulate the behavior starting
+from a non-standard auto run function. This is supported via the -i
+command line option. To emulate maldoc behavior starting from function
+Foo, use the command line option '-i Foo'. To emulate behavior
+starting from multiple non-standard entry points, use the command line
+option '-i "Foo,Bar,Baz"' (note that the entry point function names
+are comma seperated and must appear in a double quoted string).
+
 News
 ----
 
-- 2017-12-15:
-  - Added support for Select and Do loops.
-  - Added support for 'End Sub' and 0 argument return statements.
-  - Added support for #if constructs.
-  - Each VBA stream is now parsed in a separate thread (up to the # of machine cores).
-- 2017-11-28:
-  - Added parsing for private type declarations.
-  - Report calls to CreateProcessA in final report.
-  - Handle Application.Run() of locally defined methods.
-- 2017-11-23:
-  - Added VBA functions Abs, Fix, Hex, String, CByte, Atn, Dir, RGB, Log, Cos, Exp, Sin, Str, and Val.
-  - Added support for 'Exit Function' operator.
-  - Changed math operators to also work with string representations of integers.
-  - Added a configurable iteration limit on loops.
-- 2017-11-14:
-  - Added support for InStr, Replace, Sgn, Sqr, UBound, LBound, Trim, StrConv, Split, StrReverse, and Int VB functions.
-  - Added support for string character subscripting.
-  - Added support for negative integer literals.
-  - Added support for if-then-else statements.
-  - Added support for Const and initial values for global variable declarations.
-  - Handle assignments of boolean expressions to variables.
-- 2017-11-03:
-  - Added support for Left(), Right(), Array(), and BuiltInDocumentProperties() functions.
-  - Added support for global variables.
-  - Fixed some parse errors.
-  - Added analysis of AutoClose() functions.
-- **2016-09-26 v0.02**: First published version
-- 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
-- see changelog in source code for more info.
+- 2018-3:
+  - Added support for parsing some technically invalid VBA statements.
+  - Additional parsing fixes.
+  - Added support for starting emulation at non-standard functions.
+- 2018-2:
+  - Added support for Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+    LCase, RTrim, LTrim, AscW, AscB, and CurDir functions.
+- 2018-1
+  - Added emulation support for saving dropped files.
+  - Added support for For Each loops.
+  - Added support for While Wend loops.
+  - Handle 'Exit Do' instructions.
 
 Download and Install:
 ---------------------

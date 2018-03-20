@@ -37,25 +37,13 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
 from pyparsing import *
 
 from logger import log
-log.debug('importing reserved')
-
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
@@ -71,7 +59,6 @@ def caselessKeywordsList(keywords):
     for kw in keywords[1:]:
         p |= CaselessKeyword(kw)
     return p
-
 
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # A <Statement-keyword> is a <reserved-identifier> that is the first syntactic item of a statement or

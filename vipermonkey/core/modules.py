@@ -40,16 +40,7 @@ https://github.com/decalage2/ViperMonkey
 # For Python 2+3 support:
 from __future__ import print_function
 
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -57,10 +48,8 @@ from procedures import *
 from statements import *
 
 from logger import log
-log.debug('importing modules')
 
 # === VBA MODULE AND STATEMENTS ==============================================
-
 
 # --- MODULE -----------------------------------------------------------------
 
@@ -75,9 +64,6 @@ class Module(VBA_Object):
         self.external_functions = {}
         self.subs = {}
         self.global_vars = {}
-        # print tokens
-        # print 'Module.init:'
-        # pprint.pprint(tokens.asList())
         for token in tokens:
             if isinstance(token, Sub):
                 log.debug("saving sub decl: %r" % token.name)
@@ -98,9 +84,6 @@ class Module(VBA_Object):
         # TODO: should not use print
         print(self)
 
-    # def trace(self, entrypoint='*auto'):
-    #     print self.subs['AutoOpen'].eval()
-
     def __repr__(self):
         r = 'Module %r\n' % self.name
         for sub in self.subs.values():
@@ -111,15 +94,7 @@ class Module(VBA_Object):
             r += '  %r\n' % extfunc
         return r
 
-
 # see MS-VBAL 4.2 Modules
-
-# procedural_module_header = CaselessKeyword('Attribute') + CaselessKeyword('VB_Name') + Literal('=') + quoted_string
-
-# procedural_module = procedural_module_header + procedural_module_body
-# class_module = class_module_header + class_module_body
-
-# module = procedural_module | class_module
 
 # Module Header:
 
@@ -139,7 +114,7 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function #| unknown_statement
+declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -153,16 +128,12 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 empty_line = EOL.suppress()
 
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line))  # + ZeroOrMore(empty_line)
+module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line))
 
 module_body = module_declaration + module_code
 
 module = module_header + module_body
 module.setParseAction(Module)
-
-
-# module = ZeroOrMore(sub | function | statements_line).setParseAction(Module)
-
 
 # === LINE PARSER ============================================================
 
@@ -177,5 +148,3 @@ vba_line = declaration_statements_line \
         | header_statements_line \
         | simple_statements_line \
         | empty_line
-
-

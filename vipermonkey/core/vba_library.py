@@ -37,17 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -62,8 +52,6 @@ import random
 from vba_context import VBA_LIBRARY
 
 from logger import log
-log.debug('importing vba_library')
-
 
 # === VBA LIBRARY ============================================================
 
@@ -83,20 +71,16 @@ class MsgBox(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         context.report_action('Display Message', params[0], 'MsgBox')
         return 1  # vbOK
 
-
 class Len(VbaLibraryFunc):
     """
-    TODO: Len
+    Len() function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         return len(params[0])
-
 
 class Mid(VbaLibraryFunc):
     """
@@ -106,7 +90,6 @@ class Mid(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if ((len(params) > 0) and (params[0] == "ActiveDocument")):
             params = params[1:]
         assert len(params) in (2,3)
@@ -155,7 +138,6 @@ class Left(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if (len(params) > 2):
             params = params[-2:]
         assert len(params) == 2
@@ -189,7 +171,6 @@ class Right(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if (len(params) > 2):
             params = params[-2:]
         assert len(params) == 2
@@ -226,7 +207,6 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) == 1
         prop = params[0]
 
@@ -262,7 +242,6 @@ class Shell(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         try:
             params.remove('ThisDocument')
             params.remove('BuiltInDocumentProperties')
@@ -279,7 +258,6 @@ class Array(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         r = []
         for v in params:
             r.append(v)
@@ -292,7 +270,6 @@ class UBound(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
@@ -306,7 +283,6 @@ class LBound(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
@@ -320,7 +296,6 @@ class Trim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         r = None
         if (isinstance(params[0], int)):
@@ -336,7 +311,6 @@ class RTrim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         r = None
         if (isinstance(params[0], int)):
@@ -352,7 +326,6 @@ class LTrim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         r = None
         if (isinstance(params[0], int)):
@@ -386,9 +359,9 @@ class StrConv(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
-        # TODO: Actually implement this.
+
+        # TODO: Actually implement this properly.
 
         # Get the conversion type to perform.
         conv = None
@@ -397,7 +370,6 @@ class StrConv(VbaLibraryFunc):
 
         # Do the conversion.
         r = params[0]
-        print "FOO: type " + str(type(r))    
         if (isinstance(r, str)):
             if (conv):
                 if (conv == 1):
@@ -405,7 +377,6 @@ class StrConv(VbaLibraryFunc):
                 if (conv == 2):
                     r = r.lower()
                 if (conv == 64):
-                    print "FOO: Adding padding (str)"
                     padded = ""
                     for c in r:
                         padded += c + "\0"
@@ -447,7 +418,6 @@ class Split(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]
@@ -464,7 +434,6 @@ class Int(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         val = params[0]
@@ -504,7 +473,6 @@ class StrReverse(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]
@@ -520,7 +488,6 @@ class Replace(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) == 3
         string = params[0]
         if (string is None):
@@ -541,7 +508,6 @@ class InStr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) >= 2
 
         # Were we given a start position?
@@ -588,7 +554,6 @@ class InStrRev(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) >= 2
 
         # Were we given a start position?
@@ -636,7 +601,6 @@ class Sgn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         num = params[0]
         r = ''
@@ -653,7 +617,6 @@ class Sqr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -670,7 +633,6 @@ class Abs(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -687,7 +649,6 @@ class Fix(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -704,7 +665,6 @@ class Round(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -721,7 +681,6 @@ class Hex(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -738,7 +697,6 @@ class CByte(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -841,7 +799,6 @@ class Atn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -858,7 +815,6 @@ class Tan(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -875,7 +831,6 @@ class Cos(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -892,7 +847,6 @@ class Log(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -909,7 +863,6 @@ class String(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 2)
         r = ''
         try:
@@ -927,7 +880,6 @@ class Dir(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) >= 1)
         pat = params[0]
         attrib = None
@@ -945,7 +897,6 @@ class RGB(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 3)
         r = ''
         try:
@@ -964,7 +915,6 @@ class Exp(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -981,7 +931,6 @@ class Sin(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -998,7 +947,6 @@ class Str(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = str(params[0])
         log.debug("Str: %r returns %r" % (self, r))
@@ -1010,7 +958,6 @@ class Val(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
 
         # Sanity check.
@@ -1054,7 +1001,6 @@ class Base64Decode(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         txt = params[0]
         if (txt is None):
@@ -1167,7 +1113,6 @@ class Day(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         txt = params[0]
         if (txt is None):
@@ -1192,7 +1137,6 @@ class UCase(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         r = str(params[0]).upper()
         log.debug("UCase: %r returns %r" % (self, r))
         return r
@@ -1203,7 +1147,6 @@ class LCase(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         r = str(params[0]).lower()
         log.debug("LCase: %r returns %r" % (self, r))
         return r
@@ -1242,7 +1185,6 @@ class IIf(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 3)
         guard = params[0]
         true_part = params[1]
@@ -1253,7 +1195,8 @@ class IIf(VbaLibraryFunc):
             return false_part
 
 out_dir = None
-        
+file_count = 0
+
 class Close(VbaLibraryFunc):
     """
     File Close statement.
@@ -1298,14 +1241,27 @@ class Close(VbaLibraryFunc):
 
             # Dump the file.
             try:
+
+                # Get a unique name for the file.
                 short_name = name
                 if ('\\' in short_name):
                     start = short_name.rindex('\\') + 1
-                    short_name = out_dir + short_name[start:].strip()
-                    f = open(short_name, 'wb')
-                    f.write(raw_data)
+                short_name = out_dir + short_name[start:].strip()
+                try:
+                    f = open(short_name, 'r')
+                    # Already exists. Get a unique name.
                     f.close()
-                    log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+                    file_count += 1
+                    short_name += " (" + str(file_count) + ")"
+                except:
+                    pass
+                    
+                # Write out the dropped file.
+                f = open(short_name, 'wb')
+                f.write(raw_data)
+                f.close()
+                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+                
             except Exception as e:
                 log.error("Writing file " + short_name + " failed. " + str(e))
                 
@@ -1426,5 +1382,4 @@ for name, value in (
         ('vbObjectError', -2147221504),
 ):
     VBA_LIBRARY[name.lower()] = value
-
 

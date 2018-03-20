@@ -37,7 +37,6 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 # ------------------------------------------------------------------------------
 # CHANGELOG:
 # 2015-02-12 v0.01 PL: - first prototype
@@ -46,9 +45,6 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.02'
 
-# ------------------------------------------------------------------------------
-# TODO:
-
 # --- IMPORTS ------------------------------------------------------------------
 
 from comments_eol import *
@@ -56,7 +52,6 @@ from expressions import *
 from vba_context import *
 
 from logger import log
-log.debug('importing statements')
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -76,8 +71,6 @@ class UnknownStatement(VBA_Object):
     def eval(self, context, params=None):
         log.debug(self)
 
-
-# catch-all for unknown statements
 # Known keywords used at the beginning of statements
 known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('End')) + \
                                   (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
@@ -89,6 +82,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
                                   CaselessKeyword('Case') | CaselessKeyword('On') 
 
+# catch-all for unknown statements
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
                             adjacent=False).setResultsName('text')
@@ -109,27 +103,12 @@ class Attribute_Statement(VBA_Object):
     def __repr__(self):
         return 'Attribute %s = %r' % (self.name, self.value)
 
-# procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
-# class-module-header = 1*class-attr
-# class-attr = attribute "VB_Name" attr-eq quoted-identifier attr-end
-# / attribute "VB_GlobalNameSpace" attr-eq "False" attr-end
-# / attribute "VB_Creatable" attr-eq "False" attr-end
-# / attribute "VB_PredeclaredId" attr-eq boolean-literal-identifier attr-end
-# / attribute "VB_Exposed" attr-eq boolean-literal-identifier attr-end
-# / attribute "VB_Customizable" attr-eq boolean-literal-identifier attr-end
-# attribute = LINE-START "Attribute"
-# attr-eq = "="
-# attr-end = LINE-END
-
-# quoted-identifier = double-quote NO-WS IDENTIFIER NO-WS double-quote
 quoted_identifier = Combine(Suppress('"') + identifier + Suppress('"'))
 quoted_identifier.setParseAction(lambda t: str(t[0]))
 
 # TODO: here I use lex_identifier instead of identifier because attrib names are reserved identifiers
-attribute_statement = CaselessKeyword('Attribute').suppress() + lex_identifier('name') + Suppress('=') + literal(
-    'value')
+attribute_statement = CaselessKeyword('Attribute').suppress() + lex_identifier('name') + Suppress('=') + literal('value')
 attribute_statement.setParseAction(Attribute_Statement)
-
 
 # --- OPTION statement ----------------------------------------------------------
 
@@ -142,10 +121,8 @@ class Option_Statement(VBA_Object):
     def __repr__(self):
         return 'Option %s' % (self.name)
 
-
 option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
-
 
 # --- TYPE EXPRESSIONS -------------------------------------------------------
 
@@ -169,12 +146,8 @@ type_declaration = type_declaration_composite
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
 
 # 5.3.1.4 Function Type Declarations
-# function-type = "as" type-expression [array-designator]
-# array-designator = "(" ")"
-
 array_designator = Literal("(") + Literal(")")
 function_type = CaselessKeyword("as") + type_expression + Optional(array_designator)
-
 
 # --- PARAMETERS ----------------------------------------------------------
 
@@ -195,30 +168,7 @@ class Parameter(VBA_Object):
             r += ' as ' + str(self.my_type)
         return r
 
-
-# TODO 5.3.1.5 Parameter Lists
-# TODO: differentiate dim params from sub/function params?
-
 # 5.3.1.5 Parameter Lists
-# procedure-parameters = "(" [parameter-list] ")"
-# property-parameters = "(" [parameter-list ","] value-param ")"
-# parameter-list = (positional-parameters "," optional-parameters )
-#                   / (positional-parameters ["," param-array])
-#                   / optional-parameters / param-array
-# positional-parameters = positional-param *("," positional-param)
-# optional-parameters = optional-param *("," optional-param)
-# value-param = positional-param
-# positional-param = [parameter-mechanism] param-dcl
-# optional-param = optional-prefix param-dcl [default-value]
-# param-array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" / "[variant]")]
-# param-dcl = untyped-name-param-dcl / typed-name-param-dcl
-# untyped-name-param-dcl = IDENTIFIER [parameter-type]
-# typed-name-param-dcl = TYPED-NAME [array-designator]
-# optional-prefix = ("optional" [parameter-mechanism]) / ([parameter-mechanism] ("optional"))
-# parameter-mechanism = "byval" / " byref"
-# parameter-type = [array-designator] "as" (type-expression / "Any")
-# default-value = "=" constant-expression
-
 default_value = Literal("=").suppress() + expr_const('default_value')  # TODO: constant_expression
 
 parameter_mechanism = CaselessKeyword('ByVal') | CaselessKeyword('ByRef')
@@ -231,21 +181,6 @@ parameter_type = Optional(array_designator) + CaselessKeyword("as").suppress() \
 
 untyped_name_param_dcl = identifier + Optional(parameter_type)
 
-# TODO:
-# procedure_parameters = "(" [parameter_list] ")"
-# property_parameters = "(" [parameter_list ","] value_param ")"
-# parameter_list = (positional_parameters "," optional_parameters )
-#                   | (positional_parameters ["," param_array])
-#                   | optional_parameters | param_array
-# positional_parameters = positional_param *("," positional_param)
-# optional_parameters = optional_param *("," optional_param)
-# value_param = positional_param
-# positional_param = [parameter_mechanism] param_dcl
-# optional_param = optional_prefix param_dcl [default_value]
-# param_array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" | "[variant]")]
-# param_dcl = untyped_name_param_dcl | typed_name_param_dcl
-# typed_name_param_dcl = TYPED_NAME [array_designator]
-
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
             Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
@@ -256,27 +191,15 @@ parameters_list = delimitedList(parameter, delim=',')
 # --- STATEMENT LABELS -------------------------------------------------------
 
 # 5.4.1.1 Statement Labels
-# statement-label-definition = LINE-START ((identifier-statement-label ":") / (line-number-label [":"] ))
-# statement-label = identifier-statement-label / line-number-label
-# statement-label-list = statement-label ["," statement-label]
-# identifier-statement-label = IDENTIFIER
-# line-number-label = INTEGER
-
 statement_label_definition = LineStart() + ((identifier('label_name') + Suppress(":"))
                                             | (integer('label_int') + Optional(Suppress(":"))))
 statement_label = identifier | integer
 statement_label_list = delimitedList(statement_label, delim=',')
 
-# TODO: StatementLabel class
-
 # --- STATEMENT BLOCKS -------------------------------------------------------
 
 # 5.4.1 Statement Blocks
 # A statement block is a sequence of 0 or more statements.
-# statement-block = *(block-statement EOS)
-# block-statement = statement-label-definition / rem-statement / statement
-# statement = control-statement / data-manipulation-statement / error-handling-statement /
-# filestatement
 
 # need to declare statement beforehand:
 statement = Forward()
@@ -295,11 +218,6 @@ class Dim_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
-
-        # [['b1', '(', ')', 'Byte']]
-        # [['b7', '(', ')', 'Byte', '=', s]]
-        # [['l', 'Long']]
-        # [['b2', '(', ')'], ['b3'], ['b4', '(', ')', 'Byte']]
         
         # Track the initial value of the variable.
         self.init_val = None
@@ -373,54 +291,23 @@ class Dim_Statement(VBA_Object):
             context.set(var[0], curr_init_val, curr_type)
     
 # 5.4.3.1 Local Variable Declarations
-# local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
-# static-variable-declaration = "Static" variable-declaration-list
 
 # 5.2.3.1 Module Variable Declaration Lists
-# module-variable-declaration = public-variable-declaration / private-variable-declaration
-# global-variable-declaration = "Global" variable-declaration-list
-# public-variable-declaration = "Public" ["Shared"] module-variable-declaration-list
-# private-variable-declaration = ("Private" / "Dim") [ "Shared"] module-variable-declaration-
-# list
-# module-variable-declaration-list = (withevents-variable-dcl / variable-dcl)
-# *( "," (withevents-variable-dcl / variable-dcl) )
-# variable-declaration-list = variable-dcl *( "," variable-dcl )
 
 # 5.2.3.1.1 Variable Declarations
-# variable-dcl = typed-variable-dcl / untyped-variable-dcl
-# typed-variable-dcl = TYPED-NAME [array-dim]
-# untyped-variable-dcl = IDENTIFIER [array-clause / as-clause]
-# array-clause = array-dim [as-clause]
-# as-clause = as-auto-object / as-type
 
 # 5.2.3.1.3 Array Dimensions and Bounds
-# array-dim = "(" [bounds-list] ")"
-# bounds-list = dim-spec *("," dim-spec)
-# dim-spec = [lower-bound] upper-bound
-# lower-bound = constant-expression "to"
-# upper-bound = constant-expression
 
 # 5.6.16.1 Constant Expressions
 # A constant expression is an expression usable in contexts which require a value that can be fully
 # evaluated statically.
-# constant-expression = expression
 
 # 5.2.3.1.4 Variable Type Declarations
 # A type specification determines the specified type of a declaration.
-# as-auto-object = "as" "new" class-type-name
-# as-type = "as" type-spec
-# type-spec = fixed-length-string-spec / type-expression
-# fixed-length-string-spec = "string" "*" string-length
-# string-length = constant-name / INTEGER
-# constant-name = simple-name-expression
 
 # 5.2.3.1.2 WithEvents Variable Declarations
-# withevents-variable-dcl = "withevents" IDENTIFIER "as" class-type-name
-# class-type-name = defined-type-expression
 
 # 5.6.16.7 Type Expressions
-# type-expression = BUILTIN-TYPE / defined-type-expression
-# defined-type-expression = simple-name-expression / member-access-expression
 
 constant_expression = expression
 lower_bound = constant_expression + CaselessKeyword('to').suppress()
@@ -443,13 +330,9 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(
-    CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
-
-# dim_statement = CaselessKeyword('Dim').suppress() + \
-#                 Optional(CaselessKeyword("Shared")).suppress() + parameters_list
 dim_statement.setParseAction(Dim_Statement)
 
 # --- Global_Var_Statement statement ----------------------------------------------------------
@@ -509,7 +392,6 @@ class Let_Statement(VBA_Object):
             if ((context.get_type(self.name) == "Byte Array") and
                 (isinstance(value, str))):
                 tmp = []
-                print "FOO: Adding padding (byte array)"
                 for c in value:
                     tmp.append(ord(c))
                     tmp.append(0)
@@ -610,20 +492,15 @@ class Let_Statement(VBA_Object):
 # 5.4.3.8   Let Statement
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
-# let-statement = ["Let"] l-expression "=" expression
 
 # TODO: remove Set when Set_Statement implemented:
-# let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-#                 + l_expression('name') + Literal('=').suppress() + expression('expression')
 
-# previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
                 Optional(Suppress('Const')) + \
                 ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + expression('index') + Suppress(')'))) ^ \
                  member_access_expression('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
-
 let_statement.setParseAction(Let_Statement)
 
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
@@ -718,8 +595,6 @@ class For_Statement(VBA_Object):
         log.debug('FOR loop: end.')
 
 # 5.6.16.6 Bound Variable Expressions
-# bound-variable-expression = l-expression
-# Static Semantics.
 # A <bound-variable-expression> is invalid if it is classified as something other than a variable
 # expression. The expression is invalid even if it is classified as an unbound member expression that
 # could be resolved to a variable expression.
@@ -728,17 +603,6 @@ bound_variable_expression = TODO_identifier_or_object_attrib  # l_expression
 
 # 5.4.2.3 For Statement
 # A <for-statement> executes a sequence of statements a specified number of times.
-
-# for-statement = simple-for-statement / explicit-for-statement
-# simple-for-statement = for-clause EOS statement-block "Next"
-# explicit-for-statement = for-clause EOS statement-block
-# ("Next" / (nested-for-statement ",")) bound-variable-expression
-# nested-for-statement = explicit-for-statement / explicit-for-each-statement
-# for-clause = "For" bound-variable-expression "=" start-value "To" end-value [stepclause]
-# start-value = expression
-# end-value = expression
-# step-clause = "Step" step-increment
-# step-increment = expression
 
 step_clause = CaselessKeyword('Step').suppress() + expression
 
@@ -757,6 +621,8 @@ simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements'
 
 simple_for_statement.setParseAction(For_Statement)
 
+# Some maldocs have a floating Next statement that is not associated with a loop.
+# Handle that here.
 bad_next_statement = CaselessKeyword("Next") + Suppress(EOS)
 
 # For the line parser:
@@ -1287,10 +1153,12 @@ class Call_Statement(VBA_Object):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
     def eval(self, context, params=None):
-        log.info('Eval Params before calling Procedure: %s(%r)' % (self.name, self.params))
         # TODO fix params here!
         call_params = eval_args(self.params, context=context)
-        log.info('Calling Procedure: %s(%r)' % (self.name, call_params))
+        str_params = repr(call_params)
+        if (len(str_params) > 80):
+            str_params = str_params[:80] + "..."
+        log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':
@@ -1344,7 +1212,7 @@ class Call_Statement(VBA_Object):
                 log.error('Procedure %r not found' % func_name)
 
 
-# TODO: 5.4.2.1 Call Statement
+# 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
@@ -1467,6 +1335,15 @@ with_statement = CaselessKeyword('With').suppress() + lex_identifier('env') + Su
 with_statement.setParseAction(With_Statement)
 
 # --- GOTO statement ----------------------------------------------------------
+
+# TODO: Emulation of Goto statements needs to be added. This can be
+# done by changing the parsing of a Label statement to include the
+# label and then the statement list following the label. When parsed
+# the Label statement VBA_Object will track the statement list
+# associated with the label. Add a mapping from labels to statement
+# lists in the context. Then evaluating a Goto statement will involve
+# looking up the statement list for the label, evaluating those
+# statements, and then exiting the current function.
 
 class Goto_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
@@ -1629,9 +1506,6 @@ statement <<= type_declaration | simple_for_statement | simple_for_each_statemen
               simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
               with_statement| simple_statement
 
-# TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
-# TODO: can we have '::' with an empty statement?
-# TODO: use statement_block instead!
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
@@ -1705,5 +1579,3 @@ external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Opt
                                                 (CaselessKeyword('Function') | CaselessKeyword('Sub'))) + \
                                                 lex_identifier('function_name') + lib_info + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)
-
-

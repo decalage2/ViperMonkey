@@ -37,18 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-# 2016-10-10 v0.03 PL: - added Multiplication and FloorDivision operators
-
 __version__ = '0.03'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -57,7 +46,6 @@ import sys
 from vba_object import *
 
 from logger import log
-log.debug('importing operators')
 
 def debug_repr(op, args):
     r = "("
@@ -271,7 +259,6 @@ class Subtraction(VBA_Object):
         return debug_repr("-", self.arg)
         return ' - '.join(map(repr, self.arg))
 
-
 # --- MULTIPLICATION: * OPERATOR ------------------------------------------------
 
 class Multiplication(VBA_Object):
@@ -301,7 +288,6 @@ class Multiplication(VBA_Object):
     def __repr__(self):
         return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
-
 
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
@@ -337,7 +323,6 @@ class Division(VBA_Object):
         return debug_repr("/", self.arg)
         return ' / '.join(map(repr, self.arg))
 
-
 # --- FLOOR DIVISION: \ OPERATOR ------------------------------------------------
 
 class FloorDivision(VBA_Object):
@@ -368,7 +353,6 @@ class FloorDivision(VBA_Object):
     def __repr__(self):
         return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
-
 
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
 
@@ -402,7 +386,6 @@ class Concatenation(VBA_Object):
         return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
-
 # --- MOD OPERATOR -----------------------------------------------------------
 
 class Mod(VBA_Object):
@@ -424,5 +407,4 @@ class Mod(VBA_Object):
     def __repr__(self):
         return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
-
 

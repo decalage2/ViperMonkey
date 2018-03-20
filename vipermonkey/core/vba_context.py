@@ -37,23 +37,11 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
 from logger import log
-log.debug('importing vba_context')
-
 
 def is_procedure(vba_object):
     """
@@ -72,7 +60,6 @@ def is_procedure(vba_object):
 
 # global dictionary of constants, functions and subs for the VBA library
 VBA_LIBRARY = {}
-
 
 class Context(object):
     """
@@ -94,9 +81,6 @@ class Context(object):
         if _locals is not None:
             # However, if locals is explicitly provided, we use a copy of it:
             self.locals = dict(_locals)
-        # If a context is provided, its locals should NOT be copied
-        # elif context is not None:
-        #     self.locals = dict(context.locals)
         else:
             self.locals = {}
         # engine should be a pointer to the ViperMonkey engine, to provide callback features
@@ -314,5 +298,4 @@ class Context(object):
             
     def report_action(self, action, params=None, description=None):
         self.engine.report_action(action, params, description)
-
 

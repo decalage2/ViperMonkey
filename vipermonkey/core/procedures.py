@@ -37,17 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -56,7 +46,6 @@ from statements import *
 from identifiers import *
 
 from logger import log
-log.debug('importing procedures')
 
 # --- SUB --------------------------------------------------------------------
 
@@ -105,32 +94,23 @@ class Sub(VBA_Object):
             context.set(self.name, '')
 
 # 5.3.1.1 Procedure Scope
-# procedure-scope = ["global" / "public" / "private" / "friend"]
 
 procedure_scope = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')
                            | CaselessKeyword('Global') | CaselessKeyword('Friend')).suppress()
 
 # 5.3.1.2 Static Procedures
-# initial-static = "static"
-# trailing-static = "static"
 
 static_keyword = Optional(CaselessKeyword('static'))
 
-# TODO: 5.4 Procedure Bodies and Statements
+# 5.4 Procedure Bodies and Statements
 
 # 5.3.1.3 Procedure Names
-# subroutine-name = IDENTIFIER / prefixed-name
-# function-name = TYPED-NAME / subroutine-name
-# prefixed-name = event-handler-name / implemented-name / lifecycle-handler-name
 
 # 5.3.1.8 Event Handler Declarations
-# event-handler-name = IDENTIFIER
 
 # 5.3.1.9 Implemented Name Declarations
-# implemented-name = IDENTIFIER
 
 # 5.3.1.10 Lifecycle Handler Declarations
-# lifecycle-handler-name = "Class_Initialize" / "Class_Terminate"
 
 lifecycle_handler_name = CaselessKeyword("Class_Initialize") | CaselessKeyword("Class_Terminate")
 implemented_name = identifier  # duplicate, not used
@@ -139,38 +119,15 @@ prefixed_name = identifier | lifecycle_handler_name  # simplified
 
 subroutine_name = identifier | lifecycle_handler_name  # simplified
 
-# typed_name = identifier + optional type_suffix => simplified
-# function_name = typed_name | subroutine_name
 function_name = Combine(identifier + Suppress(Optional(type_suffix))) | lifecycle_handler_name
 
 # 5.3.1 Procedure Declarations
-# end-label = statement-label-definition
+
 end_label = statement_label_definition
 
-# procedure-tail = [WS] LINE-END / single-quote comment-body / ":" rem-statement
 procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":") + rem_statement
 # NOTE: rem statement does NOT include the line terminator => BUG?
 # TODO: here i assume that procedure tail does NOT include the line terminator
-
-# subroutine-declaration = procedure-scope [initial-static]
-#       "sub" subroutine-name [procedure-parameters] [trailing-static] EOS
-#       [procedure-body EOS]
-#       [end-label] "end" "sub" procedure-tail
-# function-declaration = procedure-scope [initial-static]
-#       "function" function-name [procedure-parameters] [function-type]
-#       [trailing-static] EOS
-#       [procedure-body EOS]
-#       [end-label] "end" "function" procedure-tail
-# property-get-declaration = procedure-scope [initial-static]
-#       "Property" "Get"
-#       function-name [procedure-parameters] [function-type] [trailing-static] EOS
-#       [procedure-body EOS]
-#       [end-label] "end" "property" procedure-tail
-# property-lhs-declaration = procedure-scope [initial-static]
-#       "Property" ("Let" / "Set")
-#       subroutine-name property-parameters [trailing-static] EOS
-#       [procedure-body EOS]
-#       [end-label] "end" "property" procedure-tail
 
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
@@ -186,7 +143,6 @@ sub.setParseAction(Sub)
 sub_start_line = public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                  + Optional(params_list_paren) + EOS.suppress()
 sub_start_line.setParseAction(Sub)
-
 
 # --- FUNCTION --------------------------------------------------------------------
 
@@ -250,14 +206,12 @@ class Function(VBA_Object):
             # these funcion values.
             context.set(self.name, '')
 
-
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
-#Function vQes9u(QGQEbuhT) As String
 function = (function_start + \
             Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
             Optional(bad_if_statement('bogus_if')) + \
