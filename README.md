@@ -54,24 +54,14 @@ useless statements from the Visual Basic macro code prior to parsing
 and emulation. For some maldocs this can significantly speed up
 analysis.
 
-**Quick links:**
-[Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
-[Contact the Author](http://decalage.info/contact) -
-[Repository](https://github.com/decalage2/ViperMonkey) -
-[Updates on Twitter](https://twitter.com/decalage2)
-
-[//]: # (Home page http://www.decalage.info/vipermonkey)
-[//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
-[//]: # (Download/Install https://github.com/decalage2/ViperMonkey/wiki/Install)
-
-***Emulating File Writes***
+**Emulating File Writes**
 
 ViperMonkey emulates some file writing behavior. The SHA256 hash of
 dropped files is reported in the ViperMonkey analysis results and the
 actual dropped files are saved in the directory MALDOC_artifacts/,
 where MALDOC is the name of the analyzed maldoc file.
 
-***Emulating Specific VBA Functions***
+**Emulating Specific VBA Functions**
 
 By default ViperMonkey emulates maldoc behavior starting from standard
 macro auto run function (like AutoOpen, Document_Open, Document_Close,
@@ -82,6 +72,16 @@ Foo, use the command line option '-i Foo'. To emulate behavior
 starting from multiple non-standard entry points, use the command line
 option '-i "Foo,Bar,Baz"' (note that the entry point function names
 are comma seperated and must appear in a double quoted string).
+
+**Quick links:**
+[Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
+[Contact the Author](http://decalage.info/contact) -
+[Repository](https://github.com/decalage2/ViperMonkey) -
+[Updates on Twitter](https://twitter.com/decalage2)
+
+[//]: # (Home page http://www.decalage.info/vipermonkey)
+[//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
+[//]: # (Download/Install https://github.com/decalage2/ViperMonkey/wiki/Install)
 
 News
 ----
