@@ -86,6 +86,7 @@ are comma seperated and must appear in a double quoted string).
 News
 ----
 
+- **2018-03-22 v0.06**: new features and bug fixes contributed by Kirk Sayre
 - 2018-3:
   - Added support for parsing some technically invalid VBA statements.
   - Additional parsing fixes.
@@ -98,6 +99,36 @@ News
   - Added support for For Each loops.
   - Added support for While Wend loops.
   - Handle 'Exit Do' instructions.
+- 2018-01-12 v0.05: a lot of new features and bug fixes contributed by Kirk Sayre
+- 2017-12-15:
+  - Added support for Select and Do loops.
+  - Added support for 'End Sub' and 0 argument return statements.
+  - Added support for #if constructs.
+  - Each VBA stream is now parsed in a separate thread (up to the # of machine cores).
+- 2017-11-28:
+  - Added parsing for private type declarations.
+  - Report calls to CreateProcessA in final report.
+  - Handle Application.Run() of locally defined methods.
+- 2017-11-23:
+  - Added VBA functions Abs, Fix, Hex, String, CByte, Atn, Dir, RGB, Log, Cos, Exp, Sin, Str, and Val.
+  - Added support for 'Exit Function' operator.
+  - Changed math operators to also work with string representations of integers.
+  - Added a configurable iteration limit on loops.
+- 2017-11-14:
+  - Added support for InStr, Replace, Sgn, Sqr, UBound, LBound, Trim, StrConv, Split, StrReverse, and Int VB functions.
+  - Added support for string character subscripting.
+  - Added support for negative integer literals.
+  - Added support for if-then-else statements.
+  - Added support for Const and initial values for global variable declarations.
+  - Handle assignments of boolean expressions to variables.
+- 2017-11-03:
+  - Added support for Left(), Right(), Array(), and BuiltInDocumentProperties() functions.
+  - Added support for global variables.
+  - Fixed some parse errors.
+  - Added analysis of AutoClose() functions.
+- 2016-09-26 v0.02: First published version
+- 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
+- see changelog in source code for more info.
 
 Download and Install:
 ---------------------
@@ -158,7 +189,7 @@ License
 This license applies to the ViperMonkey package, apart from the thirdparty folder which contains third-party files
 published with their own license.
 
-The ViperMonkey package is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+The ViperMonkey package is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
 
 All rights reserved.
 
