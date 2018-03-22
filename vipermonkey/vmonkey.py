@@ -148,6 +148,10 @@ def strip_useless_code(vba_code):
                     break
             if (skip):
                 continue
+
+            # Skip lines assigning variables in a with block.
+            if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
+                continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
             log.debug("SKIP: Assigned vars = " + str(match))

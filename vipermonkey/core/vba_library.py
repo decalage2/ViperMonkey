@@ -82,6 +82,15 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         return len(params[0])
 
+class LenB(VbaLibraryFunc):
+    """
+    LenB() function.
+    """
+
+    def eval(self, context, params=None):
+        # TODO: Somehow take the default character set into account.
+        return len(params[0])
+
 class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
@@ -1335,7 +1344,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, CurDir):
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

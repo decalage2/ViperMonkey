@@ -170,13 +170,13 @@ class MemberAccessExpression(VBA_Object):
         if (len(self.rhs1) > 0):
             rhs = self.rhs1
         else:
-            rhs = self.rhs
+            rhs = self.rhs[len(self.rhs) - 1]
         tmp_rhs = eval_arg(rhs, context)
             
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
-        if (isinstance(rhs, Function_Call)):
+        if (isinstance(rhs, Function_Call)):            
             return tmp_rhs
         else:
             return eval_arg(self.__repr__(), context)
@@ -273,7 +273,9 @@ class Function_Call(VBA_Object):
     """
 
     # List of interesting functions to log calls to.
-    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject"]
+    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+                 "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
+                 "CreateTextFile", ".CreateTextFile"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -282,7 +284,7 @@ class Function_Call(VBA_Object):
         assert isinstance(self.name, basestring)
         self.params = tokens.params
         log.debug('Function_Call.params = %r' % self.params)
-        log.debug('parsed %r' % self)
+        log.debug('parsed %r as Function_Call' % self)
 
     def __repr__(self):
         parms = ""
