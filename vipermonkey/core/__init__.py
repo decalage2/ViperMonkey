@@ -140,7 +140,10 @@ class ViperMonkey(object):
         self.actions = []
 
         # List of entry point functions to emulate.
-        self.entry_points = ['autoopen', 'workbook_open', 'document_open', 'autoclose', 'document_close', 'auto_open', 'autoexec']
+        self.entry_points = ['autoopen', 'document_open', 'autoclose',
+                             'document_close', 'auto_open', 'autoexec',
+                             'autoexit', 'document_beforeclose', 'workbook_open',
+                             'workbook_activate', 'auto_close', 'workbook_close']
 
     def add_compiled_module(self, m):
         """
@@ -309,10 +312,8 @@ class ViperMonkey(object):
             entry_point = entry_point.lower()
             log.debug("Trying entry point " + entry_point)
             if entry_point in self.globals:
-                context.report_action('Entry Point', str(entry_point), '')
+                context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
-            else:
-                log.debug("Not found in " + str(self.globals.keys()))
 
     def eval(self, expr):
         """

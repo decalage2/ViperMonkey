@@ -1336,6 +1336,14 @@ class Run(VbaLibraryFunc):
             return s.eval(context=context, params=call_params)
         except KeyError:
             log.error("Application.Run() failed. Cannot find function " + func_name + ".")
+
+class CreateObject(VbaLibraryFunc):
+    """
+    CreateObject() function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        pass
                 
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -1344,7 +1352,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB):
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
