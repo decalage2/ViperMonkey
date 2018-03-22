@@ -103,6 +103,19 @@ class Attribute_Statement(VBA_Object):
     def __repr__(self):
         return 'Attribute %s = %r' % (self.name, self.value)
 
+# MS-GRAMMAR: procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
+# MS-GRAMMAR: class-module-header = 1*class-attr
+# MS-GRAMMAR: class-attr = attribute "VB_Name" attr-eq quoted-identifier attr-end
+# / attribute "VB_GlobalNameSpace" attr-eq "False" attr-end
+# / attribute "VB_Creatable" attr-eq "False" attr-end
+# / attribute "VB_PredeclaredId" attr-eq boolean-literal-identifier attr-end
+# / attribute "VB_Exposed" attr-eq boolean-literal-identifier attr-end
+# / attribute "VB_Customizable" attr-eq boolean-literal-identifier attr-end
+# MS-GRAMMAR: attribute = LINE-START "Attribute"
+# MS-GRAMMAR: attr-eq = "="
+# MS-GRAMMAR: attr-end = LINE-END
+# MS-GRAMMAR: quoted-identifier = double-quote NO-WS IDENTIFIER NO-WS double-quote
+    
 quoted_identifier = Combine(Suppress('"') + identifier + Suppress('"'))
 quoted_identifier.setParseAction(lambda t: str(t[0]))
 
@@ -127,8 +140,9 @@ option_statement.setParseAction(Option_Statement)
 # --- TYPE EXPRESSIONS -------------------------------------------------------
 
 # 5.6.16.7 Type Expressions
-# type-expression = BUILTIN-TYPE / defined-type-expression
-# defined-type-expression = simple-name-expression / member-access-expression
+#
+# MS-GRAMMAR: type-expression = BUILTIN-TYPE / defined-type-expression
+# MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 # TODO: for now we use a generic syntax
 type_expression = lex_identifier
@@ -146,6 +160,10 @@ type_declaration = type_declaration_composite
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
 
 # 5.3.1.4 Function Type Declarations
+#
+# MS-GRAMMAR: function-type = "as" type-expression [array-designator]
+# MS-GRAMMAR: array-designator = "(" ")"
+
 array_designator = Literal("(") + Literal(")")
 function_type = CaselessKeyword("as") + type_expression + Optional(array_designator)
 
@@ -169,6 +187,26 @@ class Parameter(VBA_Object):
         return r
 
 # 5.3.1.5 Parameter Lists
+#
+# MS-GRAMMAR: procedure-parameters = "(" [parameter-list] ")"
+# MS-GRAMMAR: property-parameters = "(" [parameter-list ","] value-param ")"
+# MS-GRAMMAR: parameter-list = (positional-parameters "," optional-parameters )
+#                   / (positional-parameters ["," param-array])
+#                   / optional-parameters / param-array
+# MS-GRAMMAR: positional-parameters = positional-param *("," positional-param)
+# MS-GRAMMAR: optional-parameters = optional-param *("," optional-param)
+# MS-GRAMMAR: value-param = positional-param
+# MS-GRAMMAR: positional-param = [parameter-mechanism] param-dcl
+# MS-GRAMMAR: optional-param = optional-prefix param-dcl [default-value]
+# MS-GRAMMAR: param-array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" / "[variant]")]
+# MS-GRAMMAR: param-dcl = untyped-name-param-dcl / typed-name-param-dcl
+# MS-GRAMMAR: untyped-name-param-dcl = IDENTIFIER [parameter-type]
+# MS-GRAMMAR: typed-name-param-dcl = TYPED-NAME [array-designator]
+# MS-GRAMMAR: optional-prefix = ("optional" [parameter-mechanism]) / ([parameter-mechanism] ("optional"))
+# MS-GRAMMAR: parameter-mechanism = "byval" / " byref"
+# MS-GRAMMAR: parameter-type = [array-designator] "as" (type-expression / "Any")
+# MS-GRAMMAR: default-value = "=" constant-expression
+
 default_value = Literal("=").suppress() + expr_const('default_value')  # TODO: constant_expression
 
 parameter_mechanism = CaselessKeyword('ByVal') | CaselessKeyword('ByRef')
@@ -181,6 +219,20 @@ parameter_type = Optional(array_designator) + CaselessKeyword("as").suppress() \
 
 untyped_name_param_dcl = identifier + Optional(parameter_type)
 
+# MS-GRAMMAR: procedure_parameters = "(" [parameter_list] ")"
+# MS-GRAMMAR: property_parameters = "(" [parameter_list ","] value_param ")"
+# MS-GRAMMAR: parameter_list = (positional_parameters "," optional_parameters )
+#                   | (positional_parameters ["," param_array])
+#                   | optional_parameters | param_array
+# MS-GRAMMAR: positional_parameters = positional_param *("," positional_param)
+# MS-GRAMMAR: optional_parameters = optional_param *("," optional_param)
+# MS-GRAMMAR: value_param = positional_param
+# MS-GRAMMAR: positional_param = [parameter_mechanism] param_dcl
+# MS-GRAMMAR: optional_param = optional_prefix param_dcl [default_value]
+# MS-GRAMMAR: param_array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" | "[variant]")]
+# MS-GRAMMAR: param_dcl = untyped_name_param_dcl | typed_name_param_dcl
+# MS-GRAMMAR: typed_name_param_dcl = TYPED_NAME [array_designator]
+
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
             Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
@@ -191,6 +243,13 @@ parameters_list = delimitedList(parameter, delim=',')
 # --- STATEMENT LABELS -------------------------------------------------------
 
 # 5.4.1.1 Statement Labels
+#
+# MS-GRAMMAR: statement-label-definition = LINE-START ((identifier-statement-label ":") / (line-number-label [":"] ))
+# MS-GRAMMAR: statement-label = identifier-statement-label / line-number-label
+# MS-GRAMMAR: statement-label-list = statement-label ["," statement-label]
+# MS-GRAMMAR: identifier-statement-label = IDENTIFIER
+# MS-GRAMMAR: line-number-label = INTEGER
+
 statement_label_definition = LineStart() + ((identifier('label_name') + Suppress(":"))
                                             | (integer('label_int') + Optional(Suppress(":"))))
 statement_label = identifier | integer
@@ -199,7 +258,12 @@ statement_label_list = delimitedList(statement_label, delim=',')
 # --- STATEMENT BLOCKS -------------------------------------------------------
 
 # 5.4.1 Statement Blocks
+#
 # A statement block is a sequence of 0 or more statements.
+#
+# MS-GRAMMAR: statement-block = *(block-statement EOS)
+# MS-GRAMMAR: block-statement = statement-label-definition / rem-statement / statement
+# MS-GRAMMAR: statement = control-statement / data-manipulation-statement / error-handling-statement / filestatement
 
 # need to declare statement beforehand:
 statement = Forward()
@@ -291,23 +355,62 @@ class Dim_Statement(VBA_Object):
             context.set(var[0], curr_init_val, curr_type)
     
 # 5.4.3.1 Local Variable Declarations
+#
+# MS-GRAMMAR: local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
+# MS-GRAMMAR: static-variable-declaration = "Static" variable-declaration-list
 
 # 5.2.3.1 Module Variable Declaration Lists
+#
+# MS-GRAMMAR: module-variable-declaration = public-variable-declaration / private-variable-declaration
+# MS-GRAMMAR: global-variable-declaration = "Global" variable-declaration-list
+# MS-GRAMMAR: public-variable-declaration = "Public" ["Shared"] module-variable-declaration-list
+# MS-GRAMMAR: private-variable-declaration = ("Private" / "Dim") [ "Shared"] module-variable-declaration-list
+# MS-GRAMMAR: module-variable-declaration-list = (withevents-variable-dcl / variable-dcl) *( "," (withevents-variable-dcl / variable-dcl) )
+# MS-GRAMMAR: variable-declaration-list = variable-dcl *( "," variable-dcl )
 
 # 5.2.3.1.1 Variable Declarations
+#
+# MS-GRAMMAR: variable-dcl = typed-variable-dcl / untyped-variable-dcl
+# MS-GRAMMAR: typed-variable-dcl = TYPED-NAME [array-dim]
+# MS-GRAMMAR: untyped-variable-dcl = IDENTIFIER [array-clause / as-clause]
+# MS-GRAMMAR: array-clause = array-dim [as-clause]
+# MS-GRAMMAR: as-clause = as-auto-object / as-type
 
 # 5.2.3.1.3 Array Dimensions and Bounds
+#
+# MS-GRAMMAR: array-dim = "(" [bounds-list] ")"
+# MS-GRAMMAR: bounds-list = dim-spec *("," dim-spec)
+# MS-GRAMMAR: dim-spec = [lower-bound] upper-bound
+# MS-GRAMMAR: lower-bound = constant-expression "to"
+# MS-GRAMMAR: upper-bound = constant-expression
 
 # 5.6.16.1 Constant Expressions
+#
 # A constant expression is an expression usable in contexts which require a value that can be fully
 # evaluated statically.
+#
+# MS-GRAMMAR: constant-expression = expression
 
 # 5.2.3.1.4 Variable Type Declarations
+#
 # A type specification determines the specified type of a declaration.
+#
+# MS-GRAMMAR: as-auto-object = "as" "new" class-type-name
+# MS-GRAMMAR: as-type = "as" type-spec
+# MS-GRAMMAR: type-spec = fixed-length-string-spec / type-expression
+# MS-GRAMMAR: fixed-length-string-spec = "string" "*" string-length
+# MS-GRAMMAR: string-length = constant-name / INTEGER
+# MS-GRAMMAR: constant-name = simple-name-expression
 
 # 5.2.3.1.2 WithEvents Variable Declarations
+#
+# MS-GRAMMAR: withevents-variable-dcl = "withevents" IDENTIFIER "as" class-type-name
+# MS-GRAMMAR: class-type-name = defined-type-expression
 
 # 5.6.16.7 Type Expressions
+#
+# MS-GRAMMAR: type-expression = BUILTIN-TYPE / defined-type-expression
+# MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 constant_expression = expression
 lower_bound = constant_expression + CaselessKeyword('to').suppress()
@@ -490,8 +593,11 @@ class Let_Statement(VBA_Object):
             context.set(self.name, arr_var)
             
 # 5.4.3.8   Let Statement
+#
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
+#
+# MS-GRAMMAR: let-statement = ["Let"] l-expression "=" expression
 
 # TODO: remove Set when Set_Statement implemented:
 
@@ -595,14 +701,28 @@ class For_Statement(VBA_Object):
         log.debug('FOR loop: end.')
 
 # 5.6.16.6 Bound Variable Expressions
+#
 # A <bound-variable-expression> is invalid if it is classified as something other than a variable
 # expression. The expression is invalid even if it is classified as an unbound member expression that
 # could be resolved to a variable expression.
+#
+# MS-GRAMMAR: bound-variable-expression = l-expression
 
 bound_variable_expression = TODO_identifier_or_object_attrib  # l_expression
 
 # 5.4.2.3 For Statement
+#
 # A <for-statement> executes a sequence of statements a specified number of times.
+#
+# MS-GRAMMAR: for-statement = simple-for-statement / explicit-for-statement
+# MS-GRAMMAR: simple-for-statement = for-clause EOS statement-block "Next"
+# MS-GRAMMAR: explicit-for-statement = for-clause EOS statement-block ("Next" / (nested-for-statement ",")) bound-variable-expression
+# MS-GRAMMAR: nested-for-statement = explicit-for-statement / explicit-for-each-statement
+# MS-GRAMMAR: for-clause = "For" bound-variable-expression "=" start-value "To" end-value [stepclause]
+# MS-GRAMMAR: start-value = expression
+# MS-GRAMMAR: end-value = expression
+# MS-GRAMMAR: step-clause = "Step" step-increment
+# MS-GRAMMAR: step-increment = expression
 
 step_clause = CaselessKeyword('Step').suppress() + expression
 

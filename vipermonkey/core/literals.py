@@ -53,6 +53,15 @@ boolean_literal.setParseAction(lambda t: bool(t[0].lower() == 'true'))
 # --- NUMBER TOKENS ----------------------------------------------------------
 
 # 3.3.2 Number Tokens
+#
+# MS-GRAMMAR: INTEGER = integer-literal ["%" / "&" / "^"]
+# MS-GRAMMAR: integer-literal = decimal-literal / octal-literal / hex-literal
+# MS-GRAMMAR: decimal-literal = 1*decimal-digit
+# MS-GRAMMAR: octal-literal = "&" [%x004F / %x006F] 1*octal-digit ; & or &o or &O
+# MS-GRAMMAR: hex-literal = "&" (%x0048 / %x0068) 1*hex-digit; &h or &H
+# MS-GRAMMAR: octal-digit = "0" / "1" / "2" / "3" / "4" / "5" / "6" / "7"
+# MS-GRAMMAR: decimal-digit = octal-digit / "8" / "9"
+# MS-GRAMMAR: hex-digit = decimal-digit / %x0041-0046 / %x0061-0066 ;A-F / a-f
 
 # here Combine() is required to avoid spaces between elements:
 decimal_literal = Combine(pyparsing_common.signed_integer + Suppress(Optional(Word('%&^', exact=1)))) + \
@@ -69,8 +78,21 @@ hex_literal.setParseAction(lambda t: int(t[0], base=16))
 
 integer = decimal_literal | octal_literal | hex_literal
 
+# MS-GRAMMAR: decimal_int = (WordStart(alphanums) + Word(nums))
+# MS-GRAMMAR: decimal_int.setParseAction(lambda t: int(t[0]))
+#
 # NOTE: here WordStart is to avoid matching a number preceded by letters (e.g. "VBT1"), when using scanString
 # TO DO: remove WordStart if scanString is not used
+
+# MS-GRAMMAR: FLOAT = (floating-point-literal [floating-point-type-suffix] ) / (decimal-literal floating-
+# MS-GRAMMAR: point-type-suffix)
+# MS-GRAMMAR: floating-point-literal = (integer-digits exponent) / (integer-digits "." [fractional-digits]
+# MS-GRAMMAR: [exponent]) / ( "." fractional-digits [exponent])
+# MS-GRAMMAR: integer-digits = decimal-literal
+# MS-GRAMMAR: fractional-digits = decimal-literal
+# MS-GRAMMAR: exponent = exponent-letter [sign] decimal-literal
+# MS-GRAMMAR: exponent-letter = %x0044 / %x0045 / %x0064 / %x0065
+# MS-GRAMMAR: floating-point-type-suffix = "!" / "#" / "@"
 
 # TODO: Handle exponents as needed.
 float_literal = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
@@ -80,6 +102,11 @@ float_literal.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
 # --- QUOTED STRINGS ---------------------------------------------------------
 
 # 3.3.4 String Tokens
+#
+# MS-GRAMMAR: STRING = double-quote *string-character (double-quote / line-continuation / LINE-END)
+# MS-GRAMMAR: double-quote = %x0022 ; "
+# MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
+
 quoted_string = QuotedString('"', escQuote='""')
 quoted_string.setParseAction(lambda t: str(t[0]))
 
@@ -89,6 +116,25 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 # --- DATE TOKENS ------------------------------------------------------------
 
 # TODO: 3.3.3 Date Tokens
+#
+# MS-GRAMMAR: DATE = "#" *WSC [date-or-time *WSC] "#"
+# MS-GRAMMAR: date-or-time = (date-value 1*WSC time-value) / date-value / time-value
+# MS-GRAMMAR: date-value = left-date-value date-separator middle-date-value [date-separator right-date-
+# value]
+# MS-GRAMMAR: left-date-value = decimal-literal / month-name
+# MS-GRAMMAR: middle-date-value = decimal-literal / month-name
+# MS-GRAMMAR: right-date-value = decimal-literal / month-name
+# MS-GRAMMAR: date-separator = 1*WSC / (*WSC ("/" / "-" / ",") *WSC)
+# MS-GRAMMAR: month-name = English-month-name / English-month-abbreviation
+# MS-GRAMMAR: English-month-name = "january" / "february" / "march" / "april" / "may" / "june" / "august" / "september" / "october" / "november" / "december"
+# MS-GRAMMAR: English-month-abbreviation = "jan" / "feb" / "mar" / "apr" / "jun" / "jul" / "aug" / "sep" / "oct" / "nov" / "dec"
+# MS-GRAMMAR: time-value = (hour-value ampm) / (hour-value time-separator minute-value [time-separator
+# MS-GRAMMAR: second-value] [ampm])
+# MS-GRAMMAR: hour-value = decimal-literal
+# MS-GRAMMAR: minute-value = decimal-literal
+# MS-GRAMMAR: second-value = decimal-literal
+# MS-GRAMMAR: time-separator = *WSC (":" / ".") *WSC
+# MS-GRAMMAR: ampm = *WSC ("am" / "pm" / "a" / "p")
 
 # TODO: For now just handle a date literal as a string.
 date_string = QuotedString('#')

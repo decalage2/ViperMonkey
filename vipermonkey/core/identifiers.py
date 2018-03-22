@@ -54,10 +54,16 @@ from logger import log
 
 # TODO: see MS-VBAL 3.3.5 page 33
 # 3.3.5 Identifier Tokens
+#
+# MS-GRAMMAR: Latin-identifier = first-Latin-identifier-character *subsequent-Latin-identifier-character
+# MS-GRAMMAR: first-Latin-identifier-character = (%x0041-005A / %x0061-007A) ; A-Z / a-z
+# MS-GRAMMAR: subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
+# MS-GRAMMAR: identifier = expression
+
 latin_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
 
-# lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
-# Korean-identifier / simplified-Chinese-identifier / traditional-Chinese-identifier
+# MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
+# MS-GRAMMAR: Korean-identifier / simplified-Chinese-identifier / traditional-Chinese-identifier
 # TODO: add other identifier types
 lex_identifier = latin_identifier
 
@@ -72,11 +78,19 @@ identifier.setParseAction(lambda t: t[0])
 # --- ENTITY NAMES -----------------------------------------------------------
 
 # 3.3.5.3 Special Identifier Forms
+#
+# MS-GRAMMAR: FOREIGN-NAME = "[" foreign-identifier "]"
+# MS-GRAMMAR: foreign-identifier = 1*non-line-termination-character
+#
 # A <FOREIGN-NAME> is a token (section 3.3) that represents a text sequence that is used as if it
 # was an identifier but which does not conform to the VBA rules for forming an identifier. Typically, a
 # <FOREIGN-NAME> is used to refer to an entity (section 2.2) that is created using some
 # programming language other than VBA.
+
 foreign_name = Literal('[') + CharsNotIn('\x0D\x0A') + Literal(']')
+
+# MS-GRAMMAR: BUILTIN-TYPE = reserved-type-identifier / ("[" reserved-type-identifier "]")
+#                            / "object" / "[object]"
 
 builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identifier + Suppress("]")) \
                | CaselessKeyword("object") | CaselessLiteral("[object]")

@@ -94,6 +94,8 @@ class Sub(VBA_Object):
             context.set(self.name, '')
 
 # 5.3.1.1 Procedure Scope
+#
+# MS-GRAMMAR: procedure-scope = ["global" / "public" / "private" / "friend"]
 
 procedure_scope = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')
                            | CaselessKeyword('Global') | CaselessKeyword('Friend')).suppress()
@@ -105,12 +107,22 @@ static_keyword = Optional(CaselessKeyword('static'))
 # 5.4 Procedure Bodies and Statements
 
 # 5.3.1.3 Procedure Names
+#
+# MS-GRAMMAR: subroutine-name = IDENTIFIER / prefixed-name
+# MS-GRAMMAR: function-name = TYPED-NAME / subroutine-name
+# MS-GRAMMAR: prefixed-name = event-handler-name / implemented-name / lifecycle-handler-name
 
 # 5.3.1.8 Event Handler Declarations
+#
+# MS-GRAMMAR: event-handler-name = IDENTIFIER
 
 # 5.3.1.9 Implemented Name Declarations
+#
+# MS-GRAMMAR: implemented-name = IDENTIFIER
 
 # 5.3.1.10 Lifecycle Handler Declarations
+#
+# MS-GRAMMAR: lifecycle-handler-name = "Class_Initialize" / "Class_Terminate"
 
 lifecycle_handler_name = CaselessKeyword("Class_Initialize") | CaselessKeyword("Class_Terminate")
 implemented_name = identifier  # duplicate, not used
@@ -119,15 +131,43 @@ prefixed_name = identifier | lifecycle_handler_name  # simplified
 
 subroutine_name = identifier | lifecycle_handler_name  # simplified
 
+# MS-GRAMMAR: typed_name = identifier + optional type_suffix => simplified
+# MS-GRAMMAR: function_name = typed_name | subroutine_name
+
 function_name = Combine(identifier + Suppress(Optional(type_suffix))) | lifecycle_handler_name
 
 # 5.3.1 Procedure Declarations
+#
+# MS-GRAMMAR: end-label = statement-label-definition
 
 end_label = statement_label_definition
 
+# MS-GRAMMAR: procedure-tail = [WS] LINE-END / single-quote comment-body / ":" rem-statement
+
 procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":") + rem_statement
+
 # NOTE: rem statement does NOT include the line terminator => BUG?
 # TODO: here i assume that procedure tail does NOT include the line terminator
+
+# MS-GRAMMAR: subroutine-declaration = procedure-scope [initial-static]
+#       "sub" subroutine-name [procedure-parameters] [trailing-static] EOS
+#       [procedure-body EOS]
+#       [end-label] "end" "sub" procedure-tail
+# MS-GRAMMAR: function-declaration = procedure-scope [initial-static]
+#       "function" function-name [procedure-parameters] [function-type]
+#       [trailing-static] EOS
+#       [procedure-body EOS]
+#       [end-label] "end" "function" procedure-tail
+# MS-GRAMMAR: property-get-declaration = procedure-scope [initial-static]
+#       "Property" "Get"
+#       function-name [procedure-parameters] [function-type] [trailing-static] EOS
+#       [procedure-body EOS]
+#       [end-label] "end" "property" procedure-tail
+# MS-GRAMMAR: property-lhs-declaration = procedure-scope [initial-static]
+#       "Property" ("Let" / "Set")
+#       subroutine-name property-parameters [trailing-static] EOS
+#       [procedure-body EOS]
+#       [end-label] "end" "property" procedure-tail
 
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()

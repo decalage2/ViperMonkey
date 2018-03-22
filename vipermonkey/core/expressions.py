@@ -91,6 +91,8 @@ class SimpleNameExpression(VBA_Object):
 
 # 5.6.10 Simple Name Expressions
 # A simple name expression consists of a single identifier with no qualification or argument list.
+#
+# MS-GRAMMAR: simple-name-expression = name
 
 simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + TODO_identifier_or_object_attrib('name')
 simple_name_expression.setParseAction(SimpleNameExpression)
@@ -117,6 +119,8 @@ class InstanceExpression(VBA_Object):
 
 # 5.6.11 Instance Expressions
 # An instance expression consists of the keyword Me.
+#
+# MS-GRAMMAR: instance-expression = "me"
 
 # Static semantics. An instance expression is classified as a value. The declared type of an instance
 # expression is the type defined by the class module containing the enclosing procedure. It is invalid
@@ -131,6 +135,9 @@ instance_expression.setParseAction(InstanceExpression)
 
 # 5.6.12 Member Access Expressions
 # A member access expression is used to reference a member of an entity.
+#
+# MS-GRAMMAR: member-access-expression = l-expression NO-WS "." unrestricted-name
+# MS-GRAMMAR: member-access-expression =/ l-expression LINE-CONTINUATION "." unrestricted-name
 
 # NOTE: Here we assume that all line-continuation characters have been removed,
 #       so the 2nd part of member-access-expression does not apply.
@@ -200,6 +207,9 @@ member_access_expression_limited.setParseAction(MemberAccessExpression)
 # --- ARGUMENT LISTS ---------------------------------------------------------
 
 # 5.6.16.8   AddressOf Expressions
+#
+# MS-GRAMMAR: addressof-expression = "addressof" procedure-pointer-expression
+# MS-GRAMMAR: procedure-pointer-expression = simple-name-expression / member-access-expression
 
 # Examples: addressof varname, addressof varname(2).attrname
 
@@ -208,8 +218,19 @@ procedure_pointer_expression = member_access_expression | simple_name_expression
 addressof_expression = CaselessKeyword("addressof").suppress() + procedure_pointer_expression
 
 # 5.6.13.1   Argument Lists
+#
 # An argument list represents an ordered list of positional arguments and a set of named arguments
 # that are used to parameterize an expression.
+#
+# MS-GRAMMAR: argument-list = [positional-or-named-argument-list]
+# MS-GRAMMAR: positional-or-named-argument-list = *(positional-argument ",") required-positional-argument
+# MS-GRAMMAR: positional-or-named-argument-list =/   *(positional-argument ",") named-argument-list
+# MS-GRAMMAR: positional-argument = [argument-expression]
+# MS-GRAMMAR: required-positional-argument = argument-expression
+# MS-GRAMMAR: named-argument-list = named-argument *("," named-argument)
+# MS-GRAMMAR: named-argument = unrestricted-name ":""=" argument-expression
+# MS-GRAMMAR: argument-expression = ["byval"] expression
+# MS-GRAMMAR: argument-expression =/  addressof-expression
 
 argument_expression = (Optional(CaselessKeyword("byval")) + expression) | addressof_expression
 
@@ -225,16 +246,25 @@ argument_list = Optional(positional_or_named_argument_list)
 # --- INDEX EXPRESSIONS ------------------------------------------------------
 
 # 5.6.13   Index Expressions
+#
 # An index expression is used to parameterize an expression by adding an argument list to its
 # argument list queue.
+#
+# MS-GRAMMAR: index-expression = l-expression "(" argument-list ")"
 
 index_expression = simple_name_expression + Suppress("(") + simple_name_expression + Suppress(")")
 
 # --- DICTIONARY ACCESS EXPRESSIONS ------------------------------------------------------
 
 # 5.6.14   Dictionary Access Expressions
+#
 # A dictionary access expression is an alternate way to invoke an object's default member with a
 # String parameter.
+#
+# MS-GRAMMAR: dictionary-access-expression = l-expression  NO-WS "!" NO-WS unrestricted-name
+# MS-GRAMMAR: dictionary-access-expression =/  l-expression  LINE-CONTINUATION "!" NO-WS unrestricted-name
+# MS-GRAMMAR: dictionary-access-expression =/  l-expression  LINE-CONTINUATION "!" LINE-CONTINUATION
+# MS-GRAMMAR: unrestricted-name
 
 # NOTE: Here we assume that all line-continuation characters have been removed,
 #       so the 2nd and 3rd parts of dictionary-access-expression do not apply.
@@ -245,8 +275,13 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # --- WITH EXPRESSIONS ------------------------------------------------------
 
 # 5.6.15   With Expressions
+#
 # A With expression is a member access or dictionary access expression with its <l-expression>
 # implicitly supplied by the innermost enclosing With block.
+#
+# MS-GRAMAR: with-expression = with-member-access-expression / with-dictionary-access-expression
+# MS-GRAMMAR: with-member-access-expression = "." unrestricted-name
+# MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
 with_member_access_expression = Suppress(".") + (unrestricted_name ^ function_call_limited)
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
@@ -255,12 +290,19 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # --- EXPRESSIONS ------------------------------------------------------------
 
 # 5.6 Expressions
+#
 # An expression is a hierarchy of values, identifiers and subexpressions that evaluates to a value, or
 # references an entity such as a variable, constant, procedure or type. Besides its tree of
 # subexpressions, an expression also has a declared type which can be determined statically, and a
 # value type which may vary depending on the runtime value of its values and subexpressions. This
 # section defines the syntax of expressions, their static resolution rules and their runtime evaluation
 # rules.
+#
+# MS-GRAMMAR: expression = value-expression / l-expression
+# MS-GRAMMAR: value-expression = literal-expression / parenthesized-expression / typeof-is-expression /
+# MS-GRAMMAR: new-expression / operator-expression
+# MS-GRAMMAR: l-expression = simple-name-expression / instance-expression / member-access-expression /
+# MS-GRAMMAR: index-expression / dictionary-access-expression / with-expression
 
 new_expression = Forward()
 l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | dictionary_access_expression | simple_name_expression
@@ -435,6 +477,12 @@ func_call_array_access = function_call("array") + Suppress("(") + expression("in
 func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 # --- EXPRESSION ITEM --------------------------------------------------------
+
+# expression item:
+# - known functions first
+# - then generic function call
+# - then identifiers
+# - finally literals (strings, integers, etc)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
             ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \

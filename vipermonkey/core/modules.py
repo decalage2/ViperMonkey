@@ -95,6 +95,11 @@ class Module(VBA_Object):
         return r
 
 # see MS-VBAL 4.2 Modules
+#
+# MS-GRAMMAR: procedural_module_header = CaselessKeyword('Attribute') + CaselessKeyword('VB_Name') + Literal('=') + quoted_string
+# MS-GRAMMAR: procedural_module = procedural_module_header + procedural_module_body
+# MS-GRAMMAR: class_module = class_module_header + class_module_body
+# MS-GRAMMAR: module = procedural_module | class_module
 
 # Module Header:
 
