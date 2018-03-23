@@ -37,25 +37,13 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
 from pyparsing import *
 
 from logger import log
-log.debug('importing reserved')
-
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
@@ -72,17 +60,16 @@ def caselessKeywordsList(keywords):
         p |= CaselessKeyword(kw)
     return p
 
-
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # A <Statement-keyword> is a <reserved-identifier> that is the first syntactic item of a statement or
 # declaration.
 statement_keyword = caselessKeywordsList(
-    ("Call", "Close", "Const", "Declare", "DefBool", "DefByte",
+    ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
      "Enum", "Erase", "Event", "Exit", "For", "Friend", "Function", "Get", "Global",
      "GoSub", "GoTo", "If", "Implements", "Input", "Let", "Lock", "Loop", "LSet", "Next",
-     "On", "Open", "Option", "Print", "Private", "Public", "Put", "RaiseEvent", "ReDim",
+     "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub", "Type",
      "Unlock", "Wend", "While", "With", "Write"))
 
@@ -104,7 +91,7 @@ operator_identifier = caselessKeywordsList(
 # A <reserved-name> is a <reserved-identifier> that is used within expressions
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
-    "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
+    "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Date", "Debug",
     "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
 
@@ -134,8 +121,9 @@ variant_literal_identifier = CaselessKeyword("empty") | CaselessKeyword("null")
 
 # A <literal-identifier> is a <reserved-identifier> that represents a specific distinguished data value
 # (section 2.1).
-literal_identifier = boolean_literal_identifier | object_literal_identifier \
-                     | variant_literal_identifier
+#literal_identifier = boolean_literal_identifier | object_literal_identifier \
+#                     | variant_literal_identifier
+literal_identifier = boolean_literal_identifier | object_literal_identifier
 
 # A <reserved-for-implementation-use> is a <reserved-identifier> that currently has no defined
 # meaning to the VBA language but is reserved for use by language implementers.

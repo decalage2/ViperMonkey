@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env pypy
 """
 ViperMonkey - command line interface
 
@@ -99,9 +99,20 @@ _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 if not _thismodule_dir in sys.path:
     sys.path.insert(0, _thismodule_dir)
 
+# The version of pyparsing in the thirdparty directory of oletools is not
+# compatible with the version of pyparsing used in ViperMonkey. Make sure
+# the oletools thirdparty directory is not in the import path.
+item = None
+for p in sys.path:
+    if (p.endswith("oletools/thirdparty")):
+        item = p
+        break
+if (item is not None):
+    sys.path.remove(item)
+    
 # relative import of core ViperMonkey modules:
 from core import *
-
+    
 # === MAIN (for tests) ===============================================================================================
 
 def strip_useless_code(vba_code):
@@ -111,21 +122,44 @@ def strip_useless_code(vba_code):
     """
 
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+)\s*=\s*.+")
+    assign_re = re.compile("\s*(\w+)\s*=\s*")
     assigns = {}
     line_num = 0
+    bool_statements = set(["If", "For", "Do"])
     for line in vba_code.split("\n"):
 
         # Is there an assignment on this line?
         line_num += 1
-        match = assign_re.match(line)
-        if (match is not None):
+        match = assign_re.findall(line)
+        if (len(match) > 0):
 
+            log.debug("SKIP: Assign line: " + line)
+            
+            # Skip lines that end with a continuation character.
+            if (line.strip().endswith("_")):
+                log.debug("SKIP: Continuation line. Keep it.")
+                continue
+
+            # Skip lines where the '=' is part of a boolean expression.
+            strip_line = line.strip()            
+            skip = False
+            for bool_statement in bool_statements:
+                if (strip_line.startswith(bool_statement + " ")):
+                    skip = True
+                    break
+            if (skip):
+                continue
+
+            # Skip lines assigning variables in a with block.
+            if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
+                continue
+            
             # Yes, there is an assignment. Save the assigned variable and line #
-            var = match.groups(0)[0]
-            if (var not in assigns):
-                assigns[var] = set()
-            assigns[var].add(line_num)
+            log.debug("SKIP: Assigned vars = " + str(match))
+            for var in match:
+                if (var not in assigns):
+                    assigns[var] = set()
+                assigns[var].add(line_num)
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
@@ -146,14 +180,30 @@ def strip_useless_code(vba_code):
             if (var in line):
 
                 # Maybe. Count this as a reference.
+                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
                 refs[var] = True
 
-    # Now comment out all useless assignments.
+
+    # Figure out what asignemnts to trip and keep.
     comment_lines = set()
+    keep_lines = set()
     for var in refs.keys():
         if (not refs[var]):
             for num in assigns[var]:
                 comment_lines.add(num)
+        else:
+            for num in assigns[var]:
+                keep_lines.add(num)
+
+    # Multiple variables can be assigned on 1 line (a = b = 12). If any of the variables
+    # on this assignment line are used, keep it.
+    tmp = set()
+    for l in comment_lines:
+        if (l not in keep_lines):
+            tmp.add(l)
+    comment_lines = tmp
+    
+    # Now strip out all useless assignments.            
     r = ""
     line_num = 0
     for line in vba_code.split("\n"):
@@ -161,6 +211,7 @@ def strip_useless_code(vba_code):
         # Does this line get commented out?
         line_num += 1
         if (line_num in comment_lines):
+            log.debug("STRIP: Stripping Line: " + line)
             continue
         r += line + "\n"
 
@@ -172,11 +223,14 @@ def parse_stream(subfilename, stream_path=None,
     # Are the arguments all in a single tuple?
     if (stream_path is None):
         subfilename, stream_path, vba_filename, vba_code = subfilename
+
+    # Collapse long lines.
+    vba_code = vba_collapse_long_lines(vba_code)
         
     # Filter cruft from the VBA.
-    vba_code_filtered = filter_vba(vba_code)
+    vba_code = filter_vba(vba_code)
     if (strip_useless):
-        vba_code_filtered = strip_useless_code(vba_code_filtered)
+        vba_code = strip_useless_code(vba_code)
     print '-'*79
     print 'VBA MACRO %s ' % vba_filename
     print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
@@ -184,10 +238,10 @@ def parse_stream(subfilename, stream_path=None,
 
     # Parse the macro.
     m = None
-    if vba_code_filtered.strip() == '':
+    if vba_code.strip() == '':
         print '(empty macro)'
+        m = "empty"
     else:
-        vba_code = vba_collapse_long_lines(vba_code_filtered)
         print '-'*79
         print 'VBA CODE (with long lines collapsed):'
         print vba_code
@@ -198,13 +252,14 @@ def parse_stream(subfilename, stream_path=None,
             # Enable PackRat for better performance:
             # (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
             ParserElement.enablePackrat()
-            
-            m = module.parseString(vba_code, parseAll=True)[0]
+            m = module.parseString(vba_code + "\n", parseAll=True)[0]
             m.code = vba_code
         except ParseException as err:
             print err.line
             print " "*(err.column-1) + "^"
             print err
+            print "Parse Error. Processing Aborted."
+            return None
 
     # Return the parsed macro.
     return m
@@ -216,6 +271,8 @@ def parse_streams_serial(vba, strip_useless=False):
     r = []
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless)
+        if (m is None):
+            return None
         r.append(m)
     return r
 
@@ -256,8 +313,9 @@ def parse_streams(vba, strip_useless=False):
     else:
         return parse_streams_serial(vba, strip_useless)
 
+# === Top level Programatic Interface ================================================================================    
 def process_file (container, filename, data,
-                  altparser=False, strip_useless=False):
+                  altparser=False, strip_useless=False, entry_points=None):
     """
     Process a single file
 
@@ -265,6 +323,9 @@ def process_file (container, filename, data,
     a zip archive, None otherwise.
     :param filename: str, path and filename of file on disk, or within the container.
     :param data: bytes, content of the file if it is in a container, None if it is a file on disk.
+
+    :return A list of actions if actions found, an empty list if no actions found, and None if there
+    was an error.
     """
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
@@ -274,6 +335,9 @@ def process_file (container, filename, data,
     print '='*79
     print 'FILE:', display_filename
     vm = ViperMonkey()
+    if (entry_points is not None):
+        for entry_point in entry_points:
+            vm.entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
@@ -284,44 +348,71 @@ def process_file (container, filename, data,
             try:
                 ole = olefile.OleFileIO(filename)
                 vba_library.meta = ole.get_metadata()
+                vba_object.meta = vba_library.meta
             except:
+                log.error("Reading in metadata failed.")
                 vba_library.meta = {}
 
+            # Set the output directory in which to put dumped files generated by
+            # the macros.
+            out_dir = filename + "_artifacts"
+            if ("/" in out_dir):
+                start = out_dir.rindex("/") + 1
+                out_dir = out_dir[start:]
+            out_dir = out_dir.replace(".", "").strip()
+            out_dir = "./" + out_dir + "/"
+            vba_library.out_dir = out_dir
+                
             # Parse the VBA streams.
             comp_modules = parse_streams(vba, strip_useless)
+            if (comp_modules is None):
+                return None
             for m in comp_modules:
-                vm.add_compiled_module(m)
+                if (m != "empty"):
+                    vm.add_compiled_module(m)
 
             # Pull out form variables.
-            for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
-                if form_variables is not None:
-                    var_name = form_variables['name']
-                    macro_name = stream_path
-                    if ("/" in macro_name):
-                        start = macro_name.rindex("/") + 1
-                        macro_name = macro_name[start:]
-                    global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
-                    val = form_variables['value']
-                    vm.globals[global_var_name.lower()] = val
-                    log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+            try:
+                for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
+                    if form_variables is not None:
+                        var_name = form_variables['name']
+                        macro_name = stream_path
+                        if ("/" in macro_name):
+                            start = macro_name.rindex("/") + 1
+                            macro_name = macro_name[start:]
+                        global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
+                        val = form_variables['value']
+                        if (val is None):
+                            val = ''
+                        name = global_var_name.lower()
+                        vm.globals[name] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+                        vm.globals[name + ".tag"] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
+                        vm.globals[name + ".text"] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+            except Exception as e:
+                log.error("Cannot read form strings. " + str(e))
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
+            if (entry_points is not None):
+                log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
             # print table of all recorded actions
             print('Recorded Actions:')
             print(vm.dump_actions())
+            print ''
+            return vm.actions
 
         else:
             print 'No VBA macros found.'
-    except: #TypeError:
-        #raise
-        #TODO: print more info if debug mode
-        #print sys.exc_value
-        # display the exception with full stack trace for debugging, but do not stop:
-        traceback.print_exc()
-    print ''
-
+            print ''
+            return []
+    except Exception as e:
+        if ("SystemExit" not in str(e)):
+            traceback.print_exc()
+        return None
 
 def process_file_scanexpr (container, filename, data):
     """
@@ -354,17 +445,17 @@ def process_file_scanexpr (container, filename, data):
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
-                vba_code_filtered = filter_vba(vba_code)
+                vba_code = filter_vba(vba_code)
                 print '-'*79
                 print 'VBA MACRO %s ' % vba_filename
                 print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
                 print '- '*39
                 # detect empty macros:
-                if vba_code_filtered.strip() == '':
+                if vba_code.strip() == '':
                     print '(empty macro)'
                 else:
                     # TODO: option to display code
-                    print vba_code_filtered
+                    print vba_code
                     vba_code = vba_collapse_long_lines(vba_code)
                     all_code += '\n' + vba_code
             print '-'*79
@@ -431,8 +522,10 @@ def main():
                             help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
         help='Use the alternate line parser (experimental)')
-    parser.add_option("-s", action="store_true", dest="strip_useless_code",
+    parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
         help='Strip useless VB code from macros prior to parsing.')
+    parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
+                      help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
 
     (options, args) = parser.parse_args()
 
@@ -441,7 +534,7 @@ def main():
         print __doc__
         parser.print_help()
         sys.exit()
-
+        
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
@@ -454,9 +547,15 @@ def main():
         if options.scan_expressions:
             process_file_scanexpr(container, filename, data)
         else:
-            process_file(container, filename, data, altparser=options.altparser, strip_useless=options.strip_useless_code)
-
-
+            entry_points = None
+            if (options.entry_points is not None):
+                entry_points = options.entry_points.split(",")
+            process_file(container,
+                         filename,
+                         data,
+                         altparser=options.altparser,
+                         strip_useless=options.strip_useless_code,
+                         entry_points=entry_points)
 
 if __name__ == '__main__':
     main()

@@ -37,7 +37,6 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 # ------------------------------------------------------------------------------
 # CHANGELOG:
 # 2015-02-12 v0.01 PL: - first prototype
@@ -46,16 +45,13 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.02'
 
-# ------------------------------------------------------------------------------
-# TODO:
-
 # --- IMPORTS ------------------------------------------------------------------
 
 from comments_eol import *
 from expressions import *
+from vba_context import *
 
 from logger import log
-log.debug('importing statements')
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -75,8 +71,6 @@ class UnknownStatement(VBA_Object):
     def eval(self, context, params=None):
         log.debug(self)
 
-
-# catch-all for unknown statements
 # Known keywords used at the beginning of statements
 known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('End')) + \
                                   (CaselessKeyword('Sub') | CaselessKeyword('Function'))) | \
@@ -88,6 +82,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
                                   CaselessKeyword('Case') | CaselessKeyword('On') 
 
+# catch-all for unknown statements
 unknown_statement = NotAny(known_keywords_statement_start) + \
                     Combine(OneOrMore(CharsNotIn('":\'\x0A\x0D') | quoted_string_keep_quotes),
                             adjacent=False).setResultsName('text')
@@ -103,35 +98,30 @@ class Attribute_Statement(VBA_Object):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         self.value = tokens.value
-        # print 'Attribute_Statement.init:'
-        # pprint.pprint(tokens.asList())
         log.debug('parsed %r' % self)
 
     def __repr__(self):
         return 'Attribute %s = %r' % (self.name, self.value)
 
-
-# procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
-# class-module-header = 1*class-attr
-# class-attr = attribute "VB_Name" attr-eq quoted-identifier attr-end
+# MS-GRAMMAR: procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
+# MS-GRAMMAR: class-module-header = 1*class-attr
+# MS-GRAMMAR: class-attr = attribute "VB_Name" attr-eq quoted-identifier attr-end
 # / attribute "VB_GlobalNameSpace" attr-eq "False" attr-end
 # / attribute "VB_Creatable" attr-eq "False" attr-end
 # / attribute "VB_PredeclaredId" attr-eq boolean-literal-identifier attr-end
 # / attribute "VB_Exposed" attr-eq boolean-literal-identifier attr-end
 # / attribute "VB_Customizable" attr-eq boolean-literal-identifier attr-end
-# attribute = LINE-START "Attribute"
-# attr-eq = "="
-# attr-end = LINE-END
-
-# quoted-identifier = double-quote NO-WS IDENTIFIER NO-WS double-quote
+# MS-GRAMMAR: attribute = LINE-START "Attribute"
+# MS-GRAMMAR: attr-eq = "="
+# MS-GRAMMAR: attr-end = LINE-END
+# MS-GRAMMAR: quoted-identifier = double-quote NO-WS IDENTIFIER NO-WS double-quote
+    
 quoted_identifier = Combine(Suppress('"') + identifier + Suppress('"'))
 quoted_identifier.setParseAction(lambda t: str(t[0]))
 
 # TODO: here I use lex_identifier instead of identifier because attrib names are reserved identifiers
-attribute_statement = CaselessKeyword('Attribute').suppress() + lex_identifier('name') + Suppress('=') + literal(
-    'value')
+attribute_statement = CaselessKeyword('Attribute').suppress() + lex_identifier('name') + Suppress('=') + literal('value')
 attribute_statement.setParseAction(Attribute_Statement)
-
 
 # --- OPTION statement ----------------------------------------------------------
 
@@ -144,16 +134,15 @@ class Option_Statement(VBA_Object):
     def __repr__(self):
         return 'Option %s' % (self.name)
 
-
 option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
-
 
 # --- TYPE EXPRESSIONS -------------------------------------------------------
 
 # 5.6.16.7 Type Expressions
-# type-expression = BUILTIN-TYPE / defined-type-expression
-# defined-type-expression = simple-name-expression / member-access-expression
+#
+# MS-GRAMMAR: type-expression = BUILTIN-TYPE / defined-type-expression
+# MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 # TODO: for now we use a generic syntax
 type_expression = lex_identifier
@@ -171,12 +160,12 @@ type_declaration = type_declaration_composite
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
 
 # 5.3.1.4 Function Type Declarations
-# function-type = "as" type-expression [array-designator]
-# array-designator = "(" ")"
+#
+# MS-GRAMMAR: function-type = "as" type-expression [array-designator]
+# MS-GRAMMAR: array-designator = "(" ")"
 
 array_designator = Literal("(") + Literal(")")
 function_type = CaselessKeyword("as") + type_expression + Optional(array_designator)
-
 
 # --- PARAMETERS ----------------------------------------------------------
 
@@ -188,38 +177,35 @@ class Parameter(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Parameter, self).__init__(original_str, location, tokens)
         self.name = tokens.name
-        self.type = tokens.type
+        self.my_type = tokens.type
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        r = self.name
-        if self.type:
-            r += ' as %s' % self.type
+        r = str(self.name)
+        if self.my_type:
+            r += ' as ' + str(self.my_type)
         return r
 
-
-# TODO 5.3.1.5 Parameter Lists
-# TODO: differentiate dim params from sub/function params?
-
 # 5.3.1.5 Parameter Lists
-# procedure-parameters = "(" [parameter-list] ")"
-# property-parameters = "(" [parameter-list ","] value-param ")"
-# parameter-list = (positional-parameters "," optional-parameters )
+#
+# MS-GRAMMAR: procedure-parameters = "(" [parameter-list] ")"
+# MS-GRAMMAR: property-parameters = "(" [parameter-list ","] value-param ")"
+# MS-GRAMMAR: parameter-list = (positional-parameters "," optional-parameters )
 #                   / (positional-parameters ["," param-array])
 #                   / optional-parameters / param-array
-# positional-parameters = positional-param *("," positional-param)
-# optional-parameters = optional-param *("," optional-param)
-# value-param = positional-param
-# positional-param = [parameter-mechanism] param-dcl
-# optional-param = optional-prefix param-dcl [default-value]
-# param-array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" / "[variant]")]
-# param-dcl = untyped-name-param-dcl / typed-name-param-dcl
-# untyped-name-param-dcl = IDENTIFIER [parameter-type]
-# typed-name-param-dcl = TYPED-NAME [array-designator]
-# optional-prefix = ("optional" [parameter-mechanism]) / ([parameter-mechanism] ("optional"))
-# parameter-mechanism = "byval" / " byref"
-# parameter-type = [array-designator] "as" (type-expression / "Any")
-# default-value = "=" constant-expression
+# MS-GRAMMAR: positional-parameters = positional-param *("," positional-param)
+# MS-GRAMMAR: optional-parameters = optional-param *("," optional-param)
+# MS-GRAMMAR: value-param = positional-param
+# MS-GRAMMAR: positional-param = [parameter-mechanism] param-dcl
+# MS-GRAMMAR: optional-param = optional-prefix param-dcl [default-value]
+# MS-GRAMMAR: param-array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" / "[variant]")]
+# MS-GRAMMAR: param-dcl = untyped-name-param-dcl / typed-name-param-dcl
+# MS-GRAMMAR: untyped-name-param-dcl = IDENTIFIER [parameter-type]
+# MS-GRAMMAR: typed-name-param-dcl = TYPED-NAME [array-designator]
+# MS-GRAMMAR: optional-prefix = ("optional" [parameter-mechanism]) / ([parameter-mechanism] ("optional"))
+# MS-GRAMMAR: parameter-mechanism = "byval" / " byref"
+# MS-GRAMMAR: parameter-type = [array-designator] "as" (type-expression / "Any")
+# MS-GRAMMAR: default-value = "=" constant-expression
 
 default_value = Literal("=").suppress() + expr_const('default_value')  # TODO: constant_expression
 
@@ -233,23 +219,23 @@ parameter_type = Optional(array_designator) + CaselessKeyword("as").suppress() \
 
 untyped_name_param_dcl = identifier + Optional(parameter_type)
 
-# TODO:
-# procedure_parameters = "(" [parameter_list] ")"
-# property_parameters = "(" [parameter_list ","] value_param ")"
-# parameter_list = (positional_parameters "," optional_parameters )
+# MS-GRAMMAR: procedure_parameters = "(" [parameter_list] ")"
+# MS-GRAMMAR: property_parameters = "(" [parameter_list ","] value_param ")"
+# MS-GRAMMAR: parameter_list = (positional_parameters "," optional_parameters )
 #                   | (positional_parameters ["," param_array])
 #                   | optional_parameters | param_array
-# positional_parameters = positional_param *("," positional_param)
-# optional_parameters = optional_param *("," optional_param)
-# value_param = positional_param
-# positional_param = [parameter_mechanism] param_dcl
-# optional_param = optional_prefix param_dcl [default_value]
-# param_array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" | "[variant]")]
-# param_dcl = untyped_name_param_dcl | typed_name_param_dcl
-# typed_name_param_dcl = TYPED_NAME [array_designator]
+# MS-GRAMMAR: positional_parameters = positional_param *("," positional_param)
+# MS-GRAMMAR: optional_parameters = optional_param *("," optional_param)
+# MS-GRAMMAR: value_param = positional_param
+# MS-GRAMMAR: positional_param = [parameter_mechanism] param_dcl
+# MS-GRAMMAR: optional_param = optional_prefix param_dcl [default_value]
+# MS-GRAMMAR: param_array = "paramarray" IDENTIFIER "(" ")" ["as" ("variant" | "[variant]")]
+# MS-GRAMMAR: param_dcl = untyped_name_param_dcl | typed_name_param_dcl
+# MS-GRAMMAR: typed_name_param_dcl = TYPED_NAME [array_designator]
 
-parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') \
-            + Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
+            Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
+            Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -257,27 +243,27 @@ parameters_list = delimitedList(parameter, delim=',')
 # --- STATEMENT LABELS -------------------------------------------------------
 
 # 5.4.1.1 Statement Labels
-# statement-label-definition = LINE-START ((identifier-statement-label ":") / (line-number-label [":"] ))
-# statement-label = identifier-statement-label / line-number-label
-# statement-label-list = statement-label ["," statement-label]
-# identifier-statement-label = IDENTIFIER
-# line-number-label = INTEGER
+#
+# MS-GRAMMAR: statement-label-definition = LINE-START ((identifier-statement-label ":") / (line-number-label [":"] ))
+# MS-GRAMMAR: statement-label = identifier-statement-label / line-number-label
+# MS-GRAMMAR: statement-label-list = statement-label ["," statement-label]
+# MS-GRAMMAR: identifier-statement-label = IDENTIFIER
+# MS-GRAMMAR: line-number-label = INTEGER
 
 statement_label_definition = LineStart() + ((identifier('label_name') + Suppress(":"))
                                             | (integer('label_int') + Optional(Suppress(":"))))
 statement_label = identifier | integer
 statement_label_list = delimitedList(statement_label, delim=',')
 
-# TODO: StatementLabel class
-
 # --- STATEMENT BLOCKS -------------------------------------------------------
 
 # 5.4.1 Statement Blocks
+#
 # A statement block is a sequence of 0 or more statements.
-# statement-block = *(block-statement EOS)
-# block-statement = statement-label-definition / rem-statement / statement
-# statement = control-statement / data-manipulation-statement / error-handling-statement /
-# filestatement
+#
+# MS-GRAMMAR: statement-block = *(block-statement EOS)
+# MS-GRAMMAR: block-statement = statement-label-definition / rem-statement / statement
+# MS-GRAMMAR: statement = control-statement / data-manipulation-statement / error-handling-statement / filestatement
 
 # need to declare statement beforehand:
 statement = Forward()
@@ -296,70 +282,142 @@ class Dim_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
-        # print 'Dim_Statement.init:'
-        # pprint.pprint(tokens.asList())
-        log.debug('parsed %r' % self)
+        
+        # Track the initial value of the variable.
+        self.init_val = None
+        last_var = tokens[-1:][0]
+        if ((len(last_var) >= 3) and
+            (last_var[len(last_var) - 2] == '=')):
+            self.init_val = last_var[len(last_var) - 1]
+                
+        # Track each variable being declared.
+        self.variables = []
+        for var in tokens:
+
+            # Is this an array?
+            is_array = False
+            if ((len(var) > 1) and (var[1] == '(')):
+                is_array = True
+
+            # Do we have a type for the variable?
+            curr_type = None
+            if ((len(var) > 1) and (var[-1:][0] != ")")):
+                curr_type = var[-1:][0]
+
+            # Save the variable info.
+            self.variables.append((var[0], is_array, curr_type))
+        
+        log.debug('parsed %r' % str(self))
 
     def __repr__(self):
-        return 'Dim %r' % repr(self.tokens)
+        r = "Dim "
+        first = True
+        for var in self.variables:
+            if (not first):
+                r += ", "
+            first = False
+            r += str(var[0])
+            if (var[1]):
+                r += "()"
+            if (var[2]):
+                r += " As " + var[2]
+        if (self.init_val is not None):
+            r += " = " + str(self.init_val)
+        return r
 
+    def eval(self, context, params=None):
 
+        # Evaluate the initial variable value(s).
+        init_val = ''
+        if (self.init_val is not None):
+            init_val = eval_arg(self.init_val, context=context)
+            
+        # Track each declared variable.
+        for var in self.variables:
+
+            # Do we know the variable type?
+            curr_init_val = init_val
+            curr_type = var[2]
+            if (curr_type is not None):
+
+                # Get the initial value.
+                if ((curr_type == "Long") or (curr_type == "Integer")):
+                    curr_init_val = 0
+                if (curr_type == "String"):
+                    curr_init_val = ''
+                
+                # Is this variable an array?
+                if (var[1]):
+                    curr_type += " Array"
+                    curr_init_val = []
+
+            # Set the initial value of the declared variable.
+            context.set(var[0], curr_init_val, curr_type)
+    
 # 5.4.3.1 Local Variable Declarations
-# local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
-# static-variable-declaration = "Static" variable-declaration-list
+#
+# MS-GRAMMAR: local-variable-declaration = ("Dim" ["Shared"] variable-declaration-list)
+# MS-GRAMMAR: static-variable-declaration = "Static" variable-declaration-list
 
 # 5.2.3.1 Module Variable Declaration Lists
-# module-variable-declaration = public-variable-declaration / private-variable-declaration
-# global-variable-declaration = "Global" variable-declaration-list
-# public-variable-declaration = "Public" ["Shared"] module-variable-declaration-list
-# private-variable-declaration = ("Private" / "Dim") [ "Shared"] module-variable-declaration-
-# list
-# module-variable-declaration-list = (withevents-variable-dcl / variable-dcl)
-# *( "," (withevents-variable-dcl / variable-dcl) )
-# variable-declaration-list = variable-dcl *( "," variable-dcl )
+#
+# MS-GRAMMAR: module-variable-declaration = public-variable-declaration / private-variable-declaration
+# MS-GRAMMAR: global-variable-declaration = "Global" variable-declaration-list
+# MS-GRAMMAR: public-variable-declaration = "Public" ["Shared"] module-variable-declaration-list
+# MS-GRAMMAR: private-variable-declaration = ("Private" / "Dim") [ "Shared"] module-variable-declaration-list
+# MS-GRAMMAR: module-variable-declaration-list = (withevents-variable-dcl / variable-dcl) *( "," (withevents-variable-dcl / variable-dcl) )
+# MS-GRAMMAR: variable-declaration-list = variable-dcl *( "," variable-dcl )
 
 # 5.2.3.1.1 Variable Declarations
-# variable-dcl = typed-variable-dcl / untyped-variable-dcl
-# typed-variable-dcl = TYPED-NAME [array-dim]
-# untyped-variable-dcl = IDENTIFIER [array-clause / as-clause]
-# array-clause = array-dim [as-clause]
-# as-clause = as-auto-object / as-type
+#
+# MS-GRAMMAR: variable-dcl = typed-variable-dcl / untyped-variable-dcl
+# MS-GRAMMAR: typed-variable-dcl = TYPED-NAME [array-dim]
+# MS-GRAMMAR: untyped-variable-dcl = IDENTIFIER [array-clause / as-clause]
+# MS-GRAMMAR: array-clause = array-dim [as-clause]
+# MS-GRAMMAR: as-clause = as-auto-object / as-type
 
 # 5.2.3.1.3 Array Dimensions and Bounds
-# array-dim = "(" [bounds-list] ")"
-# bounds-list = dim-spec *("," dim-spec)
-# dim-spec = [lower-bound] upper-bound
-# lower-bound = constant-expression "to"
-# upper-bound = constant-expression
+#
+# MS-GRAMMAR: array-dim = "(" [bounds-list] ")"
+# MS-GRAMMAR: bounds-list = dim-spec *("," dim-spec)
+# MS-GRAMMAR: dim-spec = [lower-bound] upper-bound
+# MS-GRAMMAR: lower-bound = constant-expression "to"
+# MS-GRAMMAR: upper-bound = constant-expression
 
 # 5.6.16.1 Constant Expressions
+#
 # A constant expression is an expression usable in contexts which require a value that can be fully
 # evaluated statically.
-# constant-expression = expression
+#
+# MS-GRAMMAR: constant-expression = expression
 
 # 5.2.3.1.4 Variable Type Declarations
+#
 # A type specification determines the specified type of a declaration.
-# as-auto-object = "as" "new" class-type-name
-# as-type = "as" type-spec
-# type-spec = fixed-length-string-spec / type-expression
-# fixed-length-string-spec = "string" "*" string-length
-# string-length = constant-name / INTEGER
-# constant-name = simple-name-expression
+#
+# MS-GRAMMAR: as-auto-object = "as" "new" class-type-name
+# MS-GRAMMAR: as-type = "as" type-spec
+# MS-GRAMMAR: type-spec = fixed-length-string-spec / type-expression
+# MS-GRAMMAR: fixed-length-string-spec = "string" "*" string-length
+# MS-GRAMMAR: string-length = constant-name / INTEGER
+# MS-GRAMMAR: constant-name = simple-name-expression
 
 # 5.2.3.1.2 WithEvents Variable Declarations
-# withevents-variable-dcl = "withevents" IDENTIFIER "as" class-type-name
-# class-type-name = defined-type-expression
+#
+# MS-GRAMMAR: withevents-variable-dcl = "withevents" IDENTIFIER "as" class-type-name
+# MS-GRAMMAR: class-type-name = defined-type-expression
 
 # 5.6.16.7 Type Expressions
-# type-expression = BUILTIN-TYPE / defined-type-expression
-# defined-type-expression = simple-name-expression / member-access-expression
+#
+# MS-GRAMMAR: type-expression = BUILTIN-TYPE / defined-type-expression
+# MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 constant_expression = expression
 lower_bound = constant_expression + CaselessKeyword('to').suppress()
 upper_bound = constant_expression
 dim_spec = Optional(lower_bound) + upper_bound
 bounds_list = delimitedList(dim_spec)
-array_dim = Suppress('(') + Optional(bounds_list) + Suppress(')')
+array_dim = '(' + Optional(bounds_list).suppress() + ')'
 constant_name = simple_name_expression
 string_length = constant_name | integer
 fixed_length_string_spec = CaselessKeyword("string").suppress() + Suppress("*") + string_length
@@ -374,14 +432,10 @@ untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
-variable_declaration_list = delimitedList(variable_dcl)
-local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(
-    CaselessKeyword("Shared")).suppress() + variable_declaration_list
+variable_declaration_list = delimitedList(Group(variable_dcl))
+local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
-
-# dim_statement = CaselessKeyword('Dim').suppress() + \
-#                 Optional(CaselessKeyword("Shared")).suppress() + parameters_list
 dim_statement.setParseAction(Dim_Statement)
 
 # --- Global_Var_Statement statement ----------------------------------------------------------
@@ -393,7 +447,10 @@ class Global_Var_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Global_Var_Statement, self).__init__(original_str, location, tokens)
-        self.name = tokens[0]
+        self.name = tokens[0][0]
+        self.value = ''
+        if (len(tokens[0]) >= 3):
+            self.value = tokens[0][2]
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -433,6 +490,52 @@ class Let_Statement(VBA_Object):
 
         # set variable, non-array access.
         if (self.index is None):
+
+            # Handle conversion of strings to byte arrays, if needed.
+            if ((context.get_type(self.name) == "Byte Array") and
+                (isinstance(value, str))):
+                tmp = []
+                for c in value:
+                    tmp.append(ord(c))
+                    tmp.append(0)
+                value = tmp
+
+            # Handle conversion of byte arrays to strings, if needed.
+            if ((context.get_type(self.name) == "String") and
+                (isinstance(value, list))):
+
+                # Do we have a list of integers?
+                all_ints = True
+                for i in value:
+                    if (not isinstance(i, int)):
+                        all_ints = False
+                        break
+                if (all_ints):
+                    try:
+                        tmp = ""
+                        pos = 0
+                        # TODO: Only handles ASCII strings.
+                        while (pos < len(value)):
+                            tmp += chr(value[pos])
+                            pos += 2
+                        value = tmp
+                    except:
+                        pass
+
+                # Do we have a list of characters?
+                all_chars = True
+                for i in value:
+                    if ((i is not None) and
+                        ((not isinstance(i, str)) or (len(i) > 1))):
+                        all_chars = False
+                        break
+                if (all_chars):
+                    tmp = ""
+                    for i in value:
+                        if (i is not None):
+                            tmp += i
+                    value = tmp
+                    
             log.debug('setting %s = %s' % (self.name, value))
             context.set(self.name, value)
 
@@ -444,45 +547,86 @@ class Let_Statement(VBA_Object):
             log.debug('setting %s(%r) = %s' % (self.name, index, value))
 
             # Is array variable being set already represented as a list?
+            # Or a string?
             arr_var = None
             try:
                 arr_var = context.get(self.name)
             except KeyError:
                 log.error("WARNING: Cannot find array variable %s" % self.name)
-            if (not isinstance(arr_var, list)):
+            if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.
                 arr_var = []
 
-            # Do we need to extend the length of the list to include the index?
-            if (index >= len(arr_var)):
-                arr_var.extend([None] * (index - len(arr_var)))
+            # Handle lists
+            if (isinstance(arr_var, list)):
+            
+                # Do we need to extend the length of the list to include the index?
+                if (index >= len(arr_var)):
+                    arr_var.extend([0] * (index - len(arr_var)))
                 
-            # We now have a list with the proper # of elements. Set the
-            # array element to the proper value.
-            arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                # We now have a list with the proper # of elements. Set the
+                # array element to the proper value.
+                arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
 
+            # Handle strings.
+            if (isinstance(arr_var, str)):
+
+                # Do we need to extend the length of the string to include the index?
+                if (index >= len(arr_var)):
+                    arr_var += "\0"*(index - len(arr_var))
+                
+                # We now have a string with the proper # of elements. Set the
+                # array element to the proper value.
+                if (isinstance(value, str)):
+                    arr_var = arr_var[:index] + value + arr_var[(index + 1):]
+                elif (isinstance(value, int)):
+                    try:
+                        arr_var = arr_var[:index] + chr(value) + arr_var[(index + 1):]
+                    except Exception as e:
+                        log.error(str(e))
+                        log.error(str(value) + " cannot be converted to ASCII.")
+                else:
+                    log.error("Unhandled value type " + str(type(value)) + " for array update.")
+                        
             # Finally save the updated variable in the context.
             context.set(self.name, arr_var)
             
 # 5.4.3.8   Let Statement
+#
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
 # and may be omitted.
-# let-statement = ["Let"] l-expression "=" expression
+#
+# MS-GRAMMAR: let-statement = ["Let"] l-expression "=" expression
 
 # TODO: remove Set when Set_Statement implemented:
-# let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() \
-#                 + l_expression('name') + Literal('=').suppress() + expression('expression')
 
-# previous custom grammar (incomplete):
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
                 Optional(Suppress('Const')) + \
                 ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + expression('index') + Suppress(')'))) ^ \
                  member_access_expression('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
-
 let_statement.setParseAction(Let_Statement)
+
+# --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
+
+class Prop_Assign_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Prop_Assign_Statement, self).__init__(original_str, location, tokens)
+        self.prop = tokens.prop
+        self.param = tokens.param
+        self.value = tokens.value
+        log.debug('parsed %r as Prop_Assign_Statement' % self)
+
+    def __repr__(self):
+        return str(self.prop) + " " + str(self.param) + ":=" + str(self.value)
+
+    def eval(self, context, params=None):
+        pass
+
+prop_assign_statement = member_access_expression("prop") + lex_identifier('param') + Suppress(CaselessKeyword(':=')) + expression('value')
+prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
@@ -508,6 +652,8 @@ class For_Statement(VBA_Object):
         start = eval_arg(self.start_value, context=context)
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
         end = eval_arg(self.end_value, context=context)
+        if (not isinstance(end, int)):
+            end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
             end = VBA_Object.loop_upper_bound
@@ -555,27 +701,28 @@ class For_Statement(VBA_Object):
         log.debug('FOR loop: end.')
 
 # 5.6.16.6 Bound Variable Expressions
-# bound-variable-expression = l-expression
-# Static Semantics.
+#
 # A <bound-variable-expression> is invalid if it is classified as something other than a variable
 # expression. The expression is invalid even if it is classified as an unbound member expression that
 # could be resolved to a variable expression.
+#
+# MS-GRAMMAR: bound-variable-expression = l-expression
 
 bound_variable_expression = TODO_identifier_or_object_attrib  # l_expression
 
 # 5.4.2.3 For Statement
+#
 # A <for-statement> executes a sequence of statements a specified number of times.
-
-# for-statement = simple-for-statement / explicit-for-statement
-# simple-for-statement = for-clause EOS statement-block "Next"
-# explicit-for-statement = for-clause EOS statement-block
-# ("Next" / (nested-for-statement ",")) bound-variable-expression
-# nested-for-statement = explicit-for-statement / explicit-for-each-statement
-# for-clause = "For" bound-variable-expression "=" start-value "To" end-value [stepclause]
-# start-value = expression
-# end-value = expression
-# step-clause = "Step" step-increment
-# step-increment = expression
+#
+# MS-GRAMMAR: for-statement = simple-for-statement / explicit-for-statement
+# MS-GRAMMAR: simple-for-statement = for-clause EOS statement-block "Next"
+# MS-GRAMMAR: explicit-for-statement = for-clause EOS statement-block ("Next" / (nested-for-statement ",")) bound-variable-expression
+# MS-GRAMMAR: nested-for-statement = explicit-for-statement / explicit-for-each-statement
+# MS-GRAMMAR: for-clause = "For" bound-variable-expression "=" start-value "To" end-value [stepclause]
+# MS-GRAMMAR: start-value = expression
+# MS-GRAMMAR: end-value = expression
+# MS-GRAMMAR: step-clause = "Step" step-increment
+# MS-GRAMMAR: step-increment = expression
 
 step_clause = CaselessKeyword('Step').suppress() + expression
 
@@ -594,24 +741,93 @@ simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements'
 
 simple_for_statement.setParseAction(For_Statement)
 
-
-# This does not work with pyparsing, need to be a bit smarter:
-# explicit_for_statement = Forward()
-#
-# nested_for_statement = explicit_for_statement #| explicit_for_each_statement
-#
-# explicit_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
-#     + (CaselessKeyword("Next").suppress() | (nested_for_statement + Literal(","))) \
-#     + bound_variable_expression('next_name')
-#
-# for_statement = simple_for_statement | explicit_for_statement
-# for_statement.setParseAction(For_Statement)
+# Some maldocs have a floating Next statement that is not associated with a loop.
+# Handle that here.
+bad_next_statement = CaselessKeyword("Next") + Suppress(EOS)
 
 # For the line parser:
 for_start = for_clause + Suppress(EOL)
 for_start.setParseAction(For_Statement)
 
 for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
+
+# --- FOR EACH statement -----------------------------------------------------------
+
+class For_Each_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(For_Each_Statement, self).__init__(original_str, location, tokens)
+        self.statements = tokens.statements
+        self.item = tokens.clause.item
+        self.container = tokens.clause.container
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        return 'For Each %r In %r ...' % (self.item, self.container)
+
+    def eval(self, context, params=None):
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Get the container of values we are iterating through.
+
+        # Might be an expression.
+        container = eval_arg(self.container, context=context)
+        try:
+            # Could be a variable.
+            container = context.get(self.container)
+        except KeyError:
+            pass
+        except AssertionError:
+            pass
+
+        # Try iterating over the values in the container.
+        try:
+            for item_val in container:
+
+                # Set the loop item variable in the context.
+                context.set(self.item, item_val)
+                
+                # Execute the loop body.
+                log.debug('FOR EACH loop: %r = %r' % (self.item, context.get(self.item)))
+                done = False
+                for s in self.statements:
+                    log.debug('FOR EACH loop eval statement: %r' % s)
+                    s.eval(context=context)
+
+                    # Has 'Exit For' been called?
+                    if (not context.loop_stack[-1]):
+
+                        # Yes we have. Stop this loop.
+                        log.debug("FOR EACH loop: exited loop with 'Exit For'")
+                        done = True
+                        break
+
+                # Finished with the loop due to 'Exit For'?
+                if (done):
+                    break
+
+        except:
+
+            # The data type for the container may not be iterable. Do nothing.
+            pass
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('FOR EACH loop: end.')
+
+for_each_clause = CaselessKeyword("For").suppress() \
+                  + CaselessKeyword("Each").suppress() \
+                  + lex_identifier("item") \
+                  + CaselessKeyword("In").suppress() \
+                  + expression("container") \
+
+simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') \
+                            + CaselessKeyword("Next").suppress() \
+                            + Optional(lex_identifier) \
+                            + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
+
+simple_for_each_statement.setParseAction(For_Each_Statement)
 
 # --- WHILE statement -----------------------------------------------------------
 
@@ -630,7 +846,7 @@ class While_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
-        log.debug('DO loop: start: ' + str(self))
+        log.debug('WHILE loop: start: ' + str(self))
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -644,6 +860,62 @@ class While_Statement(VBA_Object):
                 guard_val = (not guard_val)
             if (not guard_val):
                 break
+            
+            # Execute the loop body.
+            done = False
+            for s in self.body:
+                log.debug('WHILE loop eval statement: %r' % s)
+                s.eval(context=context)
+
+                # Has 'Exit For' been called?
+                if (not context.loop_stack[-1]):
+
+                    # Yes we have. Stop this loop.
+                    log.debug("WHILE loop: exited loop with 'Exit For'")
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For'?
+            if (done):
+                break
+        
+        # Remove tracking of this loop.
+        context.loop_stack.pop()
+        log.debug('WHILE loop: end.')
+
+while_type = CaselessKeyword("While") | CaselessKeyword("Until")
+        
+while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
+
+simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
+                       + (CaselessKeyword("Loop").suppress() | CaselessKeyword("Wend").suppress())
+
+simple_while_statement.setParseAction(While_Statement)
+
+# --- DO statement -----------------------------------------------------------
+
+class Do_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Do_Statement, self).__init__(original_str, location, tokens)
+        self.loop_type = tokens.type
+        self.guard = tokens.guard
+        self.body = tokens[0]
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = "Do\\n" + str(self.body) + "\\n"
+        r += "Loop " + str(self.loop_type) + " " + str(self.guard)
+        return r
+
+    def eval(self, context, params=None):
+
+        log.debug('DO loop: start: ' + str(self))
+        
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+
+        # Loop until the loop is broken out of or we violate the loop guard.
+        while (True):
             
             # Execute the loop body.
             done = False
@@ -662,20 +934,24 @@ class While_Statement(VBA_Object):
             # Finished with the loop due to 'Exit For'?
             if (done):
                 break
-        
+
+            # Test the loop guard to see if we should exit the loop.
+            guard_val = eval_arg(self.guard, context)
+            if (self.loop_type.lower() == "until"):
+                guard_val = (not guard_val)
+            if (not guard_val):
+                break
+            
         # Remove tracking of this loop.
         context.loop_stack.pop()
         log.debug('DO loop: end.')
 
-while_type = CaselessKeyword("While") | CaselessKeyword("Until")
-        
-while_clause = CaselessKeyword("Do").suppress() + while_type("type") \
-               + boolean_expression("guard")
+simple_do_statement = Suppress(CaselessKeyword("Do")) + Suppress(EOS) + \
+                      Group(statement_block('body')) + \
+                      Suppress(CaselessKeyword("Loop")) + while_type("type") + boolean_expression("guard")
 
-simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
-                       + CaselessKeyword("Loop").suppress()
+simple_do_statement.setParseAction(Do_Statement)
 
-simple_while_statement.setParseAction(While_Statement)
 
 # --- SELECT statement -----------------------------------------------------------
 
@@ -692,7 +968,6 @@ class Select_Statement(VBA_Object):
         for case in self.cases:
             r += str(case)
         r += "End Select"
-        print r
         return r
 
     def eval(self, context, params=None):
@@ -926,10 +1201,28 @@ multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expr
                                      Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
                                            Group(statement_block('statements')))
                                  ) + \
-                                 CaselessKeyword("End If").suppress() #+ FollowedBy(EOS)
+                                 CaselessKeyword("End").suppress() + CaselessKeyword("If").suppress()
+bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                          Group(statement_block('statements'))) + \
+                          ZeroOrMore(
+                              Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                     Group(statement_block('statements')))
+                          ) + \
+                          Optional(
+                              Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
+                                    Group(statement_block('statements')))
+                          )
 simple_statements_line = Forward()
 single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
-                                  Group(simple_statements_line('statements')) ) #+ FollowedBy(EOS)
+                                  Group(simple_statements_line('statements')) )  + \
+                                  ZeroOrMore(
+                                      Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                             Group(simple_statements_line('statements')))
+                                  ) + \
+                                  Optional(
+                                      Group(CaselessKeyword("Else").suppress() + \
+                                            Group(simple_statements_line('statements')))
+                                  )
 simple_if_statement = multi_line_if_statement ^ single_line_if_statement
 
 simple_if_statement.setParseAction(If_Statement)
@@ -977,13 +1270,15 @@ class Call_Statement(VBA_Object):
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Procedure Call: %s(%r)' % (self.name, self.params)
+        return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
     def eval(self, context, params=None):
-        log.info('Eval Params before calling Procedure: %s(%r)' % (self.name, self.params))
         # TODO fix params here!
         call_params = eval_args(self.params, context=context)
-        log.info('Calling Procedure: %s(%r)' % (self.name, call_params))
+        str_params = repr(call_params)
+        if (len(str_params) > 80):
+            str_params = str_params[:80] + "..."
+        log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':
@@ -992,18 +1287,28 @@ class Call_Statement(VBA_Object):
             # vbOK = 1
             return 1
         elif '.' in func_name:
-            context.report_action('Object.Method Call', repr(call_params), func_name)
+            tmp_call_params = call_params
+            if (func_name.endswith(".Write")):
+                tmp_call_params = []
+                for p in call_params:
+                    if (isinstance(p, str)):
+                        tmp_call_params.append(p.replace("\x00", ""))
+                    else:
+                        tmp_call_params.append(p)
+            context.report_action('Object.Method Call', repr(tmp_call_params), func_name)
         try:
             s = context.get(func_name)
             s.eval(context=context, params=call_params)
         except KeyError:
             try:
-                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "")
+                tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "").\
+                           replace("[", "").replace("]", "").replace("'", "").replace('"', '')
                 if ("." in tmp_name):
-                    tmp_name = func_name[tmp_name.rindex(".") + 1:]
+                    tmp_name = tmp_name[tmp_name.rindex(".") + 1:]
                 log.debug("Looking for procedure %r" % tmp_name)
                 s = context.get(tmp_name)
-                s.eval(context=context, params=call_params)
+                if (s):
+                    s.eval(context=context, params=call_params)
             except KeyError:
 
                 # If something like Application.Run("foo", 12) is called, foo(12) will be run.
@@ -1027,13 +1332,13 @@ class Call_Statement(VBA_Object):
                 log.error('Procedure %r not found' % func_name)
 
 
-# TODO: 5.4.2.1 Call Statement
+# 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
-call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | expr_list('params')
+call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
 call_statement = NotAny(known_keywords_statement_start) \
                  + Optional(CaselessKeyword('Call').suppress()) \
-                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib('name')) + Optional(call_params)
+                 + (member_access_expression_limited('name') | TODO_identifier_or_object_attrib_loose('name')) + Optional(call_params)
 call_statement.setParseAction(Call_Statement)
 
 # --- EXIT FOR statement ----------------------------------------------------------
@@ -1051,9 +1356,20 @@ class Exit_For_Statement(VBA_Object):
         context.loop_stack.pop()
         context.loop_stack.append(False)
 
-# Break out of a loop.
+class Exit_While_Statement(Exit_For_Statement):
+    def __repr__(self):
+        return 'Exit Do'
+
+# Break out of a For loop.
 exit_for_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('For').suppress()
 exit_for_statement.setParseAction(Exit_For_Statement)
+
+# Break out of a While Do loop.
+exit_while_statement = CaselessKeyword('Exit').suppress() + CaselessKeyword('Do').suppress()
+exit_while_statement.setParseAction(Exit_While_Statement)
+
+# Break out of a loop.
+exit_loop_statement = exit_for_statement | exit_while_statement
 
 # --- EXIT FUNCTION statement ----------------------------------------------------------
 
@@ -1092,7 +1408,8 @@ class Redim_Statement(VBA_Object):
 
 # Array redim statement
 redim_statement = CaselessKeyword('ReDim').suppress() + expression('item') + \
-                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress()
+                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress() + \
+                  Optional(CaselessKeyword('As') + lex_identifier).suppress()
 redim_statement.setParseAction(Redim_Statement)
 
 # --- WITH statement ----------------------------------------------------------
@@ -1100,7 +1417,8 @@ redim_statement.setParseAction(Redim_Statement)
 class With_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(With_Statement, self).__init__(original_str, location, tokens)
-        self.body = tokens.body
+        log.debug("tokens = " + str(tokens))
+        self.body = tokens[1]
         self.env = tokens.env
         log.debug('parsed %r' % self)
 
@@ -1108,8 +1426,26 @@ class With_Statement(VBA_Object):
         return 'With ' + str(self.env) + "\\n" + str(self.body) + " End With"
 
     def eval(self, context, params=None):
-        # TODO: Currently stubbed out. Need to track the containing environment object name(s) in a stack
-        # and append them to the names of variables like ".foo" when referencing variables in the With.
+
+        # Track the with prefix.
+        if (len(context.with_prefix) > 0):
+            context.with_prefix += "." + str(self.env)
+        else:
+            context.with_prefix = str(self.env)
+            
+        # Evaluate each statement in the with block.
+        log.debug("START WITH")
+        for s in self.body:
+            s.eval(context)
+        log.debug("END WITH")
+            
+        # Remove the current with prefix.
+        if ("." not in context.with_prefix):
+            context.with_prefix = ""
+        else:
+            end = context.with_prefix.rindex(".")
+            context.with_prefix = context.with_prefix[:end]
+            
         return
 
 # With statement
@@ -1119,6 +1455,15 @@ with_statement = CaselessKeyword('With').suppress() + lex_identifier('env') + Su
 with_statement.setParseAction(With_Statement)
 
 # --- GOTO statement ----------------------------------------------------------
+
+# TODO: Emulation of Goto statements needs to be added. This can be
+# done by changing the parsing of a Label statement to include the
+# label and then the statement list following the label. When parsed
+# the Label statement VBA_Object will track the statement list
+# associated with the label. Add a mapping from labels to statement
+# lists in the context. Then evaluating a Goto statement will involve
+# looking up the statement list for the label, evaluating those
+# statements, and then exiting the current function.
 
 class Goto_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
@@ -1177,21 +1522,110 @@ on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
 
 on_error_statement.setParseAction(On_Error_Statement)
 
+# --- FILE OPEN -------------------------------------------------------------
+
+class File_Open(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(File_Open, self).__init__(original_str, location, tokens)
+        self.file_name = tokens.file_name
+        self.file_id = tokens.file_id
+        self.file_mode = tokens.type.mode
+        self.file_access = None
+        if (hasattr(tokens.type, "access")):
+            self.file_access = tokens.type.access
+        log.debug('parsed %r as File_Open' % self)
+
+    def __repr__(self):
+        r = "Open " + str(self.file_name) + " For " + str(self.file_mode)
+        if (self.file_access is not None):
+            r += " Access " + str(self.file_access)
+        r += " As " + str(self.file_id)
+        return r
+
+    def eval(self, context, params=None):
+
+        # Get the file name.
+
+        # Might be an expression.
+        name = eval_arg(self.file_name, context=context)
+        try:
+            # Could be a variable.
+            name = context.get(self.file_name)
+        except KeyError:
+            pass
+        except AssertionError:
+            pass
+
+        # Save that the file is opened.
+        context.open_files[self.file_id] = {}
+        context.open_files[self.file_id]["name"] = name
+        context.open_files[self.file_id]["contents"] = []
+
+file_type = Suppress(CaselessKeyword("For")) + \
+            (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
+            Optional(Suppress(CaselessKeyword("Access")) + \
+                     (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
+
+file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement.setParseAction(File_Open)
+
+# --- PRINT -------------------------------------------------------------
+
+class Print_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Print_Statement, self).__init__(original_str, location, tokens)
+        self.file_id = tokens.file_id
+        self.value = tokens.value
+        log.debug('parsed %r as Print_Statement' % self)
+
+    def __repr__(self):
+        r = "Print " + str(self.file_id) + ", " + str(self.value)
+        return r
+
+    def eval(self, context, params=None):
+
+        # Get the ID of the file.
+        file_id = eval_arg(self.file_id, context=context)
+
+        # Get the data.
+        data = eval_arg(self.value, context=context)
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
+
+print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value")
+print_statement.setParseAction(Print_Statement)
+
+# --- DOEVENTS STATEMENT -------------------------------------------------------------
+
+doevents_statement = Suppress(CaselessKeyword("DoEvents"))
+
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ call_statement ^ label_statement) | exit_for_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement
+simple_statement = dim_statement | option_statement | (let_statement ^ prop_assign_statement ^ expression ^ call_statement ^ label_statement) | exit_loop_statement | \
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
+                   rem_statement | print_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= type_declaration | simple_for_statement | simple_if_statement | \
-              simple_if_statement_macro | simple_while_statement | simple_select_statement | with_statement| simple_statement
+statement <<= type_declaration | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+              simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+              with_statement| simple_statement
 
-# TODO: potential issue here, as some statements can be multiline, such as for loops... => check MS-VBAL
-# TODO: can we have '::' with an empty statement?
-# TODO: use statement_block instead!
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
@@ -1240,6 +1674,11 @@ class External_Function(VBA_Object):
                 context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
                 # return 0 when no error occurred:
                 return 0
+        if function_name.lower().startswith('shellexecute'):
+            cmd = str(params[2]) + str(params[3])
+            context.report_action('Run Command', cmd, function_name)
+            # return 0 when no error occurred:
+            return 0
         # TODO: return result according to the known DLLs and functions
         log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
         return None
@@ -1256,9 +1695,7 @@ lib_info = CaselessKeyword('Lib').suppress() + quoted_string('lib_name') \
            + Optional(CaselessKeyword('Alias') + quoted_string('alias_name'))
 
 # TODO: identifier or lex_identifier
-external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe'))
-                                                + CaselessKeyword('Function')) + lex_identifier('function_name') + lib_info \
-                                                + Optional(params_list_paren) + Optional(function_type2)
+external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe')) + \
+                                                (CaselessKeyword('Function') | CaselessKeyword('Sub'))) + \
+                                                lex_identifier('function_name') + lib_info + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)
-
-

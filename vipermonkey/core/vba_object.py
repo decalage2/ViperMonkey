@@ -53,7 +53,6 @@ __version__ = '0.02'
 
 import base64
 from logger import log
-log.debug('importing vba_object')
 
 class VBA_Object(object):
     """
@@ -61,7 +60,7 @@ class VBA_Object(object):
     """
 
     # Upper bound for loop iterations. 0 or less means unlimited.
-    loop_upper_bound = 1000
+    loop_upper_bound = 1000000
     
     def __init__(self, original_str, location, tokens):
         """
@@ -98,7 +97,8 @@ class VBA_Object(object):
         #     else:
         #         return None
 
-
+meta = None
+        
 def eval_arg(arg, context):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
@@ -148,8 +148,10 @@ def eval_arg(arg, context):
 
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
+
+                # Try it as a form variable.
+                tmp = arg.lower()
                 try:
-                    tmp = arg.lower()
                     log.debug("eval_arg: Try to load as variable " + tmp + "...")
                     val = context.get(tmp)
                     return val
@@ -158,9 +160,47 @@ def eval_arg(arg, context):
                     log.debug("eval_arg: Not found as variable")
                     pass
 
-        # The .text hack did not work.
-        return arg
+                # Try it as a function
+                func_name = arg.lower()
+                func_name = func_name[func_name.rindex(".")+1:]
+                try:
+                    log.debug("eval_arg: Try to run as function " + func_name + "...")
+                    func = context.get(func_name)
+                    return func.eval(context=context)
 
+                except KeyError:
+                    log.debug("eval_arg: Not found as function")
+
+                except Exception as e:
+                    log.debug("eval_arg: Failed. Not a function. " + str(e))
+
+                # Are we trying to load some document meta data?
+                if (tmp.startswith("activedocument.item(")):
+
+                    # Try to pull the result from the document meta data.
+                    prop = tmp.replace("activedocument.item(", "").replace(")", "").replace("'","").strip()
+
+                    # Make sure we read in the metadata.
+                    if (meta is None):
+                        log.error("BuiltInDocumentProperties: Metadata not read.")
+                        return ""
+                
+                    # See if we can find the metadata attribute.
+                    if (not hasattr(meta, prop.lower())):
+                        log.error("BuiltInDocumentProperties: Metadata field '" + prop + "' not found.")
+                        return ""
+
+                    # We have the attribute. Return it.
+                    r = getattr(meta, prop.lower())
+                    log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
+                    return r
+
+                # None of those worked. We can't find the data.
+                #return "??"
+                
+        # The .text hack did not work.
+        log.debug("eval_arg: return " + str(arg))
+        return arg
 
 def eval_args(args, context):
     """

@@ -37,23 +37,11 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
 from logger import log
-log.debug('importing vba_context')
-
 
 def is_procedure(vba_object):
     """
@@ -72,7 +60,6 @@ def is_procedure(vba_object):
 
 # global dictionary of constants, functions and subs for the VBA library
 VBA_LIBRARY = {}
-
 
 class Context(object):
     """
@@ -94,9 +81,6 @@ class Context(object):
         if _locals is not None:
             # However, if locals is explicitly provided, we use a copy of it:
             self.locals = dict(_locals)
-        # If a context is provided, its locals should NOT be copied
-        # elif context is not None:
-        #     self.locals = dict(context.locals)
         else:
             self.locals = {}
         # engine should be a pointer to the ViperMonkey engine, to provide callback features
@@ -114,6 +98,18 @@ class Context(object):
         # Track whether we have exited from the current function.
         self.exit_func = False
 
+        # Track variable types, if known.
+        self.types = {}
+
+        # Track open files.
+        self.open_files = {}
+
+        # Track the final contents of written files.
+        self.closed_files = {}
+
+        # Track the current with prefix for with statements.
+        self.with_prefix = ""
+        
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"
         self.globals["vbKeyLButton".lower()] = 1
@@ -228,36 +224,65 @@ class Context(object):
         self.globals["vbUnicode".lower()] = 64
         self.globals["vbFromUnicode".lower()] = 128
         
-    def get(self, name):
-        # TODO: remove this check once everything works fine
-        assert isinstance(name, basestring)
+    def _get(self, name):
+
+        if (not isinstance(name, basestring)):
+            raise KeyError('Object %r not found' % name)
+
         # convert to lowercase
         name = name.lower()
-        # first, search in the global VBA library:
-        if name in VBA_LIBRARY:
-            log.debug('Found %r in VBA Library' % name)
-            return VBA_LIBRARY[name]
-        # second, search in locals:
+        log.debug("Looking for var '" + name + "'...")
+        
+        # First, search in locals. This handles variables whose name overrides
+        # a system function.
         if name in self.locals:
             log.debug('Found %r in locals' % name)
             return self.locals[name]
-        # third, in globals:
+        # second, in globals:
         elif name in self.globals:
             log.debug('Found %r in globals' % name)
             return self.globals[name]
-        else:
+        # finally, search in the global VBA library:
+        elif name in VBA_LIBRARY:
+            log.debug('Found %r in VBA Library' % name)
+            return VBA_LIBRARY[name]
+        # Unknown symbol.
+        else:            
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
 
+    def get(self, name):
+
+        # First try to get the item using the current with context.
+        tmp_name = str(self.with_prefix) + str(name)
+        try:
+            return self._get(tmp_name)
+        except KeyError:
+            pass
+
+        # Now try it without the current with context.
+        return self._get(name)
+            
+    def get_type(self, var):
+        if (not isinstance(var, basestring)):
+            return None
+        var = var.lower()
+        if (var not in self.types):
+            return None
+        return self.types[var]
+            
     # TODO: set_global?
 
-    def set(self, name, value):
+    def set(self, name, value, var_type=None, do_with_prefix=True):
+        if (not isinstance(name, basestring)):
+            return
         # convert to lowercase
         name = name.lower()
         # raise exception if name in VBA library:
-        if name in VBA_LIBRARY:
-            raise ValueError('%r cannot be modified, it is part of the VBA Library.' % name)
+        # Commented out since it looks like you can have local variables named things like str.
+        #if name in VBA_LIBRARY:
+        #    raise ValueError('%r cannot be modified, it is part of the VBA Library.' % name)
         if name in self.locals:
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
@@ -267,7 +292,16 @@ class Context(object):
             # new name, always stored in locals:
             self.locals[name] = value
 
+        # If we know the type of the variable, save it.
+        if (var_type is not None):
+            self.types[name] = var_type
+
+        # Also set the variable using the current With name prefix, if
+        # we have one.
+        if ((do_with_prefix) and (len(self.with_prefix) > 0)):
+            tmp_name = str(self.with_prefix) + str(name)
+            self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
+            
     def report_action(self, action, params=None, description=None):
         self.engine.report_action(action, params, description)
-
 

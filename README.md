@@ -54,6 +54,25 @@ useless statements from the Visual Basic macro code prior to parsing
 and emulation. For some maldocs this can significantly speed up
 analysis.
 
+**Emulating File Writes**
+
+ViperMonkey emulates some file writing behavior. The SHA256 hash of
+dropped files is reported in the ViperMonkey analysis results and the
+actual dropped files are saved in the directory MALDOC_artifacts/,
+where MALDOC is the name of the analyzed maldoc file.
+
+**Emulating Specific VBA Functions**
+
+By default ViperMonkey emulates maldoc behavior starting from standard
+macro auto run function (like AutoOpen, Document_Open, Document_Close,
+etc.). In some cases you may want to emulate the behavior starting
+from a non-standard auto run function. This is supported via the -i
+command line option. To emulate maldoc behavior starting from function
+Foo, use the command line option '-i Foo'. To emulate behavior
+starting from multiple non-standard entry points, use the command line
+option '-i "Foo,Bar,Baz"' (note that the entry point function names
+are comma seperated and must appear in a double quoted string).
+
 **Quick links:**
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
 [Contact the Author](http://decalage.info/contact) -
@@ -67,7 +86,20 @@ analysis.
 News
 ----
 
-- **2018-01-12 v0.05**: a lot of new features and bug fixes contributed by Kirk Sayre
+- **2018-03-22 v0.06**: new features and bug fixes contributed by Kirk Sayre
+- 2018-3:
+  - Added support for parsing some technically invalid VBA statements.
+  - Additional parsing fixes.
+  - Added support for starting emulation at non-standard functions.
+- 2018-2:
+  - Added support for Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+    LCase, RTrim, LTrim, AscW, AscB, and CurDir functions.
+- 2018-1
+  - Added emulation support for saving dropped files.
+  - Added support for For Each loops.
+  - Added support for While Wend loops.
+  - Handle 'Exit Do' instructions.
+- 2018-01-12 v0.05: a lot of new features and bug fixes contributed by Kirk Sayre
 - 2017-12-15:
   - Added support for Select and Do loops.
   - Added support for 'End Sub' and 0 argument return statements.

@@ -37,26 +37,16 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
 from pyparsing import *
+
 from vba_object import *
 from literals import *
 
 from logger import log
-log.debug('importing lib_functions')
 
 # --- VBA Expressions ---------------------------------------------------------
 
@@ -65,7 +55,6 @@ log.debug('importing lib_functions')
 
 # any VBA expression: need to pre-declare using Forward() because it is recursive
 expression = Forward()
-
 
 # --- CHR --------------------------------------------------------------------
 
@@ -112,14 +101,11 @@ class Chr(VBA_Object):
         return 'Chr(%s)' % repr(self.arg)
 
 # Chr, Chr$, ChrB, ChrW()
-# TODO: see 6.1.2.11.1.4 p241 => Chr[BW]?[$]?
-# TODO: fix this like in olevba
 chr_ = Suppress(Combine(( CaselessKeyword('Chr$') | CaselessKeyword('Chr') | \
                           CaselessKeyword('ChrB$') | CaselessKeyword('ChrB') | \
-                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrB')))) + \
+                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrW')))) + \
        Suppress('(') + expression + Suppress(')')
 chr_.setParseAction(Chr)
-
 
 # --- ASC --------------------------------------------------------------------
 
@@ -145,9 +131,8 @@ class Asc(VBA_Object):
 
 # Asc()
 # TODO: see MS-VBAL 6.1.2.11.1.1 page 240 => AscB, AscW
-asc = Suppress(CaselessKeyword('Asc') + '(') + expression + Suppress(')')
+asc = Suppress((CaselessKeyword('Asc') | CaselessKeyword('AscW'))  + '(') + expression + Suppress(')')
 asc.setParseAction(Asc)
-
 
 # --- StrReverse() --------------------------------------------------------------------
 
@@ -169,11 +154,9 @@ class StrReverse(VBA_Object):
     def __repr__(self):
         return 'StrReverse(%s)' % repr(self.arg)
 
-
 # StrReverse()
 strReverse = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expression + Suppress(Literal(')'))
 strReverse.setParseAction(StrReverse)
-
 
 # --- ENVIRON() --------------------------------------------------------------------
 
@@ -199,9 +182,6 @@ class Environ(VBA_Object):
     def __repr__(self):
         return 'Environ(%s)' % repr(self.arg)
 
-
 # Environ("name") => just translated to "%name%", that is enough for malware analysis
 environ = Suppress(CaselessKeyword('Environ') + '(') + expression('arg') + Suppress(')')
 environ.setParseAction(Environ)
-
-

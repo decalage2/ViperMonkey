@@ -37,18 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-# 2016-10-10 v0.03 PL: - added Multiplication and FloorDivision operators
-
 __version__ = '0.03'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -57,7 +46,6 @@ import sys
 from vba_object import *
 
 from logger import log
-log.debug('importing operators')
 
 def debug_repr(op, args):
     r = "("
@@ -107,6 +95,31 @@ class Sum(VBA_Object):
         return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
 
+# --- EQV --------------------------------------------------------
+
+class Eqv(VBA_Object):
+    """
+    VBA Eqv operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Eqv, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the eqv of all the arguments:
+        try:
+            return reduce(lambda a, b: (a & b) | ~(a | b), eval_args(self.arg, context))
+        except TypeError:
+            log.error('Impossible to Eqv arguments of different types.')
+            return 0
+        except RuntimeError:
+            log.error("overflow trying eval Eqv: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' Eqv '.join(map(repr, self.arg))
+    
 # --- XOR --------------------------------------------------------
 
 class Xor(VBA_Object):
@@ -137,9 +150,68 @@ class Xor(VBA_Object):
             sys.exit(1)
 
     def __repr__(self):
-        return debug_repr("^", self.arg)
         return ' ^ '.join(map(repr, self.arg))
 
+# --- AND --------------------------------------------------------
+
+class And(VBA_Object):
+    """
+    VBA And operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(And, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            return reduce(lambda x, y: x & y, eval_args(self.arg, context))
+        except TypeError:
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) & int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to and arguments of different types.')
+                return 0
+        except RuntimeError:
+            log.error("overflow trying eval and: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' & '.join(map(repr, self.arg))
+
+# --- OR --------------------------------------------------------
+
+class Or(VBA_Object):
+    """
+    VBA Or operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Or, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            return reduce(lambda x, y: x | y, eval_args(self.arg, context))
+        except TypeError:
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: int(x) | int(y), eval_args(self.arg, context))
+            except:
+                log.error('Impossible to or arguments of different types.')
+                return 0
+        except RuntimeError:
+            log.error("overflow trying eval or: %r" % self.arg)
+            sys.exit(1)
+
+    def __repr__(self):
+        return ' | '.join(map(repr, self.arg))
+    
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
 class Subtraction(VBA_Object):
@@ -163,14 +235,29 @@ class Subtraction(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
             except Exception as e:
-                log.error('Impossible to subtract arguments of different types. ' + str(e))
-                # TODO
-                return 0
+
+                # Are we doing math on character ordinals?
+                l1 = []
+                orig = eval_args(self.arg, context)
+                for v in orig:
+                    if (isinstance(v, int)):
+                        l1.append(v)
+                        continue
+                    if (isinstance(v, str) and (len(v) == 1)):
+                        l1.append(ord(v))
+                        continue
+
+                # Do we have something that we can do math on?
+                if (len(orig) != len(l1)):                
+                    log.error('Impossible to subtract arguments of different types. ' + str(e))
+                    return 0
+
+                # Try subtracting based on character ordinals.
+                return reduce(lambda x, y: int(x) - int(y), l1)
 
     def __repr__(self):
         return debug_repr("-", self.arg)
         return ' - '.join(map(repr, self.arg))
-
 
 # --- MULTIPLICATION: * OPERATOR ------------------------------------------------
 
@@ -201,7 +288,6 @@ class Multiplication(VBA_Object):
     def __repr__(self):
         return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
-
 
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
@@ -237,7 +323,6 @@ class Division(VBA_Object):
         return debug_repr("/", self.arg)
         return ' / '.join(map(repr, self.arg))
 
-
 # --- FLOOR DIVISION: \ OPERATOR ------------------------------------------------
 
 class FloorDivision(VBA_Object):
@@ -268,7 +353,6 @@ class FloorDivision(VBA_Object):
     def __repr__(self):
         return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
-
 
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
 
@@ -302,7 +386,6 @@ class Concatenation(VBA_Object):
         return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
-
 # --- MOD OPERATOR -----------------------------------------------------------
 
 class Mod(VBA_Object):
@@ -324,5 +407,4 @@ class Mod(VBA_Object):
     def __repr__(self):
         return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
-
 

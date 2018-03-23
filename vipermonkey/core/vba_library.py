@@ -37,29 +37,21 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# ------------------------------------------------------------------------------
-# CHANGELOG:
-# 2015-02-12 v0.01 PL: - first prototype
-# 2015-2016        PL: - many updates
-# 2016-06-11 v0.02 PL: - split vipermonkey into several modules
-
 __version__ = '0.02'
-
-# ------------------------------------------------------------------------------
-# TODO:
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import array
 import math
 import base64
 import re
+from hashlib import sha256
+import os
+import random
 
 from vba_context import VBA_LIBRARY
 
 from logger import log
-log.debug('importing vba_library')
-
 
 # === VBA LIBRARY ============================================================
 
@@ -67,28 +59,39 @@ log.debug('importing vba_library')
 # TODO: Excel
 # TODO: other MS Office apps?
 
-class MsgBox(object):
+class VbaLibraryFunc(object):
+    """
+    Marker class to tell if a class implements a VBA function.
+    """
+    pass
+    
+class MsgBox(VbaLibraryFunc):
     """
     6.1.2.8.1.13 MsgBox
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         context.report_action('Display Message', params[0], 'MsgBox')
         return 1  # vbOK
 
-
-class Len(object):
+class Len(VbaLibraryFunc):
     """
-    TODO: Len
+    Len() function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         return len(params[0])
 
+class LenB(VbaLibraryFunc):
+    """
+    LenB() function.
+    """
 
-class Mid(object):
+    def eval(self, context, params=None):
+        # TODO: Somehow take the default character set into account.
+        return len(params[0])
+
+class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
 
@@ -96,7 +99,6 @@ class Mid(object):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if ((len(params) > 0) and (params[0] == "ActiveDocument")):
             params = params[1:]
         assert len(params) in (2,3)
@@ -139,13 +141,12 @@ class Mid(object):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
-class Left(object):
+class Left(VbaLibraryFunc):
     """
     Left function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if (len(params) > 2):
             params = params[-2:]
         assert len(params) == 2
@@ -173,13 +174,12 @@ class Left(object):
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
-class Right(object):
+class Right(VbaLibraryFunc):
     """
     Right function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         if (len(params) > 2):
             params = params[-2:]
         assert len(params) == 2
@@ -209,14 +209,13 @@ class Right(object):
 
 meta = None
     
-class BuiltInDocumentProperties(object):
+class BuiltInDocumentProperties(VbaLibraryFunc):
     """
     Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
     """
 
     def eval(self, context, params=None):
 
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) == 1
         prop = params[0]
 
@@ -241,7 +240,7 @@ class Item(BuiltInDocumentProperties):
     """
     pass
     
-class Shell(object):
+class Shell(VbaLibraryFunc):
     """
     6.1.2.8.1.15 Shell
     Function Shell(PathName As Variant, Optional WindowStyle As VbAppWinStyle = vbMinimizedFocus)
@@ -252,7 +251,6 @@ class Shell(object):
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         try:
             params.remove('ThisDocument')
             params.remove('BuiltInDocumentProperties')
@@ -263,26 +261,24 @@ class Shell(object):
         context.report_action('Execute Command', command, 'Shell function')
         return 0
 
-class Array(object):
+class Array(VbaLibraryFunc):
     """
     Create an array.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         r = []
         for v in params:
             r.append(v)
         log.debug("Array: return %r" % r)
         return r
 
-class UBound(object):
+class UBound(VbaLibraryFunc):
     """
     UBound() array function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
@@ -290,13 +286,12 @@ class UBound(object):
         log.debug("UBound: return %r" % r)
         return r
 
-class LBound(object):
+class LBound(VbaLibraryFunc):
     """
     LBound() array function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
@@ -304,13 +299,12 @@ class LBound(object):
         log.debug("LBound: return %r" % r)
         return r
 
-class Trim(object):
+class Trim(VbaLibraryFunc):
     """
     Trim() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         r = None
         if (isinstance(params[0], int)):
@@ -320,37 +314,119 @@ class Trim(object):
         log.debug("Trim: return %r" % r)
         return r
 
-class StrConv(object):
+class RTrim(VbaLibraryFunc):
+    """
+    RTrim() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        r = None
+        if (isinstance(params[0], int)):
+            r = str(params[0])
+        else:
+            r = params[0].rstrip()
+        log.debug("RTrim: return %r" % r)
+        return r
+
+class LTrim(VbaLibraryFunc):
+    """
+    LTrim() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        r = None
+        if (isinstance(params[0], int)):
+            r = str(params[0])
+        else:
+            r = params[0].lstrip()
+        log.debug("LTrim: return %r" % r)
+        return r
+
+class AscW(VbaLibraryFunc):
+    """
+    AscW() character function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) == 1
+        c = params[0]
+        if (isinstance(c, int)):
+            r = c
+        else:
+            r = ord(str(c)[0])
+        log.debug("AscW: return %r" % r)
+        return r
+
+class AscB(AscW):
+    pass
+
+class StrConv(VbaLibraryFunc):
     """
     StrConv() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
-        # TODO: Actually implement this.
-        r = str(params[0])
+
+        # TODO: Actually implement this properly.
+
+        # Get the conversion type to perform.
+        conv = None
         if (len(params) > 1):
             conv = int(params[1])
-            if (conv == 1):
-                r = r.upper()
-            if (conv == 2):
-                r = r.lower()
-            if (conv == 64):
-                padded = ""
-                for c in r:
-                    padded += c + "\0"
-                r = padded
+
+        # Do the conversion.
+        r = params[0]
+        if (isinstance(r, str)):
+            if (conv):
+                if (conv == 1):
+                    r = r.upper()
+                if (conv == 2):
+                    r = r.lower()
+                if (conv == 64):
+                    padded = ""
+                    for c in r:
+                        padded += c + "\0"
+                    r = padded
+                if (conv == 128):
+                    pass
+
+        elif (isinstance(r, list)):
+
+            # Handle list of ASCII values.
+            all_int = True
+            for i in r:
+                if (not isinstance(i, int)):
+                    all_int = False
+                    break
+            if (all_int):
+                tmp = ""
+                for i in r:
+                    if (i <= 0):
+                        continue
+                    try:
+                        tmp += chr(i)
+                        #if (conv == 64):
+                        #    tmp += "\0"
+                    except:
+                        pass
+                r = tmp
+
+            else:
+                log.error("StrConv: Unhandled type.")
+                r = ''
+                        
         log.debug("StrConv: return %r" % r)
         return r
 
-class Split(object):
+class Split(VbaLibraryFunc):
     """
     Split() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]
@@ -361,13 +437,12 @@ class Split(object):
         log.debug("Split: return %r" % r)
         return r
 
-class Int(object):
+class Int(VbaLibraryFunc):
     """
     Int() function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         val = params[0]
@@ -385,7 +460,7 @@ class CInt(Int):
     """
     pass
 
-class Oct(object):
+class Oct(VbaLibraryFunc):
     """
     Oct() function.
     """
@@ -401,13 +476,12 @@ class Oct(object):
             log.error("Oct(): Invalid call oct(%r). Returning ''." % val)
             return ''
 
-class StrReverse(object):
+class StrReverse(VbaLibraryFunc):
     """
     StrReverse() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]
@@ -417,13 +491,12 @@ class StrReverse(object):
         log.debug("StrReverse: return %r" % r)
         return r
 
-class Replace(object):
+class Replace(VbaLibraryFunc):
     """
     Replace() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) == 3
         string = params[0]
         if (string is None):
@@ -438,13 +511,12 @@ class Replace(object):
         log.debug("Replace: return %r" % r)
         return r
 
-class InStr(object):
+class InStr(VbaLibraryFunc):
     """
     InStr() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert len(params) >= 2
 
         # Were we given a start position?
@@ -485,13 +557,59 @@ class InStr(object):
         log.debug("InStr: %r returns %r" % (self, r))
         return r
 
-class Sgn(object):
+class InStrRev(VbaLibraryFunc):
+    """
+    InStrRev() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 2
+
+        # Were we given a start position?
+        start = 0
+        s1 = params[0]
+        if (s1 is None):
+            s1 = ''
+        s2 = params[1]
+        if (s2 is None):
+            s2 = ''
+        if (isinstance(params[0], int)):
+            start = params[0] - 1
+            if (start < 0):
+                start = 0
+            s1 = params[1]
+            s2 = params[2]
+
+        # Were we given a search type?
+        search_type = 1
+        if (isinstance(params[-1], int)):
+            search_type = params[-1]
+            if (search_type not in (0, 1)):
+                search_type = 1
+
+        # TODO: Figure out how VB binary search works. For now just do text search.
+        r = None
+        if (len(s1) == 0):
+            r = 0
+        elif (len(s2) == 0):
+            r = start
+        elif (start > len(s1)):
+            r = 0
+        else:
+            if (s2 in s1):
+                r = s1[start:].rindex(s2) + start + 1
+            else:
+                r = 0
+        log.debug("InStr: %r returns %r" % (self, r))
+        return r
+
+    
+class Sgn(VbaLibraryFunc):
     """
     Sgn() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         num = params[0]
         r = ''
@@ -502,13 +620,12 @@ class Sgn(object):
         log.debug("Sgn: %r returns %r" % (self, r))
         return r
         
-class Sqr(object):
+class Sqr(VbaLibraryFunc):
     """
     Sqr() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -519,13 +636,12 @@ class Sqr(object):
         log.debug("Sqr: %r returns %r" % (self, r))
         return r
 
-class Abs(object):
+class Abs(VbaLibraryFunc):
     """
     Abs() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -536,13 +652,12 @@ class Abs(object):
         log.debug("Abs: %r returns %r" % (self, r))
         return r
 
-class Fix(object):
+class Fix(VbaLibraryFunc):
     """
     Fix() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -553,13 +668,12 @@ class Fix(object):
         log.debug("Fix: %r returns %r" % (self, r))
         return r
 
-class Round(object):
+class Round(VbaLibraryFunc):
     """
     Round() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -570,13 +684,12 @@ class Round(object):
         log.debug("Round: %r returns %r" % (self, r))
         return r
 
-class Hex(object):
+class Hex(VbaLibraryFunc):
     """
     Hex() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -587,13 +700,12 @@ class Hex(object):
         log.debug("Hex: %r returns %r" % (self, r))
         return r
 
-class CByte(object):
+class CByte(VbaLibraryFunc):
     """
     CByte() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -610,7 +722,30 @@ class CByte(object):
         log.debug("CByte: %r returns %r" % (self, r))
         return r
 
-class CBool(object):
+class CLng(VbaLibraryFunc):
+    """
+    CLng() math function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        r = ''
+        try:
+            tmp = params[0]
+            if (isinstance(tmp, str)):
+                tmp = params[0].upper()
+                if (tmp.startswith("&H")):
+                    tmp = tmp.replace("&H", "0x")
+                    tmp = int(tmp, 16)
+                elif (len(tmp) == 1):
+                    tmp = ord(tmp)
+            r = int(tmp)
+        except:
+            pass 
+        log.debug("CLng: %r returns %r" % (self, r))
+        return r
+    
+class CBool(VbaLibraryFunc):
     """
     CBool() type conversion function.
     """
@@ -624,7 +759,7 @@ class CBool(object):
         log.debug("CBool: %r returns %r" % (self, r))
         return r
 
-class CDate(object):
+class CDate(VbaLibraryFunc):
     """
     CDate() type conversion function.
     """
@@ -636,7 +771,7 @@ class CDate(object):
         log.debug("CDate: %r returns %r" % (self, r))
         return r
 
-class CStr(object):
+class CStr(VbaLibraryFunc):
     """
     CStr() type conversion function.
     """
@@ -648,7 +783,7 @@ class CStr(object):
         log.debug("CStr: %r returns %r" % (self, r))
         return r
 
-class CSng(object):
+class CSng(VbaLibraryFunc):
     """
     CSng() type conversion function.
     """
@@ -667,13 +802,12 @@ class CSng(object):
         log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
     
-class Atn(object):
+class Atn(VbaLibraryFunc):
     """
     Atn() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -684,13 +818,12 @@ class Atn(object):
         log.debug("Atn: %r returns %r" % (self, r))
         return r
 
-class Tan(object):
+class Tan(VbaLibraryFunc):
     """
     Tan() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -701,13 +834,12 @@ class Tan(object):
         log.debug("Tan: %r returns %r" % (self, r))
         return r
         
-class Cos(object):
+class Cos(VbaLibraryFunc):
     """
     Cos() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -718,13 +850,12 @@ class Cos(object):
         log.debug("Cos: %r returns %r" % (self, r))
         return r
         
-class Log(object):
+class Log(VbaLibraryFunc):
     """
     Log() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -735,13 +866,12 @@ class Log(object):
         log.debug("Log: %r returns %r" % (self, r))
         return r
     
-class String(object):
+class String(VbaLibraryFunc):
     """
     String() repeated character string creation function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 2)
         r = ''
         try:
@@ -753,13 +883,12 @@ class String(object):
         log.debug("String: %r returns %r" % (self, r))
         return r
 
-class Dir(object):
+class Dir(VbaLibraryFunc):
     """
     Dir() file/directory finding function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) >= 1)
         pat = params[0]
         attrib = None
@@ -771,13 +900,12 @@ class Dir(object):
         log.debug("Dir: %r returns %r" % (self, r))
         return r
 
-class RGB(object):
+class RGB(VbaLibraryFunc):
     """
     RGB() color function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 3)
         r = ''
         try:
@@ -790,13 +918,12 @@ class RGB(object):
         log.debug("RGB: %r returns %r" % (self, r))
         return r
 
-class Exp(object):
+class Exp(VbaLibraryFunc):
     """
     Exp() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -807,13 +934,12 @@ class Exp(object):
         log.debug("Exp: %r returns %r" % (self, r))
         return r
             
-class Sin(object):
+class Sin(VbaLibraryFunc):
     """
     Sin() math function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = ''
         try:
@@ -824,25 +950,23 @@ class Sin(object):
         log.error("Sin: %r returns %r" % (self, r))
         return r
             
-class Str(object):
+class Str(VbaLibraryFunc):
     """
     Str() convert number to string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         r = str(params[0])
         log.debug("Str: %r returns %r" % (self, r))
         return r
 
-class Val(object):
+class Val(VbaLibraryFunc):
     """
     Val() convert string to number function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
 
         # Sanity check.
@@ -880,13 +1004,12 @@ class Val(object):
         log.debug("Val: Invalid Value: %r returns %r" % (self, r))
         return r
     
-class Base64Decode(object):
+class Base64Decode(VbaLibraryFunc):
     """
-    Base64Decode() function.
+    Base64Decode() function used by some malware. Note that this is not part of Visual Basic.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         txt = params[0]
         if (txt is None):
@@ -895,7 +1018,10 @@ class Base64Decode(object):
         log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
 
-class Pmt(object):
+class Base64DecodeString(Base64Decode):
+    pass
+    
+class Pmt(VbaLibraryFunc):
     """
     Pmt() payment computation function.
 
@@ -990,13 +1116,12 @@ class Pmt(object):
         log.debug("Pmt: %r returns %r" % (self, r))
         return r
 
-class Day(object):
+class Day(VbaLibraryFunc):
     """
     Day() function. This is currently partially implemented.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         assert (len(params) == 1)
         txt = params[0]
         if (txt is None):
@@ -1015,18 +1140,27 @@ class Day(object):
         log.debug("Day: %r returns %r" % (self, r))
         return r
 
-class UCase(object):
+class UCase(VbaLibraryFunc):
     """
     UCase() string function.
     """
 
     def eval(self, context, params=None):
-        # assumption: here the params have already been evaluated by Call_Function beforehand
         r = str(params[0]).upper()
         log.debug("UCase: %r returns %r" % (self, r))
         return r
 
-class Randomize(object):
+class LCase(VbaLibraryFunc):
+    """
+    LCase() string function.
+    """
+
+    def eval(self, context, params=None):
+        r = str(params[0]).lower()
+        log.debug("LCase: %r returns %r" % (self, r))
+        return r
+
+class Randomize(VbaLibraryFunc):
     """
     Randomize RNG function.
     """
@@ -1035,21 +1169,190 @@ class Randomize(object):
         log.debug("Randomize(): Stubbed out as NOP")
         return ''
 
-class Rnd(object):
+class Rnd(VbaLibraryFunc):
     """
     Rnd() RNG function.
     """
 
     def eval(self, context, params=None):
-        log.debug("Rnd(): Stubbed out as NOP")
-        return ''
-    
+        return random.random()
+
+class Environ(VbaLibraryFunc):
+    """
+    Environ() function for getting environment variable values.
+    """
+
+    def eval(self, context, params=None):
+        # TODO: Actually simulate getting common environment variable values.
+        r = "%" + str(params[0]).upper() + "%"
+        log.debug("Environ: %r returns %r" % (self, r))
+        return r
+
+class IIf(VbaLibraryFunc):
+    """
+    IIf() if-like function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 3)
+        guard = params[0]
+        true_part = params[1]
+        false_part = params[2]
+        if (guard):
+            return true_part
+        else:
+            return false_part
+
+out_dir = None
+file_count = 0
+
+class Close(VbaLibraryFunc):
+    """
+    File Close statement.
+    """
+
+    def eval(self, context, params=None):
+
+        # Are we closing a file pointer?
+        if ((len(params) != 1) or (not params[0].startswith('#'))):
+
+            # No actions to do here.
+            return
+
+        # We are actually closing a file.
+        
+        # Get the name of the file being closed.
+        file_id = params[0]
+        name = context.open_files[file_id]["name"]
+
+        # Get the data written to the file and track it.
+        data = context.open_files[file_id]["contents"]
+        context.closed_files[name] = data
+
+        # Clear the file out of the open files.
+        del context.open_files[file_id]
+
+        # Save the hash of the written file.
+        raw_data = array.array('B', data).tostring()
+        h = sha256()
+        h.update(raw_data)
+        file_hash = h.hexdigest()
+        context.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
+
+        # TODO: Set a flag to control whether to dump file contents.
+
+        # Dump out the file.
+        if (out_dir is not None):
+
+            # Make the dropped file directory if needed.
+            if (not os.path.isdir(out_dir)):
+                os.makedirs(out_dir)
+
+            # Dump the file.
+            try:
+
+                # Get a unique name for the file.
+                short_name = name
+                if ('\\' in short_name):
+                    start = short_name.rindex('\\') + 1
+                short_name = out_dir + short_name[start:].strip()
+                try:
+                    f = open(short_name, 'r')
+                    # Already exists. Get a unique name.
+                    f.close()
+                    file_count += 1
+                    short_name += " (" + str(file_count) + ")"
+                except:
+                    pass
+                    
+                # Write out the dropped file.
+                f = open(short_name, 'wb')
+                f.write(raw_data)
+                f.close()
+                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+                
+            except Exception as e:
+                log.error("Writing file " + short_name + " failed. " + str(e))
+                
+class Put(VbaLibraryFunc):
+    """
+    File Put statement.
+    """
+
+    def eval(self, context, params=None):
+        assert ((len(params) == 2) or (len(params) == 3))
+
+        # Get the ID of the file.
+        file_id = params[0]
+
+        # TODO: Handle writing at a given file position.
+
+        # Get the data.
+        data = params[1]
+        if (len(params) == 3):
+            data = params[2]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
+
+class CurDir(VbaLibraryFunc):
+    """
+    CurDir() function.
+    """
+
+    def eval(self, context, params=None):
+        return "~"
+            
+class Run(VbaLibraryFunc):
+    """
+    Application.Run() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the name of the function to call.
+        func_name = params[0]
+
+        # Get any parameters to pass to the function to call.
+        call_params = None
+        if (len(params) > 1):
+            call_params = params[1:]
+        
+        # Can we find the function to call?
+        try:
+            s = context.get(func_name)
+            return s.eval(context=context, params=call_params)
+        except KeyError:
+            log.error("Application.Run() failed. Cannot find function " + func_name + ".")
+
+class CreateObject(VbaLibraryFunc):
+    """
+    CreateObject() function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        pass
+                
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
-               UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct):
+               UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
+               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
@@ -1096,5 +1399,4 @@ for name, value in (
         ('vbObjectError', -2147221504),
 ):
     VBA_LIBRARY[name.lower()] = value
-
 

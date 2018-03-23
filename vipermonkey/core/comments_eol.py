@@ -73,7 +73,7 @@ comment_single_quote = Combine(single_quote + comment_body)
 
 # 5.4.1.2 Rem Statement
 # rem-statement = "Rem" comment-body
-rem_statement = Combine(CaselessKeyword('Rem') + comment_body)
+rem_statement = Suppress(Combine(CaselessKeyword('Rem') + comment_body))
 
 
 # --- SEPARATOR AND SPECIAL TOKENS ---------------------------------------

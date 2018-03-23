@@ -56,7 +56,6 @@ log.debug('importing vba_lines')
 
 from pyparsing import *
 
-
 # --- WSC = White Space Character --------------------------------------------
 
 # Important: need to change the default pyparsing whitespace setting, because CRLF is not a whitespace for VBA.
