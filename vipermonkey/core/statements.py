@@ -50,6 +50,7 @@ __version__ = '0.02'
 from comments_eol import *
 from expressions import *
 from vba_context import *
+from reserved import *
 
 from logger import log
 
@@ -235,7 +236,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
-            Optional(CaselessKeyword('as').suppress() + lex_identifier('type'))
+            Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type')))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -625,7 +626,7 @@ class Prop_Assign_Statement(VBA_Object):
     def eval(self, context, params=None):
         pass
 
-prop_assign_statement = member_access_expression("prop") + lex_identifier('param') + Suppress(CaselessKeyword(':=')) + expression('value')
+prop_assign_statement = member_access_expression("prop") + lex_identifier('param') + Suppress(':=') + expression('value')
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
@@ -1624,7 +1625,7 @@ simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_
 # the "<<=" operator:
 statement <<= type_declaration | simple_for_statement | simple_for_each_statement | simple_if_statement | \
               simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-              with_statement| simple_statement
+              with_statement| simple_statement | rem_statement
 
 statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
 

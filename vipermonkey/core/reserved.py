@@ -103,9 +103,16 @@ special_form = caselessKeywordsList((
 
 # A <reserved-type-identifier> is used within a declaration to identify the specific
 # declared type (section 2.2) of an entity.
-reserved_type_identifier = caselessKeywordsList((
+
+# TODO: Add more of these as needed or generalize.
+reserved_complex_type_identifier = caselessKeywordsList((
+    "MSForms.fmScrollAction", "MSForms.ReturnSingle"))
+
+reserved_atomic_type_identifier = caselessKeywordsList((
     "Boolean", "Byte", "Currency", "Date", "Double", "Integer",
     "Long", "LongLong", "LongPtr", "Single", "String", "Variant"))
+
+reserved_type_identifier = reserved_atomic_type_identifier | reserved_complex_type_identifier
 
 # A <boolean-literal-identifier> specifying "true" or "false" has a declared type of
 # Boolean and a data value of True or False, respectively.
