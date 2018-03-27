@@ -321,7 +321,7 @@ class Dim_Statement(VBA_Object):
             if (var[1]):
                 r += "()"
             if (var[2]):
-                r += " As " + var[2]
+                r += " As " + str(var[2])
         if (self.init_val is not None):
             r += " = " + str(self.init_val)
         return r
@@ -626,7 +626,8 @@ class Prop_Assign_Statement(VBA_Object):
     def eval(self, context, params=None):
         pass
 
-prop_assign_statement = member_access_expression("prop") + lex_identifier('param') + Suppress(':=') + expression('value')
+prop_assign_statement = (member_access_expression("prop") + lex_identifier('param') + Suppress(':=') + expression('value') + \
+                         ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value')))
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
