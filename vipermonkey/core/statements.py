@@ -51,6 +51,7 @@ from comments_eol import *
 from expressions import *
 from vba_context import *
 from reserved import *
+from from_unicode_str import *
 
 from logger import log
 
@@ -179,12 +180,15 @@ class Parameter(VBA_Object):
         super(Parameter, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         self.my_type = tokens.type
+        self.init_val = tokens.init_val
         log.debug('parsed %r' % self)
 
     def __repr__(self):
         r = str(self.name)
         if self.my_type:
             r += ' as ' + str(self.my_type)
+        if (self.init_val):
+            r += ' = ' + str(self.init_val)
         return r
 
 # 5.3.1.5 Parameter Lists
@@ -236,7 +240,8 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
-            Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type')))
+            Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type'))) + \
+            Optional('=' + expression('init_val'))
 parameter.setParseAction(Parameter)
 
 parameters_list = delimitedList(parameter, delim=',')
@@ -434,7 +439,7 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = CaselessKeyword("Dim").suppress() + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
 dim_statement.setParseAction(Dim_Statement)
@@ -498,7 +503,10 @@ class Let_Statement(VBA_Object):
                 tmp = []
                 for c in value:
                     tmp.append(ord(c))
-                    tmp.append(0)
+                    # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
+                    # or not (no padding).
+                    if (not isinstance(value, from_unicode_str)):
+                        tmp.append(0)
                 value = tmp
 
             # Handle conversion of byte arrays to strings, if needed.
@@ -604,7 +612,7 @@ class Let_Statement(VBA_Object):
 
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
                 Optional(Suppress('Const')) + \
-                ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + expression('index') + Suppress(')'))) ^ \
+                ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + Optional(expression('index')) + Suppress(')'))) ^ \
                  member_access_expression('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
@@ -854,8 +862,15 @@ class While_Statement(VBA_Object):
         context.loop_stack.append(True)
 
         # Loop until the loop is broken out of or we violate the loop guard.
+        num_iters = 0
         while (True):
 
+            # Break infinite loops.
+            if (num_iters > VBA_Object.loop_upper_bound):
+                log.error("Maximum loop iterations exceeded. Breaking loop.")
+                break
+            num_iters += 1
+            
             # Test the loop guard to see if we should exit the loop.
             guard_val = eval_arg(self.guard, context)
             if (self.loop_type.lower() == "until"):
@@ -917,7 +932,14 @@ class Do_Statement(VBA_Object):
         context.loop_stack.append(True)
 
         # Loop until the loop is broken out of or we violate the loop guard.
+        num_iters = 0
         while (True):
+
+            # Break infinite loops.
+            if (num_iters > VBA_Object.loop_upper_bound):
+                log.error("Maximum loop iterations exceeded. Breaking loop.")
+                break
+            num_iters += 1
             
             # Execute the loop body.
             done = False

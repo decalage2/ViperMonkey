@@ -41,6 +41,8 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import re
+
 from identifiers import *
 from lib_functions import *
 from literals import *
@@ -357,7 +359,7 @@ class Function_Call(VBA_Object):
             # Is this actually an array access?
             if ((isinstance(f, list) and len(params) > 0)):
                 tmp = f
-                # Try to gues whether we are accessing a character in a string.
+                # Try to guess whether we are accessing a character in a string.
                 if ((len(f) == 1) and (isinstance(f[0], str))):
                     tmp = f[0]
                 log.debug('Array Access: %r[%r]' % (tmp, params[0]))
@@ -368,7 +370,7 @@ class Function_Call(VBA_Object):
                     return r
                 except:
                     log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
-                    return ""
+                    return 0
             log.debug('Calling: %r' % f)
             if (f is not None):
                 if (not(isinstance(f, str)) and
@@ -388,6 +390,7 @@ class Function_Call(VBA_Object):
                         return r
                     except:
                         log.error("Array access %r[%r] failed." % (f, params[0]))
+                        return 0
                     else:
                         log.error("Improper type for function.")
                         return None
@@ -614,13 +617,21 @@ class BoolExprItem(VBA_Object):
             return lhs <= rhs
         elif (self.op == "<>"):
             return lhs != rhs
+        elif (self.op.lower() == "like"):
+            # TODO: Actually convert VBA regexes to Python regexes.
+            try:
+                return (re.match(rhs, lhs) is not None)
+            except Exception as e:
+                log.error("BoolExprItem: 'Like' re match failed. " + str(e))
+                return False
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
 
 bool_expr_item = (limited_expression + \
                   (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | \
-                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>")) + \
+                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>") | \
+                   CaselessKeyword("Like")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)

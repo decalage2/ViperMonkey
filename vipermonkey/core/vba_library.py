@@ -48,6 +48,7 @@ import re
 from hashlib import sha256
 import os
 import random
+from from_unicode_str import *
 
 from vba_context import VBA_LIBRARY
 
@@ -386,12 +387,18 @@ class StrConv(VbaLibraryFunc):
                 if (conv == 2):
                     r = r.lower()
                 if (conv == 64):
-                    padded = ""
-                    for c in r:
-                        padded += c + "\0"
-                    r = padded
+
+                    # We are converting the string to unicode. ViperMonkey assumes
+                    # unless otherwise noted that all strings are unicode. Make sure
+                    # that the string is represented as a regular str object so that
+                    # it is treated as unicode.
+                    r = str(r)
+
                 if (conv == 128):
-                    pass
+
+                    # The string is being converted from unicode to ascii. Mark this
+                    # by representing the string with the from_unicode_str class.
+                    r = from_unicode_str(r)
 
         elif (isinstance(r, list)):
 

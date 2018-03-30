@@ -64,9 +64,19 @@ class Sub(VBA_Object):
         return 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def eval(self, context, params=None):
+
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
+
+        # Set the default parameter values.
+        for param in self.params:
+            init_val = None
+            if (param.init_val is not None):
+                init_val = eval_arg(param.init_val, context=context)
+            context.set(param.name, init_val)
+
+        # Set given parameter values.
         if params is not None:
             # TODO: handle named parameters
             for i in range(len(params)):
@@ -205,11 +215,22 @@ class Function(VBA_Object):
         return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def eval(self, context, params=None):
+
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
+
         # add function name in locals:
         context.set(self.name, None)
+
+        # Set the default parameter values.
+        for param in self.params:
+            init_val = None
+            if (param.init_val is not None):
+                init_val = eval_arg(param.init_val, context=context)
+            context.set(param.name, init_val)
+            
+        # Set given parameter values.
         if params is not None:
             # TODO: handle named parameters
             for i in range(len(params)):
