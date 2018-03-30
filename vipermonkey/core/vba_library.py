@@ -1351,7 +1351,20 @@ class CreateObject(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         pass
-                
+
+class CheckSpelling(VbaLibraryFunc):
+    """
+    Application.CheckSpelling() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+
+        # TODO: Find and use a Python spell checker to check the spelling
+        # of the argument.
+
+        # For now just say everything is correctly spelled.
+        return True
+    
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1359,7 +1372,8 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject):
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
+               CheckSpelling):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
