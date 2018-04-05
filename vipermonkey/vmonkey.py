@@ -115,6 +115,29 @@ from core import *
     
 # === MAIN (for tests) ===============================================================================================
 
+def is_useless_call(line):
+    """
+    See if the given line contains a useless do-nothing function call.
+    """
+
+    # These are the functions that do nothing if they appear on a line by themselves.
+    # TODO: Add more functions as needed.
+    useless_funcs = set(["Cos", "Log", "Cos", "Exp", "Sin", "Tan"])
+
+    # Is this an assignment line?
+    if ("=" in line):
+        return False
+
+    # Is this a function call?
+    if ("(" not in line):
+        return False
+    
+    # Nothing is being assigned. See if a useless function is called and the
+    # return value is not used.
+    line = line.replace(" ", "")
+    called_func = line[:line.index("(")]
+    return (called_func in useless_funcs)
+
 def strip_useless_code(vba_code):
     """
     Strip statements that have no usefull effect from the given VB. The
@@ -184,7 +207,7 @@ def strip_useless_code(vba_code):
                 refs[var] = True
 
 
-    # Figure out what asignemnts to trip and keep.
+    # Figure out what assignments to strip and keep.
     comment_lines = set()
     keep_lines = set()
     for var in refs.keys():
@@ -208,11 +231,17 @@ def strip_useless_code(vba_code):
     line_num = 0
     for line in vba_code.split("\n"):
 
-        # Does this line get commented out?
+        # Does this line get stripped based on variable usage?
         line_num += 1
         if (line_num in comment_lines):
             log.debug("STRIP: Stripping Line: " + line)
             continue
+
+        # Does this line get stripped based on a useless function call?
+        if (is_useless_call(line)):
+            continue
+
+        # The line is useful. Keep it.
         r += line + "\n"
 
     return r
