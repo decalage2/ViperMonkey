@@ -88,7 +88,8 @@ class Sub(VBA_Object):
         # TODO self.call_params
         for s in self.statements:
             log.debug('Sub %s eval statement: %s' % (self.name, s))
-            s.eval(context=context)
+            if (isinstance(s, VBA_Object)):
+                s.eval(context=context)
 
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
@@ -242,7 +243,8 @@ class Function(VBA_Object):
         # TODO self.call_params
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
-            s.eval(context=context)
+            if (isinstance(s, VBA_Object)):
+                s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):

@@ -60,7 +60,7 @@ class VBA_Object(object):
     """
 
     # Upper bound for loop iterations. 0 or less means unlimited.
-    loop_upper_bound = 1000000
+    loop_upper_bound = 10000000
     
     def __init__(self, original_str, location, tokens):
         """

@@ -681,11 +681,14 @@ class Round(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        assert ((len(params) == 1) or (len(params) == 2))
         r = ''
         try:
             num = float(params[0])
-            r = round(num)
+            sig = 0
+            if (len(params) == 2):
+                sig = int(params(1))                
+            r = round(num, sig)
         except:
             pass
         log.debug("Round: %r returns %r" % (self, r))
@@ -954,7 +957,7 @@ class Sin(VbaLibraryFunc):
             r = math.sin(num)
         except:
             pass
-        log.error("Sin: %r returns %r" % (self, r))
+        log.debug("Sin: %r returns %r" % (self, r))
         return r
             
 class Str(VbaLibraryFunc):
@@ -1364,6 +1367,15 @@ class CheckSpelling(VbaLibraryFunc):
 
         # For now just say everything is correctly spelled.
         return True
+
+class Specialfolders(VbaLibraryFunc):
+    """
+    Excel Specialfolders() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        return "%" + str(params[0]) + "%"
     
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -1373,7 +1385,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
-               CheckSpelling):
+               CheckSpelling, Specialfolders):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

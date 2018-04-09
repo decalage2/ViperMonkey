@@ -1473,7 +1473,7 @@ class With_Statement(VBA_Object):
         return
 
 # With statement
-with_statement = CaselessKeyword('With').suppress() + lex_identifier('env') + Suppress(EOS) + \
+with_statement = CaselessKeyword('With').suppress() + (member_access_expression('env') ^ lex_identifier('env')) + Suppress(EOS) + \
                  Group(statement_block('body')) + \
                  CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
 with_statement.setParseAction(With_Statement)
@@ -1545,6 +1545,10 @@ on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
                       (CaselessKeyword('Resume') + CaselessKeyword('Next')))
 
 on_error_statement.setParseAction(On_Error_Statement)
+
+# --- RESUME STATEMENT -------------------------------------------------------------
+
+resume_statement = CaselessKeyword('Resume')
 
 # --- FILE OPEN -------------------------------------------------------------
 
@@ -1641,7 +1645,7 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
 simple_statement = dim_statement | option_statement | (let_statement ^ prop_assign_statement ^ expression ^ call_statement ^ label_statement) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-                   rem_statement | print_statement
+                   rem_statement | print_statement | resume_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
