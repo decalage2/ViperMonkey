@@ -163,6 +163,11 @@ def strip_useless_code(vba_code):
                 log.debug("SKIP: Continuation line. Keep it.")
                 continue
 
+            # Skip function definitions.
+            if (("Sub " in line) or ("Function " in line)):
+                log.debug("SKIP: Function definition. Keep it.")
+                continue
+            
             # Skip lines where the '=' is part of a boolean expression.
             strip_line = line.strip()            
             skip = False
