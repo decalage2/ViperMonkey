@@ -688,6 +688,8 @@ class For_Statement(VBA_Object):
             done = False
             for s in self.statements:
                 log.debug('FOR loop eval statement: %r' % s)
+                if (not isinstance(s, VBA_Object)):
+                    continue
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
@@ -803,6 +805,8 @@ class For_Each_Statement(VBA_Object):
                 done = False
                 for s in self.statements:
                     log.debug('FOR EACH loop eval statement: %r' % s)
+                    if (not isinstance(s, VBA_Object)):
+                        continue
                     s.eval(context=context)
 
                     # Has 'Exit For' been called?
@@ -882,6 +886,8 @@ class While_Statement(VBA_Object):
             done = False
             for s in self.body:
                 log.debug('WHILE loop eval statement: %r' % s)
+                if (not isinstance(s, VBA_Object)):
+                    continue
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
@@ -945,6 +951,8 @@ class Do_Statement(VBA_Object):
             done = False
             for s in self.body:
                 log.debug('DO loop eval statement: %r' % s)
+                if (not isinstance(s, VBA_Object)):
+                    continue
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
@@ -998,6 +1006,8 @@ class Select_Statement(VBA_Object):
 
         # Get the current value of the guard expression for the select.
         log.debug("eval select: " + str(self))
+        if (not isinstance(self.select_val, VBA_Object)):
+            return
         select_guard_val = self.select_val.eval(context, params)
 
         # Loop through each case, seeing which one applies.
@@ -1013,6 +1023,8 @@ class Select_Statement(VBA_Object):
                 # Evaluate the body of this case.
                 log.debug("eval select: take case " + str(case))
                 for statement in case.body:
+                    if (not isinstance(statement, VBA_Object)):
+                        continue
                     statement.eval(context, params)
 
                 # Done with the select.
@@ -1209,6 +1221,8 @@ class If_Statement(VBA_Object):
 
                 # Yes it does. Emulate the statements in the body.
                 for stmt in piece["body"]:
+                    if (not isinstance(stmt, VBA_Object)):
+                        continue
                     stmt.eval(context)
 
                 # We have emulated the if.
@@ -1267,7 +1281,8 @@ class If_Statement_Macro(If_Statement):
         log.debug("eval: " + str(self))
         then_part = self.pieces[0]
         for stmt in then_part["body"]:
-            stmt.eval(context)
+            if (isinstance(stmt, VBA_Object)):
+                stmt.eval(context)
 
 # Grammar element for #IF statements.
 simple_if_statement_macro = Group( CaselessKeyword("#If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
@@ -1461,6 +1476,8 @@ class With_Statement(VBA_Object):
         # Evaluate each statement in the with block.
         log.debug("START WITH")
         for s in self.body:
+            if (not isinstance(s, VBA_Object)):
+                continue
             s.eval(context)
         log.debug("END WITH")
             

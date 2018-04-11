@@ -363,6 +363,30 @@ class AscW(VbaLibraryFunc):
 class AscB(AscW):
     pass
 
+class StrComp(VbaLibraryFunc):
+    """
+    StrComp() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 2
+        s1 = params[0]
+        s2 = params[1]
+        method = 0
+        if (len(params) >= 3):
+            try:
+                method = int(params[2])
+            except Exception as e:
+                log.error("StrComp: Invalid comparison method. " + str(e))
+        if (method == 0):
+            s1 = s1.lower()
+            s2 = s2.lower()
+        if (s1 == s2):
+            return 0
+        if (s1 < s2):
+            return -1
+        return 1
+                
 class StrConv(VbaLibraryFunc):
     """
     StrConv() string function.
@@ -1385,7 +1409,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
-               CheckSpelling, Specialfolders):
+               CheckSpelling, Specialfolders, StrComp):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
