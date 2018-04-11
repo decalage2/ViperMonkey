@@ -86,7 +86,7 @@ class Sum(VBA_Object):
                 return reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
             except ValueError:
                 # Punt and sum all arguments as strings.
-                return reduce(lambda x, y: str(x) + str(y), eval_args(self.arg, context))
+                return reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(eval_args(self.arg, context)))
         except RuntimeError:
             log.error("overflow trying eval sum: %r" % self.arg)
             sys.exit(1)

@@ -378,6 +378,7 @@ class StrComp(VbaLibraryFunc):
                 method = int(params[2])
             except Exception as e:
                 log.error("StrComp: Invalid comparison method. " + str(e))
+                pass
         if (method == 0):
             s1 = s1.lower()
             s2 = s2.lower()

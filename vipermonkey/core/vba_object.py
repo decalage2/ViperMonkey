@@ -216,7 +216,7 @@ def coerce_to_str(obj):
     :return: string
     """
     # in VBA, Null/None is equivalent to an empty string
-    if obj is None:
+    if ((obj is None) or (obj == 0)):
         return ''
     else:
         return str(obj)

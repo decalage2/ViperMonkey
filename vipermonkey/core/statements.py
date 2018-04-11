@@ -865,12 +865,19 @@ class While_Statement(VBA_Object):
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
+        # Some loop guards check the readystate value on an object. To simulate this
+        # will will just go around the loop a small fixed # of times.
+        max_loop_iters = VBA_Object.loop_upper_bound
+        if (".readyState" in str(self.guard)):
+            log.info("Limiting # of iterations of a .readyState loop.")
+            max_loop_iters = 5
+        
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
         while (True):
 
             # Break infinite loops.
-            if (num_iters > VBA_Object.loop_upper_bound):
+            if (num_iters > max_loop_iters):
                 log.error("Maximum loop iterations exceeded. Breaking loop.")
                 break
             num_iters += 1
@@ -937,12 +944,19 @@ class Do_Statement(VBA_Object):
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
+        # Some loop guards check the readystate value on an object. To simulate this
+        # will will just go around the loop a small fixed # of times.
+        max_loop_iters = VBA_Object.loop_upper_bound
+        if (".readyState" in str(self.guard)):
+            log.info("Limiting # of iterations of a .readyState loop.")
+            max_loop_iters = 5
+        
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
         while (True):
 
             # Break infinite loops.
-            if (num_iters > VBA_Object.loop_upper_bound):
+            if (num_iters > max_loop_iters):
                 log.error("Maximum loop iterations exceeded. Breaking loop.")
                 break
             num_iters += 1

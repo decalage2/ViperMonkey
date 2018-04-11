@@ -88,8 +88,7 @@ class SimpleNameExpression(VBA_Object):
             return value
         except KeyError:
             log.error('Variable %r not found' % self.name)
-            return ""
-
+            return 0
 
 # 5.6.10 Simple Name Expressions
 # A simple name expression consists of a single identifier with no qualification or argument list.

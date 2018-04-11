@@ -85,6 +85,7 @@ class Sub(VBA_Object):
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
+        log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
         for s in self.statements:
             log.debug('Sub %s eval statement: %s' % (self.name, s))
