@@ -1273,11 +1273,12 @@ class If_Statement_Macro(If_Statement):
 simple_if_statement_macro = Group( CaselessKeyword("#If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
                                    Group(statement_block('statements'))) + \
                                    ZeroOrMore(
-                                       Group( CaselessKeyword("#ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
+                                       Group( Suppress(CaselessKeyword("#ElseIf") | CaselessKeyword("ElseIf")) + \
+                                              boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
                                               Group(statement_block('statements')))
                                    ) + \
                                    Optional(
-                                       Group(CaselessKeyword("#Else").suppress() + Suppress(EOS) + \
+                                       Group(Suppress(CaselessKeyword("#Else") | CaselessKeyword("Else")) + Suppress(EOS) + \
                                              Group(statement_block('statements')))
                                    ) + \
                                    CaselessKeyword("#End If").suppress() + FollowedBy(EOS)
@@ -1319,7 +1320,7 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p.replace("\x00", ""))
                     else:
                         tmp_call_params.append(p)
-            context.report_action('Object.Method Call', repr(tmp_call_params), func_name)
+            context.report_action('Object.Method Call', tmp_call_params, func_name)
         try:
             s = context.get(func_name)
             s.eval(context=context, params=call_params)
