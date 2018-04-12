@@ -86,10 +86,6 @@ __version__ = '0.04'
 # TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
 
-# Enable PackRat for better performance:
-# (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
-ParserElement.enablePackrat()
-
 # TODO: replace with tablestream
 import prettytable
 

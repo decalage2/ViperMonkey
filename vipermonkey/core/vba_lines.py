@@ -52,7 +52,6 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from logger import log
-log.debug('importing vba_lines')
 
 from pyparsing import *
 

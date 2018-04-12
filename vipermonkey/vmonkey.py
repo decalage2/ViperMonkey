@@ -80,6 +80,11 @@ __version__ = '0.05'
 
 #--- IMPORTS ------------------------------------------------------------------
 
+# Do this before any other imports to make sure we have an unlimited
+# packrat parsing cache. Do not move or remove this line.
+from pyparsing import *
+ParserElement.enablePackrat(cache_size_limit=None)
+
 import multiprocessing
 import optparse
 import sys
@@ -115,6 +120,18 @@ from core import *
     
 # === MAIN (for tests) ===============================================================================================
 
+def is_useless_dim(line):
+    """
+    See if we can skip this Dim statement and still successfully emulate.
+    We only use Byte type information when emulating.
+    """
+
+    # Is this dimming a Byte variable?
+    line = line.strip()
+    if (not line.startswith("Dim ")):
+        return False
+    return ("Byte" not in line)
+    
 def is_useless_call(line):
     """
     See if the given line contains a useless do-nothing function call.
@@ -138,6 +155,75 @@ def is_useless_call(line):
     called_func = line[:line.index("(")]
     return (called_func in useless_funcs)
 
+def collapse_macro_if_blocks(vba_code):
+    """
+    When emulating we only pick a single block from a #if statement. Speed up parsing
+    by picking the largest block and strip out the rest.
+    """
+
+    # Pick out the largest #if blocks.
+    log.debug("Collapsing macro blocks...")
+    curr_blocks = None
+    curr_block = None
+    r = ""
+    for line in vba_code.split("\n"):
+
+        # Are we tracking an #if block?
+        strip_line = line.strip()
+        if (curr_blocks is None):
+
+            # Is this the start of an #if block?
+            if (strip_line.startswith("#If")):
+
+                # Yes, start tracking blocks.
+                log.debug("Start block " + strip_line)
+                curr_blocks = []
+                curr_block = []
+                continue
+
+            # Not the start of an #if. Save the line.
+            r += line + "\n"
+            continue
+
+        # If we get here we are tracking an #if statement.
+
+        # Is this the start of another block in the #if?
+        if ((strip_line.startswith("#Else")) or
+            (strip_line.startswith("Else"))):
+
+            # Save the current block.
+            curr_blocks.append(curr_block)
+            log.debug("Save block " + str(curr_block))
+
+            # Start a new block.
+            curr_block = []
+            continue
+
+        # Have we finished the #if?
+        if (strip_line.startswith("#End")):
+
+            log.debug("End if " + strip_line)
+            
+            # Add back in the largest block and skip the rest.
+            biggest_block = []
+            for block in curr_blocks:
+                if (len(block) > len(biggest_block)):
+                    biggest_block = block
+            for block_line in biggest_block:
+                r += block_line + "\n"
+            log.debug("Pick block " + str(biggest_block))
+                
+            # Done processing #if.
+            curr_blocks = None
+            curr_block = None
+            continue
+
+        # We have a block line. Save it.
+        curr_block.append(line)
+
+    # Return the stripped VBA.
+    return r
+    
 def strip_useless_code(vba_code):
     """
     Strip statements that have no usefull effect from the given VB. The
@@ -231,7 +317,7 @@ def strip_useless_code(vba_code):
             tmp.add(l)
     comment_lines = tmp
     
-    # Now strip out all useless assignments.            
+    # Now strip out all useless assignments.
     r = ""
     line_num = 0
     for line in vba_code.split("\n"):
@@ -246,9 +332,17 @@ def strip_useless_code(vba_code):
         if (is_useless_call(line)):
             continue
 
+        # Does this line get stripped based on being a Dim that we will not use
+        # when emulating?
+        if (is_useless_dim(line)):
+            continue
+        
         # The line is useful. Keep it.
         r += line + "\n"
 
+    # Now collapse down #if blocks.
+    r = collapse_macro_if_blocks(r)
+        
     return r
     
 def parse_stream(subfilename, stream_path=None,
@@ -282,11 +376,8 @@ def parse_stream(subfilename, stream_path=None,
         print '-'*79
         print 'PARSING VBA CODE:'
         try:
-
-            # Enable PackRat for better performance:
-            # (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
-            ParserElement.enablePackrat()
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
+            ParserElement.resetCache()
             m.code = vba_code
         except ParseException as err:
             print err.line

@@ -1181,6 +1181,16 @@ class Day(VbaLibraryFunc):
         log.debug("Day: %r returns %r" % (self, r))
         return r
 
+class Space(VbaLibraryFunc):
+    """
+    Space() string function.
+    """
+
+    def eval(self, context, params=None):
+        n = int_convert(params[0])
+        r = " " * n
+        return r
+    
 class UCase(VbaLibraryFunc):
     """
     UCase() string function.
@@ -1416,7 +1426,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
-               CheckSpelling, Specialfolders, StrComp):
+               CheckSpelling, Specialfolders, StrComp, Space):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

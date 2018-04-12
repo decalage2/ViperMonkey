@@ -438,7 +438,7 @@ function_call.setParseAction(Function_Call)
 #                          )
 function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + \
-                           ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^
+                           ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
                             # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
                             # parsed as function_call_limited "foo .bar". The real way this should be
                             # parsed is to require at least 1 space between the function name and the
