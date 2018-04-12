@@ -49,6 +49,7 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import int_convert
 from vba_library import VbaLibraryFunc
 
 from logger import log
@@ -88,7 +89,7 @@ class SimpleNameExpression(VBA_Object):
             return value
         except KeyError:
             log.error('Variable %r not found' % self.name)
-            return 0
+            return "NULL"
 
 # 5.6.10 Simple Name Expressions
 # A simple name expression consists of a single identifier with no qualification or argument list.
@@ -318,7 +319,7 @@ class Function_Call(VBA_Object):
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval"]
+                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -362,7 +363,7 @@ class Function_Call(VBA_Object):
                 if ((len(f) == 1) and (isinstance(f[0], str))):
                     tmp = f[0]
                 log.debug('Array Access: %r[%r]' % (tmp, params[0]))
-                index = int(params[0])
+                index = int_convert(params[0])
                 try:
                     r = tmp[index]
                     log.debug('Returning: %r' % r)
@@ -381,7 +382,7 @@ class Function_Call(VBA_Object):
                     # Looks like this is actually an array access.
                     log.debug("Looks like array access.")
                     try:
-                        i = int(params[0])
+                        i = int_convert(params[0])
                         r = f[i]
                         if (isinstance(f, str)):
                             r = ord(r)
@@ -423,7 +424,7 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = expr_list_item + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
@@ -613,6 +614,19 @@ class BoolExprItem(VBA_Object):
             rhs = eval_arg(self.rhs, context)
         except AttributeError:
             pass
+
+        # Handle unitialized variables. Grrr. Base their conversion on
+        # the type of the initialized expression.
+        if (rhs == "NULL"):
+            if (isinstance(lhs, str)):
+                rhs = ''
+            else:
+                rhs = 0
+        if (lhs == "NULL"):
+            if (isinstance(rhs, str)):
+                lhs = ''
+            else:
+                lhs = 0
         
         # Evaluate the expression.
         if (self.op == "="):

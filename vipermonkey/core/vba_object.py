@@ -216,7 +216,7 @@ def coerce_to_str(obj):
     :return: string
     """
     # in VBA, Null/None is equivalent to an empty string
-    if ((obj is None) or (obj == 0)):
+    if ((obj is None) or (obj == "NULL")):
         return ''
     else:
         return str(obj)
@@ -230,3 +230,69 @@ def coerce_args_to_str(args):
     return [coerce_to_str(arg) for arg in args]
     # return map(lambda arg: str(arg), args)
 
+def coerce_to_int(obj):
+    """
+    Coerce a constant VBA object (integer, Null, etc) to a int.
+    :param obj: VBA object
+    :return: int
+    """
+    # in VBA, Null/None is equivalent to 0
+    if ((obj is None) or (obj == "NULL")):
+        return 0
+    else:
+        return int(obj)
+
+def coerce_args_to_int(args):
+    """
+    Coerce a list of arguments to ints.
+    Return the list of evaluated arguments.
+    """
+    return [coerce_to_int(arg) for arg in args]
+
+def coerce_args(args):
+    """
+    Coerce all of the arguments to either str or int based on the most
+    common arg type.
+    """
+
+    # Count the # of str and int args.
+    str_count = 0
+    int_count = 0
+    other_count = 0
+    for arg in args:
+
+        # Skip NULL values since they can be int or str based on context.
+        if (arg == "NULL"):
+            continue
+        if (isinstance(arg, str)):
+            str_count += 1
+        elif (isinstance(arg, int)):
+            int_count += 1
+        else:
+            other_count += 1
+
+    # Leave things alone if we have any non-int or str args.
+    if (other_count > 0):
+        return args
+            
+    # Do type conversion based on most common type.
+    if (int_count > str_count):
+        return coerce_args_to_int(args)
+    else:
+        return coerce_args_to_str(args)
+
+def int_convert(arg):
+    """
+    Convert a VBA expression to an int, handling VBA NULL.
+    """
+    if (arg == "NULL"):
+        return 0
+    return int(arg)
+
+def str_convert(arg):
+    """
+    Convert a VBA expression to an str, handling VBA NULL.
+    """
+    if (arg == "NULL"):
+        return ''
+    return str(arg)

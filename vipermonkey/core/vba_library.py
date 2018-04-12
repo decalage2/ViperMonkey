@@ -49,6 +49,8 @@ from hashlib import sha256
 import os
 import random
 from from_unicode_str import *
+from vba_object import int_convert
+from vba_object import str_convert
 
 from vba_context import VBA_LIBRARY
 
@@ -81,7 +83,11 @@ class Len(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        return len(params[0])
+        if (hasattr(params[0], '__len__')):
+            return len(params[0])
+        else:
+            log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
+            return 0
 
 class LenB(VbaLibraryFunc):
     """
@@ -110,7 +116,7 @@ class Mid(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -127,7 +133,7 @@ class Mid(VbaLibraryFunc):
             return s[start-1:]
         length = 0
         try:
-            length = int(params[2])
+            length = int_convert(params[2])
         except:
             pass
         # "If omitted or if there are fewer than Length characters in the text
@@ -158,7 +164,7 @@ class Left(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -191,7 +197,7 @@ class Right(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -375,7 +381,7 @@ class StrComp(VbaLibraryFunc):
         method = 0
         if (len(params) >= 3):
             try:
-                method = int(params[2])
+                method = int_convert(params[2])
             except Exception as e:
                 log.error("StrComp: Invalid comparison method. " + str(e))
                 pass
@@ -401,7 +407,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int(params[1])
+            conv = int_convert(params[1])
 
         # Do the conversion.
         r = params[0]
@@ -479,7 +485,7 @@ class Int(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         val = params[0]
         try:
-            r = int(val)
+            r = int_convert(val)
             log.debug("Int: return %r" % r)
             return r
         except:
@@ -646,7 +652,7 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = ''
         try:
-            r = int(math.copysign(1, int(num)))
+            r = int(math.copysign(1, int_convert(num)))
         except:
             pass
         log.debug("Sgn: %r returns %r" % (self, r))
@@ -661,7 +667,7 @@ class Sqr(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0]) + 0.0
+            num = int_convert(params[0]) + 0.0
             r = math.sqrt(num)
         except:
             pass
@@ -677,7 +683,7 @@ class Abs(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             r = abs(num)
         except:
             pass
@@ -712,7 +718,7 @@ class Round(VbaLibraryFunc):
             num = float(params[0])
             sig = 0
             if (len(params) == 2):
-                sig = int(params(1))                
+                sig = int_convert(params(1))                
             r = round(num, sig)
         except:
             pass
@@ -728,7 +734,7 @@ class Hex(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             r = hex(num).replace("0x","").upper()
         except:
             pass
@@ -910,7 +916,7 @@ class String(VbaLibraryFunc):
         assert (len(params) == 2)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             char = params[1]
             r = char * num
         except:
@@ -944,9 +950,9 @@ class RGB(VbaLibraryFunc):
         assert (len(params) == 3)
         r = ''
         try:
-            red = int(params[0])
-            green = int(params[1])
-            blue = int(params[2])
+            red = int_convert(params[0])
+            green = int_convert(params[1])
+            blue = int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
         except:
             pass
@@ -1011,7 +1017,7 @@ class Val(VbaLibraryFunc):
             return r
         
         # Ignore whitespace.
-        tmp = params[0].strip().replace(" ", "")
+        tmp = str_convert(params[0]).strip().replace(" ", "")
 
         # The VB Val() function is ugly. Look for VB hex encoding.
         nums = re.compile(r"&H[0-9A-Fa-f]+")
@@ -1131,7 +1137,7 @@ class Pmt(VbaLibraryFunc):
         try:
             # Pull out the arguments.
             rate = float(params[0])
-            nper = int(params[1]) + 0.0
+            nper = int_convert(params[1]) + 0.0
             pv = float(params[2])
             fv = 0
             if (len(params) >= 4):
@@ -1159,7 +1165,7 @@ class Day(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         txt = params[0]
-        if (txt is None):
+        if ((txt is None) or (txt == "NULL")):
             txt = ''
         r = str(txt)
 

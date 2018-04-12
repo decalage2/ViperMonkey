@@ -52,6 +52,7 @@ from expressions import *
 from vba_context import *
 from reserved import *
 from from_unicode_str import *
+from vba_object import int_convert
 
 from logger import log
 
@@ -552,7 +553,7 @@ class Let_Statement(VBA_Object):
         else:
 
             # Evaluate the index expression.
-            index = int(eval_arg(self.index, context=context))
+            index = int_convert(eval_arg(self.index, context=context))
             log.debug('setting %s(%r) = %s' % (self.name, index, value))
 
             # Is array variable being set already represented as a list?
@@ -1107,8 +1108,8 @@ class Case_Clause(VBA_Object):
             start = None
             end = None
             try:
-                start = int(eval_arg(self.case_val[0], context))
-                end = int(eval_arg(self.case_val[1], context)) + 1
+                start = int_convert(eval_arg(self.case_val[0], context))
+                end = int_convert(eval_arg(self.case_val[1], context)) + 1
             except:
                 return False                
 
