@@ -131,7 +131,10 @@ def is_useless_dim(line):
     line = line.strip()
     if (not line.startswith("Dim ")):
         return False
-    return ("Byte" not in line)
+    return (("Byte" not in line) and
+            (":" not in line) and
+            ("=" not in line) and
+            (not line.strip().endswith("_")))
     
 def is_useless_call(line):
     """
