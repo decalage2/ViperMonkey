@@ -88,7 +88,7 @@ class SimpleNameExpression(VBA_Object):
                 log.debug('evaluated function %r = %r' % (self.name, value))
             return value
         except KeyError:
-            log.error('Variable %r not found' % self.name)
+            log.warning('Variable %r not found' % self.name)
             return "NULL"
 
 # 5.6.10 Simple Name Expressions
@@ -418,7 +418,7 @@ class Function_Call(VBA_Object):
                     return s.eval(context=context, params=new_params)
                 except KeyError:
                     pass
-            log.error('Function %r not found' % self.name)
+            log.warning('Function %r not found' % self.name)
             return None
 
 # comma-separated list of parameters, each of them can be an expression:

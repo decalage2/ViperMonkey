@@ -83,7 +83,8 @@ __version__ = '0.05'
 # Do this before any other imports to make sure we have an unlimited
 # packrat parsing cache. Do not move or remove this line.
 from pyparsing import *
-ParserElement.enablePackrat(cache_size_limit=None)
+#ParserElement.enablePackrat(cache_size_limit=None)
+ParserElement.enablePackrat(cache_size_limit=10000000)
 
 import multiprocessing
 import optparse
