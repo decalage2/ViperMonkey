@@ -352,7 +352,7 @@ class Function_Call(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, repr(params)[1:-1], 'Interesting Function Call')
+            context.report_action(self.name, params, 'Interesting Function Call')
         try:
             f = context.get(self.name)
 
