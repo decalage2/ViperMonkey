@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from datetime import datetime
 import array
 import math
 import base64
@@ -1417,7 +1418,20 @@ class Specialfolders(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
-    
+
+class Year(VbaLibraryFunc):
+    """
+    Year() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.year)
+        return r
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1426,7 +1440,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
-               CheckSpelling, Specialfolders, StrComp, Space):
+               CheckSpelling, Specialfolders, StrComp, Space, Year):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

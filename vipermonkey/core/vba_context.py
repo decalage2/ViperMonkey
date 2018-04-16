@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from datetime import datetime
 from logger import log
 
 def is_procedure(vba_object):
@@ -109,6 +110,9 @@ class Context(object):
 
         # Track the current with prefix for with statements.
         self.with_prefix = ""
+
+        # Add in a global for the current time.
+        self.globals["Now".lower()] = datetime.now()
         
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"

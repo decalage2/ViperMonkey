@@ -197,6 +197,7 @@ def collapse_macro_if_blocks(vba_code):
 
             # Save the current block.
             curr_blocks.append(curr_block)
+            log.debug("Else if " + strip_line)
             log.debug("Save block " + str(curr_block))
 
             # Start a new block.
@@ -207,6 +208,9 @@ def collapse_macro_if_blocks(vba_code):
         if (strip_line.startswith("#End")):
 
             log.debug("End if " + strip_line)
+
+            # Save the current block.
+            curr_blocks.append(curr_block)
             
             # Add back in the largest block and skip the rest.
             biggest_block = []
@@ -271,6 +275,14 @@ def strip_useless_code(vba_code):
             # Skip lines assigning variables in a with block.
             if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
                 continue
+
+            # Skip lines where the '=' might be in a string.
+            if ('"' in line):
+                eq_index = line.index("=")
+                qu_index1 =  line.index('"')
+                qu_index2 =  line.rindex('"')
+                if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
+                    continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
             log.debug("SKIP: Assigned vars = " + str(match))
@@ -329,16 +341,18 @@ def strip_useless_code(vba_code):
         # Does this line get stripped based on variable usage?
         line_num += 1
         if (line_num in comment_lines):
-            log.debug("STRIP: Stripping Line: " + line)
+            log.debug("STRIP: Stripping Line (1): " + line)
             continue
 
         # Does this line get stripped based on a useless function call?
         if (is_useless_call(line)):
+            log.debug("STRIP: Stripping Line (2): " + line)
             continue
 
         # Does this line get stripped based on being a Dim that we will not use
         # when emulating?
         if (is_useless_dim(line)):
+            log.debug("STRIP: Stripping Line (3): " + line)
             continue
         
         # The line is useful. Keep it.
