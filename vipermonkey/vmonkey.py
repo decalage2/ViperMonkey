@@ -121,6 +121,44 @@ from core import *
     
 # === MAIN (for tests) ===============================================================================================
 
+def _read_doc_vars(fname):
+    """
+    Use a heuristic to try to read in document variable names and values from
+    the 1Table OLE stream. Note that this heuristic is kind of hacky and is not
+    close to being a general solution for reading in document variables, but it
+    serves the need for ViperMonkey emulation.
+
+    TODO: Replace this when actual support for reading doc vars is added to olefile.
+    """
+
+    try:
+
+        # Pull out all of the wide character strings from the 1Table OLE data.
+        ole = olefile.OleFileIO(fname, write_mode=False)
+        data = ole.openstream("1Table").read()
+        tmp_strs = re.findall("(([^\x00-\x1F\x7F-\xFF]\x00){4,})", data)
+        strs = []
+        for s in tmp_strs:
+            s1 = s[0].replace("\x00", "").strip()
+            strs.append(s1)
+
+        # Treat each wide character string as a potential variable that has a value
+        # of the string 2 positions ahead on the current string. This introduces "variables"
+        # that don't really exist into the list, but these variables will not be accessed
+        # by valid VBA so emulation will work.
+        pos = 0
+        r = []
+        for s in strs:
+            if ((pos + 2) < len(strs)):
+                r.append((s, strs[pos + 2]))
+            pos += 1
+
+        # Return guesses at doc variable assignments.
+        return r
+            
+    except:
+        return []
+        
 def is_useless_dim(line):
     """
     See if we can skip this Dim statement and still successfully emulate.
@@ -470,6 +508,10 @@ def process_file (container, filename, data,
     :return A list of actions if actions found, an empty list if no actions found, and None if there
     was an error.
     """
+
+    # Increase Python call depth.
+    sys.setrecursionlimit(13000)
+    
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
         display_filename = '%s in %s' % (filename, container)
@@ -514,8 +556,8 @@ def process_file (container, filename, data,
                 if (m != "empty"):
                     vm.add_compiled_module(m)
 
-            # Pull out form variables.
             try:
+                # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
                     if form_variables is not None:
                         var_name = form_variables['name']
@@ -534,6 +576,12 @@ def process_file (container, filename, data,
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
                         vm.globals[name + ".text"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+                        
+                # Pull out document variables.
+                for (var_name, var_val) in _read_doc_vars(filename):
+                    vm.doc_vars[var_name.lower()] = var_val
+                    log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+                
             except Exception as e:
                 log.error("Cannot read form strings. " + str(e))
                 

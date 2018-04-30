@@ -1384,11 +1384,18 @@ class Run(VbaLibraryFunc):
         
         # Can we find the function to call?
         try:
+            context.report_action("Run", func_name, 'Interesting Function Call')
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
-            log.error("Application.Run() failed. Cannot find function " + func_name + ".")
+            log.error("Application.Run() failed. Cannot find function " + str(func_name) + ".")
 
+class Exec(Run):
+    """
+    Treat Exec() like the Run() function.
+    """
+    pass
+    
 class CreateObject(VbaLibraryFunc):
     """
     CreateObject() function (stubbed).
@@ -1432,6 +1439,20 @@ class Year(VbaLibraryFunc):
             r = int(t.year)
         return r
 
+class Variable(VbaLibraryFunc):
+    """
+    Get document variable.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        var = str(params[0]).strip()
+        r = context.get_doc_var(var)
+        if (r is None):
+            r = ""
+        log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
+        return r
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1440,7 +1461,8 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
-               CheckSpelling, Specialfolders, StrComp, Space, Year):
+               CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
+               Exec):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -660,6 +660,12 @@ class For_Statement(VBA_Object):
     def eval(self, context, params=None):
         # evaluate values:
         log.debug('FOR loop: evaluating start, end, step')
+
+        # Do not bother running loops with empty bodies.
+        if (len(self.statements) == 0):
+            log.debug("FOR loop: empty body. Skipping.")
+            return
+        
         start = eval_arg(self.start_value, context=context)
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
         end = eval_arg(self.end_value, context=context)
@@ -862,6 +868,11 @@ class While_Statement(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug('WHILE loop: start: ' + str(self))
+
+        # Do not bother running loops with empty bodies.
+        if (len(self.body) == 0):
+            log.debug("WHILE loop: empty body. Skipping.")
+            return
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -941,6 +952,11 @@ class Do_Statement(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug('DO loop: start: ' + str(self))
+
+        # Do not bother running loops with empty bodies.
+        if (len(self.body) == 0):
+            log.debug("DO loop: empty body. Skipping.")
+            return
         
         # Track that the current loop is running.
         context.loop_stack.append(True)

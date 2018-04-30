@@ -135,6 +135,9 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # Track data saved in document variables.
+        self.doc_vars = {}
+        
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
@@ -299,7 +302,7 @@ class ViperMonkey(object):
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self)
+        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
         # reset the actions list, in case it is called several times
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
@@ -318,7 +321,7 @@ class ViperMonkey(object):
         :return: value of the evaluated expression
         """
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self)
+        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
         # reset the actions list, in case it is called several times
         self.actions = []
         e = expression.parseString(expr)[0]

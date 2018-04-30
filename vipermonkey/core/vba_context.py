@@ -68,7 +68,12 @@ class Context(object):
     used to evaluate VBA statements.
     """
 
-    def __init__(self, _globals=None, _locals=None, context=None, engine=None):
+    def __init__(self,
+                 _globals=None,
+                 _locals=None,
+                 context=None,
+                 engine=None,
+                 doc_vars=None):
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -92,6 +97,15 @@ class Context(object):
         else:
             self.engine = None
 
+        # Track data saved in document variables.
+        if doc_vars is not None:
+            # direct copy of the pointer to globals:
+            self.doc_vars = doc_vars
+        elif context is not None:
+            self.doc_vars = context.doc_vars
+        else:
+            self.doc_vars = {}
+            
         # Track whether nested loops are running with a stack of flags. If a loop is
         # running its flag will be True.
         self.loop_stack = []
@@ -275,6 +289,15 @@ class Context(object):
         if (var not in self.types):
             return None
         return self.types[var]
+
+    def get_doc_var(self, var):
+        if (not isinstance(var, basestring)):
+            return None
+        var = var.lower()
+        log.info("Looking up doc var " + var)
+        if (var not in self.doc_vars):
+            return None
+        return self.doc_vars[var]
             
     # TODO: set_global?
 

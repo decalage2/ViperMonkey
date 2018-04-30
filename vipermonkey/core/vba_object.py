@@ -195,6 +195,21 @@ def eval_arg(arg, context):
                     log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
 
+                # Are we loading a document variable?
+                if (tmp.startswith("activedocument.variables(")):
+
+                    # ActiveDocument.Variables("ER0SNQAWT").Value
+                    # Try to pull the result from the document variables.
+                    var = tmp.replace("activedocument.variables(", "").\
+                          replace(")", "").\
+                          replace("'","").\
+                          replace('"',"").\
+                          replace('.value',"").\
+                          strip()
+                    val = context.get_doc_var(var)
+                    if (val is not None):
+                        return val
+                    
                 # None of those worked. We can't find the data.
                 #return "??"
                 
