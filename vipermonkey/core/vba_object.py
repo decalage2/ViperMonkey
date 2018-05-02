@@ -270,6 +270,10 @@ def coerce_args(args):
     common arg type.
     """
 
+    # Sanity check.
+    if (len(args) == 0):
+        return args
+    
     # Count the # of str and int args.
     str_count = 0
     int_count = 0
@@ -291,10 +295,18 @@ def coerce_args(args):
         return args
             
     # Do type conversion based on most common type.
-    if (int_count > str_count):
-        return coerce_args_to_int(args)
+    #if (int_count > str_count):
+    #    return coerce_args_to_int(args)
+    #else:
+    #    return coerce_args_to_str(args)
+
+    # Do conversion based on type of 1st arg in the list.
+    if (isinstance(args[0], str)):
+        #log.debug("Coerce to str " + str(args))
+        return coerce_args_to_str(args)    
     else:
-        return coerce_args_to_str(args)
+        #log.debug("Coerce to int " + str(args))
+        return coerce_args_to_int(args)
 
 def int_convert(arg):
     """

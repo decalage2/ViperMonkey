@@ -627,7 +627,24 @@ class BoolExprItem(VBA_Object):
                 lhs = ''
             else:
                 lhs = 0
-        
+
+        # Ugh. VBA autoconverts strings and ints.
+        if (isinstance(lhs, str) and isinstance(rhs, int)):
+
+            # Convert both to ints, if possible.
+            try:
+                lhs = int(lhs)
+            except:
+                pass
+
+        if (isinstance(rhs, str) and isinstance(lhs, int)):
+
+            # Convert both to ints, if possible.
+            try:
+                rhs = int(rhs)
+            except:
+                pass
+                
         # Evaluate the expression.
         if (self.op == "="):
             return lhs == rhs

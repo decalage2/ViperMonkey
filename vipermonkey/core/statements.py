@@ -665,13 +665,28 @@ class For_Statement(VBA_Object):
         if (len(self.statements) == 0):
             log.debug("FOR loop: empty body. Skipping.")
             return
-        
+
+        # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
+        if (isinstance(start, basestring)):
+            try:
+                start = int(start)
+            except:
+                pass
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
+
+        # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
+        if (isinstance(end, basestring)):
+            try:
+                end = int(end)
+            except:
+                pass
         if (not isinstance(end, int)):
             end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+
+        # Set start and end to valid values.
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
             end = VBA_Object.loop_upper_bound
             log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)

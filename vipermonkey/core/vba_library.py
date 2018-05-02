@@ -1453,6 +1453,29 @@ class Variable(VbaLibraryFunc):
         log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
         return r
 
+class CDbl(VbaLibraryFunc):
+    """
+    CDbl() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        try:
+            # VBA rounds the significant digits.
+            #return round(float(params[0]), 11)
+            return float(params[0])
+        except:
+            return 0
+
+class Print(VbaLibraryFunc):
+    """
+    Debug.Print function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        context.report_action("Debug Print", str(params[0]), '')
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1462,7 +1485,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec):
+               Exec, CDbl, Print):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

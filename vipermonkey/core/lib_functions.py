@@ -77,11 +77,14 @@ class Chr(VBA_Object):
         # It also ignores leading and trailing spaces.
         # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
         # => need to parse the string as integer
+        # It also looks like floating point numbers are allowed.
         # First, eval the argument:
         param = eval_arg(self.arg, context)
         if isinstance (param, int):
             try:
-                return chr(param)
+                r = chr(param)
+                log.debug("Chr(" + str(param) + ") = " + str(r))
+                return r
             except Exception as e:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
                 return ""
@@ -89,7 +92,19 @@ class Chr(VBA_Object):
             log.debug('Chr: converting string %r to integer' % param)
             try:
                 param_int = integer.parseString(param.strip())[0]
-                return chr(param_int)
+                r = chr(param_int)
+                log.debug("Chr(" + str(param_int) + ") = " + str(r))
+                return r
+            except:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ''
+        elif isinstance(param, float):
+            log.debug('Chr: converting float %r to integer' % param)
+            try:
+                param_int = int(round(param))
+                r = chr(param_int)
+                log.debug("Chr(" + str(param_int) + ") = " + str(r))
+                return r
             except:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
                 return ''
