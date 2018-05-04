@@ -1266,17 +1266,37 @@ class Close(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Are we closing a file pointer?
-        if ((len(params) != 1) or (not params[0].startswith('#'))):
+        file_id = None
+        if ((params is not None) and
+            (len(params) == 1) and
+            (params[0] is not None) and
+            (params[0].startswith('#'))):
 
-            # No actions to do here.
-            return
+            # Get the ID of the file being closed.
+            file_id = params[0]
+
+        # Close() object method call?
+        else:
+
+            # TODO: Currently the object on which Close() is being called is not
+            # being tracked. We will only handle the Close() if there is only 1
+            # current open file.
+            if ((context.open_files is None) or (len(context.open_files) == 0)):
+                log.error("Cannot process Close(). No open files.")
+                return
+            if (len(context.open_files) > 1):
+                log.error("Cannot process Close(). Too many open files.")
+                return
+
+            # Get the ID of the file.
+            file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
         
         # Get the name of the file being closed.
-        file_id = params[0]
         name = context.open_files[file_id]["name"]
-
+        log.info("Closing file " + name)
+        
         # Get the data written to the file and track it.
         data = context.open_files[file_id]["contents"]
         context.closed_files[name] = data
@@ -1325,6 +1345,9 @@ class Close(VbaLibraryFunc):
                 
             except Exception as e:
                 log.error("Writing file " + short_name + " failed. " + str(e))
+
+        else:
+            log.warning("File not dumped. Output dir is None.")
                 
 class Put(VbaLibraryFunc):
     """
@@ -1476,6 +1499,65 @@ class Print(VbaLibraryFunc):
         assert (len(params) == 1)
         context.report_action("Debug Print", str(params[0]), '')
 
+class CreateTextFile(VbaLibraryFunc):
+    """
+    CreateTextFile() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the name of the file being opened.
+        fname = str(params[0])
+
+        # Save that the file is opened.
+        context.open_files[fname] = {}
+        context.open_files[fname]["name"] = fname
+        context.open_files[fname]["contents"] = []
+
+class Write(VbaLibraryFunc):
+    """
+    Write() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the data being written.
+        dat = str(params[0])
+
+        # TODO: Currently the object on which Write() is being called is not
+        # being tracked. We will only handle the Write() if there is only 1
+        # current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process Write(). No open files.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process Write(). Too many open files.")
+            return
+
+        # Simulate the write.
+
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+
+        # Get the data.
+        data = params[0]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1485,7 +1567,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec, CDbl, Print):
+               Exec, CDbl, Print, CreateTextFile, Write):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
