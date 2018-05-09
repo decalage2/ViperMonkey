@@ -377,7 +377,11 @@ class Function_Call(VBA_Object):
                 if (not(isinstance(f, str)) and
                     not(isinstance(f, list)) and
                     not(isinstance(f, unicode))):
-                    return f.eval(context=context, params=params)
+                    try:
+                        return f.eval(context=context, params=params)
+                    except AttributeError:
+                        log.error(str(f) + " has no eval() method.")
+                        return f
                 elif (len(params) > 0):
 
                     # Looks like this is actually an array access.
@@ -624,11 +628,15 @@ class BoolExprItem(VBA_Object):
                 rhs = ''
             else:
                 rhs = 0
+            context.set(self.rhs, rhs)
+            log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
         if (lhs == "NULL"):
             if (isinstance(rhs, str)):
                 lhs = ''
             else:
                 lhs = 0
+            context.set(self.lhs, lhs)
+            log.debug("Set unitialized " + str(self.lhs) + " = " + str(lhs))
 
         # Ugh. VBA autoconverts strings and ints.
         if (isinstance(lhs, str) and isinstance(rhs, int)):

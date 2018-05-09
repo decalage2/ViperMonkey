@@ -1462,6 +1462,32 @@ class Year(VbaLibraryFunc):
             r = int(t.year)
         return r
 
+class Minute(VbaLibraryFunc):
+    """
+    Minute() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.minute)
+        return r
+
+class Second(VbaLibraryFunc):
+    """
+    Second() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.second)
+        return r
+
 class Variable(VbaLibraryFunc):
     """
     Get document variable.
@@ -1567,7 +1593,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec, CDbl, Print, CreateTextFile, Write):
+               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

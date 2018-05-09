@@ -274,39 +274,60 @@ def coerce_args(args):
     if (len(args) == 0):
         return args
     
-    # Count the # of str and int args.
-    str_count = 0
-    int_count = 0
-    other_count = 0
+    # Find the 1st type in the arg list.
+    first_type = None
+    have_other_type = False
     for arg in args:
 
         # Skip NULL values since they can be int or str based on context.
         if (arg == "NULL"):
             continue
         if (isinstance(arg, str)):
-            str_count += 1
+            if (first_type is None):
+                first_type = "str"
+            continue
         elif (isinstance(arg, int)):
-            int_count += 1
+            if (first_type is None):
+                first_type = "int"
+            continue
         else:
-            other_count += 1
-
+            have_other_type = True
+            break
+        
     # Leave things alone if we have any non-int or str args.
-    if (other_count > 0):
+    if (have_other_type):
         return args
-            
-    # Do type conversion based on most common type.
-    #if (int_count > str_count):
-    #    return coerce_args_to_int(args)
-    #else:
-    #    return coerce_args_to_str(args)
 
+    # Leave things alone if we cannot figure out the type to which to coerce.
+    if (first_type is None):
+        return args
+    
     # Do conversion based on type of 1st arg in the list.
-    if (isinstance(args[0], str)):
-        #log.debug("Coerce to str " + str(args))
-        return coerce_args_to_str(args)    
+    if (first_type == "str"):
+
+        # Replace unititialized values.
+        new_args = []
+        for arg in args:
+            if (args == "NULL"):
+                new_args.append('')
+            else:
+                new_args.append(arg)
+
+        #log.debug("Coerce to str " + str(new_args))
+        return coerce_args_to_str(new_args)
+
     else:
-        #log.debug("Coerce to int " + str(args))
-        return coerce_args_to_int(args)
+
+        # Replace unititialized values.
+        new_args = []
+        for arg in args:
+            if (args == "NULL"):
+                new_args.append(0)
+            else:
+                new_args.append(arg)
+
+        #log.debug("Coerce to int " + str(new_args))
+        return coerce_args_to_int(new_args)
 
 def int_convert(arg):
     """

@@ -241,6 +241,10 @@ class Context(object):
         self.globals["vbHiragana".lower()] = 32
         self.globals["vbUnicode".lower()] = 64
         self.globals["vbFromUnicode".lower()] = 128
+
+        self.globals["xlOuterCenterPoint".lower()] = 2.0
+        self.globals["xlPivotLineBlank".lower()] = 2
+        self.globals["rgbMaroon".lower()] = 128
         
     def _get(self, name):
 
