@@ -1707,7 +1707,7 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (let_statement ^ prop_assign_statement ^ expression ^ call_statement ^ label_statement) | exit_loop_statement | \
+simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
                    rem_statement | print_statement | resume_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)

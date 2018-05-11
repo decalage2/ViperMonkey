@@ -265,6 +265,7 @@ class Shell(VbaLibraryFunc):
         except:
             pass
         command = params[0]
+        log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function')
         return 0
