@@ -1360,6 +1360,13 @@ simple_if_statement_macro.setParseAction(If_Statement_Macro)
 # --- CALL statement ----------------------------------------------------------
 
 class Call_Statement(VBA_Object):
+
+    # List of interesting functions to log calls to.
+    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+                 "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
+                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "SetExpandedStringValue", "WinExec"]
+    
     def __init__(self, original_str, location, tokens):
         super(Call_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -1376,6 +1383,16 @@ class Call_Statement(VBA_Object):
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."
         log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+
+        # Log functions of interest.
+        save = False
+        for func in Function_Call.log_funcs:
+            if (self.name.lower().endswith(func.lower())):
+                save = True
+                break
+        if (save):
+            context.report_action(self.name, call_params, 'Interesting Function Call')
+        
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':

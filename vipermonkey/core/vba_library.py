@@ -1419,7 +1419,19 @@ class Exec(Run):
     Treat Exec() like the Run() function.
     """
     pass
-    
+
+class WinExec(VbaLibraryFunc):
+    """
+    WinExec() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        cmd = params[0]
+        context.report_action("Run", cmd, 'Interesting Command Execution')
+        return ''
+        
 class CreateObject(VbaLibraryFunc):
     """
     CreateObject() function (stubbed).
@@ -1594,7 +1606,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second):
+               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
