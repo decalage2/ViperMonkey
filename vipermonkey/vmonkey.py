@@ -170,6 +170,8 @@ def is_useless_dim(line):
     if (not line.startswith("Dim ")):
         return False
     return (("Byte" not in line) and
+            ("Long" not in line) and
+            ("Integer" not in line) and
             (":" not in line) and
             ("=" not in line) and
             (not line.strip().endswith("_")))
@@ -394,6 +396,17 @@ def strip_useless_code(vba_code):
             continue
         
         # The line is useful. Keep it.
+
+        # At least 1 maldoc builder is not putting a newline before the
+        # 'End Function' closing out functions. Rather than changing the
+        # parser to deal with this we just fix those lines here.
+        if ((line.endswith("End Function")) and
+            (len(line) > len("End Function"))):
+            r += line.replace("End Function", "") + "\n"
+            r += "End Function\n"
+            continue
+
+        # This is a regular valid line. Add it.
         r += line + "\n"
 
     # Now collapse down #if blocks.

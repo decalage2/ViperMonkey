@@ -360,6 +360,7 @@ class Dim_Statement(VBA_Object):
 
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type)
+            log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
     
 # 5.4.3.1 Local Variable Declarations
 #
@@ -511,8 +512,8 @@ class Let_Statement(VBA_Object):
                 value = tmp
 
             # Handle conversion of byte arrays to strings, if needed.
-            if ((context.get_type(self.name) == "String") and
-                (isinstance(value, list))):
+            elif ((context.get_type(self.name) == "String") and
+                  (isinstance(value, list))):
 
                 # Do we have a list of integers?
                 all_ints = True
@@ -545,6 +546,16 @@ class Let_Statement(VBA_Object):
                         if (i is not None):
                             tmp += i
                     value = tmp
+
+            # Handle conversion of strings to int, if needed.
+            elif (((context.get_type(self.name) == "Integer") or
+                   (context.get_type(self.name) == "Long")) and
+                  (isinstance(value, str))):
+                try:
+                    value = int(value)
+                except:
+                    log.error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
+                    value = 0
                     
             log.debug('setting %s = %s' % (self.name, value))
             context.set(self.name, value)
