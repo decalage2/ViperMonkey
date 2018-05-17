@@ -143,14 +143,15 @@ def _read_doc_vars(fname):
             strs.append(s1)
 
         # Treat each wide character string as a potential variable that has a value
-        # of the string 2 positions ahead on the current string. This introduces "variables"
+        # of the string 1 positions ahead on the current string. This introduces "variables"
         # that don't really exist into the list, but these variables will not be accessed
         # by valid VBA so emulation will work.
         pos = 0
         r = []
         for s in strs:
-            if ((pos + 2) < len(strs)):
-                r.append((s, strs[pos + 2]))
+            # TODO: Figure out if this is 1 or 2 positions ahead.
+            if ((pos + 1) < len(strs)):
+                r.append((s, strs[pos + 1]))
             pos += 1
 
         # Return guesses at doc variable assignments.
