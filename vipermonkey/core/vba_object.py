@@ -264,16 +264,24 @@ def coerce_args_to_int(args):
     """
     return [coerce_to_int(arg) for arg in args]
 
-def coerce_args(args):
+def coerce_args(orig_args):
     """
     Coerce all of the arguments to either str or int based on the most
     common arg type.
     """
 
     # Sanity check.
-    if (len(args) == 0):
-        return args
-    
+    if (len(orig_args) == 0):
+        return orig_args
+
+    # Convert args with None value to 'NULL'.
+    args = []
+    for arg in orig_args:
+        if (arg is None):
+            args.append("NULL")
+        else:
+            args.append(arg)
+            
     # Find the 1st type in the arg list.
     first_type = None
     have_other_type = False

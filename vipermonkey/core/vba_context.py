@@ -41,6 +41,9 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import array
+import os
+from hashlib import sha256
 from datetime import datetime
 from logger import log
 
@@ -62,6 +65,11 @@ def is_procedure(vba_object):
 # global dictionary of constants, functions and subs for the VBA library
 VBA_LIBRARY = {}
 
+# Output directory to save dropped artifacts.
+out_dir = None
+# Count of files dropped.
+file_count = 0
+
 class Context(object):
     """
     a Context object contains the global and local named objects (variables, subs, functions)
@@ -74,6 +82,13 @@ class Context(object):
                  context=None,
                  engine=None,
                  doc_vars=None):
+
+        # Track open files.
+        self.open_files = {}
+
+        # Track the final contents of written files.
+        self.closed_files = {}
+
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -81,6 +96,8 @@ class Context(object):
             self.globals = _globals
         elif context is not None:
             self.globals = context.globals
+            self.open_files = context.open_files
+            self.closed_files = context.closed_files
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -115,12 +132,6 @@ class Context(object):
 
         # Track variable types, if known.
         self.types = {}
-
-        # Track open files.
-        self.open_files = {}
-
-        # Track the final contents of written files.
-        self.closed_files = {}
 
         # Track the current with prefix for with statements.
         self.with_prefix = ""
@@ -453,6 +464,76 @@ class Context(object):
         self.globals["VBA.vbKeyF14".lower()] = 0x7D
         self.globals["VBA.vbKeyF15".lower()] = 0x7E
         self.globals["VBA.vbKeyF16".lower()] = 0x7F        
+
+    def dump_file(self, file_id):
+        """
+        Save the contents of a file dumped by the VBA to disk.
+
+        file_id - The name of the file.
+        """
+
+        # Make sure the "file" exists.
+        file_id = str(file_id)
+        if (file_id not in self.open_files):
+            log.error("File " + file_id + " not open. Cannot save.")
+            return
+        
+        # Get the name of the file being closed.
+        name = self.open_files[file_id]["name"]
+        log.info("Closing file " + name)
+        
+        # Get the data written to the file and track it.
+        data = self.open_files[file_id]["contents"]
+        self.closed_files[name] = data
+
+        # Clear the file out of the open files.
+        del self.open_files[file_id]
+
+        # Save the hash of the written file.
+        raw_data = array.array('B', data).tostring()
+        h = sha256()
+        h.update(raw_data)
+        file_hash = h.hexdigest()
+        self.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
+
+        # TODO: Set a flag to control whether to dump file contents.
+
+        # Dump out the file.
+        if (out_dir is not None):
+
+            # Make the dropped file directory if needed.
+            if (not os.path.isdir(out_dir)):
+                os.makedirs(out_dir)
+
+            # Dump the file.
+            try:
+
+                # Get a unique name for the file.
+                short_name = name
+                start = 0
+                if ('\\' in short_name):
+                    start = short_name.rindex('\\') + 1
+                short_name = out_dir + short_name[start:].strip()
+                try:
+                    f = open(short_name, 'r')
+                    # Already exists. Get a unique name.
+                    f.close()
+                    file_count += 1
+                    short_name += " (" + str(file_count) + ")"
+                except:
+                    pass
+                    
+                # Write out the dropped file.
+                f = open(short_name, 'wb')
+                f.write(raw_data)
+                f.close()
+                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
+                
+            except Exception as e:
+                log.error("Writing file " + short_name + " failed. " + str(e))
+
+        else:
+            log.warning("File not dumped. Output dir is None.")
         
     def _get(self, name):
 

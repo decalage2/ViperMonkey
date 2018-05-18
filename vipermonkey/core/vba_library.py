@@ -1256,9 +1256,6 @@ class IIf(VbaLibraryFunc):
         else:
             return false_part
 
-out_dir = None
-file_count = 0
-
 class Close(VbaLibraryFunc):
     """
     File Close statement.
@@ -1293,62 +1290,7 @@ class Close(VbaLibraryFunc):
             file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
-        
-        # Get the name of the file being closed.
-        name = context.open_files[file_id]["name"]
-        log.info("Closing file " + name)
-        
-        # Get the data written to the file and track it.
-        data = context.open_files[file_id]["contents"]
-        context.closed_files[name] = data
-
-        # Clear the file out of the open files.
-        del context.open_files[file_id]
-
-        # Save the hash of the written file.
-        raw_data = array.array('B', data).tostring()
-        h = sha256()
-        h.update(raw_data)
-        file_hash = h.hexdigest()
-        context.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
-
-        # TODO: Set a flag to control whether to dump file contents.
-
-        # Dump out the file.
-        if (out_dir is not None):
-
-            # Make the dropped file directory if needed.
-            if (not os.path.isdir(out_dir)):
-                os.makedirs(out_dir)
-
-            # Dump the file.
-            try:
-
-                # Get a unique name for the file.
-                short_name = name
-                if ('\\' in short_name):
-                    start = short_name.rindex('\\') + 1
-                short_name = out_dir + short_name[start:].strip()
-                try:
-                    f = open(short_name, 'r')
-                    # Already exists. Get a unique name.
-                    f.close()
-                    file_count += 1
-                    short_name += " (" + str(file_count) + ")"
-                except:
-                    pass
-                    
-                # Write out the dropped file.
-                f = open(short_name, 'wb')
-                f.write(raw_data)
-                f.close()
-                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
-                
-            except Exception as e:
-                log.error("Writing file " + short_name + " failed. " + str(e))
-
-        else:
-            log.warning("File not dumped. Output dir is None.")
+        context.dump_file(file_id)
                 
 class Put(VbaLibraryFunc):
     """

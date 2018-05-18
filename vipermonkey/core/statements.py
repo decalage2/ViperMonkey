@@ -55,6 +55,7 @@ from from_unicode_str import *
 from vba_object import int_convert
 
 from logger import log
+import sys
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -1755,6 +1756,51 @@ class External_Function(VBA_Object):
     External Function from a DLL
     """
 
+    file_count = 0
+    def _createfile(self, params, context):
+
+        # Get a name for the file.
+        fname = None
+        if ((params[0] is not None) and (len(params[0]) > 0)):
+            fname = "#" + str(params[0])
+        else:
+            External_Function.file_count += 1
+            fname = "#SOME_FILE_" + str(External_Function.file_count)
+
+        # Save that the file is opened.
+        context.open_files[fname] = {}
+        context.open_files[fname]["name"] = fname
+        context.open_files[fname]["contents"] = []
+        log.info("Created file " + fname)
+        
+        # Return the name of the "file".
+        return fname
+
+    def _writefile(self, params, context):
+
+        # Simulate the write.
+        file_id = params[0]
+
+        # Make sure the file exists.
+        if (file_id not in context.open_files):
+            log.error("File " + file_id + " not open. Cannot write.")
+            return 1
+        
+        # We can only write single byte values for now.
+        data = params[1]
+        if (not isinstance(data, int)):
+            log.error("Cannot WriteFile() data that is not int.")
+            return 0
+        context.open_files[file_id]["contents"].append(data)
+        return 0
+
+    def _closehandle(self, params, context):
+
+        # Simulate the file close.
+        file_id = params[0]
+        context.dump_file(file_id)
+        return 0
+    
     def __init__(self, original_str, location, tokens):
         super(External_Function, self).__init__(original_str, location, tokens)
         self.name = tokens.function_name
@@ -1786,7 +1832,9 @@ class External_Function(VBA_Object):
             function_name = self.alias_name
         else:
             function_name = self.name
-        log.debug('evaluating External Function %s(%r)' % (function_name, params))
+        log.info('Evaluating external function %s(%r)' % (function_name, params))
+
+        # Log certain function calls.
         function_name = function_name.lower()
         if self.lib_name.startswith('urlmon'):
             if function_name.startswith('urldownloadtofile'):
@@ -1799,9 +1847,20 @@ class External_Function(VBA_Object):
             context.report_action('Run Command', cmd, function_name)
             # return 0 when no error occurred:
             return 0
+
+        # Simulate certain external calls of interest.
+        if (function_name.lower().startswith('createfile')):
+            return self._createfile(params, context)
+
+        if (function_name.lower().startswith('writefile')):
+            return self._writefile(params, context)
+
+        if (function_name.lower().startswith('closehandle')):
+            return self._closehandle(params, context)
+        
         # TODO: return result according to the known DLLs and functions
         log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
-        return None
+        return 0
 
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
                  + Optional(Literal('(') + Literal(')')).suppress()

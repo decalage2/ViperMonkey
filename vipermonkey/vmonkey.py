@@ -560,7 +560,7 @@ def process_file (container, filename, data,
                 out_dir = out_dir[start:]
             out_dir = out_dir.replace(".", "").strip()
             out_dir = "./" + out_dir + "/"
-            vba_library.out_dir = out_dir
+            vba_context.out_dir = out_dir
                 
             # Parse the VBA streams.
             comp_modules = parse_streams(vba, strip_useless)
