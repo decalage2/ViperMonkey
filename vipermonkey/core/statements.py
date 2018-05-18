@@ -1388,7 +1388,7 @@ class Call_Statement(VBA_Object):
         # Log functions of interest.
         save = False
         for func in Function_Call.log_funcs:
-            if (self.name.lower().endswith(func.lower())):
+            if (str(self.name).lower().endswith(func.lower())):
                 save = True
                 break
         if (save):

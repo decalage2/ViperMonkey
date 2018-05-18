@@ -1256,6 +1256,20 @@ class IIf(VbaLibraryFunc):
         else:
             return false_part
 
+class CallByName(VbaLibraryFunc):
+    """
+    CallByName() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 3)
+        cmd = params[1]
+        args = ''
+        if (len(params) >= 4):
+            args = params[3]
+        if ("Run" in cmd):
+            context.report_action("Run", args, 'Interesting Function Call')
+
 class Close(VbaLibraryFunc):
     """
     File Close statement.
@@ -1548,7 +1562,8 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec):
+               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
+               CallByName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
