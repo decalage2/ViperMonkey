@@ -159,7 +159,51 @@ def _read_doc_vars(fname):
             
     except:
         return []
-        
+
+def _read_custom_doc_props(fname):
+    """
+    Use a heuristic to try to read in custom document property names
+    and values from the DocumentSummaryInformation OLE stream. Note
+    that this heuristic is kind of hacky and is not close to being a
+    general solution for reading in document properties, but it serves
+    the need for ViperMonkey emulation.
+
+    TODO: Replace this when actual support for reading doc properties
+    is added to olefile.
+    """
+
+    try:
+
+        # Pull out all of the character strings from the DocumentSummaryInformation OLE data.
+        ole = olefile.OleFileIO(fname, write_mode=False)
+        data = None
+        for stream_name in ole.listdir():
+            if ("DocumentSummaryInformation" in stream_name[-1]):
+                data = ole.openstream(stream_name).read()
+                break
+        if (data is None):
+            return []
+        strs = re.findall("(\w{4,})", data)
+            
+        # Treat each wide character string as a potential variable that has a value
+        # of the string 1 positions ahead on the current string. This introduces "variables"
+        # that don't really exist into the list, but these variables will not be accessed
+        # by valid VBA so emulation will work.
+        pos = 0
+        r = []
+        for s in strs:
+            # TODO: Figure out if this is 1 or 2 positions ahead.
+            if ((pos + 1) < len(strs)):
+                r.append((s, strs[pos + 1]))
+            pos += 1
+
+        # Return guesses at custom doc prop assignments.
+        return r
+            
+    except Exception as e:
+        log.error("Cannot read custom doc properties. " + str(e))
+        return []
+    
 def is_useless_dim(line):
     """
     See if we can skip this Dim statement and still successfully emulate.
@@ -575,6 +619,16 @@ def process_file (container, filename, data,
                 if (m != "empty"):
                     vm.add_compiled_module(m)
 
+            # Pull out document variables.
+            for (var_name, var_val) in _read_doc_vars(filename):
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+
+            # Pull out custom document properties.
+            for (var_name, var_val) in _read_custom_doc_props(filename):
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
+                    
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
@@ -595,14 +649,11 @@ def process_file (container, filename, data,
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
                         vm.globals[name + ".text"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
-                        
-                # Pull out document variables.
-                for (var_name, var_val) in _read_doc_vars(filename):
-                    vm.doc_vars[var_name.lower()] = var_val
-                    log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
                 
             except Exception as e:
                 log.error("Cannot read form strings. " + str(e))
+                traceback.print_exc()
+                raise e
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'

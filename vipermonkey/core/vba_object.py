@@ -209,6 +209,21 @@ def eval_arg(arg, context):
                     val = context.get_doc_var(var)
                     if (val is not None):
                         return val
+
+                # Are we loading a custom document property?
+                if (tmp.startswith("activedocument.customdocumentproperties(")):
+
+                    # ActiveDocument.CustomDocumentProperties("l3qDvt3B53wxeXu").Value
+                    # Try to pull the result from the custom properties.
+                    var = tmp.replace("activedocument.customdocumentproperties(", "").\
+                          replace(")", "").\
+                          replace("'","").\
+                          replace('"',"").\
+                          replace('.value',"").\
+                          strip()
+                    val = context.get_doc_var(var)
+                    if (val is not None):
+                        return val
                     
                 # None of those worked. We can't find the data.
                 #return "??"
