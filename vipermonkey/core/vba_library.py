@@ -1394,7 +1394,41 @@ class CreateObject(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        pass
+        assert (len(params) >= 1)
+        
+        # Track contents of data written to 'ADODB.Stream'.
+        obj_type = str(params[0])
+        if (obj_type == 'ADODB.Stream'):
+            context.open_file('ADODB.Stream')
+
+class ReadText(VbaLibraryFunc):
+    """
+    ReadText() stream method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        
+        # TODO: Currently the stream object on which ReadText() is
+        # being called is not being tracked. We will only handle the
+        # ReadText() if there is only 1 current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process ReadText(). No open streams.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process ReadText(). Too many open streams.")
+            return
+
+        # Simulate the read.
+
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+
+        # Get the data to read.
+        data = context.open_files[file_id]["contents"]
+        raw_data = array.array('B', data).tostring()
+
+        # Return the data.
+        return raw_data
 
 class CheckSpelling(VbaLibraryFunc):
     """
@@ -1506,9 +1540,7 @@ class CreateTextFile(VbaLibraryFunc):
         fname = str(params[0])
 
         # Save that the file is opened.
-        context.open_files[fname] = {}
-        context.open_files[fname]["name"] = fname
-        context.open_files[fname]["contents"] = []
+        context.open_file(fname)
 
 class Write(VbaLibraryFunc):
     """
@@ -1563,7 +1595,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName):
+               CallByName, ReadText):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -347,9 +347,9 @@ def strip_useless_code(vba_code):
                 log.debug("SKIP: Function definition. Keep it.")
                 continue
 
-            # Skip calls to GetObject().
-            if ("GetObject" in line):
-                log.debug("SKIP: GetObject() call. Keep it.")
+            # Skip calls to GetObject() or Shell().
+            if (("GetObject" in line) or ("Shell" in line)):
+                log.debug("SKIP: GetObject()/Shell() call. Keep it.")
                 continue
             
             # Skip lines where the '=' is part of a boolean expression.

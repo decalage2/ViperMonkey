@@ -465,6 +465,18 @@ class Context(object):
         self.globals["VBA.vbKeyF15".lower()] = 0x7E
         self.globals["VBA.vbKeyF16".lower()] = 0x7F        
 
+    def open_file(self, fname):
+        """
+        Simulate opening a file.
+
+        fname - The name of the file.
+        """
+
+        # Save that the file is opened.
+        self.open_files[fname] = {}
+        self.open_files[fname]["name"] = fname
+        self.open_files[fname]["contents"] = []
+        
     def dump_file(self, file_id):
         """
         Save the contents of a file dumped by the VBA to disk.
