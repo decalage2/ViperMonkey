@@ -323,13 +323,28 @@ def strip_useless_code(vba_code):
     stripped statements are commented out.
     """
 
+    # Track data change callback function names.
+    change_callbacks = set()
+    
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+)\s*=\s*")
+    assign_re = re.compile("\s*(\w+(\.\w+)*)\s*=\s*")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
     for line in vba_code.split("\n"):
 
+        # Is this a change function callback?
+        if (("Sub " in line) and ("_Change(" in line)):
+
+            # Pull out the name of the data item with the current change callback.
+            # ex: Private Sub besstirp_Change()
+            data_name = line.replace("Sub ", "").\
+                        replace("Private ", "").\
+                        replace(" ", "").\
+                        replace("()", "").\
+                        replace("_Change", "").strip()
+            change_callbacks.add(data_name)
+        
         # Is there an assignment on this line?
         line_num += 1
         match = assign_re.findall(line)
@@ -377,6 +392,7 @@ def strip_useless_code(vba_code):
             # Yes, there is an assignment. Save the assigned variable and line #
             log.debug("SKIP: Assigned vars = " + str(match))
             for var in match:
+                var = var[0]
                 if (var not in assigns):
                     assigns[var] = set()
                 assigns[var].add(line_num)
@@ -384,7 +400,9 @@ def strip_useless_code(vba_code):
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
     for var in assigns.keys():
-        refs[var] = False
+        # Keep assignments to variables in other streams since we cannot
+        # tell based on the current stream whether the assignment is used.
+        refs[var] = ("." in var)
     line_num = 0
     for line in vba_code.split("\n"):
 
@@ -403,7 +421,11 @@ def strip_useless_code(vba_code):
                 log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
                 refs[var] = True
 
-
+    # Keep assignments that have change callbacks.
+    for change_var in change_callbacks:
+        for var in assigns.keys():
+            refs[var] = ((change_var in var) or (var in change_var))
+                
     # Figure out what assignments to strip and keep.
     comment_lines = set()
     keep_lines = set()
@@ -638,7 +660,7 @@ def process_file (container, filename, data,
                         if ("/" in macro_name):
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
-                        global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore')
+                        global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
                         val = form_variables['value']
                         if (val is None):
                             val = ''

@@ -490,6 +490,34 @@ class Let_Statement(VBA_Object):
         else:
             return 'Let %s(%r) = %r' % (self.name, self.index, self.expression)
 
+    def _handle_change_callback(self, var_name, context):
+
+        # Get the variable name, minus any embedded context.
+        if ("." in var_name):
+            var_name = var_name[var_name.rindex(".") + 1:]
+
+        # Get the name of the change callback for the variable.
+        callback_name = var_name + "_Change"
+
+        # Do we have any functions defined with this callback name?
+        try:
+
+            # Can we find something with this name?
+            callback = context.get(callback_name)
+            log.debug("Found change callback " + callback_name)
+
+            # Is it a function?
+            if (is_procedure(callback)):
+
+                # Yes it is. Run it.
+                log.info("Running change callback " + callback_name)
+                callback.eval(context)
+
+        except KeyError:
+
+            # No callback.
+            pass
+        
     def eval(self, context, params=None):
 
         # evaluate value of right operand:
@@ -557,9 +585,13 @@ class Let_Statement(VBA_Object):
                 except:
                     log.error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
                     value = 0
-                    
+
+            # Update the variable.
             log.debug('setting %s = %s' % (self.name, value))
             context.set(self.name, value)
+
+            # See if there is a change callback function for the updated variable.
+            self._handle_change_callback(self.name, context)
 
         # set variable, array access.
         else:
