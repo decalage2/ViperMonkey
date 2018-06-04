@@ -1132,7 +1132,10 @@ class Select_Clause(VBA_Object):
         return r
 
     def eval(self, context, params=None):
-        return self.select_val.eval(context, params)
+        if (hasattr(self.select_val, "eval")):
+            return self.select_val.eval(context, params)
+        else:
+            return self.select_val
 
 class Case_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
