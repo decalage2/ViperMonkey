@@ -664,13 +664,30 @@ def process_file (container, filename, data,
                         val = form_variables['value']
                         if (val is None):
                             val = ''
+                        tag = form_variables['tag']
+                        if (tag is None):
+                            tag = ''
+                        tag = tag.replace('\xb1', '').replace('\x03', '')
+                            
+                        # Save full form variable names.
                         name = global_var_name.lower()
                         vm.globals[name] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
-                        vm.globals[name + ".tag"] = val
+                        vm.globals[name + ".tag"] = tag
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", val))
                         vm.globals[name + ".text"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+
+                        # Save short form variable names.
+                        short_name = global_var_name.lower()
+                        if ("." in short_name):
+                            short_name = short_name[short_name.rindex(".") + 1:]
+                            vm.globals[short_name] = val
+                            log.debug("Added VBA form variable %r = %r to globals." % (short_name, val))
+                            vm.globals[short_name + ".tag"] = tag
+                            log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Tag", val))
+                            vm.globals[short_name + ".text"] = val
+                            log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Text", val))
                 
             except Exception as e:
                 log.error("Cannot read form strings. " + str(e))

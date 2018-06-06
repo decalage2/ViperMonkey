@@ -493,6 +493,7 @@ class Let_Statement(VBA_Object):
     def _handle_change_callback(self, var_name, context):
 
         # Get the variable name, minus any embedded context.
+        var_name = str(var_name)
         if ("." in var_name):
             var_name = var_name[var_name.rindex(".") + 1:]
 
