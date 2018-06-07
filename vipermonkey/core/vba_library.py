@@ -444,7 +444,7 @@ class StrConv(VbaLibraryFunc):
             if (all_int):
                 tmp = ""
                 for i in r:
-                    if (i <= 0):
+                    if (i < 0):
                         continue
                     try:
                         tmp += chr(i)

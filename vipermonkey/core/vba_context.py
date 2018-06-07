@@ -601,8 +601,21 @@ class Context(object):
         var = var.lower()
         log.info("Looking up doc var " + var)
         if (var not in self.doc_vars):
+
+            # Can't find a doc var with this name. See if we have an internal variable
+            # with this name.
+            log.debug("doc var named " + var + " not found.")
+            var_value = self.get(var)
+            if (var_value is not None):
+                return self.get_doc_var(var_value)
+
+            # Can't find it.
             return None
-        return self.doc_vars[var]
+
+        # Found it.
+        r = self.doc_vars[var]
+        log.debug("Found doc var " + var + " = " + str(r))
+        return r
             
     # TODO: set_global?
 
