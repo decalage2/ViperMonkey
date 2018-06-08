@@ -1264,10 +1264,11 @@ class CallByName(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) >= 3)
         cmd = params[1]
+        obj = str(params[0])
         args = ''
         if (len(params) >= 4):
             args = params[3]
-        if ("Run" in cmd):
+        if (("Run" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call')
 
 class Close(VbaLibraryFunc):
@@ -1400,6 +1401,10 @@ class CreateObject(VbaLibraryFunc):
         obj_type = str(params[0])
         if (obj_type == 'ADODB.Stream'):
             context.open_file('ADODB.Stream')
+
+        # Just return a string representation of the name of the object
+        # being created.
+        return str(obj_type)
 
 class ReadText(VbaLibraryFunc):
     """
