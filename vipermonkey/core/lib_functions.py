@@ -80,37 +80,40 @@ class Chr(VBA_Object):
         # It also looks like floating point numbers are allowed.
         # First, eval the argument:
         param = eval_arg(self.arg, context)
-        if isinstance (param, int):
+
+        # Get the ordinal value.
+        if isinstance(param, basestring):
             try:
-                r = chr(param)
-                log.debug("Chr(" + str(param) + ") = " + str(r))
-                return r
-            except Exception as e:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ""
-        elif isinstance(param, basestring):
-            log.debug('Chr: converting string %r to integer' % param)
-            try:
-                param_int = integer.parseString(param.strip())[0]
-                r = chr(param_int)
-                log.debug("Chr(" + str(param_int) + ") = " + str(r))
-                return r
+                param = integer.parseString(param.strip())[0]
             except:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''
+                return ''            
         elif isinstance(param, float):
             log.debug('Chr: converting float %r to integer' % param)
             try:
-                param_int = int(round(param))
-                r = chr(param_int)
-                log.debug("Chr(" + str(param_int) + ") = " + str(r))
-                return r
+                param = int(round(param))
             except:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
                 return ''
+        elif isinstance(param, int):
+            pass
         else:
             raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
+            
+        # Figure out whether to create a unicode or ascii character.
+        converter = chr
+        if (param > 255):
+            converter = unichr
 
+        # Do the conversion.
+        try:
+            r = converter(param)
+            log.debug("Chr(" + str(param) + ") = " + r)
+            return r
+        except Exception as e:
+            log.error(str(e))
+            log.error("%r is not a valid chr() value. Returning ''." % param)
+            return ""
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)

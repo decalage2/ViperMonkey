@@ -625,7 +625,7 @@ class Let_Statement(VBA_Object):
                 arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
 
             # Handle strings.
-            if (isinstance(arr_var, str)):
+            if ((isinstance(arr_var, str)) or (isinstance(arr_var, unicode))):
 
                 # Do we need to extend the length of the string to include the index?
                 if (index >= len(arr_var)):
@@ -633,7 +633,7 @@ class Let_Statement(VBA_Object):
                 
                 # We now have a string with the proper # of elements. Set the
                 # array element to the proper value.
-                if (isinstance(value, str)):
+                if ((isinstance(value, str)) or (isinstance(value, unicode))):
                     arr_var = arr_var[:index] + value + arr_var[(index + 1):]
                 elif (isinstance(value, int)):
                     try:

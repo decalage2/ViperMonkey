@@ -363,7 +363,6 @@ class ViperMonkey(object):
             t.add_row(action)
         return t
 
-
 def scan_expressions(vba_code):
     """
     Scan VBA code to extract constant VBA expressions, i.e. expressions
