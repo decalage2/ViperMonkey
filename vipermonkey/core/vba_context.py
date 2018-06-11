@@ -138,6 +138,9 @@ class Context(object):
 
         # Add in a global for the current time.
         self.globals["Now".lower()] = datetime.now()
+
+        # Fake up a user name.
+        self.globals["Application.UserName".lower()] = "--"
         
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"

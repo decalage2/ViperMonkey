@@ -392,6 +392,13 @@ def strip_useless_code(vba_code):
             # Yes, there is an assignment. Save the assigned variable and line #
             log.debug("SKIP: Assigned vars = " + str(match))
             for var in match:
+
+                # Keep lines where we may be running a command via an object.
+                val = line[line.rindex("=") + 1:]
+                if ("." in val):
+                    continue
+
+                # It does not look like we are running something. Track the variable.
                 var = var[0]
                 if (var not in assigns):
                     assigns[var] = set()
@@ -661,8 +668,6 @@ def process_file (container, filename, data,
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
                         global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
-                        print "Form var: " + global_var_name
-                        print "Form var value: " + str(form_variables)
                         val = form_variables['value']
                         if (val is None):
                             val = ''

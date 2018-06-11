@@ -89,6 +89,9 @@ from pyparsing import *
 # TODO: replace with tablestream
 import prettytable
 
+# sudo pypy -m pip install unidecode
+import unidecode
+
 from logger import log
 
 
@@ -334,6 +337,15 @@ class ViperMonkey(object):
         Callback function for each evaluated statement to report macro actions
         """
         # store the action for later use:
+        if (isinstance(action, str)):
+            action = unidecode.unidecode(action.decode('unicode-escape'))
+        if (isinstance(params, str)):
+            try:
+                params = unidecode.unidecode(params.decode('unicode-escape'))
+            except:
+                pass
+        if (isinstance(description, str)):
+            description = unidecode.unidecode(description.decode('unicode-escape'))
         self.actions.append((action, params, description))
         log.info("ACTION: %s - params %r - %s" % (action, params, description))
 
