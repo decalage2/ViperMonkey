@@ -398,6 +398,10 @@ def strip_useless_code(vba_code):
                 if ("." in val):
                     continue
 
+                # Keep object creations.
+                if ("CreateObject" in val):
+                    continue
+                
                 # It does not look like we are running something. Track the variable.
                 var = var[0]
                 if (var not in assigns):
@@ -485,6 +489,20 @@ def strip_useless_code(vba_code):
             r += "End Function\n"
             continue
 
+        # Fix Application.Run "foo, bar baz" type expressions by removing
+        # the quotes.
+        if (line.strip().startswith("Application.Run") and
+            (line.count('"') == 2) and
+            (line.strip().endswith('"'))):
+
+            # Just directly run the command in the string.
+            line = line.replace('"', '').replace("Application.Run", "")
+
+            # Fix cases where the function to run is the 1st argument in the arg string.
+            fields = line.split(",")
+            if ((len(fields) > 1) and (" " not in fields[0].strip())):
+                line = "WScript.Shell " + line
+        
         # This is a regular valid line. Add it.
         r += line + "\n"
 

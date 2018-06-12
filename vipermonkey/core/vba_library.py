@@ -54,6 +54,7 @@ from vba_object import int_convert
 from vba_object import str_convert
 
 from vba_context import VBA_LIBRARY
+import expressions
 
 from logger import log
 
@@ -1357,7 +1358,7 @@ class Run(VbaLibraryFunc):
 
         # Get the name of the function to call.
         func_name = params[0]
-
+            
         # Get any parameters to pass to the function to call.
         call_params = None
         if (len(params) > 1):
