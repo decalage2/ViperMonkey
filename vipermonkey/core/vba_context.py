@@ -244,7 +244,9 @@ class Context(object):
         self.globals["vbKeyF15".lower()] = 126
         self.globals["vbKeyF16".lower()] = 127
         self.globals["vbNullString".lower()] = ''
+        self.globals["VBA.vbNullString".lower()] = ''
         self.globals["vbNullChar".lower()] = '\0'
+        self.globals["VBA.vbNullChar".lower()] = '\0'
 
         self.globals["vbUpperCase".lower()] = 1
         self.globals["vbLowerCase".lower()] = 2
