@@ -337,15 +337,23 @@ class ViperMonkey(object):
         Callback function for each evaluated statement to report macro actions
         """
         # store the action for later use:
-        if (isinstance(action, str)):
-            action = unidecode.unidecode(action.decode('unicode-escape'))
+        try:
+            if (isinstance(action, str)):
+                action = unidecode.unidecode(action.decode('unicode-escape'))
+        except UnicodeDecodeError:
+            action = "??"
         if (isinstance(params, str)):
             try:
                 params = unidecode.unidecode(params.decode('unicode-escape'))
             except:
-                pass
-        if (isinstance(description, str)):
-            description = unidecode.unidecode(description.decode('unicode-escape'))
+                log.error("Unicode decode of action params failed.")
+                params = "?? (not decoded)"
+        try:
+            if (isinstance(description, str)):
+                description = unidecode.unidecode(description.decode('unicode-escape'))
+        except UnicodeDecodeError:
+            log.error("Unicode decode of action description failed.")
+            description = "?? (not decoded)"
         self.actions.append((action, params, description))
         log.info("ACTION: %s - params %r - %s" % (action, params, description))
 
