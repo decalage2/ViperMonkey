@@ -314,7 +314,17 @@ class Dim_Statement(VBA_Object):
 
             # Save the variable info.
             self.variables.append((var[0], is_array, curr_type))
-        
+
+        # Handle multiple variables declared with the same type.
+        tmp_vars = []
+        final_type = self.variables[len(self.variables) - 1][2]
+        for var in self.variables:
+            curr_type = var[2]
+            if (curr_type is None):
+                curr_type = final_type
+            tmp_vars.append((var[0], var[1], curr_type))
+        self.variables = tmp_vars
+            
         log.debug('parsed %r' % str(self))
 
     def __repr__(self):

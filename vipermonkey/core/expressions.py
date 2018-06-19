@@ -358,20 +358,28 @@ class Function_Call(VBA_Object):
             f = context.get(self.name)
 
             # Is this actually an array access?
-            if ((isinstance(f, list) and len(params) > 0)):
-                tmp = f
-                # Try to guess whether we are accessing a character in a string.
-                if ((len(f) == 1) and (isinstance(f[0], str))):
-                    tmp = f[0]
-                log.debug('Array Access: %r[%r]' % (tmp, params[0]))
-                index = int_convert(params[0])
-                try:
-                    r = tmp[index]
-                    log.debug('Returning: %r' % r)
-                    return r
-                except:
-                    log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
-                    return 0
+            if (isinstance(f, list)):
+
+                # Are we accessing an element?
+                if (len(params) > 0):
+                    tmp = f
+                    # Try to guess whether we are accessing a character in a string.
+                    if ((len(f) == 1) and (isinstance(f[0], str))):
+                        tmp = f[0]
+                    log.debug('Array Access: %r[%r]' % (tmp, params[0]))
+                    index = int_convert(params[0])
+                    try:
+                        r = tmp[index]
+                        log.debug('Returning: %r' % r)
+                        return r
+                    except:
+                        log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
+                        return 0
+
+                # Looks like we want the whole array (ex. foo()).
+                else:
+                    return f
+                    
             log.debug('Calling: %r' % f)
             if (f is not None):
                 if (not(isinstance(f, str)) and
