@@ -1511,6 +1511,9 @@ class Variable(VbaLibraryFunc):
         log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
         return r
 
+class Variables(Variable):
+    pass
+    
 class CDbl(VbaLibraryFunc):
     """
     CDbl() type conversion function.
@@ -1601,7 +1604,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText):
+               CallByName, ReadText, Variables):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
