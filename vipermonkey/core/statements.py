@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -42,8 +42,9 @@ https://github.com/decalage2/ViperMonkey
 # 2015-02-12 v0.01 PL: - first prototype
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
+# 2018-06-20 v0.06 PL: - fixed a slight issue in Dim_Statement.__repr__
 
-__version__ = '0.02'
+__version__ = '0.06'
 
 # --- IMPORTS ------------------------------------------------------------------
 
@@ -320,7 +321,7 @@ class Dim_Statement(VBA_Object):
             if (var[1]):
                 r += "()"
             if (var[2]):
-                r += " As " + var[2]
+                r += " As " + str(var[2])
         if (self.init_val is not None):
             r += " = " + str(self.init_val)
         return r

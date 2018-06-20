@@ -45,8 +45,9 @@ https://github.com/decalage2/ViperMonkey
 # 2016-10-06 v0.03 PL: - fixed vipermonkey.core import
 # 2016-12-11 v0.04 PL: - fixed relative import for core package (issue #17)
 # 2018-01-12 v0.05 KS: - lots of bug fixes and additions by Kirk Sayre (PR #23)
+# 2018-06-20 v0.06 PL: - fixed issue #28, import prettytable
 
-__version__ = '0.05'
+__version__ = '0.06'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -89,7 +90,7 @@ import logging
 import colorlog
 import re
 
-from oletools.thirdparty.prettytable import prettytable
+import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba
 import olefile
