@@ -146,7 +146,8 @@ class ViperMonkey(object):
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
-                             'workbook_activate', 'auto_close', 'workbook_close']
+                             'workbook_activate', 'auto_close', 'workbook_close',
+                             'inkpicture1_painted']
 
     def add_compiled_module(self, m):
         """

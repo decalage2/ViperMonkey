@@ -183,10 +183,14 @@ class Parameter(VBA_Object):
         self.name = tokens.name
         self.my_type = tokens.type
         self.init_val = tokens.init_val
+        self.mechanism = str(tokens.mechanism)
         log.debug('parsed %r' % self)
 
     def __repr__(self):
-        r = str(self.name)
+        r = ""
+        if (self.mechanism):
+            r += str(self.mechanism) + " "
+        r += str(self.name)
         if self.my_type:
             r += ' as ' + str(self.my_type)
         if (self.init_val):
@@ -240,7 +244,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # MS-GRAMMAR: param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # MS-GRAMMAR: typed_name_param_dcl = TYPED_NAME [array_designator]
 
-parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism).suppress() + TODO_identifier_or_object_attrib('name') + \
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism('mechanism')) + TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
             Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type'))) + \
             Optional('=' + expression('init_val'))
@@ -1424,7 +1428,8 @@ class Call_Statement(VBA_Object):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
     def eval(self, context, params=None):
-        # TODO fix params here!
+
+        # Get argument values.
         call_params = eval_args(self.params, context=context)
         str_params = repr(call_params)
         if (len(str_params) > 80):
@@ -1458,8 +1463,17 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p)
             context.report_action('Object.Method Call', tmp_call_params, func_name)
         try:
+
+            # Emulate the function body.
             s = context.get(func_name)
             s.eval(context=context, params=call_params)
+
+            # Set the values of the arguments passed as ByRef parameters.
+            if (hasattr(s, "byref_params")):
+                for byref_param_info in s.byref_params.keys():
+                    arg_var_name = str(self.params[byref_param_info[1]])
+                    context.set(arg_var_name, s.byref_params[byref_param_info])
+            
         except KeyError:
             try:
                 tmp_name = func_name.replace("$", "").replace("VBA.", "").replace("Math.", "").\

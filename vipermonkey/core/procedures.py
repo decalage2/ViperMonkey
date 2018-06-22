@@ -233,13 +233,24 @@ class Function(VBA_Object):
             context.set(param.name, init_val)
             
         # Set given parameter values.
+        self.byref_params = {}
         if params is not None:
+
             # TODO: handle named parameters
             for i in range(len(params)):
+
+                # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
+
+                # Is this a ByRef parameter?
+                if (self.params[i].mechanism == "ByRef"):
+
+                    # Save it so we can pull out the updated value in the Call statement.
+                    self.byref_params[(param_name, i)] = None
+                
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
         for s in self.statements:
@@ -258,6 +269,12 @@ class Function(VBA_Object):
         # TODO: get result from context.locals
         context.exit_func = False
         try:
+
+            # Save the values of the ByRef parameters.
+            for byref_param in self.byref_params.keys():
+                self.byref_params[byref_param] = context.get(byref_param[0])
+            
+            # Get the return value.
             return_value = context.get(self.name)
             if (return_value is None):
                 context.set(self.name, '')

@@ -44,6 +44,7 @@ __version__ = '0.02'
 from pyparsing import *
 
 from logger import log
+from identifiers import *
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
@@ -105,8 +106,9 @@ special_form = caselessKeywordsList((
 # declared type (section 2.2) of an entity.
 
 # TODO: Add more of these as needed or generalize.
-reserved_complex_type_identifier = caselessKeywordsList((
-    "MSForms.fmScrollAction", "MSForms.ReturnSingle"))
+#reserved_complex_type_identifier = caselessKeywordsList(("MSForms.fmScrollAction", "MSForms.ReturnSingle"))
+simple_type_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
+reserved_complex_type_identifier = Group(simple_type_identifier + ZeroOrMore("." + simple_type_identifier))
 
 reserved_atomic_type_identifier = caselessKeywordsList((
     "Boolean", "Byte", "Currency", "Date", "Double", "Integer",
