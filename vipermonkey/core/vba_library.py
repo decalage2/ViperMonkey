@@ -42,11 +42,13 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from datetime import datetime
+import time
 import array
 import math
 import base64
 import re
 from hashlib import sha256
+import sys
 import os
 import random
 from from_unicode_str import *
@@ -1551,6 +1553,14 @@ class CreateTextFile(VbaLibraryFunc):
         # Save that the file is opened.
         context.open_file(fname)
 
+class Timer(VbaLibraryFunc):
+    """
+    Timer() method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return int(time.mktime(datetime.now().timetuple()))
+
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -1604,7 +1614,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText, Variables):
+               CallByName, ReadText, Variables, Timer):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
