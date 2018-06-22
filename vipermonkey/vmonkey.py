@@ -435,7 +435,7 @@ def strip_useless_code(vba_code):
     # Keep assignments that have change callbacks.
     for change_var in change_callbacks:
         for var in assigns.keys():
-            refs[var] = ((change_var in var) or (var in change_var))
+            refs[var] = ((change_var in var) or (var in change_var) or refs[var])
                 
     # Figure out what assignments to strip and keep.
     comment_lines = set()
