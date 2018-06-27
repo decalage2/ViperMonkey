@@ -141,6 +141,9 @@ class ViperMonkey(object):
 
         # Track data saved in document variables.
         self.doc_vars = {}
+
+        # Track document text.
+        self.doc_text = ""
         
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
@@ -308,6 +311,10 @@ class ViperMonkey(object):
         # TODO: use the provided entrypoint
         # Create the global context for the engine
         context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+
+        # Save the document text in the proper variable in the context.
+        context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text
+        
         # reset the actions list, in case it is called several times
         self.actions = []
         # TODO: look for ALL auto* subs, in the same order as MS Office
@@ -389,8 +396,6 @@ def scan_expressions(vba_code):
         # only yield expressions which are not plain constants
         # a VBA expression should have an eval() method:
         if hasattr(e, 'eval'):
-            # print 'eval(%s) = %s' % (repr(e), repr(e.eval()))
-            # print repr(e.eval())
             yield (e, e.eval(context))
 
 

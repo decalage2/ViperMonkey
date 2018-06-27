@@ -107,15 +107,6 @@ module_body_logical_structure = ZeroOrMore(extended_line)
 logical_line = LineStart() + ZeroOrMore(extended_line.leaveWhitespace()) + line_terminator  # rather than LineEnd()
 module_body_lines = Combine(ZeroOrMore(logical_line))  # .setDebug()
 
-
-# for l in module_body_lines.parseString(vba, parseAll=True):
-#     print l,
-
-# print module_body_lines.parseString(vba, parseAll=True)[0]
-
-# for m in line_continuation.scanString(vba):
-#     print m
-
 # === FUNCTIONS ==============================================================
 
 def vba_collapse_long_lines(vba_code):

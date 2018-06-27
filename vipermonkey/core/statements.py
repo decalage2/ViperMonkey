@@ -184,6 +184,10 @@ class Parameter(VBA_Object):
         self.my_type = tokens.type
         self.init_val = tokens.init_val
         self.mechanism = str(tokens.mechanism)
+        # Is this an array parameter?
+        if (('(' in str(tokens)) and (')' in str(tokens))):
+            # Arrays are always passed by reference.
+            self.mechanism = 'ByRef'
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -245,7 +249,7 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # MS-GRAMMAR: typed_name_param_dcl = TYPED_NAME [array_designator]
 
 parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism('mechanism')) + TODO_identifier_or_object_attrib('name') + \
-            Optional(CaselessKeyword("(") + ZeroOrMore(" ") + CaselessKeyword(")")).suppress() + \
+            Optional(CaselessKeyword("(") + ZeroOrMore(" ").suppress() + CaselessKeyword(")")) + \
             Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type'))) + \
             Optional('=' + expression('init_val'))
 parameter.setParseAction(Parameter)

@@ -121,6 +121,36 @@ from core import *
     
 # === MAIN (for tests) ===============================================================================================
 
+def _read_doc_text(fname):
+    """
+    Use a heuristic to read in the document text. The current
+    heuristic (basically run strings on the document file) is not
+    good, so this function is a placeholder until Python support for
+    reading in the document text is found.
+
+    TODO: Replace this when a real Python solution for reading the doc
+    text is found.
+    """
+
+    # Read in the file.
+    data = ""
+    try:
+        f = open(fname, 'r')
+        data = f.read()
+        f.close()
+    except Exception as e:
+        log.error("Cannot read document text from " + str(fname) + ". " + str(e))
+        return ""
+
+    # Pull strings from doc.
+    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
+    r = ""
+    for s in str_list:
+        r += s + "\n"
+    
+    # Return all the strings.
+    return r
+        
 def _read_doc_vars(fname):
     """
     Use a heuristic to try to read in document variable names and values from
@@ -675,7 +705,10 @@ def process_file (container, filename, data,
             for (var_name, var_val) in _read_custom_doc_props(filename):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
-                    
+
+            # Pull out the document text.
+            vm.doc_text = _read_doc_text(filename)
+                
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
