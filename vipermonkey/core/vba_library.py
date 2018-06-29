@@ -1273,7 +1273,10 @@ class CallByName(VbaLibraryFunc):
             args = params[3]
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call')
-
+        # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
+        if (("Open" in cmd) and ("WinHttpRequest" in obj)):
+            context.report_action("GET", params[4], 'Interesting Function Call')
+            
 class Close(VbaLibraryFunc):
     """
     File Close statement.
