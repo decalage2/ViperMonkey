@@ -94,7 +94,8 @@ import unidecode
 import string
 
 from logger import log
-
+from procedures import Function
+from procedures import Sub
 
 # === FUNCTIONS ==============================================================
 
@@ -317,8 +318,8 @@ class ViperMonkey(object):
         
         # reset the actions list, in case it is called several times
         self.actions = []
-        # TODO: look for ALL auto* subs, in the same order as MS Office
-        # TODO: how to handle auto subs calling other auto subs?
+
+        # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
             log.debug("Trying entry point " + entry_point)
@@ -326,6 +327,20 @@ class ViperMonkey(object):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
 
+        # Look for callback functions that can act as entry points.
+        for name in self.globals.keys():
+
+            # A *_Painted() callback?
+            if (name.lower().endswith("_painted")):
+
+                # Is this a function?
+                item = self.globals[name]
+                if (isinstance(item, Function) or isinstance(item, Sub)):
+
+                    # Emulate it.
+                    context.report_action('Found Entry Point', str(name), '')
+                    item.eval(context=context)
+                    
     def eval(self, expr):
         """
         Parse and evaluate a single VBA expression

@@ -1556,6 +1556,12 @@ class CreateTextFile(VbaLibraryFunc):
         # Save that the file is opened.
         context.open_file(fname)
 
+class Open(CreateTextFile):
+    """
+    Open() file function.
+    """
+    pass
+
 class Timer(VbaLibraryFunc):
     """
     Timer() method (stubbed).
@@ -1617,7 +1623,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText, Variables, Timer):
+               CallByName, ReadText, Variables, Timer, Open):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

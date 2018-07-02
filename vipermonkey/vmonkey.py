@@ -187,7 +187,8 @@ def _read_doc_vars(fname):
         # Return guesses at doc variable assignments.
         return r
             
-    except:
+    except Exception as e:
+        log.error("Cannot read document variables. " + str(e))
         return []
 
 def _read_custom_doc_props(fname):
