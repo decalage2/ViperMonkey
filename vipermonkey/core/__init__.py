@@ -153,6 +153,34 @@ class ViperMonkey(object):
                              'workbook_activate', 'auto_close', 'workbook_close',
                              'inkpicture1_painted']
 
+        # List of suffixes of the names of callback functions that provide alternate
+        # methods for running things on document (approximately) open.
+        # See https://www.greyhathacker.net/?m=201609
+        self.callback_suffixes = ['_BeforeNavigate2',
+                                  '_BeforeScriptExecute',
+                                  '_Change',
+                                  '_DocumentComplete',
+                                  '_DownloadBegin',
+                                  '_DownloadComplete',
+                                  '_FileDownload',
+                                  '_GotFocus',
+                                  '_Layout',
+                                  '_LostFocus',
+                                  '_MouseEnter',
+                                  '_MouseHover',
+                                  '_MouseLeave',
+                                  '_MouseMove',
+                                  '_NavigateComplete2',
+                                  '_NavigateError',
+                                  '_Painted',
+                                  '_Painting',
+                                  '_ProgressChange',
+                                  '_PropertyChange',
+                                  '_Resize',
+                                  '_SetSecureLockIcon',
+                                  '_StatusTextChange',
+                                  '_TitleChange']
+                                  
     def add_compiled_module(self, m):
         """
         Add an already parsed and processed module.
@@ -330,16 +358,19 @@ class ViperMonkey(object):
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
 
-            # A *_Painted() callback?
-            if (name.lower().endswith("_painted")):
+            # Look for functions whose name ends with a callback suffix.
+            for suffix in self.callback_suffixes:
 
-                # Is this a function?
-                item = self.globals[name]
-                if (isinstance(item, Function) or isinstance(item, Sub)):
+                # Is this a callback?
+                if (name.lower().endswith(suffix.lower())):
 
-                    # Emulate it.
-                    context.report_action('Found Entry Point', str(name), '')
-                    item.eval(context=context)
+                    # Is this a function?
+                    item = self.globals[name]
+                    if (isinstance(item, Function) or isinstance(item, Sub)):
+
+                        # Emulate it.
+                        context.report_action('Found Entry Point', str(name), '')
+                        item.eval(context=context)
                     
     def eval(self, expr):
         """
