@@ -399,8 +399,8 @@ class Function_Call(VBA_Object):
                         # Return result.
                         return r
 
-                    except AttributeError:
-                        log.error(str(f) + " has no eval() method.")
+                    except AttributeError as e:
+                        log.error(str(f) + " has no eval() method. " + str(e))
                         return f
                 elif (len(params) > 0):
 

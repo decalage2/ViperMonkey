@@ -675,7 +675,7 @@ class Let_Statement(VBA_Object):
 # TODO: remove Set when Set_Statement implemented:
 
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
-                Optional(Suppress('Const')) + \
+                Optional(Suppress(CaselessKeyword('Const'))) + \
                 ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + Optional(expression('index')) + Suppress(')'))) ^ \
                  member_access_expression('name')) + \
                 Literal('=').suppress() + \
