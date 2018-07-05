@@ -667,7 +667,6 @@ def process_file (container, filename, data,
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
-        print 'Type:', vba.type
         if vba.detect_vba_macros():
 
             # Read in document metadata.
@@ -713,6 +712,7 @@ def process_file (container, filename, data,
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
+                    print form_variables
                     if form_variables is not None:
                         var_name = form_variables['name']
                         macro_name = stream_path

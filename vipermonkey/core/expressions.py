@@ -676,7 +676,7 @@ class BoolExprItem(VBA_Object):
                 pass
                 
         # Evaluate the expression.
-        if (self.op == "="):
+        if ((self.op == "=") or (self.op.lower() == "is")):
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
@@ -702,7 +702,7 @@ class BoolExprItem(VBA_Object):
 bool_expr_item = (limited_expression + \
                   (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | \
                    CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>") | \
-                   CaselessKeyword("Like")) + \
+                   CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)

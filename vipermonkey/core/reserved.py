@@ -93,7 +93,7 @@ operator_identifier = caselessKeywordsList(
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
-    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Date", "Debug",
+    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Debug",
     "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
 
 # A <special-form> is a <reserved-identifier> that is used in an expression as
