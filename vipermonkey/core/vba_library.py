@@ -1025,10 +1025,10 @@ class Val(VbaLibraryFunc):
         tmp = str_convert(params[0]).strip().replace(" ", "")
 
         # The VB Val() function is ugly. Look for VB hex encoding.
-        nums = re.compile(r"&H[0-9A-Fa-f]+")
+        nums = re.compile(r"&[Hh][0-9A-Fa-f]+")
         matches = nums.search(tmp)
         if (hasattr(matches, "group")):
-            tmp = nums.search(tmp).group(0).replace("&H", "0x")
+            tmp = nums.search(tmp).group(0).replace("&H", "0x").replace("&h", "0x")
             r = float(int(tmp, 16))
             log.debug("Val: %r returns %r" % (self, r))
             return r
@@ -1258,6 +1258,29 @@ class IIf(VbaLibraryFunc):
             return true_part
         else:
             return false_part
+
+class CVErr(VbaLibraryFunc):
+    """
+    CVErr() Excel error string function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        err = None
+        try:
+            err = int(params[0])
+        except:
+            pass
+        vals = {2007 : "#DIV/0!",
+                2042 : "#N/A",
+                2029 : "#NAME?",
+                2000 : "#NULL!",
+                2036 : "#NUM!",
+                2023 : "#REF!",
+                2015 : "#VALUE!"}
+        if (err in vals):
+            return vals[err]
+        return ""
 
 class CallByName(VbaLibraryFunc):
     """
@@ -1623,7 +1646,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText, Variables, Timer, Open):
+               CallByName, ReadText, Variables, Timer, Open, CVErr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

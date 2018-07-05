@@ -477,7 +477,7 @@ class Global_Var_Statement(VBA_Object):
         self.name = tokens[0][0]
         self.value = ''
         if (len(tokens[0]) >= 3):
-            self.value = tokens[0][2]
+            self.value = tokens[0][len(tokens[0]) - 1]
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -1705,7 +1705,7 @@ on_error_statement.setParseAction(On_Error_Statement)
 
 # --- RESUME STATEMENT -------------------------------------------------------------
 
-resume_statement = CaselessKeyword('Resume')
+resume_statement = CaselessKeyword('Resume') + Optional(lex_identifier)
 
 # --- FILE OPEN -------------------------------------------------------------
 

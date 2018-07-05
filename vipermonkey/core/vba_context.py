@@ -470,6 +470,15 @@ class Context(object):
         self.globals["VBA.vbKeyF15".lower()] = 0x7E
         self.globals["VBA.vbKeyF16".lower()] = 0x7F        
 
+        # Excel error codes.
+        self.globals["xlErrDiv0".lower()] = 2007  #DIV/0!
+        self.globals["xlErrNA".lower()] = 2042    #N/A
+        self.globals["xlErrName".lower()] = 2029  #NAME?
+        self.globals["xlErrNull".lower()] = 2000  #NULL!
+        self.globals["xlErrNum".lower()] = 2036   #NUM!
+        self.globals["xlErrRef".lower()] = 2023   #REF!
+        self.globals["xlErrValue".lower()] = 2015 #VALUE!
+        
     def open_file(self, fname):
         """
         Simulate opening a file.

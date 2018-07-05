@@ -198,7 +198,7 @@ class ViperMonkey(object):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-            log.debug('storing global var "%s" in globals' % name)
+            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 self.globals[name.lower()] = _var
             if (isinstance(name, list)):
@@ -298,7 +298,7 @@ class ViperMonkey(object):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-                log.debug('storing global var "%s" in globals' % name)
+                log.debug('storing global var "%s" in globals (2)' % name)
             
     def parse_next_line(self):
         # extract next line
