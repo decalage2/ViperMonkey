@@ -1368,6 +1368,50 @@ class Put(VbaLibraryFunc):
         else:
             log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
+class WriteLine(VbaLibraryFunc):
+    """
+    File WriteLine() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+
+        # TODO: Currently the object on which WriteLine() is being called is not
+        # being tracked. We will only handle the WriteLine() if there is only 1
+        # current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process WriteLine(). No open files.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process WriteLine(). Too many open files.")
+            return
+        
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+        
+        # TODO: Handle writing at a given file position.
+
+        # Get the data.
+        data = params[0]
+        if (len(params) == 3):
+            data = params[2]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+            context.open_files[file_id]["contents"].append(ord("\n"))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+            context.open_files[file_id]["contents"].append(ord("\n"))
+                
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
+
 class CurDir(VbaLibraryFunc):
     """
     CurDir() function.
@@ -1646,7 +1690,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText, Variables, Timer, Open, CVErr):
+               CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
