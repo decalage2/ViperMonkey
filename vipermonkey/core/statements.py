@@ -1019,6 +1019,8 @@ class Do_Statement(VBA_Object):
         super(Do_Statement, self).__init__(original_str, location, tokens)
         self.loop_type = tokens.type
         self.guard = tokens.guard
+        if (self.guard is None):
+            self.guard = True
         self.body = tokens[0]
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
@@ -1089,7 +1091,7 @@ class Do_Statement(VBA_Object):
 
 simple_do_statement = Suppress(CaselessKeyword("Do")) + Suppress(EOS) + \
                       Group(statement_block('body')) + \
-                      Suppress(CaselessKeyword("Loop")) + while_type("type") + boolean_expression("guard")
+                      Suppress(CaselessKeyword("Loop")) + Optional(while_type("type") + boolean_expression("guard"))
 
 simple_do_statement.setParseAction(Do_Statement)
 
@@ -1156,12 +1158,29 @@ class Select_Clause(VBA_Object):
         else:
             return self.select_val
 
-class Case_Clause(VBA_Object):
+class Case_Clause_Atomic(VBA_Object):
     def __init__(self, original_str, location, tokens):
-        super(Case_Clause, self).__init__(original_str, location, tokens)
-        self.case_val = tokens.case_val
-        self.test_range = ((tokens.lbound != "") and (tokens.lbound != ""))
+        super(Case_Clause_Atomic, self).__init__(original_str, location, tokens)
+
+        # Parsed Else clause?
+        if (tokens[0] == "Else"):
+            self.case_val = ["Else"]
+
+        # Do we have a range of values clause?
+        self.test_range = ((tokens.lbound != "") and (tokens.ubound != ""))
+        if (self.test_range):
+            self.case_val = [tokens.lbound, tokens.ubound]
+        else:
+            self.case_val = tokens
+            
+        # Are we testing a set of values (possibly 1 value)?
+        if ((not self.test_range) and
+            (tokens.case_val is not None) and
+            (tokens.case_val != "")):
+            self.case_val = tokens
         self.test_set = (not self.test_range) and (len(self.case_val) > 1)
+
+        # Set the flag so we know this is an Else clause.
         self.is_else = False
         for v in self.case_val:
             if (str(v).lower() == "else"):
@@ -1170,7 +1189,7 @@ class Case_Clause(VBA_Object):
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        r = "Case "
+        r = ""
         if (self.test_range):
             r += str(self.case_val[0]) + " To " + str(self.case_val[1])
         elif (self.test_set):
@@ -1180,9 +1199,8 @@ class Case_Clause(VBA_Object):
                     r += ", "
                 first = False
                 r += str(val)
-        else:            
+        else:
             r += str(self.case_val[0])
-        r += "\\n"
         return r
 
     def eval(self, context, params=None):
@@ -1231,6 +1249,37 @@ class Case_Clause(VBA_Object):
         expected_val = eval_arg(self.case_val[0], context)
         return (test_val == expected_val)
 
+class Case_Clause(VBA_Object):
+
+    def __init__(self, original_str, location, tokens):
+        super(Case_Clause, self).__init__(original_str, location, tokens)
+        self.clauses = []
+        for clause in tokens:
+            self.clauses.append(clause)
+        log.debug('parsed %r as %s' % (self, self.__class__.__name__))
+
+    def __repr__(self):
+        r = "Case "
+        first = True
+        for clause in self.clauses:
+            if (not first):
+                r += ", "
+            first = False
+            r += str(clause)
+        return r
+
+    def eval(self, context, params=None):
+        """
+        Evaluate the guard of this case against the given value.
+        """
+
+        # Check each clause.
+        for clause in self.clauses:
+            guard_val = clause.eval(context, params=params)
+            if (guard_val):
+                return True
+        return False
+    
 class Select_Case(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Select_Case, self).__init__(original_str, location, tokens)
@@ -1250,11 +1299,12 @@ select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").s
                 + expression("select_val")
 select_clause.setParseAction(Select_Clause)
 
-case_clause = CaselessKeyword("Case").suppress() + \
-              ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
-               (CaselessKeyword("Else")) | \
-               (expression("case_val") + ZeroOrMore(Suppress(",") + expression)))
-                             
+case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
+                      (CaselessKeyword("Else")) | \
+                      (expression("case_val") + ZeroOrMore(Suppress(",") + expression)))
+case_clause_atomic.setParseAction(Case_Clause_Atomic)
+
+case_clause = CaselessKeyword("Case").suppress() + case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
 select_case = case_clause("case_val") + Suppress(EOS) + Group(statement_block('statements'))("body")
@@ -1900,26 +1950,25 @@ class External_Function(VBA_Object):
 
         # Log certain function calls.
         function_name = function_name.lower()
-        if self.lib_name.startswith('urlmon'):
-            if function_name.startswith('urldownloadtofile'):
-                context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
-                context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
-                # return 0 when no error occurred:
-                return 0
-        if function_name.lower().startswith('shellexecute'):
+        if function_name.startswith('urldownloadtofile'):
+            context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
+            # return 0 when no error occurred:
+            return 0
+        if function_name.startswith('shellexecute'):
             cmd = str(params[2]) + str(params[3])
             context.report_action('Run Command', cmd, function_name)
             # return 0 when no error occurred:
             return 0
 
         # Simulate certain external calls of interest.
-        if (function_name.lower().startswith('createfile')):
+        if (function_name.startswith('createfile')):
             return self._createfile(params, context)
 
-        if (function_name.lower().startswith('writefile')):
+        if (function_name.startswith('writefile')):
             return self._writefile(params, context)
 
-        if (function_name.lower().startswith('closehandle')):
+        if (function_name.startswith('closehandle')):
             return self._closehandle(params, context)
         
         # TODO: return result according to the known DLLs and functions

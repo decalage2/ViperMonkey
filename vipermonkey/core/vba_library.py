@@ -1594,9 +1594,16 @@ class CDbl(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         try:
+            # Handle hex.
+            tmp = params[0].upper()
+            if (tmp.startswith("&H")):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+
             # VBA rounds the significant digits.
             #return round(float(params[0]), 11)
-            return float(params[0])
+            return float(tmp)
+
         except:
             return 0
 
@@ -1608,6 +1615,16 @@ class Print(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         context.report_action("Debug Print", str(params[0]), '')
+
+class URLDownloadToFile(VbaLibraryFunc):
+    """
+    URLDownloadToFile() external function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) >= 3):
+            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile')
 
 class CreateTextFile(VbaLibraryFunc):
     """
@@ -1690,7 +1707,8 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
-               CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine):
+               CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
+               URLDownloadToFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
