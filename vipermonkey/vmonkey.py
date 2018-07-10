@@ -251,7 +251,21 @@ def is_useless_dim(line):
             (":" not in line) and
             ("=" not in line) and
             (not line.strip().endswith("_")))
-    
+
+def is_interesting_call(line):
+
+    # Is this an interesting function call?
+    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+                 "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
+                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile"]
+    for func in log_funcs:
+        if (func in line):
+            return True
+
+    # Not a call we are tracking.
+    return False
+
 def is_useless_call(line):
     """
     See if the given line contains a useless do-nothing function call.
@@ -396,6 +410,10 @@ def strip_useless_code(vba_code):
             # Skip calls to GetObject() or Shell().
             if (("GetObject" in line) or ("Shell" in line)):
                 log.debug("SKIP: GetObject()/Shell() call. Keep it.")
+                continue
+
+            # Skip calls to various interesting calls.
+            if (is_interesting_call(line)):
                 continue
             
             # Skip lines where the '=' is part of a boolean expression.
