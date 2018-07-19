@@ -1520,6 +1520,8 @@ class Call_Statement(VBA_Object):
 
             # Emulate the function body.
             s = context.get(func_name)
+            if (s is None):
+                raise KeyError("func not found")
             s.eval(context=context, params=call_params)
 
             # Set the values of the arguments passed as ByRef parameters.
