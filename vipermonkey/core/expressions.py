@@ -89,6 +89,8 @@ class SimpleNameExpression(VBA_Object):
             return value
         except KeyError:
             log.warning('Variable %r not found' % self.name)
+            if (self.name.startswith("%") and self.name.endswith("%")):
+                return self.name.upper()
             return "NULL"
 
 # 5.6.10 Simple Name Expressions
