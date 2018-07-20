@@ -399,7 +399,8 @@ class ViperMonkey(object):
             action = ''.join(filter(lambda x:x in string.printable, action))
         if (isinstance(params, str)):
             try:
-                params = unidecode.unidecode(params.decode('unicode-escape'))
+                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
+                params = unidecode.unidecode(decoded)
             except Exception as e:
                 log.warn("Unicode decode of action params failed. " + str(e))
                 params = ''.join(filter(lambda x:x in string.printable, params))
