@@ -460,10 +460,6 @@ function_call <<= CaselessKeyword("nothing") | \
                    Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
 function_call.setParseAction(Function_Call)
 
-#function_call_limited <<= CaselessKeyword("nothing") | \
-#                          (NotAny(reserved_keywords) + lex_identifier('name') + \
-#                           (Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
-#                          )
 function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + \
                            ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |

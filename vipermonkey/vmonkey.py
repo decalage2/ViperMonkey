@@ -252,7 +252,7 @@ def is_useless_dim(line):
             ("=" not in line) and
             (not line.strip().endswith("_")))
 
-def is_interesting_call(line):
+def is_interesting_call(line, external_funcs):
 
     # Is this an interesting function call?
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
@@ -263,6 +263,15 @@ def is_interesting_call(line):
         if (func in line):
             return True
 
+    # Are we calling an external function?
+    for ext_func_decl in external_funcs:
+        if (("Function" in ext_func_decl) and ("Lib" in ext_func_decl)):
+            start = ext_func_decl.index("Function") + len("Function")
+            end = ext_func_decl.index("Lib")
+            ext_func = ext_func_decl[start:end].strip()
+            if (ext_func in line):
+                return True
+        
     # Not a call we are tracking.
     return False
 
@@ -376,8 +385,14 @@ def strip_useless_code(vba_code):
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
+    external_funcs = []
     for line in vba_code.split("\n"):
 
+        # Save external function declarations lines so we can avoid stripping
+        # calls to external functions.
+        if (("Declare" in line) and ("Lib" in line)):
+            external_funcs.append(line.strip())
+        
         # Is this a change function callback?
         if (("Sub " in line) and ("_Change(" in line)):
 
@@ -396,7 +411,7 @@ def strip_useless_code(vba_code):
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)
-            
+                
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
                 log.debug("SKIP: Continuation line. Keep it.")
@@ -413,7 +428,7 @@ def strip_useless_code(vba_code):
                 continue
 
             # Skip calls to various interesting calls.
-            if (is_interesting_call(line)):
+            if (is_interesting_call(line, external_funcs)):
                 continue
             
             # Skip lines where the '=' is part of a boolean expression.
@@ -730,7 +745,6 @@ def process_file (container, filename, data,
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
-                    print form_variables
                     if form_variables is not None:
                         var_name = form_variables['name']
                         macro_name = stream_path
@@ -738,9 +752,6 @@ def process_file (container, filename, data,
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
                         global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
-                        val = form_variables['value']
-                        if (val is None):
-                            val = ''
                         tag = form_variables['tag']
                         if (tag is None):
                             tag = ''
@@ -749,6 +760,9 @@ def process_file (container, filename, data,
                         if (caption is None):
                             caption = ''
                         caption = caption.replace('\xb1', '').replace('\x03', '')
+                        val = form_variables['value']
+                        if (val is None):
+                            val = caption
                         control_tip_text = form_variables['control_tip_text']
                         if (control_tip_text is None):
                             control_tip_text = ''
