@@ -258,7 +258,7 @@ def is_interesting_call(line, external_funcs):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile"]
+                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print"]
     for func in log_funcs:
         if (func in line):
             return True
@@ -411,6 +411,11 @@ def strip_useless_code(vba_code):
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)
+
+            # Skip function definitions.
+            if (line.strip().startswith("Function ")):
+                log.debug("SKIP: Function decl. Keep it.")
+                continue
                 
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
@@ -523,11 +528,29 @@ def strip_useless_code(vba_code):
     # Now strip out all useless assignments.
     r = ""
     line_num = 0
+    if_count = 0
     for line in vba_code.split("\n"):
 
-        # Does this line get stripped based on variable usage?
+        # Keep track of if starts so we can match up end ifs.
         line_num += 1
-        if (line_num in comment_lines):
+        if (line.strip().startswith("If ")):
+            if_count += 1
+
+        # Do we have an unmatched 'end if'? If so, replace it with an
+        # 'end function' to handle some Carbanak maldocs.
+        if (line.strip().startswith("End If")):
+            if_count -= 1
+            if (if_count < 0):
+                r += "End Function\n"
+                if_count = 0
+                continue
+        
+        # Does this line get stripped based on variable usage?
+        if ((line_num in comment_lines) and
+            (not line.strip().startswith("Function ")) and
+            (not line.strip().startswith("Sub ")) and
+            (not line.strip().startswith("End Sub")) and
+            (not line.strip().startswith("End Function"))):
             log.debug("STRIP: Stripping Line (1): " + line)
             continue
 
