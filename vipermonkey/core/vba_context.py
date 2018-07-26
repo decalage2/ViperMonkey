@@ -600,12 +600,12 @@ class Context(object):
 
         # Now try it without the current with context.
         try:
-            return self._get(name)
+            return self._get(str(name))
         except KeyError:
             pass
 
         # Finally see if the variable was initially defined with a trailing '$'.
-        return self._get(name + "$")
+        return self._get(str(name) + "$")
             
     def get_type(self, var):
         if (not isinstance(var, basestring)):

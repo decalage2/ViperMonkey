@@ -605,12 +605,21 @@ class Let_Statement(VBA_Object):
                     log.error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
                     value = 0
 
-            # Update the variable.
-            log.debug('setting %s = %s' % (self.name, value))
-            context.set(self.name, value)
+            # Update the variable, if there was no error.
+            if (value != "ERROR"):
 
-            # See if there is a change callback function for the updated variable.
-            self._handle_change_callback(self.name, context)
+                # Update the variable.
+                log.debug('setting %s = %s' % (self.name, value))
+                context.set(self.name, value)
+
+                # See if there is a change callback function for the updated variable.
+                self._handle_change_callback(self.name, context)
+
+            else:
+
+                # TODO: Currently we are assuming that 'On Error Resume Next' is being
+                # used. Need to actually check what is being done on error.
+                log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
 
         # set variable, array access.
         else:
@@ -662,8 +671,21 @@ class Let_Statement(VBA_Object):
                 else:
                     log.error("Unhandled value type " + str(type(value)) + " for array update.")
                         
-            # Finally save the updated variable in the context.
-            context.set(self.name, arr_var)
+            # Finally save the updated variable in the context, if there was no error.
+            if (value != "ERROR"):
+
+                # Update the array.
+                context.set(self.name, arr_var)
+
+                # See if there is a change callback function for the updated variable.
+                self._handle_change_callback(self.name, context)
+
+            else:
+
+                # TODO: Currently we are assuming that 'On Error Resume Next' is being
+                # used. Need to actually check what is being done on error.
+                log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
+
             
 # 5.4.3.8   Let Statement
 #
@@ -1538,12 +1560,15 @@ class Call_Statement(VBA_Object):
                     tmp_name = tmp_name[tmp_name.rindex(".") + 1:]
                 log.debug("Looking for procedure %r" % tmp_name)
                 s = context.get(tmp_name)
+                log.debug("Found procedure " + tmp_name + " = " + str(s))
                 if (s):
+                    log.debug("Found procedure. Running procedure " + tmp_name)
                     s.eval(context=context, params=call_params)
             except KeyError:
 
                 # If something like Application.Run("foo", 12) is called, foo(12) will be run.
                 # Try to handle that.
+                log.debug("Did not find procedure.")
                 if ((func_name == "Application.Run") or (func_name == "Run")):
 
                     # Pull the name of what is being run from the 1st arg.
@@ -1561,8 +1586,10 @@ class Call_Statement(VBA_Object):
                     except KeyError:
                         pass
                 log.error('Procedure %r not found' % func_name)
-
-
+            except Exception as e:
+                log.debug("General error: " + str(e))
+                raise e
+                
 # 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not

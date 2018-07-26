@@ -54,6 +54,7 @@ import random
 from from_unicode_str import *
 from vba_object import int_convert
 from vba_object import str_convert
+import decimal
 
 from vba_context import VBA_LIBRARY
 import expressions
@@ -490,11 +491,16 @@ class Int(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         val = params[0]
         try:
-            r = int_convert(val)
+            if (isinstance(val, str) and (("e" in val) or ("E" in val))):
+                r = int(decimal.Decimal(val))
+            else:
+                r = int_convert(val)
+            if ((r > 2147483647) or (r < -2147483647)):
+                r = "ERROR"
             log.debug("Int: return %r" % r)
             return r
-        except:
-            log.error("Int(): Invalid call int(%r). Returning ''." % val)
+        except Exception as e:
+            log.error("Int(): Invalid call int(%r) [%s]. Returning ''." % (val, str(e)))
             return ''
 
 class CInt(Int):
@@ -1626,6 +1632,15 @@ class URLDownloadToFile(VbaLibraryFunc):
             context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile')
             context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile')
 
+class FollowHyperlink(VbaLibraryFunc):
+    """
+    FollowHyperlink() function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) >= 1):
+            context.report_action('Download URL', str(params[0]), 'FollowHyperLink')
+            
 class CreateTextFile(VbaLibraryFunc):
     """
     CreateTextFile() method.
@@ -1708,7 +1723,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile):
+               URLDownloadToFile, FollowHyperlink):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

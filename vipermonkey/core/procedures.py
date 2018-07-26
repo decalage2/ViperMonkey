@@ -223,7 +223,7 @@ class Function(VBA_Object):
         context = Context(context=caller_context)
 
         # add function name in locals:
-        context.set(self.name, None)
+        #context.set(self.name, None)
 
         # Set the default parameter values.
         for param in self.params:
@@ -276,8 +276,8 @@ class Function(VBA_Object):
             
             # Get the return value.
             return_value = context.get(self.name)
-            if (return_value is None):
-                context.set(self.name, '')
+            if ((return_value is None) or (isinstance(return_value, Function))):
+                #context.set(self.name, '')
                 return_value = ''
             log.debug('Function %s: return value = %r' % (self.name, return_value))
             return return_value
@@ -285,7 +285,8 @@ class Function(VBA_Object):
 
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
-            context.set(self.name, '')
+            #context.set(self.name, '')
+            return ''
 
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
