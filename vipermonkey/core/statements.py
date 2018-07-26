@@ -865,10 +865,10 @@ simple_for_statement.setParseAction(For_Statement)
 bad_next_statement = CaselessKeyword("Next") + Suppress(EOS)
 
 # For the line parser:
-for_start = for_clause + Suppress(EOL)
+for_start = for_clause + Suppress(EOS)
 for_start.setParseAction(For_Statement)
 
-for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOL)
+for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppress(EOS)
 
 # --- FOR EACH statement -----------------------------------------------------------
 
@@ -1497,6 +1497,8 @@ class Call_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Call_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
+        if (str(self.name).endswith("@")):
+            self.name = str(self.name).replace("@", "")
         self.params = tokens.params
         log.debug('parsed %r' % self)
 
