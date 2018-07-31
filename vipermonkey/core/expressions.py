@@ -540,7 +540,7 @@ expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
 
 expression <<= (infixNotation(expr_item,
                                   [
-                                      # ("^", 2, opAssoc.RIGHT), # Exponentiation
+                                      ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
                                       # ("-", 1, opAssoc.LEFT), # Unary negation
                                       ("*", 2, opAssoc.LEFT, Multiplication),
                                       ("/", 2, opAssoc.LEFT, Division),

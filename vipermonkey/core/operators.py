@@ -289,6 +289,36 @@ class Multiplication(VBA_Object):
         return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
 
+# --- EXPONENTIATION: ^ OPERATOR ------------------------------------------------
+
+class Power(VBA_Object):
+    """
+    VBA exponentiation using the binary operator ^
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Power, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the exponentiation of all the arguments:
+        try:
+            return reduce(lambda x, y: pow(x, y), coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: pow(int(x), int(y)), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to do exponentiation with arguments of different types. ' + str(e))
+                return 0
+
+    def __repr__(self):
+        return debug_repr("^", self.arg)
+        return ' ^ '.join(map(repr, self.arg))
+    
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
 class Division(VBA_Object):

@@ -720,7 +720,8 @@ class Prop_Assign_Statement(VBA_Object):
     def eval(self, context, params=None):
         pass
 
-prop_assign_statement = (member_access_expression("prop") + lex_identifier('param') + Suppress(':=') + expression('value') + \
+prop_assign_statement = ((member_access_expression("prop") ^ (Suppress(".") + lex_identifier("prop")))+ \
+                         lex_identifier('param') + Suppress(':=') + expression('value') + \
                          ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value')))
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 

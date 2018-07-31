@@ -289,7 +289,8 @@ class Function(VBA_Object):
             return ''
 
 # TODO 5.3.1.4 Function Type Declarations
-function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
+function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
