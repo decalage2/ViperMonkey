@@ -87,7 +87,7 @@ class VBA_Object(object):
 
 meta = None
         
-def eval_arg(arg, context):
+def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
     """
@@ -101,12 +101,13 @@ def eval_arg(arg, context):
         if (isinstance(arg, str)):
 
             # Simple case first. Is this a variable?
-            try:
-                return context.get(arg)
-            except:
-
-                # No it is not. Try more complicated cases.
-                pass
+            if (treat_as_var_name):
+                try:
+                    return context.get(arg)
+                except:
+                    
+                    # No it is not. Try more complicated cases.
+                    pass
             
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
@@ -162,7 +163,7 @@ def eval_arg(arg, context):
                 try:
                     log.debug("eval_arg: Try to run as function " + func_name + "...")
                     func = context.get(func_name)
-                    return eval_arg(func, context)
+                    return eval_arg(func, context, treat_as_var_name=True)
 
                 except KeyError:
                     log.debug("eval_arg: Not found as function")
