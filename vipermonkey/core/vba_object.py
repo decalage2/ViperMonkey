@@ -85,18 +85,6 @@ class VBA_Object(object):
         log.debug(self)
         # raise NotImplementedError
 
-
-        # def get(self, name):
-        #     """
-        #     get the value of a variable, or a sub/function. First search in the local variables,
-        #     then if not found forward the call up to the parent.
-        #     """
-        #     # by default, a VBA_Object has no local variables, always forward to parent if any:
-        #     if self.parent is not None:
-        #         return self.parent.get(name)
-        #     else:
-        #         return None
-
 meta = None
         
 def eval_arg(arg, context):
@@ -111,6 +99,14 @@ def eval_arg(arg, context):
 
         # Might this be a special type of variable lookup?
         if (isinstance(arg, str)):
+
+            # Simple case first. Is this a variable?
+            try:
+                return context.get(arg)
+            except:
+
+                # No it is not. Try more complicated cases.
+                pass
             
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
@@ -166,7 +162,7 @@ def eval_arg(arg, context):
                 try:
                     log.debug("eval_arg: Try to run as function " + func_name + "...")
                     func = context.get(func_name)
-                    return func.eval(context=context)
+                    return eval_arg(func, context)
 
                 except KeyError:
                     log.debug("eval_arg: Not found as function")

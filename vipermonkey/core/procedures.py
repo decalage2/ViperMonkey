@@ -265,7 +265,7 @@ class Function(VBA_Object):
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
-            
+
         # TODO: get result from context.locals
         context.exit_func = False
         try:

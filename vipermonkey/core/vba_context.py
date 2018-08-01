@@ -644,15 +644,12 @@ class Context(object):
             return
         # convert to lowercase
         name = name.lower()
-        # raise exception if name in VBA library:
-        # Commented out since it looks like you can have local variables named things like str.
-        #if name in VBA_LIBRARY:
-        #    raise ValueError('%r cannot be modified, it is part of the VBA Library.' % name)
         if name in self.locals:
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
             self.globals[name] = value
+            log.debug("Set global var " + name + " = " + str(value))
         else:
             # new name, always stored in locals:
             self.locals[name] = value
