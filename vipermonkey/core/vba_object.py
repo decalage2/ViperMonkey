@@ -103,11 +103,15 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Simple case first. Is this a variable?
             if (treat_as_var_name):
                 try:
+                    log.debug("eval_arg: Try as variable name: %r" % arg)
                     return context.get(arg)
                 except:
                     
                     # No it is not. Try more complicated cases.
+                    log.debug("eval_arg: Not found as variable name: %r" % arg)
                     pass
+            else:
+                log.debug("eval_arg: Do not try as variable name: %r" % arg)
             
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
@@ -161,9 +165,21 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 func_name = arg.lower()
                 func_name = func_name[func_name.rindex(".")+1:]
                 try:
+
+                    # Lookp and execute the function.
                     log.debug("eval_arg: Try to run as function " + func_name + "...")
                     func = context.get(func_name)
-                    return eval_arg(func, context, treat_as_var_name=True)
+                    r = eval_arg(func, context, treat_as_var_name=True)
+
+                    # Did the function resolve to a value?
+                    if (r != func):
+
+                        # Yes it did. Return the function result.
+                        return r
+
+                    # The function did to resolve to a value. Return as the
+                    # original string.
+                    return arg
 
                 except KeyError:
                     log.debug("eval_arg: Not found as function")
