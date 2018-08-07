@@ -560,6 +560,26 @@ class Replace(VbaLibraryFunc):
         log.debug("Replace: return %r" % r)
         return r
 
+class Join(VbaLibraryFunc):
+    """
+    Join() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        strings = params[0]
+        sep = " "
+        if (len(params) > 1):
+            sep = str(params[1])
+        r = ""
+        if (isinstance(strings, list)):
+            for s in strings:
+                r += s + sep
+        else:
+            r = str(strings)
+        log.debug("Join: return %r" % r)
+        return r
+
 class InStr(VbaLibraryFunc):
     """
     InStr() string function.
@@ -1723,7 +1743,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink):
+               URLDownloadToFile, FollowHyperlink, Join):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -141,6 +141,21 @@ class Option_Statement(VBA_Object):
 option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
 
+# --- NAME nnn AS yyy statement ----------------------------------------------------------
+
+class Name_As_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Name_As_Statement, self).__init__(original_str, location, tokens)
+        self.old_name = tokens.old_name
+        self.new_name = tokens.new_name
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return "Name " + str(self.old_name) + " As " + str(self.new_name)
+    
+name_as_statement = CaselessKeyword('Name').suppress() + lex_identifier('old_name') + CaselessKeyword('As').suppress() + lex_identifier('new_name')
+name_as_statement.setParseAction(Name_As_Statement)
+
 # --- TYPE EXPRESSIONS -------------------------------------------------------
 
 # 5.6.16.7 Type Expressions
@@ -1889,7 +1904,7 @@ simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_
 
 # statement has to be declared beforehand using Forward(), so here we use
 # the "<<=" operator:
-statement <<= type_declaration | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+statement <<= type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
               simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
               with_statement| simple_statement | rem_statement
 

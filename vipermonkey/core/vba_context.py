@@ -478,6 +478,9 @@ class Context(object):
         self.globals["xlErrNum".lower()] = 2036   #NUM!
         self.globals["xlErrRef".lower()] = 2023   #REF!
         self.globals["xlErrValue".lower()] = 2015 #VALUE!
+
+        # System info.
+        self.globals["System.OperatingSystem".lower()] = "Windows NT"
         
     def open_file(self, fname):
         """
