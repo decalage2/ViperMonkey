@@ -2025,7 +2025,7 @@ class External_Function(VBA_Object):
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
                  + Optional(Literal('(') + Literal(')')).suppress()
 
-public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private')).suppress()
+public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Global')).suppress()
 
 params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
 

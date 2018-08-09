@@ -549,9 +549,9 @@ expression <<= (infixNotation(expr_item,
                                       ("-", 2, opAssoc.LEFT, Subtraction),
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
-                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                       (CaselessKeyword("and"), 2, opAssoc.LEFT, And),
                                       (CaselessKeyword("or"), 2, opAssoc.LEFT, Or),
+                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                       (CaselessKeyword("eqv"), 2, opAssoc.LEFT, Eqv),
                                   ]))
 expression.setParseAction(lambda t: t[0])

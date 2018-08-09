@@ -437,6 +437,9 @@ class Mod(VBA_Object):
         except (TypeError, ValueError) as e:
             log.error('Impossible to mod arguments of different types. ' + str(e))
             return ''
+        except ZeroDivisionError:
+            log.error('Mod division by zero error.')
+            return ''
 
     def __repr__(self):
         return debug_repr("mod", self.arg)
