@@ -481,6 +481,16 @@ class Split(VbaLibraryFunc):
         log.debug("Split: return %r" % r)
         return r
 
+class VarType(VbaLibraryFunc):
+    """
+    VarType() function. NOTE: Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        # TODO: Actually implement this properly.
+        return 8
+    
 class Int(VbaLibraryFunc):
     """
     Int() function.
@@ -1743,7 +1753,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink, Join):
+               URLDownloadToFile, FollowHyperlink, Join, VarType):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
