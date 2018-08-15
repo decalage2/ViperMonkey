@@ -150,8 +150,7 @@ class ViperMonkey(object):
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
-                             'workbook_activate', 'auto_close', 'workbook_close',
-                             'inkpicture1_painted']
+                             'workbook_activate', 'auto_close', 'workbook_close']
 
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
