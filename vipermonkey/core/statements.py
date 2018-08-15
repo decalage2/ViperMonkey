@@ -1517,6 +1517,8 @@ class Call_Statement(VBA_Object):
             self.name = str(self.name).replace("@", "")
         if (str(self.name).endswith("!")):
             self.name = str(self.name).replace("!", "")
+        if (str(self.name).endswith("#")):
+            self.name = str(self.name).replace("#", "")
         self.params = tokens.params
         log.debug('parsed %r' % self)
 
