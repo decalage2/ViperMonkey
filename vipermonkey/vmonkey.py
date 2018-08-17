@@ -47,6 +47,7 @@ https://github.com/decalage2/ViperMonkey
 # 2018-01-12 v0.05 KS: - lots of bug fixes and additions by Kirk Sayre (PR #23)
 # 2018-06-20 v0.06 PL: - fixed issue #28, import prettytable
 # 2018-08-17 v0.07 KS: - lots of bug fixes and additions by Kirk Sayre (PR #34)
+#                  PL: - added ASCII art banner
 
 __version__ = '0.07'
 
@@ -922,6 +923,13 @@ def main():
     sys.setrecursionlimit(13000)
     
     # print banner with version
+    # Generated with http://www.patorjk.com/software/taag/#p=display&f=Slant&t=ViperMonkey
+    print(''' _    ___                 __  ___            __             
+| |  / (_)___  ___  _____/  |/  /___  ____  / /_____  __  __
+| | / / / __ \/ _ \/ ___/ /|_/ / __ \/ __ \/ //_/ _ \/ / / /
+| |/ / / /_/ /  __/ /  / /  / / /_/ / / / / ,< /  __/ /_/ / 
+|___/_/ .___/\___/_/  /_/  /_/\____/_/ /_/_/|_|\___/\__, /  
+     /_/                                           /____/   ''')
     print ('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
     print ('THIS IS WORK IN PROGRESS - Check updates regularly!')
     print ('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
