@@ -15,6 +15,7 @@ and vbashell from any directory.
 #--- CHANGELOG ----------------------------------------------------------------
 
 # 2016-12-14 v0.04 PL: - replaced scripts by entry points (issue #17)
+# 2018-08-17 v0.07 PL: - added required dependency unidecode
 
 #--- TODO ---------------------------------------------------------------------
 
@@ -40,14 +41,14 @@ entry_points = {
 
 setup(
     name="vipermonkey",
-    version="0.06",  # not compliant with PEP440, setuptools normalizes to 0.2
+    version="0.07",  # 0.0x not compliant with PEP440, setuptools normalizes to 0.x
     description=(
         "ViperMonkey is a VBA Emulation engine written in Python, designed to "
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
     install_requires=["oletools", "prettytable", "colorlog", "colorama",
-                      "pyparsing"],
+                      "pyparsing", 'unidecode'],
     packages=["vipermonkey", "vipermonkey.core"],
     #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
     entry_points=entry_points,
