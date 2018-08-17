@@ -44,6 +44,7 @@ __version__ = '0.02'
 from pyparsing import *
 
 from logger import log
+from identifiers import *
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
@@ -92,7 +93,7 @@ operator_identifier = caselessKeywordsList(
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
-    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Date", "Debug",
+    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Debug",
     "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
 
 # A <special-form> is a <reserved-identifier> that is used in an expression as
@@ -103,9 +104,17 @@ special_form = caselessKeywordsList((
 
 # A <reserved-type-identifier> is used within a declaration to identify the specific
 # declared type (section 2.2) of an entity.
-reserved_type_identifier = caselessKeywordsList((
+
+# TODO: Add more of these as needed or generalize.
+#reserved_complex_type_identifier = caselessKeywordsList(("MSForms.fmScrollAction", "MSForms.ReturnSingle"))
+simple_type_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
+reserved_complex_type_identifier = Group(simple_type_identifier + ZeroOrMore("." + simple_type_identifier))
+
+reserved_atomic_type_identifier = caselessKeywordsList((
     "Boolean", "Byte", "Currency", "Date", "Double", "Integer",
     "Long", "LongLong", "LongPtr", "Single", "String", "Variant"))
+
+reserved_type_identifier = reserved_atomic_type_identifier | reserved_complex_type_identifier
 
 # A <boolean-literal-identifier> specifying "true" or "false" has a declared type of
 # Boolean and a data value of True or False, respectively.

@@ -44,6 +44,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from comments_eol import *
 from procedures import *
 from statements import *
 
@@ -119,7 +120,7 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function
+declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function | rem_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 

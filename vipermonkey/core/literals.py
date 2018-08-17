@@ -94,10 +94,16 @@ integer = decimal_literal | octal_literal | hex_literal
 # MS-GRAMMAR: exponent-letter = %x0044 / %x0045 / %x0064 / %x0065
 # MS-GRAMMAR: floating-point-type-suffix = "!" / "#" / "@"
 
-# TODO: Handle exponents as needed.
-float_literal = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
-                Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
-float_literal.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
+float_literal_no_exp = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
+                       Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
+float_literal_no_exp.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
+
+float_literal_exp = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
+                    Suppress(CaselessLiteral('E')) + (CaselessLiteral('+') | CaselessLiteral('-')) + decimal_literal + \
+                    Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
+float_literal_exp.setParseAction( lambda t: float(str(t[0]) + "." + str(t[1])) * pow(10,int(str(t[2]) + str(t[3])) ))
+
+float_literal = float_literal_exp ^ float_literal_no_exp
 
 # --- QUOTED STRINGS ---------------------------------------------------------
 

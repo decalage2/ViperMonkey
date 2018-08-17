@@ -55,6 +55,16 @@ import logging
 
 # === LOGGING =================================================================
 
+class DuplicateFilter(logging.Filter):
+
+    def filter(self, record):
+        # add other fields if you need more granular comparison, depends on your app
+        current_log = (record.module, record.levelno, record.msg)
+        if current_log != getattr(self, "last_log", None):
+            self.last_log = current_log
+            return True
+        return False
+
 class NullHandler(logging.Handler):
     """
     Log Handler without output, to avoid printing messages if logging is not
@@ -83,6 +93,8 @@ def get_logger(name, level=logging.NOTSET):
         logger = logging.getLogger(name)
         # make sure level is OK:
         logger.setLevel(level)
+        # Skip duplicate log messages.
+        logger.addFilter(DuplicateFilter()) 
         return logger
     # get a new logger:
     logger = logging.getLogger(name)
@@ -90,6 +102,8 @@ def get_logger(name, level=logging.NOTSET):
     # to configure its own logging:
     logger.addHandler(NullHandler())
     logger.setLevel(level)
+    # Skip duplicate log messages.
+    logger.addFilter(DuplicateFilter()) 
     return logger
 
 

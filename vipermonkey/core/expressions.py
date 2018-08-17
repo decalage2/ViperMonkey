@@ -41,12 +41,15 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import re
+
 from identifiers import *
 from lib_functions import *
 from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import int_convert
 from vba_library import VbaLibraryFunc
 
 from logger import log
@@ -85,9 +88,10 @@ class SimpleNameExpression(VBA_Object):
                 log.debug('evaluated function %r = %r' % (self.name, value))
             return value
         except KeyError:
-            log.error('Variable %r not found' % self.name)
-            return ""
-
+            log.warning('Variable %r not found' % self.name)
+            if (self.name.startswith("%") and self.name.endswith("%")):
+                return self.name.upper()
+            return "NULL"
 
 # 5.6.10 Simple Name Expressions
 # A simple name expression consists of a single identifier with no qualification or argument list.
@@ -317,7 +321,8 @@ class Function_Call(VBA_Object):
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile"]
+                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "SetExpandedStringValue", "WinExec"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -350,37 +355,61 @@ class Function_Call(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, repr(params)[1:-1], 'Interesting Function Call')
+            context.report_action(self.name, params, 'Interesting Function Call')
         try:
             f = context.get(self.name)
 
             # Is this actually an array access?
-            if ((isinstance(f, list) and len(params) > 0)):
-                tmp = f
-                # Try to gues whether we are accessing a character in a string.
-                if ((len(f) == 1) and (isinstance(f[0], str))):
-                    tmp = f[0]
-                log.debug('Array Access: %r[%r]' % (tmp, params[0]))
-                index = int(params[0])
-                try:
-                    r = tmp[index]
-                    log.debug('Returning: %r' % r)
-                    return r
-                except:
-                    log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
-                    return ""
+            if (isinstance(f, list)):
+
+                # Are we accessing an element?
+                if (len(params) > 0):
+                    tmp = f
+                    # Try to guess whether we are accessing a character in a string.
+                    if ((len(f) == 1) and (isinstance(f[0], str))):
+                        tmp = f[0]
+                    log.debug('Array Access: %r[%r]' % (tmp, params[0]))
+                    index = int_convert(params[0])
+                    try:
+                        r = tmp[index]
+                        log.debug('Returning: %r' % r)
+                        return r
+                    except:
+                        log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
+                        return 0
+
+                # Looks like we want the whole array (ex. foo()).
+                else:
+                    return f
+                    
             log.debug('Calling: %r' % f)
             if (f is not None):
                 if (not(isinstance(f, str)) and
                     not(isinstance(f, list)) and
                     not(isinstance(f, unicode))):
-                    return f.eval(context=context, params=params)
+                    try:
+
+                        # Call function.
+                        r = f.eval(context=context, params=params)
+
+                        # Set the values of the arguments passed as ByRef parameters.
+                        if (hasattr(f, "byref_params")):
+                            for byref_param_info in f.byref_params.keys():
+                                arg_var_name = str(self.params[byref_param_info[1]])
+                                context.set(arg_var_name, f.byref_params[byref_param_info])
+
+                        # Return result.
+                        return r
+
+                    except AttributeError as e:
+                        log.error(str(f) + " has no eval() method. " + str(e))
+                        return f
                 elif (len(params) > 0):
 
                     # Looks like this is actually an array access.
                     log.debug("Looks like array access.")
                     try:
-                        i = int(params[0])
+                        i = int_convert(params[0])
                         r = f[i]
                         if (isinstance(f, str)):
                             r = ord(r)
@@ -388,6 +417,7 @@ class Function_Call(VBA_Object):
                         return r
                     except:
                         log.error("Array access %r[%r] failed." % (f, params[0]))
+                        return 0
                     else:
                         log.error("Improper type for function.")
                         return None
@@ -415,22 +445,30 @@ class Function_Call(VBA_Object):
                     return s.eval(context=context, params=new_params)
                 except KeyError:
                     pass
-            log.error('Function %r not found' % self.name)
+            log.warning('Function %r not found' % self.name)
             return None
 
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = expr_list_item + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
                   (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + Suppress(Optional('$')) + \
-                   Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+                   Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | \
+                   Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
 function_call.setParseAction(Function_Call)
 
 function_call_limited <<= CaselessKeyword("nothing") | \
-                          (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+                          (NotAny(reserved_keywords) + lex_identifier('name') + \
+                           ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
+                            # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
+                            # parsed as function_call_limited "foo .bar". The real way this should be
+                            # parsed is to require at least 1 space between the function name and the
+                            # 1st argument, then "foo.bar" will not match.
+                            (Suppress(Optional('$')) + NotAny(".") + expr_list('params')))
+                          )
 function_call_limited.setParseAction(Function_Call)
 
 # --- ARRAY ACCESS OF FUNCTION CALL --------------------------------------------------------
@@ -502,7 +540,7 @@ expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
 
 expression <<= (infixNotation(expr_item,
                                   [
-                                      # ("^", 2, opAssoc.RIGHT), # Exponentiation
+                                      ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
                                       # ("-", 1, opAssoc.LEFT), # Unary negation
                                       ("*", 2, opAssoc.LEFT, Multiplication),
                                       ("/", 2, opAssoc.LEFT, Division),
@@ -511,9 +549,9 @@ expression <<= (infixNotation(expr_item,
                                       ("-", 2, opAssoc.LEFT, Subtraction),
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
-                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                       (CaselessKeyword("and"), 2, opAssoc.LEFT, And),
                                       (CaselessKeyword("or"), 2, opAssoc.LEFT, Or),
+                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                       (CaselessKeyword("eqv"), 2, opAssoc.LEFT, Eqv),
                                   ]))
 expression.setParseAction(lambda t: t[0])
@@ -600,9 +638,43 @@ class BoolExprItem(VBA_Object):
             rhs = eval_arg(self.rhs, context)
         except AttributeError:
             pass
-        
+
+        # Handle unitialized variables. Grrr. Base their conversion on
+        # the type of the initialized expression.
+        if (rhs == "NULL"):
+            if (isinstance(lhs, str)):
+                rhs = ''
+            else:
+                rhs = 0
+            context.set(self.rhs, rhs)
+            log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
+        if (lhs == "NULL"):
+            if (isinstance(rhs, str)):
+                lhs = ''
+            else:
+                lhs = 0
+            context.set(self.lhs, lhs)
+            log.debug("Set unitialized " + str(self.lhs) + " = " + str(lhs))
+
+        # Ugh. VBA autoconverts strings and ints.
+        if (isinstance(lhs, str) and isinstance(rhs, int)):
+
+            # Convert both to ints, if possible.
+            try:
+                lhs = int(lhs)
+            except:
+                pass
+
+        if (isinstance(rhs, str) and isinstance(lhs, int)):
+
+            # Convert both to ints, if possible.
+            try:
+                rhs = int(rhs)
+            except:
+                pass
+                
         # Evaluate the expression.
-        if (self.op == "="):
+        if ((self.op == "=") or (self.op.lower() == "is")):
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
@@ -614,13 +686,21 @@ class BoolExprItem(VBA_Object):
             return lhs <= rhs
         elif (self.op == "<>"):
             return lhs != rhs
+        elif (self.op.lower() == "like"):
+            # TODO: Actually convert VBA regexes to Python regexes.
+            try:
+                return (re.match(rhs, lhs) is not None)
+            except Exception as e:
+                log.error("BoolExprItem: 'Like' re match failed. " + str(e))
+                return False
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
 
 bool_expr_item = (limited_expression + \
                   (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | \
-                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>")) + \
+                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>") | \
+                   CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)

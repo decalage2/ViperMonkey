@@ -41,15 +41,23 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from datetime import datetime
+import time
 import array
 import math
 import base64
 import re
 from hashlib import sha256
+import sys
 import os
 import random
+from from_unicode_str import *
+from vba_object import int_convert
+from vba_object import str_convert
+import decimal
 
 from vba_context import VBA_LIBRARY
+import expressions
 
 from logger import log
 
@@ -80,7 +88,11 @@ class Len(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        return len(params[0])
+        if (hasattr(params[0], '__len__')):
+            return len(params[0])
+        else:
+            log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
+            return 0
 
 class LenB(VbaLibraryFunc):
     """
@@ -109,7 +121,7 @@ class Mid(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -126,7 +138,7 @@ class Mid(VbaLibraryFunc):
             return s[start-1:]
         length = 0
         try:
-            length = int(params[2])
+            length = int_convert(params[2])
         except:
             pass
         # "If omitted or if there are fewer than Length characters in the text
@@ -157,7 +169,7 @@ class Left(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -190,7 +202,7 @@ class Right(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int(params[1])
+            start = int_convert(params[1])
         except:
             pass
         # "If Start is greater than the number of characters in String,
@@ -257,6 +269,7 @@ class Shell(VbaLibraryFunc):
         except:
             pass
         command = params[0]
+        log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function')
         return 0
@@ -362,6 +375,31 @@ class AscW(VbaLibraryFunc):
 class AscB(AscW):
     pass
 
+class StrComp(VbaLibraryFunc):
+    """
+    StrComp() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 2
+        s1 = params[0]
+        s2 = params[1]
+        method = 0
+        if (len(params) >= 3):
+            try:
+                method = int_convert(params[2])
+            except Exception as e:
+                log.error("StrComp: Invalid comparison method. " + str(e))
+                pass
+        if (method == 0):
+            s1 = s1.lower()
+            s2 = s2.lower()
+        if (s1 == s2):
+            return 0
+        if (s1 < s2):
+            return -1
+        return 1
+                
 class StrConv(VbaLibraryFunc):
     """
     StrConv() string function.
@@ -375,7 +413,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int(params[1])
+            conv = int_convert(params[1])
 
         # Do the conversion.
         r = params[0]
@@ -386,12 +424,18 @@ class StrConv(VbaLibraryFunc):
                 if (conv == 2):
                     r = r.lower()
                 if (conv == 64):
-                    padded = ""
-                    for c in r:
-                        padded += c + "\0"
-                    r = padded
+
+                    # We are converting the string to unicode. ViperMonkey assumes
+                    # unless otherwise noted that all strings are unicode. Make sure
+                    # that the string is represented as a regular str object so that
+                    # it is treated as unicode.
+                    r = str(r)
+
                 if (conv == 128):
-                    pass
+
+                    # The string is being converted from unicode to ascii. Mark this
+                    # by representing the string with the from_unicode_str class.
+                    r = from_unicode_str(r)
 
         elif (isinstance(r, list)):
 
@@ -404,7 +448,7 @@ class StrConv(VbaLibraryFunc):
             if (all_int):
                 tmp = ""
                 for i in r:
-                    if (i <= 0):
+                    if (i < 0):
                         continue
                     try:
                         tmp += chr(i)
@@ -437,6 +481,16 @@ class Split(VbaLibraryFunc):
         log.debug("Split: return %r" % r)
         return r
 
+class VarType(VbaLibraryFunc):
+    """
+    VarType() function. NOTE: Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        # TODO: Actually implement this properly.
+        return 8
+    
 class Int(VbaLibraryFunc):
     """
     Int() function.
@@ -447,11 +501,16 @@ class Int(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         val = params[0]
         try:
-            r = int(val)
+            if (isinstance(val, str) and (("e" in val) or ("E" in val))):
+                r = int(decimal.Decimal(val))
+            else:
+                r = int_convert(val)
+            if ((r > 2147483647) or (r < -2147483647)):
+                r = "ERROR"
             log.debug("Int: return %r" % r)
             return r
-        except:
-            log.error("Int(): Invalid call int(%r). Returning ''." % val)
+        except Exception as e:
+            log.error("Int(): Invalid call int(%r) [%s]. Returning ''." % (val, str(e)))
             return ''
 
 class CInt(Int):
@@ -509,6 +568,26 @@ class Replace(VbaLibraryFunc):
             rep = ''
         r = string.replace(pat, rep)
         log.debug("Replace: return %r" % r)
+        return r
+
+class Join(VbaLibraryFunc):
+    """
+    Join() string function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) > 0
+        strings = params[0]
+        sep = " "
+        if (len(params) > 1):
+            sep = str(params[1])
+        r = ""
+        if (isinstance(strings, list)):
+            for s in strings:
+                r += s + sep
+        else:
+            r = str(strings)
+        log.debug("Join: return %r" % r)
         return r
 
 class InStr(VbaLibraryFunc):
@@ -614,7 +693,7 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = ''
         try:
-            r = int(math.copysign(1, int(num)))
+            r = int(math.copysign(1, int_convert(num)))
         except:
             pass
         log.debug("Sgn: %r returns %r" % (self, r))
@@ -629,7 +708,7 @@ class Sqr(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0]) + 0.0
+            num = int_convert(params[0]) + 0.0
             r = math.sqrt(num)
         except:
             pass
@@ -645,7 +724,7 @@ class Abs(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             r = abs(num)
         except:
             pass
@@ -674,11 +753,14 @@ class Round(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        assert ((len(params) == 1) or (len(params) == 2))
         r = ''
         try:
             num = float(params[0])
-            r = round(num)
+            sig = 0
+            if (len(params) == 2):
+                sig = int_convert(params(1))                
+            r = round(num, sig)
         except:
             pass
         log.debug("Round: %r returns %r" % (self, r))
@@ -693,7 +775,7 @@ class Hex(VbaLibraryFunc):
         assert (len(params) == 1)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             r = hex(num).replace("0x","").upper()
         except:
             pass
@@ -875,7 +957,7 @@ class String(VbaLibraryFunc):
         assert (len(params) == 2)
         r = ''
         try:
-            num = int(params[0])
+            num = int_convert(params[0])
             char = params[1]
             r = char * num
         except:
@@ -909,9 +991,9 @@ class RGB(VbaLibraryFunc):
         assert (len(params) == 3)
         r = ''
         try:
-            red = int(params[0])
-            green = int(params[1])
-            blue = int(params[2])
+            red = int_convert(params[0])
+            green = int_convert(params[1])
+            blue = int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
         except:
             pass
@@ -947,7 +1029,7 @@ class Sin(VbaLibraryFunc):
             r = math.sin(num)
         except:
             pass
-        log.error("Sin: %r returns %r" % (self, r))
+        log.debug("Sin: %r returns %r" % (self, r))
         return r
             
 class Str(VbaLibraryFunc):
@@ -976,13 +1058,13 @@ class Val(VbaLibraryFunc):
             return r
         
         # Ignore whitespace.
-        tmp = params[0].strip().replace(" ", "")
+        tmp = str_convert(params[0]).strip().replace(" ", "")
 
         # The VB Val() function is ugly. Look for VB hex encoding.
-        nums = re.compile(r"&H[0-9A-Fa-f]+")
+        nums = re.compile(r"&[Hh][0-9A-Fa-f]+")
         matches = nums.search(tmp)
         if (hasattr(matches, "group")):
-            tmp = nums.search(tmp).group(0).replace("&H", "0x")
+            tmp = nums.search(tmp).group(0).replace("&H", "0x").replace("&h", "0x")
             r = float(int(tmp, 16))
             log.debug("Val: %r returns %r" % (self, r))
             return r
@@ -1096,7 +1178,7 @@ class Pmt(VbaLibraryFunc):
         try:
             # Pull out the arguments.
             rate = float(params[0])
-            nper = int(params[1]) + 0.0
+            nper = int_convert(params[1]) + 0.0
             pv = float(params[2])
             fv = 0
             if (len(params) >= 4):
@@ -1124,7 +1206,7 @@ class Day(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         txt = params[0]
-        if (txt is None):
+        if ((txt is None) or (txt == "NULL")):
             txt = ''
         r = str(txt)
 
@@ -1140,6 +1222,16 @@ class Day(VbaLibraryFunc):
         log.debug("Day: %r returns %r" % (self, r))
         return r
 
+class Space(VbaLibraryFunc):
+    """
+    Space() string function.
+    """
+
+    def eval(self, context, params=None):
+        n = int_convert(params[0])
+        r = " " * n
+        return r
+    
 class UCase(VbaLibraryFunc):
     """
     UCase() string function.
@@ -1203,9 +1295,47 @@ class IIf(VbaLibraryFunc):
         else:
             return false_part
 
-out_dir = None
-file_count = 0
+class CVErr(VbaLibraryFunc):
+    """
+    CVErr() Excel error string function.
+    """
 
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        err = None
+        try:
+            err = int(params[0])
+        except:
+            pass
+        vals = {2007 : "#DIV/0!",
+                2042 : "#N/A",
+                2029 : "#NAME?",
+                2000 : "#NULL!",
+                2036 : "#NUM!",
+                2023 : "#REF!",
+                2015 : "#VALUE!"}
+        if (err in vals):
+            return vals[err]
+        return ""
+
+class CallByName(VbaLibraryFunc):
+    """
+    CallByName() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 3)
+        cmd = params[1]
+        obj = str(params[0])
+        args = ''
+        if (len(params) >= 4):
+            args = params[3]
+        if (("Run" in cmd) or ("WScript.Shell" in obj)):
+            context.report_action("Run", args, 'Interesting Function Call')
+        # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
+        if (("Open" in cmd) and ("WinHttpRequest" in obj)):
+            context.report_action("GET", params[4], 'Interesting Function Call')
+            
 class Close(VbaLibraryFunc):
     """
     File Close statement.
@@ -1214,65 +1344,33 @@ class Close(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Are we closing a file pointer?
-        if ((len(params) != 1) or (not params[0].startswith('#'))):
+        file_id = None
+        if ((params is not None) and
+            (len(params) == 1) and
+            (params[0] is not None) and
+            (params[0].startswith('#'))):
 
-            # No actions to do here.
-            return
+            # Get the ID of the file being closed.
+            file_id = params[0]
+
+        # Close() object method call?
+        else:
+
+            # TODO: Currently the object on which Close() is being called is not
+            # being tracked. We will only handle the Close() if there is only 1
+            # current open file.
+            if ((context.open_files is None) or (len(context.open_files) == 0)):
+                log.error("Cannot process Close(). No open files.")
+                return
+            if (len(context.open_files) > 1):
+                log.error("Cannot process Close(). Too many open files.")
+                return
+
+            # Get the ID of the file.
+            file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
-        
-        # Get the name of the file being closed.
-        file_id = params[0]
-        name = context.open_files[file_id]["name"]
-
-        # Get the data written to the file and track it.
-        data = context.open_files[file_id]["contents"]
-        context.closed_files[name] = data
-
-        # Clear the file out of the open files.
-        del context.open_files[file_id]
-
-        # Save the hash of the written file.
-        raw_data = array.array('B', data).tostring()
-        h = sha256()
-        h.update(raw_data)
-        file_hash = h.hexdigest()
-        context.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
-
-        # TODO: Set a flag to control whether to dump file contents.
-
-        # Dump out the file.
-        if (out_dir is not None):
-
-            # Make the dropped file directory if needed.
-            if (not os.path.isdir(out_dir)):
-                os.makedirs(out_dir)
-
-            # Dump the file.
-            try:
-
-                # Get a unique name for the file.
-                short_name = name
-                if ('\\' in short_name):
-                    start = short_name.rindex('\\') + 1
-                short_name = out_dir + short_name[start:].strip()
-                try:
-                    f = open(short_name, 'r')
-                    # Already exists. Get a unique name.
-                    f.close()
-                    file_count += 1
-                    short_name += " (" + str(file_count) + ")"
-                except:
-                    pass
-                    
-                # Write out the dropped file.
-                f = open(short_name, 'wb')
-                f.write(raw_data)
-                f.close()
-                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
-                
-            except Exception as e:
-                log.error("Writing file " + short_name + " failed. " + str(e))
+        context.dump_file(file_id)
                 
 class Put(VbaLibraryFunc):
     """
@@ -1306,6 +1404,50 @@ class Put(VbaLibraryFunc):
         else:
             log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
+class WriteLine(VbaLibraryFunc):
+    """
+    File WriteLine() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+
+        # TODO: Currently the object on which WriteLine() is being called is not
+        # being tracked. We will only handle the WriteLine() if there is only 1
+        # current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process WriteLine(). No open files.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process WriteLine(). Too many open files.")
+            return
+        
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+        
+        # TODO: Handle writing at a given file position.
+
+        # Get the data.
+        data = params[0]
+        if (len(params) == 3):
+            data = params[2]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+            context.open_files[file_id]["contents"].append(ord("\n"))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+            context.open_files[file_id]["contents"].append(ord("\n"))
+                
+        # Unhandled.
+        else:
+            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
+
 class CurDir(VbaLibraryFunc):
     """
     CurDir() function.
@@ -1324,7 +1466,7 @@ class Run(VbaLibraryFunc):
 
         # Get the name of the function to call.
         func_name = params[0]
-
+            
         # Get any parameters to pass to the function to call.
         call_params = None
         if (len(params) > 1):
@@ -1332,19 +1474,274 @@ class Run(VbaLibraryFunc):
         
         # Can we find the function to call?
         try:
+            context.report_action("Run", func_name, 'Interesting Function Call')
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
-            log.error("Application.Run() failed. Cannot find function " + func_name + ".")
+            log.error("Application.Run() failed. Cannot find function " + str(func_name) + ".")
 
+class Exec(Run):
+    """
+    Treat Exec() like the Run() function.
+    """
+    pass
+
+class WinExec(VbaLibraryFunc):
+    """
+    WinExec() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        cmd = params[0]
+        context.report_action("Run", cmd, 'Interesting Command Execution')
+        return ''
+        
 class CreateObject(VbaLibraryFunc):
     """
     CreateObject() function (stubbed).
     """
 
     def eval(self, context, params=None):
-        pass
-                
+        assert (len(params) >= 1)
+        
+        # Track contents of data written to 'ADODB.Stream'.
+        obj_type = str(params[0])
+        if (obj_type == 'ADODB.Stream'):
+            context.open_file('ADODB.Stream')
+
+        # Just return a string representation of the name of the object
+        # being created.
+        return str(obj_type)
+
+class ReadText(VbaLibraryFunc):
+    """
+    ReadText() stream method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        
+        # TODO: Currently the stream object on which ReadText() is
+        # being called is not being tracked. We will only handle the
+        # ReadText() if there is only 1 current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process ReadText(). No open streams.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process ReadText(). Too many open streams.")
+            return
+
+        # Simulate the read.
+
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+
+        # Get the data to read.
+        data = context.open_files[file_id]["contents"]
+        raw_data = array.array('B', data).tostring()
+
+        # Return the data.
+        return raw_data
+
+class CheckSpelling(VbaLibraryFunc):
+    """
+    Application.CheckSpelling() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+
+        # TODO: Find and use a Python spell checker to check the spelling
+        # of the argument.
+
+        # For now just say everything is correctly spelled.
+        return True
+
+class Specialfolders(VbaLibraryFunc):
+    """
+    Excel Specialfolders() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        return "%" + str(params[0]) + "%"
+
+class Year(VbaLibraryFunc):
+    """
+    Year() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.year)
+        return r
+
+class Minute(VbaLibraryFunc):
+    """
+    Minute() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.minute)
+        return r
+
+class Second(VbaLibraryFunc):
+    """
+    Second() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        t = params[0]
+        r = 0
+        if (isinstance(t, datetime)):
+            r = int(t.second)
+        return r
+
+class Variable(VbaLibraryFunc):
+    """
+    Get document variable.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        var = str(params[0]).strip()
+        r = context.get_doc_var(var)
+        if (r is None):
+            r = ""
+        log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
+        return r
+
+class Variables(Variable):
+    pass
+    
+class CDbl(VbaLibraryFunc):
+    """
+    CDbl() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        try:
+            # Handle hex.
+            tmp = params[0].upper()
+            if (tmp.startswith("&H")):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+
+            # VBA rounds the significant digits.
+            #return round(float(params[0]), 11)
+            return float(tmp)
+
+        except:
+            return 0
+
+class Print(VbaLibraryFunc):
+    """
+    Debug.Print function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        context.report_action("Debug Print", str(params[0]), '')
+
+class URLDownloadToFile(VbaLibraryFunc):
+    """
+    URLDownloadToFile() external function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) >= 3):
+            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile')
+
+class FollowHyperlink(VbaLibraryFunc):
+    """
+    FollowHyperlink() function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) >= 1):
+            context.report_action('Download URL', str(params[0]), 'FollowHyperLink')
+            
+class CreateTextFile(VbaLibraryFunc):
+    """
+    CreateTextFile() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the name of the file being opened.
+        fname = str(params[0])
+
+        # Save that the file is opened.
+        context.open_file(fname)
+
+class Open(CreateTextFile):
+    """
+    Open() file function.
+    """
+    pass
+
+class Timer(VbaLibraryFunc):
+    """
+    Timer() method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return int(time.mktime(datetime.now().timetuple()))
+
+class Write(VbaLibraryFunc):
+    """
+    Write() method.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the data being written.
+        dat = str(params[0])
+
+        # TODO: Currently the object on which Write() is being called is not
+        # being tracked. We will only handle the Write() if there is only 1
+        # current open file.
+        if ((context.open_files is None) or (len(context.open_files) == 0)):
+            log.error("Cannot process Write(). No open files.")
+            return
+        if (len(context.open_files) > 1):
+            log.error("Cannot process Write(). Too many open files.")
+            return
+
+        # Simulate the write.
+
+        # Get the ID of the file.
+        file_id = context.open_files.keys()[0]
+
+        # Get the data.
+        data = params[0]
+
+        # Are we writing a string?
+        if (isinstance(data, str)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(ord(c))
+
+        # Are we writing a list?
+        elif (isinstance(data, list)):
+            for c in data:
+                context.open_files[file_id]["contents"].append(c)
+
+        # Unhandled.
+        else:
+            log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
+
 for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -1352,7 +1749,11 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject):
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
+               CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
+               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
+               CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
+               URLDownloadToFile, FollowHyperlink, Join, VarType):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -86,15 +86,16 @@ __version__ = '0.04'
 # TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
 
-# Enable PackRat for better performance:
-# (see https://pythonhosted.org/pyparsing/pyparsing.ParserElement-class.html#enablePackrat)
-ParserElement.enablePackrat()
-
 # TODO: replace with tablestream
 import prettytable
 
-from logger import log
+# sudo pypy -m pip install unidecode
+import unidecode
+import string
 
+from logger import log
+from procedures import Function
+from procedures import Sub
 
 # === FUNCTIONS ==============================================================
 
@@ -139,12 +140,46 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # Track data saved in document variables.
+        self.doc_vars = {}
+
+        # Track document text.
+        self.doc_text = ""
+        
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
                              'workbook_activate', 'auto_close', 'workbook_close']
 
+        # List of suffixes of the names of callback functions that provide alternate
+        # methods for running things on document (approximately) open.
+        # See https://www.greyhathacker.net/?m=201609
+        self.callback_suffixes = ['_BeforeNavigate2',
+                                  '_BeforeScriptExecute',
+                                  '_Change',
+                                  '_DocumentComplete',
+                                  '_DownloadBegin',
+                                  '_DownloadComplete',
+                                  '_FileDownload',
+                                  '_GotFocus',
+                                  '_Layout',
+                                  '_LostFocus',
+                                  '_MouseEnter',
+                                  '_MouseHover',
+                                  '_MouseLeave',
+                                  '_MouseMove',
+                                  '_NavigateComplete2',
+                                  '_NavigateError',
+                                  '_Painted',
+                                  '_Painting',
+                                  '_ProgressChange',
+                                  '_PropertyChange',
+                                  '_Resize',
+                                  '_SetSecureLockIcon',
+                                  '_StatusTextChange',
+                                  '_TitleChange']
+                                  
     def add_compiled_module(self, m):
         """
         Add an already parsed and processed module.
@@ -162,7 +197,7 @@ class ViperMonkey(object):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-            log.debug('storing global var "%s" in globals' % name)
+            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 self.globals[name.lower()] = _var
             if (isinstance(name, list)):
@@ -262,7 +297,7 @@ class ViperMonkey(object):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-                log.debug('storing global var "%s" in globals' % name)
+                log.debug('storing global var "%s" in globals (2)' % name)
             
     def parse_next_line(self):
         # extract next line
@@ -303,11 +338,15 @@ class ViperMonkey(object):
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self)
+        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+
+        # Save the document text in the proper variable in the context.
+        context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text
+        
         # reset the actions list, in case it is called several times
         self.actions = []
-        # TODO: look for ALL auto* subs, in the same order as MS Office
-        # TODO: how to handle auto subs calling other auto subs?
+
+        # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
             log.debug("Trying entry point " + entry_point)
@@ -315,6 +354,23 @@ class ViperMonkey(object):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
 
+        # Look for callback functions that can act as entry points.
+        for name in self.globals.keys():
+
+            # Look for functions whose name ends with a callback suffix.
+            for suffix in self.callback_suffixes:
+
+                # Is this a callback?
+                if (name.lower().endswith(suffix.lower())):
+
+                    # Is this a function?
+                    item = self.globals[name]
+                    if (isinstance(item, Function) or isinstance(item, Sub)):
+
+                        # Emulate it.
+                        context.report_action('Found Entry Point', str(name), '')
+                        item.eval(context=context)
+                    
     def eval(self, expr):
         """
         Parse and evaluate a single VBA expression
@@ -322,7 +378,7 @@ class ViperMonkey(object):
         :return: value of the evaluated expression
         """
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self)
+        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
         # reset the actions list, in case it is called several times
         self.actions = []
         e = expression.parseString(expr)[0]
@@ -335,6 +391,24 @@ class ViperMonkey(object):
         Callback function for each evaluated statement to report macro actions
         """
         # store the action for later use:
+        try:
+            if (isinstance(action, str)):
+                action = unidecode.unidecode(action.decode('unicode-escape'))
+        except UnicodeDecodeError:
+            action = ''.join(filter(lambda x:x in string.printable, action))
+        if (isinstance(params, str)):
+            try:
+                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
+                params = unidecode.unidecode(decoded)
+            except Exception as e:
+                log.warn("Unicode decode of action params failed. " + str(e))
+                params = ''.join(filter(lambda x:x in string.printable, params))
+        try:
+            if (isinstance(description, str)):
+                description = unidecode.unidecode(description.decode('unicode-escape'))
+        except UnicodeDecodeError as e:
+            log.warn("Unicode decode of action description failed. " + str(e))
+            description = ''.join(filter(lambda x:x in string.printable, description))
         self.actions.append((action, params, description))
         log.info("ACTION: %s - params %r - %s" % (action, params, description))
 
@@ -352,7 +426,6 @@ class ViperMonkey(object):
             t.add_row(action)
         return t
 
-
 def scan_expressions(vba_code):
     """
     Scan VBA code to extract constant VBA expressions, i.e. expressions
@@ -369,8 +442,6 @@ def scan_expressions(vba_code):
         # only yield expressions which are not plain constants
         # a VBA expression should have an eval() method:
         if hasattr(e, 'eval'):
-            # print 'eval(%s) = %s' % (repr(e), repr(e.eval()))
-            # print repr(e.eval())
             yield (e, e.eval(context))
 
 

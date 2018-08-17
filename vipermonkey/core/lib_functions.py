@@ -77,25 +77,43 @@ class Chr(VBA_Object):
         # It also ignores leading and trailing spaces.
         # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
         # => need to parse the string as integer
+        # It also looks like floating point numbers are allowed.
         # First, eval the argument:
         param = eval_arg(self.arg, context)
-        if isinstance (param, int):
+
+        # Get the ordinal value.
+        if isinstance(param, basestring):
             try:
-                return chr(param)
-            except Exception as e:
+                param = integer.parseString(param.strip())[0]
+            except:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ""
-        elif isinstance(param, basestring):
-            log.debug('Chr: converting string %r to integer' % param)
+                return ''            
+        elif isinstance(param, float):
+            log.debug('Chr: converting float %r to integer' % param)
             try:
-                param_int = integer.parseString(param.strip())[0]
-                return chr(param_int)
+                param = int(round(param))
             except:
                 log.error("%r is not a valid chr() value. Returning ''." % param)
                 return ''
+        elif isinstance(param, int):
+            pass
         else:
             raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
+            
+        # Figure out whether to create a unicode or ascii character.
+        converter = chr
+        if (param > 255):
+            converter = unichr
 
+        # Do the conversion.
+        try:
+            r = converter(param)
+            log.debug("Chr(" + str(param) + ") = " + r)
+            return r
+        except Exception as e:
+            log.error(str(e))
+            log.error("%r is not a valid chr() value. Returning ''." % param)
+            return ""
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)

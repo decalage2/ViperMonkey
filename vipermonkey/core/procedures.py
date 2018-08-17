@@ -64,9 +64,19 @@ class Sub(VBA_Object):
         return 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def eval(self, context, params=None):
+
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
+
+        # Set the default parameter values.
+        for param in self.params:
+            init_val = None
+            if (param.init_val is not None):
+                init_val = eval_arg(param.init_val, context=context)
+            context.set(param.name, init_val)
+
+        # Set given parameter values.
         if params is not None:
             # TODO: handle named parameters
             for i in range(len(params)):
@@ -75,10 +85,12 @@ class Sub(VBA_Object):
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
+        log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
         for s in self.statements:
             log.debug('Sub %s eval statement: %s' % (self.name, s))
-            s.eval(context=context)
+            if (isinstance(s, VBA_Object)):
+                s.eval(context=context)
 
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
@@ -205,23 +217,46 @@ class Function(VBA_Object):
         return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def eval(self, context, params=None):
+
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
+
         # add function name in locals:
-        context.set(self.name, None)
+        #context.set(self.name, None)
+
+        # Set the default parameter values.
+        for param in self.params:
+            init_val = None
+            if (param.init_val is not None):
+                init_val = eval_arg(param.init_val, context=context)
+            context.set(param.name, init_val)
+            
+        # Set given parameter values.
+        self.byref_params = {}
         if params is not None:
+
             # TODO: handle named parameters
             for i in range(len(params)):
+
+                # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
+
+                # Is this a ByRef parameter?
+                if (self.params[i].mechanism == "ByRef"):
+
+                    # Save it so we can pull out the updated value in the Call statement.
+                    self.byref_params[(param_name, i)] = None
+                
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
-            s.eval(context=context)
+            if (isinstance(s, VBA_Object)):
+                s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):
@@ -230,13 +265,19 @@ class Function(VBA_Object):
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
-            
+
         # TODO: get result from context.locals
         context.exit_func = False
         try:
+
+            # Save the values of the ByRef parameters.
+            for byref_param in self.byref_params.keys():
+                self.byref_params[byref_param] = context.get(byref_param[0].lower())
+            
+            # Get the return value.
             return_value = context.get(self.name)
-            if (return_value is None):
-                context.set(self.name, '')
+            if ((return_value is None) or (isinstance(return_value, Function))):
+                #context.set(self.name, '')
                 return_value = ''
             log.debug('Function %s: return value = %r' % (self.name, return_value))
             return return_value
@@ -244,10 +285,12 @@ class Function(VBA_Object):
 
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
-            context.set(self.name, '')
+            #context.set(self.name, '')
+            return ''
 
 # TODO 5.3.1.4 Function Type Declarations
-function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
+function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()

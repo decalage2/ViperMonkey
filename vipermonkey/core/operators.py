@@ -76,17 +76,17 @@ class Sum(VBA_Object):
         # (Note: sum() is not applicable here, because it does not work for strings)
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
-            return reduce(lambda x, y: x + y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x + y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # NOTE: In VB you are not supposed to be able to add integers and strings.
             # However, there are maldocs that do this. If the strings are integer strings,
             # integer addition is performed.
-            log.debug('Impossible to sum arguments of different types. Try converting strings to ints.')
+            log.debug('Impossible to sum arguments of different types. Try converting strings to common type.')
             try:
                 return reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
             except ValueError:
                 # Punt and sum all arguments as strings.
-                return reduce(lambda x, y: str(x) + str(y), eval_args(self.arg, context))
+                return reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(eval_args(self.arg, context)))
         except RuntimeError:
             log.error("overflow trying eval sum: %r" % self.arg)
             sys.exit(1)
@@ -109,8 +109,8 @@ class Eqv(VBA_Object):
     def eval(self, context, params=None):
         # return the eqv of all the arguments:
         try:
-            return reduce(lambda a, b: (a & b) | ~(a | b), eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda a, b: (a & b) | ~(a | b), coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             log.error('Impossible to Eqv arguments of different types.')
             return 0
         except RuntimeError:
@@ -136,8 +136,8 @@ class Xor(VBA_Object):
     def eval(self, context, params=None):
         # return the xor of all the arguments:
         try:
-            return reduce(lambda x, y: x ^ y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x ^ y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -166,8 +166,8 @@ class And(VBA_Object):
     def eval(self, context, params=None):
         # return the and of all the arguments:
         try:
-            return reduce(lambda x, y: x & y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x & y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -196,8 +196,8 @@ class Or(VBA_Object):
     def eval(self, context, params=None):
         # return the and of all the arguments:
         try:
-            return reduce(lambda x, y: x | y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x | y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -228,8 +228,8 @@ class Subtraction(VBA_Object):
     def eval(self, context, params=None):
         # return the subtraction of all the arguments:
         try:
-            return reduce(lambda x, y: x - y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x - y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -275,8 +275,8 @@ class Multiplication(VBA_Object):
     def eval(self, context, params=None):
         # return the multiplication of all the arguments:
         try:
-            return reduce(lambda x, y: x * y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x * y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -289,6 +289,36 @@ class Multiplication(VBA_Object):
         return debug_repr("*", self.arg)
         return ' * '.join(map(repr, self.arg))
 
+# --- EXPONENTIATION: ^ OPERATOR ------------------------------------------------
+
+class Power(VBA_Object):
+    """
+    VBA exponentiation using the binary operator ^
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Power, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list [a,'&',b,'&',c,...]
+        self.arg = tokens[0][::2]
+
+    def eval(self, context, params=None):
+        # return the exponentiation of all the arguments:
+        try:
+            return reduce(lambda x, y: pow(x, y), coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                return reduce(lambda x, y: pow(int(x), int(y)), eval_args(self.arg, context))
+            except Exception as e:
+                log.error('Impossible to do exponentiation with arguments of different types. ' + str(e))
+                return 0
+
+    def __repr__(self):
+        return debug_repr("^", self.arg)
+        return ' ^ '.join(map(repr, self.arg))
+    
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
 class Division(VBA_Object):
@@ -305,8 +335,8 @@ class Division(VBA_Object):
     def eval(self, context, params=None):
         # return the division of all the arguments:
         try:
-            return reduce(lambda x, y: x / y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x / y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -339,8 +369,8 @@ class FloorDivision(VBA_Object):
     def eval(self, context, params=None):
         # return the floor division of all the arguments:
         try:
-            return reduce(lambda x, y: x // y, eval_args(self.arg, context))
-        except TypeError:
+            return reduce(lambda x, y: x // y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
@@ -377,7 +407,7 @@ class Concatenation(VBA_Object):
             eval_params = coerce_args_to_str(eval_params)
             log.debug('Concatenation after eval: %r' % eval_params)
             return ''.join(eval_params)
-        except TypeError as e:
+        except (TypeError, ValueError) as e:
             log.exception('Impossible to concatenate non-string arguments. ' + str(e))
             # TODO
             return ''
@@ -402,7 +432,14 @@ class Mod(VBA_Object):
     def eval(self, context, params=None):
         # return the sum of all the arguments:
         # see https://docs.python.org/2/library/functions.html#reduce
-        return reduce(lambda x, y: x % y, eval_args(self.arg, context))
+        try:
+            return reduce(lambda x, y: x % y, coerce_args(eval_args(self.arg, context)))
+        except (TypeError, ValueError) as e:
+            log.error('Impossible to mod arguments of different types. ' + str(e))
+            return ''
+        except ZeroDivisionError:
+            log.error('Mod division by zero error.')
+            return ''
 
     def __repr__(self):
         return debug_repr("mod", self.arg)
