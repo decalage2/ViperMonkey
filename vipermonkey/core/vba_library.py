@@ -1280,6 +1280,20 @@ class Environ(VbaLibraryFunc):
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
+class DriveExists(VbaLibraryFunc):
+    """
+    DriveExists() function for checking to see if a drive exists.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        drive = str(params[0]).lower()
+        r = False
+        # Assume the C: drive is always there.
+        if ((drive == 'c') or (drive == 'c:')):
+            r = True
+        return r
+
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
@@ -1753,7 +1767,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink, Join, VarType):
+               URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
