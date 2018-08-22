@@ -1294,6 +1294,16 @@ class DriveExists(VbaLibraryFunc):
             r = True
         return r
 
+class Navigate(VbaLibraryFunc):
+    """
+    Navigate() function for loading a URL in a web browser.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        url = str(params[0])
+        context.report_action("GET", url, 'Load in browser')
+        
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
@@ -1767,7 +1777,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists):
+               URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
