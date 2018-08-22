@@ -725,6 +725,8 @@ def process_file (container, filename, data,
             vm.entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
+        if (isinstance(data, Exception)):
+            data = None
         vba = VBA_Parser(filename, data, relaxed=True)
         if vba.detect_vba_macros():
 
