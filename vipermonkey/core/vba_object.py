@@ -92,7 +92,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
     evaluate a single argument if it is a VBA_Object, otherwise return its value
     """
     log.debug("try eval arg: %s" % arg)
-    if isinstance(arg, VBA_Object):
+    if (isinstance(arg, VBA_Object)):
+        log.debug("eval_arg: eval as VBA_Object %s" % arg)
         return arg.eval(context=context)
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
@@ -218,6 +219,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace("'","").\
                           replace('"',"").\
                           replace('.value',"").\
+                          replace("(", "").\
                           strip()
                     val = context.get_doc_var(var)
                     if (val is not None):
@@ -233,6 +235,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace("'","").\
                           replace('"',"").\
                           replace('.value',"").\
+                          replace("(", "").\
                           strip()
                     val = context.get_doc_var(var)
                     if (val is not None):

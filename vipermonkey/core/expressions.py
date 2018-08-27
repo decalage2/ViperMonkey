@@ -173,6 +173,12 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def eval(self, context, params=None):
+
+        # Handle accessing document variables as a special case.
+        tmp = self.__repr__().lower()
+        if (tmp.startswith("activedocument.variables(")):
+            return eval_arg(self.__repr__(), context)
+            
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
         tmp_lhs = eval_arg(self.lhs, context)

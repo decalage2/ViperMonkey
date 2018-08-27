@@ -1637,6 +1637,12 @@ class Variable(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         var = str(params[0]).strip()
+        var = var.replace("activedocument.customdocumentproperties(", "").\
+              replace(")", "").\
+              replace("'","").\
+              replace('"',"").\
+              replace('.value',"").\
+              strip()
         r = context.get_doc_var(var)
         if (r is None):
             r = ""
