@@ -181,6 +181,8 @@ def _read_doc_vars(fname):
         # by valid VBA so emulation will work.
         pos = 0
         r = []
+        #print data
+        #print strs
         for s in strs:
             # TODO: Figure out if this is 1 or 2 positions ahead.
             if ((pos + 1) < len(strs)):

@@ -1436,6 +1436,16 @@ class WriteLine(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
 
+        # Get the data.
+        data = params[0]
+        if (len(params) == 3):
+            data = params[2]
+        
+        # Save writes that look like they are writing URLs.
+        data_str = str(data)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which WriteLine() is being called is not
         # being tracked. We will only handle the WriteLine() if there is only 1
         # current open file.
@@ -1450,11 +1460,6 @@ class WriteLine(VbaLibraryFunc):
         file_id = context.open_files.keys()[0]
         
         # TODO: Handle writing at a given file position.
-
-        # Get the data.
-        data = params[0]
-        if (len(params) == 3):
-            data = params[2]
 
         # Are we writing a string?
         if (isinstance(data, str)):
@@ -1680,6 +1685,12 @@ class Print(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
+
+        # Save writes that look like they are writing URLs.
+        data_str = str(params[0])
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'Debug Print')
+
         context.report_action("Debug Print", str(params[0]), '')
 
 class URLDownloadToFile(VbaLibraryFunc):
@@ -1740,6 +1751,11 @@ class Write(VbaLibraryFunc):
         # Get the data being written.
         dat = str(params[0])
 
+        # Save writes that look like they are writing URLs.
+        data_str = str(dat)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
         # current open file.
