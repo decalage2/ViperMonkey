@@ -607,6 +607,8 @@ class InStr(VbaLibraryFunc):
         if (s2 is None):
             s2 = ''
         if (isinstance(params[0], int)):
+            if (len(params) < 3):
+                return False
             start = params[0] - 1
             if (start < 0):
                 start = 0
