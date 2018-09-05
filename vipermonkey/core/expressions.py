@@ -188,12 +188,19 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs1
         else:
             rhs = self.rhs[len(self.rhs) - 1]
-        tmp_rhs = eval_arg(rhs, context)
             
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
-        if (isinstance(rhs, Function_Call)):            
+        if (isinstance(rhs, Function_Call)):
+
+            # Skip local functions that have a name collision with VBA built in functions.
+            for func in Function_Call.log_funcs:
+                if (rhs.name.lower() == func.lower()):
+                    return str(self)
+
+            # This is not a builtin. Evaluate it
+            tmp_rhs = eval_arg(rhs, context)
             return tmp_rhs
         else:
             return eval_arg(self.__repr__(), context)
@@ -328,7 +335,7 @@ class Function_Call(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec"]
+                 "SetExpandedStringValue", "WinExec", "FileExists"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
