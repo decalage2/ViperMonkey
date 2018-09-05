@@ -482,6 +482,12 @@ class Context(object):
 
         # System info.
         self.globals["System.OperatingSystem".lower()] = "Windows NT"
+
+        # Call type constants.
+        self.globals["vbGet".lower()] = 2
+        self.globals["vbLet".lower()] = 4
+        self.globals["vbMethod".lower()] = 1
+        self.globals["vbSet".lower()] = 8
         
     def open_file(self, fname):
         """
