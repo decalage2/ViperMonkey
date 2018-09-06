@@ -54,6 +54,29 @@ __version__ = '0.02'
 import base64
 from logger import log
 
+from inspect import getouterframes, currentframe
+import sys
+from datetime import datetime
+
+max_emulation_time = None
+
+def limits_exceeded():
+    """
+    Check to see if we are about to exceed the maximum recursion depth. Also check to 
+    see if emulation is taking too long (if needed).
+    """
+
+    # Check to see if we are approaching the recursion limit.
+    level = len(getouterframes(currentframe(1)))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .85))
+    time_exceeded = False
+
+    # Check to see if we have exceeded the time limit.
+    if (max_emulation_time is not None):
+        time_exceeded = (datetime.now() > max_emulation_time)
+    
+    return (recursion_exceeded or time_exceeded)
+
 class VBA_Object(object):
     """
     Base class for all VBA objects that can be evaluated.
@@ -91,6 +114,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
     """
+
+    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
+    # avoid that. Also check to see if emulation has taken too long.
+    if (limits_exceeded()):
+        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+    
     log.debug("try eval arg: %s" % arg)
     if (isinstance(arg, VBA_Object)):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)

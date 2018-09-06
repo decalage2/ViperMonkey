@@ -98,6 +98,8 @@ import traceback
 import logging
 import colorlog
 import re
+from datetime import datetime
+from datetime import timedelta
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -750,8 +752,13 @@ def parse_streams(vba, strip_useless=False):
         return parse_streams_serial(vba, strip_useless)
 
 # === Top level Programatic Interface ================================================================================    
-def process_file (container, filename, data,
-                  altparser=False, strip_useless=False, entry_points=None):
+def process_file (container,
+                  filename,
+                  data,
+                  altparser=False,
+                  strip_useless=False,
+                  entry_points=None,
+                  time_limit=None):
     """
     Process a single file
 
@@ -766,6 +773,10 @@ def process_file (container, filename, data,
 
     # Increase Python call depth.
     sys.setrecursionlimit(13000)
+
+    # Set the emulation time limit.
+    if (time_limit is not None):
+        vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
@@ -1023,6 +1034,8 @@ def main():
         help='Strip useless VB code from macros prior to parsing.')
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
                       help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
+    parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
+                      help="Time limit (in minutes) for emulation.")
 
     (options, args) = parser.parse_args()
 
@@ -1052,7 +1065,8 @@ def main():
                          data,
                          altparser=options.altparser,
                          strip_useless=options.strip_useless_code,
-                         entry_points=entry_points)
+                         entry_points=entry_points,
+                         time_limit=options.time_limit)
 
 if __name__ == '__main__':
     main()
