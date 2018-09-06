@@ -1027,7 +1027,7 @@ def main():
     parser.add_option("-e", action="store_true", dest="scan_expressions",
         help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
-                            help="logging level debug/info/warning/error/critical (default=%default)")
+                      help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
         help='Use the alternate line parser (experimental)')
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
@@ -1035,7 +1035,7 @@ def main():
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
                       help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
     parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
-                      help="Time limit (in minutes) for emulation.")
+                      type='int', help="Time limit (in minutes) for emulation.")
 
     (options, args) = parser.parse_args()
 
