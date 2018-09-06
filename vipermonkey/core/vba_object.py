@@ -68,13 +68,18 @@ def limits_exceeded():
 
     # Check to see if we are approaching the recursion limit.
     level = len(getouterframes(currentframe(1)))
-    recursion_exceeded = (level > (sys.getrecursionlimit() * .85))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .80))
     time_exceeded = False
 
     # Check to see if we have exceeded the time limit.
     if (max_emulation_time is not None):
         time_exceeded = (datetime.now() > max_emulation_time)
-    
+
+    if (recursion_exceeded):
+        log.error("Call recursion depth approaching limit.")
+    if (time_exceeded):
+        log.error("Emulation time exceeded.")
+        
     return (recursion_exceeded or time_exceeded)
 
 class VBA_Object(object):
