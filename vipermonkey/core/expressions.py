@@ -195,9 +195,10 @@ class MemberAccessExpression(VBA_Object):
         if (isinstance(rhs, Function_Call)):
 
             # Skip local functions that have a name collision with VBA built in functions.
-            for func in Function_Call.log_funcs:
-                if (rhs.name.lower() == func.lower()):
-                    return str(self)
+            if (context.contains(rhs.name)):
+                for func in Function_Call.log_funcs:
+                    if (rhs.name.lower() == func.lower()):
+                        return str(self)
 
             # This is not a builtin. Evaluate it
             tmp_rhs = eval_arg(rhs, context)

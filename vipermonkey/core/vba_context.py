@@ -616,7 +616,14 @@ class Context(object):
 
         # Finally see if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
-            
+
+    def contains(self, name):
+        try:
+            self.get(name)
+            return True
+        except KeyError:
+            return False
+    
     def get_type(self, var):
         if (not isinstance(var, basestring)):
             return None
