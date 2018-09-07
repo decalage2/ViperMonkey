@@ -623,7 +623,10 @@ class Context(object):
             return True
         except KeyError:
             return False
-    
+
+    def contains_user_defined(self, name):
+        return ((name in self.locals) or (name in self.globals))
+        
     def get_type(self, var):
         if (not isinstance(var, basestring)):
             return None

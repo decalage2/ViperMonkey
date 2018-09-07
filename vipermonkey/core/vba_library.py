@@ -1730,9 +1730,14 @@ class CreateTextFile(VbaLibraryFunc):
 
 class Open(CreateTextFile):
     """
-    Open() file function.
+    Open() file function. Also Open() HTTP function.
     """
-    pass
+
+    def eval(self, context, params=None):
+
+        # Is this a HTTP GET?
+        if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
+            context.report_action("GET", str(params[1]), 'Interesting Function Call')
 
 class Timer(VbaLibraryFunc):
     """
