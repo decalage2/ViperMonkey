@@ -538,7 +538,7 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
             ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
-              simple_name_expression | asc | strReverse | literal | file_pointer)
+              simple_name_expression | vbformat | asc | strReverse | literal | file_pointer)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -593,6 +593,8 @@ chr_const = Suppress(
 chr_const.setParseAction(Chr)
 asc_const = Suppress(CaselessKeyword('Asc') + '(') + expr_const + Suppress(')')
 asc_const.setParseAction(Asc)
+vbformat = Suppress(CaselessKeyword('Format') + '(') + expr_const + Suppress(')')
+vbformat.setParseAction(Format)
 strReverse_const = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expr_const + Suppress(Literal(')'))
 strReverse_const.setParseAction(StrReverse)
 environ_const = Suppress(CaselessKeyword('Environ') + '(') + expr_const + Suppress(')')
