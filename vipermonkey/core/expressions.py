@@ -173,6 +173,12 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def eval(self, context, params=None):
+
+        # Handle accessing document variables as a special case.
+        tmp = self.__repr__().lower()
+        if (tmp.startswith("activedocument.variables(")):
+            return eval_arg(self.__repr__(), context)
+            
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
         tmp_lhs = eval_arg(self.lhs, context)
@@ -182,12 +188,20 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs1
         else:
             rhs = self.rhs[len(self.rhs) - 1]
-        tmp_rhs = eval_arg(rhs, context)
             
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
-        if (isinstance(rhs, Function_Call)):            
+        if (isinstance(rhs, Function_Call)):
+
+            # Skip local functions that have a name collision with VBA built in functions.
+            if (context.contains_user_defined(rhs.name)):
+                for func in Function_Call.log_funcs:
+                    if (rhs.name.lower() == func.lower()):
+                        return str(self)
+
+            # This is not a builtin. Evaluate it
+            tmp_rhs = eval_arg(rhs, context)
             return tmp_rhs
         else:
             return eval_arg(self.__repr__(), context)
@@ -322,7 +336,7 @@ class Function_Call(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec"]
+                 "SetExpandedStringValue", "WinExec", "FileExists"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -524,7 +538,7 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
             ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
-              simple_name_expression | asc | strReverse | literal | file_pointer)
+              simple_name_expression | vbformat | asc | strReverse | literal | file_pointer)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -579,6 +593,8 @@ chr_const = Suppress(
 chr_const.setParseAction(Chr)
 asc_const = Suppress(CaselessKeyword('Asc') + '(') + expr_const + Suppress(')')
 asc_const.setParseAction(Asc)
+vbformat = Suppress(CaselessKeyword('Format') + '(') + expr_const + Suppress(')')
+vbformat.setParseAction(Format)
 strReverse_const = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expr_const + Suppress(Literal(')'))
 strReverse_const.setParseAction(StrReverse)
 environ_const = Suppress(CaselessKeyword('Environ') + '(') + expr_const + Suppress(')')

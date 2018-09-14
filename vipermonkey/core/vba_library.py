@@ -607,6 +607,8 @@ class InStr(VbaLibraryFunc):
         if (s2 is None):
             s2 = ''
         if (isinstance(params[0], int)):
+            if (len(params) < 3):
+                return False
             start = params[0] - 1
             if (start < 0):
                 start = 0
@@ -1291,6 +1293,30 @@ class Environ(VbaLibraryFunc):
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
+class DriveExists(VbaLibraryFunc):
+    """
+    DriveExists() function for checking to see if a drive exists.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        drive = str(params[0]).lower()
+        r = False
+        # Assume the C: drive is always there.
+        if ((drive == 'c') or (drive == 'c:')):
+            r = True
+        return r
+
+class Navigate(VbaLibraryFunc):
+    """
+    Navigate() function for loading a URL in a web browser.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        url = str(params[0])
+        context.report_action("GET", url, 'Load in browser')
+        
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
@@ -1423,6 +1449,16 @@ class WriteLine(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
 
+        # Get the data.
+        data = params[0]
+        if (len(params) == 3):
+            data = params[2]
+        
+        # Save writes that look like they are writing URLs.
+        data_str = str(data)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which WriteLine() is being called is not
         # being tracked. We will only handle the WriteLine() if there is only 1
         # current open file.
@@ -1437,11 +1473,6 @@ class WriteLine(VbaLibraryFunc):
         file_id = context.open_files.keys()[0]
         
         # TODO: Handle writing at a given file position.
-
-        # Get the data.
-        data = params[0]
-        if (len(params) == 3):
-            data = params[2]
 
         # Are we writing a string?
         if (isinstance(data, str)):
@@ -1624,6 +1655,12 @@ class Variable(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         var = str(params[0]).strip()
+        var = var.replace("activedocument.customdocumentproperties(", "").\
+              replace(")", "").\
+              replace("'","").\
+              replace('"',"").\
+              replace('.value',"").\
+              strip()
         r = context.get_doc_var(var)
         if (r is None):
             r = ""
@@ -1661,6 +1698,12 @@ class Print(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
+
+        # Save writes that look like they are writing URLs.
+        data_str = str(params[0])
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'Debug Print')
+
         context.report_action("Debug Print", str(params[0]), '')
 
 class URLDownloadToFile(VbaLibraryFunc):
@@ -1698,9 +1741,14 @@ class CreateTextFile(VbaLibraryFunc):
 
 class Open(CreateTextFile):
     """
-    Open() file function.
+    Open() file function. Also Open() HTTP function.
     """
-    pass
+
+    def eval(self, context, params=None):
+
+        # Is this a HTTP GET?
+        if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
+            context.report_action("GET", str(params[1]), 'Interesting Function Call')
 
 class Timer(VbaLibraryFunc):
     """
@@ -1721,6 +1769,11 @@ class Write(VbaLibraryFunc):
         # Get the data being written.
         dat = str(params[0])
 
+        # Save writes that look like they are writing URLs.
+        data_str = str(dat)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
         # current open file.
@@ -1764,7 +1817,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink, Join, VarType):
+               URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

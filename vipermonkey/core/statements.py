@@ -165,7 +165,7 @@ name_as_statement.setParseAction(Name_As_Statement)
 # MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 # TODO: for now we use a generic syntax
-type_expression = lex_identifier
+type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 # --- TYPE DECLARATIONS -------------------------------------------------------
 
@@ -476,7 +476,7 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static") | CaselessKeyword("Const")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
 dim_statement.setParseAction(Dim_Statement)
@@ -1520,6 +1520,8 @@ class Call_Statement(VBA_Object):
             self.name = str(self.name).replace("!", "")
         if (str(self.name).endswith("#")):
             self.name = str(self.name).replace("#", "")
+        if (str(self.name).endswith("%")):
+            self.name = str(self.name).replace("%", "")
         self.params = tokens.params
         log.debug('parsed %r' % self)
 
@@ -1853,7 +1855,9 @@ file_type = Suppress(CaselessKeyword("For")) + \
             Optional(Suppress(CaselessKeyword("Access")) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+#file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+#                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + file_type("type") + \
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)
 

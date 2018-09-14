@@ -89,6 +89,7 @@ from pyparsing import *
 #ParserElement.enablePackrat(cache_size_limit=None)
 ParserElement.enablePackrat(cache_size_limit=10000000)
 
+import struct
 import multiprocessing
 import optparse
 import sys
@@ -97,6 +98,8 @@ import traceback
 import logging
 import colorlog
 import re
+from datetime import datetime
+from datetime import timedelta
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -153,7 +156,48 @@ def _read_doc_text(fname):
     
     # Return all the strings.
     return r
-        
+
+def get_doc_var_info(ole):
+    """
+    Get the byte offset and size of the chunk of data containing the document
+    variables. This information is read from the FIB 
+    (https://msdn.microsoft.com/en-us/library/dd944907(v=office.12).aspx). The doc
+    vars appear in the 1Table or 0Table stream.
+    """
+
+    # Read the WordDocument stream. This contains the FIB.
+    if (not ole.exists('worddocument')):
+        return (None, None)
+    data = ole.openstream("worddocument").read()
+
+    # Get the byte offset of the doc vars.
+    # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
+    # offset to fcStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
+    #
+    # Get offset to FibRgFcLcb97 blob:
+    #
+    # base (32 bytes): The FibBase.
+    # csw (2 bytes): An unsigned integer that specifies the count of 16-bit values corresponding to fibRgW that follow.
+    # fibRgW (28 bytes): The FibRgW97.
+    # cslw (2 bytes): An unsigned integer that specifies the count of 32-bit values corresponding to fibRgLw that follow.
+    # fibRgLw (88 bytes): The FibRgLw97.
+    # cbRgFcLcb (2 bytes):
+    #
+    # The fcStwUser field holds the offset of the doc var info in the 0Table or 1Table stream. It is preceded
+    # by 119 other 4 byte values, hence the 120*4 offset.
+    fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4)
+    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    doc_var_offset = struct.unpack('!I', tmp)[0]
+
+    # Get the size of the doc vars (lcbStwUser).
+    # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
+    # offset to lcbStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
+    fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4) + 4
+    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    doc_var_size = struct.unpack('!I', tmp)[0]
+    
+    return (doc_var_offset, doc_var_size)
+    
 def _read_doc_vars(fname):
     """
     Use a heuristic to try to read in document variable names and values from
@@ -167,24 +211,37 @@ def _read_doc_vars(fname):
     try:
 
         # Pull out all of the wide character strings from the 1Table OLE data.
+        #
+        # TODO: Check the FIB to see if we should read from 0Table or 1Table.
         ole = olefile.OleFileIO(fname, write_mode=False)
-        data = ole.openstream("1Table").read()
-        tmp_strs = re.findall("(([^\x00-\x1F\x7F-\xFF]\x00){4,})", data)
+        var_offset, var_size = get_doc_var_info(ole)
+        if ((var_offset is None) or (var_size is None) or (var_size == 0)):
+            return []
+        data = ole.openstream("1Table").read()[var_offset : (var_offset + var_size + 1)]
+        full_data = ole.openstream("1Table").read()
+        tmp_strs = re.findall("(([^\x00-\x1F\x7F-\xFF]\x00){2,})", data)
         strs = []
         for s in tmp_strs:
             s1 = s[0].replace("\x00", "").strip()
             strs.append(s1)
 
-        # Treat each wide character string as a potential variable that has a value
-        # of the string 1 positions ahead on the current string. This introduces "variables"
-        # that don't really exist into the list, but these variables will not be accessed
-        # by valid VBA so emulation will work.
+        # It looks like the document variable names and values are stored as wide character
+        # strings in the doc var/VBA signing certificate data segment. Additionally it looks
+        # like the doc var names appear sequentially first followed by the doc var values in
+        # the same order.
+        #
+        # We match up the doc var names to values by splitting the list of strings in half
+        # and then matching up elements in the 1st half of the list with the 2nd half of the list.
         pos = 0
         r = []
-        for s in strs:
-            # TODO: Figure out if this is 1 or 2 positions ahead.
-            if ((pos + 1) < len(strs)):
-                r.append((s, strs[pos + 1]))
+        end = len(strs)
+        # We need an even # of strings. Try adding a doc var value if needed.
+        if (end % 2 != 0):
+            end = end + 1
+            strs.append("Unknown")
+        end = end/2
+        while (pos < end):
+            r.append((strs[pos], strs[pos + end]))
             pos += 1
 
         # Return guesses at doc variable assignments.
@@ -695,8 +752,13 @@ def parse_streams(vba, strip_useless=False):
         return parse_streams_serial(vba, strip_useless)
 
 # === Top level Programatic Interface ================================================================================    
-def process_file (container, filename, data,
-                  altparser=False, strip_useless=False, entry_points=None):
+def process_file (container,
+                  filename,
+                  data,
+                  altparser=False,
+                  strip_useless=False,
+                  entry_points=None,
+                  time_limit=None):
     """
     Process a single file
 
@@ -711,6 +773,10 @@ def process_file (container, filename, data,
 
     # Increase Python call depth.
     sys.setrecursionlimit(13000)
+
+    # Set the emulation time limit.
+    if (time_limit is not None):
+        vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
@@ -725,6 +791,8 @@ def process_file (container, filename, data,
             vm.entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
+        if (isinstance(data, Exception)):
+            data = None
         vba = VBA_Parser(filename, data, relaxed=True)
         if vba.detect_vba_macros():
 
@@ -959,13 +1027,15 @@ def main():
     parser.add_option("-e", action="store_true", dest="scan_expressions",
         help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
-                            help="logging level debug/info/warning/error/critical (default=%default)")
+                      help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
         help='Use the alternate line parser (experimental)')
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
         help='Strip useless VB code from macros prior to parsing.')
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
                       help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
+    parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
+                      type='int', help="Time limit (in minutes) for emulation.")
 
     (options, args) = parser.parse_args()
 
@@ -995,7 +1065,8 @@ def main():
                          data,
                          altparser=options.altparser,
                          strip_useless=options.strip_useless_code,
-                         entry_points=entry_points)
+                         entry_points=entry_points,
+                         time_limit=options.time_limit)
 
 if __name__ == '__main__':
     main()

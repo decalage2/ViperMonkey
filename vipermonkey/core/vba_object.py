@@ -54,6 +54,34 @@ __version__ = '0.02'
 import base64
 from logger import log
 
+from inspect import getouterframes, currentframe
+import sys
+from datetime import datetime
+
+max_emulation_time = None
+
+def limits_exceeded():
+    """
+    Check to see if we are about to exceed the maximum recursion depth. Also check to 
+    see if emulation is taking too long (if needed).
+    """
+
+    # Check to see if we are approaching the recursion limit.
+    level = len(getouterframes(currentframe(1)))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .80))
+    time_exceeded = False
+
+    # Check to see if we have exceeded the time limit.
+    if (max_emulation_time is not None):
+        time_exceeded = (datetime.now() > max_emulation_time)
+
+    if (recursion_exceeded):
+        log.error("Call recursion depth approaching limit.")
+    if (time_exceeded):
+        log.error("Emulation time exceeded.")
+        
+    return (recursion_exceeded or time_exceeded)
+
 class VBA_Object(object):
     """
     Base class for all VBA objects that can be evaluated.
@@ -91,8 +119,15 @@ def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
     """
+
+    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
+    # avoid that. Also check to see if emulation has taken too long.
+    if (limits_exceeded()):
+        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+    
     log.debug("try eval arg: %s" % arg)
-    if isinstance(arg, VBA_Object):
+    if (isinstance(arg, VBA_Object)):
+        log.debug("eval_arg: eval as VBA_Object %s" % arg)
         return arg.eval(context=context)
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
@@ -218,6 +253,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace("'","").\
                           replace('"',"").\
                           replace('.value',"").\
+                          replace("(", "").\
                           strip()
                     val = context.get_doc_var(var)
                     if (val is not None):
@@ -233,6 +269,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace("'","").\
                           replace('"',"").\
                           replace('.value',"").\
+                          replace("(", "").\
                           strip()
                     val = context.get_doc_var(var)
                     if (val is not None):

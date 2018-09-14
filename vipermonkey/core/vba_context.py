@@ -46,6 +46,7 @@ import os
 from hashlib import sha256
 from datetime import datetime
 from logger import log
+import base64
 
 def is_procedure(vba_object):
     """
@@ -481,6 +482,12 @@ class Context(object):
 
         # System info.
         self.globals["System.OperatingSystem".lower()] = "Windows NT"
+
+        # Call type constants.
+        self.globals["vbGet".lower()] = 2
+        self.globals["vbLet".lower()] = 4
+        self.globals["vbMethod".lower()] = 1
+        self.globals["vbSet".lower()] = 8
         
     def open_file(self, fname):
         """
@@ -609,7 +616,17 @@ class Context(object):
 
         # Finally see if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
-            
+
+    def contains(self, name):
+        try:
+            self.get(name)
+            return True
+        except KeyError:
+            return False
+
+    def contains_user_defined(self, name):
+        return ((name in self.locals) or (name in self.globals))
+        
     def get_type(self, var):
         if (not isinstance(var, basestring)):
             return None
@@ -666,6 +683,28 @@ class Context(object):
         if ((do_with_prefix) and (len(self.with_prefix) > 0)):
             tmp_name = str(self.with_prefix) + str(name)
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
+
+        # Handle base64 conversion with VBA objects.
+        if (name.endswith(".text")):
+
+            # Is the root object something set to the "bin.base64" data type?
+            node_type = name.replace(".text", ".datatype")
+            try:
+                val = str(self.get(node_type)).strip()
+                if (val == "bin.base64"):
+
+                    # Try converting the text from base64.
+                    try:
+
+                        # Set the typed vale of the node to the decoded value.
+                        conv_val = base64.b64decode(str(value).strip())
+                        val_name = name.replace(".text", ".nodetypedvalue")
+                        self.set(val_name, conv_val)
+                    except Exception as e:
+                        log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                        
+            except KeyError:
+                pass
             
     def report_action(self, action, params=None, description=None):
         self.engine.report_action(action, params, description)

@@ -152,6 +152,32 @@ class Asc(VBA_Object):
 asc = Suppress((CaselessKeyword('Asc') | CaselessKeyword('AscW'))  + '(') + expression + Suppress(')')
 asc.setParseAction(Asc)
 
+class Format(VBA_Object):
+    """
+    VBA Format function
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Format, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # Here the arg is expected to be either a string or a VBA_Object
+        self.arg = tokens[0]
+
+    def eval(self, context, params=None):
+        r = eval_arg(self.arg, context)
+        log.debug("Format(%r): return %r" % (self.arg, r))
+        return r
+
+    def __repr__(self):
+        return 'Format(%s)' % repr(self.arg)
+
+
+# Format()
+# TODO: see MS-VBAL 6.1.2.11.1.8 page 254 => Format
+vbformat = Suppress((CaselessKeyword('Format') | CaselessKeyword('Format$'))  + '(') + expression + Suppress(')')
+vbformat.setParseAction(Format)
+
+
 # --- StrReverse() --------------------------------------------------------------------
 
 class StrReverse(VBA_Object):
