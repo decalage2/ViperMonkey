@@ -1045,17 +1045,6 @@ class Str(VbaLibraryFunc):
         log.debug("Str: %r returns %r" % (self, r))
         return r
 
-class Format(VbaLibraryFunc):
-    """
-    Format(), when abused with no 2nd fmtstring parameter, behaves like Str().
-    """
-
-    def eval(self, context, params=None):
-        assert (len(params) == 1)
-        r = str(params[0])
-        log.debug("Format: %r returns %r" % (self, r))
-        return r
-
 class Val(VbaLibraryFunc):
     """
     Val() convert string to number function.
@@ -1810,7 +1799,7 @@ for _class in (MsgBox, Shell, Len, Mid, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
-               Dir, RGB, Log, Cos, Exp, Sin, Str, Format, Val, CInt, Pmt, Day, Round,
+               Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
