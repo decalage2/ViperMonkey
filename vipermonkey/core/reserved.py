@@ -94,7 +94,8 @@ operator_identifier = caselessKeywordsList(
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Debug",
-    "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
+    "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String",
+    "Format"))
 
 # A <special-form> is a <reserved-identifier> that is used in an expression as
 # if it was a program defined procedure name but which has special syntactic rules for
