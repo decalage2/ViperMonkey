@@ -759,6 +759,43 @@ class For_Statement(VBA_Object):
         return 'For %s = %r to %r step %r' % (self.name,
                                               self.start_value, self.end_value, self.step_value)
 
+    def _handle_simple_loop(self, context, start, end, step):
+
+        # Handle simple loops used purely for obfuscation.
+        #
+        # For vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = 1 To 833127186
+        # vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = vPHpqvZhLlFhzUmTfwXoRrfZRjfRu + 1
+        # Next
+
+        # Do we just have 1 line in the loop body?
+        if (len(self.statements) != 1):
+            return (None, None)
+
+        # Are we just modifying the loop counter variable each loop iteration?
+        var_inc = str(self.name) + " = " + str(self.name)
+        body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (not body.startswith(var_inc)):
+            return (None, None)
+
+        # We are just modifying the loop variable each time. Figure out the final
+        # iteration value.
+        if (" " not in body):
+            return (None, None)
+        body = body.replace(var_inc, "").strip()
+        op = body[:body.index(" ")]
+        num = body[body.index(" ") + 1:]
+        try:
+            num = int(num)
+        except:
+            return (None, None)
+        if (op == "+"):
+            return (self.name, end + num)
+        if (op == "-"):
+            return (self.name, end - num)
+        if (op == "*"):
+            return (self.name, end * num)
+        return (None, None)
+    
     def eval(self, context, params=None):
         # evaluate values:
         log.debug('FOR loop: evaluating start, end, step')
@@ -798,6 +835,13 @@ class For_Statement(VBA_Object):
         else:
             step = 1
 
+        # See if we have a simple style loop put in purely for obfuscation.
+        var, val = self._handle_simple_loop(context, start, end, step)
+        if ((var is not None) and (val is not None)):
+            log.info("Short circuited loop. Set " + str(var) + " = " + str(val))
+            context.set(var, val)
+            return
+            
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
