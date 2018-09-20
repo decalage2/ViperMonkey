@@ -1124,12 +1124,12 @@ class CleanString(VbaLibraryFunc):
             for i in range(len(a)):
                 c = a[i]
                 if ord(c) == 7:
-                    if ord(a[i-1]) == 13:
+                    if i>0 and ord(a[i-1]) == 13:
                         a[i] = chr(9)
                     else:
                         a[i] = ''
                 if ord(c) == 10:
-                    if ord(a[i-1]) == 13:
+                    if i>0 and ord(a[i-1]) == 13:
                         a[i] = ''
                     else:
                         a[i] = chr(13)
