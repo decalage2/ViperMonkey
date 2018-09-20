@@ -153,6 +153,9 @@ class Mid(VbaLibraryFunc):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
+class MidB(Mid):
+    pass
+
 class Left(VbaLibraryFunc):
     """
     Left function.
@@ -1795,7 +1798,7 @@ class Write(VbaLibraryFunc):
         else:
             log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
-for _class in (MsgBox, Shell, Len, Mid, Left, Right,
+for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
