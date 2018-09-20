@@ -153,6 +153,9 @@ class Mid(VbaLibraryFunc):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
+class MidB(Mid):
+    pass
+
 class Left(VbaLibraryFunc):
     """
     Left function.
@@ -1105,6 +1108,42 @@ class Base64Decode(VbaLibraryFunc):
 class Base64DecodeString(Base64Decode):
     pass
     
+class CleanString(VbaLibraryFunc):
+    """
+    CleanString() function removes certain characters from the character stream, or translates them
+    https://docs.microsoft.com/en-us/office/vba/api/word.application.cleanstring
+    """
+
+    def eval(self,context,params=None):
+        assert (len(params) == 1)
+        txt=params[0]
+        if (txt is None):
+            txt = ''
+        if isinstance(txt,str):
+            a = [c for c in txt]
+            for i in range(len(a)):
+                c = a[i]
+                if ord(c) == 7:
+                    if i>0 and ord(a[i-1]) == 13:
+                        a[i] = chr(9)
+                    else:
+                        a[i] = ''
+                if ord(c) == 10:
+                    if i>0 and ord(a[i-1]) == 13:
+                        a[i] = ''
+                    else:
+                        a[i] = chr(13)
+                if ord(c) == 31 or ord(c) == 172 or ord(c) == 182:
+                    a[i] = ''
+                if ord(c) == 160 or ord(c) == 176 or ord(c) == 183:
+                    a[i] = chr(32)
+            r = "".join(a)
+        else:
+            # punt for things like CleanString(99), which shows up as an integer
+            r = txt
+        log.debug("CleanString: %r returns %r" % (self,r))
+        return r
+
 class Pmt(VbaLibraryFunc):
     """
     Pmt() payment computation function.
@@ -1795,13 +1834,13 @@ class Write(VbaLibraryFunc):
         else:
             log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
-for _class in (MsgBox, Shell, Len, Mid, Left, Right,
+for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+               Environ, IIf, CleanString, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
