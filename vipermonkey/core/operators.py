@@ -87,9 +87,9 @@ class Sum(VBA_Object):
             except ValueError:
                 # Punt and sum all arguments as strings.
                 return reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(eval_args(self.arg, context)))
-        except RuntimeError:
+        except RuntimeError as e:
             log.error("overflow trying eval sum: %r" % self.arg)
-            sys.exit(1)
+            raise e
 
     def __repr__(self):
         return debug_repr("+", self.arg)
@@ -113,9 +113,9 @@ class Eqv(VBA_Object):
         except (TypeError, ValueError):
             log.error('Impossible to Eqv arguments of different types.')
             return 0
-        except RuntimeError:
+        except RuntimeError as e:
             log.error("overflow trying eval Eqv: %r" % self.arg)
-            sys.exit(1)
+            raise e
 
     def __repr__(self):
         return ' Eqv '.join(map(repr, self.arg))
@@ -145,9 +145,9 @@ class Xor(VBA_Object):
             except:
                 log.error('Impossible to xor arguments of different types.')
                 return 0
-        except RuntimeError:
+        except RuntimeError as e:
             log.error("overflow trying eval xor: %r" % self.arg)
-            sys.exit(1)
+            raise e
 
     def __repr__(self):
         return ' ^ '.join(map(repr, self.arg))
@@ -175,9 +175,9 @@ class And(VBA_Object):
             except:
                 log.error('Impossible to and arguments of different types.')
                 return 0
-        except RuntimeError:
+        except RuntimeError as e:
             log.error("overflow trying eval and: %r" % self.arg)
-            sys.exit(1)
+            raise e
 
     def __repr__(self):
         return ' & '.join(map(repr, self.arg))
@@ -205,9 +205,9 @@ class Or(VBA_Object):
             except:
                 log.error('Impossible to or arguments of different types.')
                 return 0
-        except RuntimeError:
+        except RuntimeError as e:
             log.error("overflow trying eval or: %r" % self.arg)
-            sys.exit(1)
+            raise e
 
     def __repr__(self):
         return ' | '.join(map(repr, self.arg))
