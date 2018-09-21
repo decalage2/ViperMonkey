@@ -903,7 +903,9 @@ def process_file (container,
             # print table of all recorded actions
             print('Recorded Actions:')
             print(vm.dump_actions())
-            print ''
+            print('')
+            print('VBA Builtins Called: ' + str(vm.external_funcs))
+            print('')
             return vm.actions
 
         else:

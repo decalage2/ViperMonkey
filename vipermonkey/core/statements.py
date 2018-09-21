@@ -99,6 +99,7 @@ unknown_statement.setParseAction(UnknownStatement)
 # 4.2 Modules
 
 class Attribute_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name

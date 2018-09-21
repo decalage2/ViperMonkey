@@ -57,6 +57,7 @@ from logger import log
 from inspect import getouterframes, currentframe
 import sys
 from datetime import datetime
+import pyparsing
 
 max_emulation_time = None
 
@@ -68,7 +69,7 @@ def limits_exceeded():
 
     # Check to see if we are approaching the recursion limit.
     level = len(getouterframes(currentframe(1)))
-    recursion_exceeded = (level > (sys.getrecursionlimit() * .80))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .75))
     time_exceeded = False
 
     # Check to see if we have exceeded the time limit.
@@ -112,6 +113,40 @@ class VBA_Object(object):
         """
         log.debug(self)
         # raise NotImplementedError
+
+    def get_children(self):
+        """
+        Return the child VBA objects of the current object.
+        """
+
+        # The default behavior is to count any VBA_Object attribute as
+        # a child.
+        r = []
+        for _, value in self.__dict__.iteritems():
+            if (isinstance(value, VBA_Object)):
+                r.append(value)
+            if ((isinstance(value, list)) or
+                (isinstance(value, pyparsing.ParseResults))):
+                for i in value:
+                    if (isinstance(i, VBA_Object)):
+                        r.append(i)
+            if (isinstance(value, dict)):
+                for i in value.values():
+                    if (isinstance(i, VBA_Object)):
+                        r.append(i)
+        return r
+                        
+    def accept(self, visitor):
+        """
+        Visitor design pattern support. Accept a visitor.
+        """
+
+        # Visit the current item.
+        visitor.visit(self)
+
+        # Visit all the children.
+        for child in self.get_children():
+            child.accept(visitor)
 
 meta = None
         
