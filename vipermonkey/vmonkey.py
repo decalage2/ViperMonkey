@@ -218,13 +218,12 @@ def _read_doc_vars(fname):
         if ((var_offset is None) or (var_size is None) or (var_size == 0)):
             return []
         data = ole.openstream("1Table").read()[var_offset : (var_offset + var_size + 1)]
-        full_data = ole.openstream("1Table").read()
         tmp_strs = re.findall("(([^\x00-\x1F\x7F-\xFF]\x00){2,})", data)
         strs = []
         for s in tmp_strs:
             s1 = s[0].replace("\x00", "").strip()
             strs.append(s1)
-
+            
         # It looks like the document variable names and values are stored as wide character
         # strings in the doc var/VBA signing certificate data segment. Additionally it looks
         # like the doc var names appear sequentially first followed by the doc var values in
@@ -274,12 +273,27 @@ def _read_custom_doc_props(fname):
                 break
         if (data is None):
             return []
-        strs = re.findall("(\w{4,})", data)
-            
+        strs = re.findall("([\w\.\:/]{4,})", data)
+        
         # Treat each wide character string as a potential variable that has a value
         # of the string 1 positions ahead on the current string. This introduces "variables"
         # that don't really exist into the list, but these variables will not be accessed
         # by valid VBA so emulation will work.
+
+        # Skip some strings that look like they may be common.
+        skip_names = set(["Title"])
+        tmp = []
+        for s in strs:
+            if (s not in skip_names):
+                tmp.append(s)
+        strs = tmp
+
+        # Set up wildcard matching of variable names if we have only one
+        # potential variable value.
+        if (len(strs) == 1):
+            strs = ["*", strs[0]]
+
+        # Actually match up the variables with values.
         pos = 0
         r = []
         for s in strs:
@@ -906,12 +920,12 @@ def process_file (container,
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
-            return vm.actions
+            return (vm.actions, vm.external_funcs)
 
         else:
             print 'No VBA macros found.'
             print ''
-            return []
+            return ([], [])
     except Exception as e:
         if ("SystemExit" not in str(e)):
             traceback.print_exc()
