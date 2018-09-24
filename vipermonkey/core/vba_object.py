@@ -278,6 +278,15 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
 
+                # Are we trying to load some document data?
+                if (tmp.startswith("thisdocument.builtindocumentproperties(")):
+
+                    # Try to pull the result from the document data.
+                    var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
+                    val = context.get_doc_var(var)
+                    if (val is not None):
+                        return val
+
                 # Are we loading a document variable?
                 if (tmp.startswith("activedocument.variables(")):
 

@@ -51,3 +51,5 @@ class var_defn_visitor(visitor):
         if (isinstance(item, Dim_Statement)):
             for name, _, _ in item.variables:
                 self.variables.add(str(name))
+        if (isinstance(item, Let_Statement)):
+            self.variables.add(str(item.name))

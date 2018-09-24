@@ -645,11 +645,19 @@ class Context(object):
             # Can't find a doc var with this name. See if we have an internal variable
             # with this name.
             log.debug("doc var named " + var + " not found.")
-            var_value = self.get(var)
-            if (var_value is not None):
-                return self.get_doc_var(var_value)
+            try:
+                var_value = self.get(var)
+                if (var_value is not None):
+                    return self.get_doc_var(var_value)
+            except KeyError:
+                pass
 
-            # Can't find it.
+            # Can't find it. Do we have a wild card doc var to guess for
+            # this value?
+            if ("*" in self.doc_vars):
+                return self.doc_vars["*"]
+
+            # No wildcard variable. Return nothing.
             return None
 
         # Found it.
