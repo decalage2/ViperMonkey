@@ -365,7 +365,7 @@ class ViperMonkey(object):
             if ((f in defn_visitor.funcs) or
                 (f in var_visitor.variables) or
                 (len(f) == 0) or
-                ("." in f)):
+                (("." in f) and (not "Shell" in f))):
                 continue
             r.append(f)
         r.sort()

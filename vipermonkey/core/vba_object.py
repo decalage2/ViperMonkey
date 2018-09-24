@@ -103,7 +103,8 @@ class VBA_Object(object):
         self.original_str = original_str
         self.location = location
         self.tokens = tokens
-
+        self._children = None
+        
     def eval(self, context, params=None):
         """
         Evaluate the current value of the object.
@@ -121,6 +122,8 @@ class VBA_Object(object):
 
         # The default behavior is to count any VBA_Object attribute as
         # a child.
+        if (self._children is not None):
+            return self._children
         r = []
         for _, value in self.__dict__.iteritems():
             if (isinstance(value, VBA_Object)):
@@ -134,6 +137,7 @@ class VBA_Object(object):
                 for i in value.values():
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
+        self._children = r
         return r
                         
     def accept(self, visitor):
@@ -147,7 +151,7 @@ class VBA_Object(object):
         # Visit all the children.
         for child in self.get_children():
             child.accept(visitor)
-
+            
 meta = None
         
 def eval_arg(arg, context, treat_as_var_name=False):

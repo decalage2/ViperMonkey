@@ -1420,6 +1420,28 @@ class If_Statement(VBA_Object):
 
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
+    def get_children(self):
+        """
+        Return the child VBA objects of the current object.
+        """
+
+        if (self._children is not None):
+            return self._children
+        self._children = []
+        for piece in self.pieces:
+            if (isinstance(piece["body"], VBA_Object)):
+                self._children.append(piece["body"])
+            if ((isinstance(piece["body"], list)) or
+                (isinstance(piece["body"], pyparsing.ParseResults))):
+                for i in piece["body"]:
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+            if (isinstance(piece["body"], dict)):
+                for i in piece["body"].values():
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+        return self._children
+                
     def __repr__(self):
         r = ""
         first = True

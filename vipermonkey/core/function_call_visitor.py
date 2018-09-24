@@ -39,6 +39,7 @@ https://github.com/decalage2/ViperMonkey
 from visitor import *
 from statements import *
 from expressions import *
+from lib_functions import *
 
 class function_call_visitor(visitor):
     """
@@ -53,3 +54,14 @@ class function_call_visitor(visitor):
             self.called_funcs.add(str(item.name))
         if (isinstance(item, Function_Call)):
             self.called_funcs.add(str(item.name))
+        if (isinstance(item, Chr)):
+            self.called_funcs.add("Chr")
+        if (isinstance(item, Asc)):
+            self.called_funcs.add("Asc")
+        if (isinstance(item, Format)):
+            self.called_funcs.add("Format")
+        if (isinstance(item, StrReverse)):
+            self.called_funcs.add("StrReverse")
+        if (isinstance(item, Environ)):
+            self.called_funcs.add("Environ")
+        
