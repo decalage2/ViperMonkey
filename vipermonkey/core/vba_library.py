@@ -82,6 +82,55 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox')
         return 1  # vbOK
 
+class KeyString(VbaLibraryFunc):
+    """
+    KeyString() -- acts kinda like Chr(), but.. yeah.
+    """
+    def eval(self,context,params=None):
+        # NOTE: in the specification, the parameter is expected to be an integer
+        # But in reality, VBA accepts a string containing the representation
+        # of an integer in decimal, hexadecimal or octal form.
+        # It also ignores leading and trailing spaces.
+        # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
+        # => need to parse the string as integer
+        # It also looks like floating point numbers are allowed.
+        # First, eval the argument:
+        param = params[0]
+
+        # Get the ordinal value.
+        if isinstance(param, basestring):
+            try:
+                param = integer.parseString(param.strip())[0]
+            except:
+                log.error("%r is not a valid KeyString() value. Returning ''." % param)
+                return ''
+        elif isinstance(param, float):
+            log.debug('KeyString: converting float %r to integer' % param)
+            try:
+                param = int(round(param))
+            except:
+                log.error("%r is not a valid KeyString() value. Returning ''." % param)
+                return ''
+        elif isinstance(param, int):
+            pass
+        else:
+            raise TypeError('KeyString: parameter must be an integer or a string, not %s' % type(param))
+
+        # Figure out whether to create a unicode or ascii character.
+        converter = chr
+        if (param > 255):
+            converter = unichr
+
+        # Do the conversion.
+        try:
+            r = converter(param)
+            log.debug("KeyString(" + str(param) + ") = " + r)
+            return r
+        except Exception as e:
+            log.error(str(e))
+            log.error("%r is not a valid KeyString() value. Returning ''." % param)
+            return ""
+
 class Len(VbaLibraryFunc):
     """
     Len() function.
@@ -1834,7 +1883,7 @@ class Write(VbaLibraryFunc):
         else:
             log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
-for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
+for _class in (MsgBox, KeyString, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
