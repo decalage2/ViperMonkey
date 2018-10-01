@@ -1413,6 +1413,7 @@ class Close(VbaLibraryFunc):
         if ((params is not None) and
             (len(params) == 1) and
             (params[0] is not None) and
+            (isinstance(params[0], str)) and
             (params[0].startswith('#'))):
 
             # Get the ID of the file being closed.
