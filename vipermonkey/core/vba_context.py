@@ -549,6 +549,8 @@ class Context(object):
                 start = 0
                 if ('\\' in short_name):
                     start = short_name.rindex('\\') + 1
+                if ('/' in short_name):
+                    start = short_name.rindex('/') + 1
                 short_name = out_dir + short_name[start:].strip()
                 try:
                     f = open(short_name, 'r')
