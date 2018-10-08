@@ -41,6 +41,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import xlrd
+
 import array
 import os
 from hashlib import sha256
@@ -82,8 +84,12 @@ class Context(object):
                  _locals=None,
                  context=None,
                  engine=None,
-                 doc_vars=None):
+                 doc_vars=None,
+                 loaded_excel=None):
 
+        # Track the in-memory loaded Excel workbook (xlrd workbook object).
+        self.loaded_excel = loaded_excel
+        
         # Track open files.
         self.open_files = {}
 
@@ -99,6 +105,7 @@ class Context(object):
             self.globals = context.globals
             self.open_files = context.open_files
             self.closed_files = context.closed_files
+            self.loaded_excel = context.loaded_excel
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -115,6 +122,8 @@ class Context(object):
         else:
             self.engine = None
 
+        log.debug("Have xlrd loaded Excel file = " + str(self.loaded_excel is not None))
+            
         # Track data saved in document variables.
         if doc_vars is not None:
             # direct copy of the pointer to globals:

@@ -143,6 +143,9 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # Track the loaded Excel spreadsheet (xlrd).
+        self.loaded_excel = None
+        
         # Track data saved in document variables.
         self.doc_vars = {}
 
@@ -374,7 +377,10 @@ class ViperMonkey(object):
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+        context = Context(_globals=self.globals,
+                          engine=self,
+                          doc_vars=self.doc_vars,
+                          loaded_excel=self.loaded_excel)
 
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text
@@ -417,7 +423,10 @@ class ViperMonkey(object):
         :return: value of the evaluated expression
         """
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+        context = Context(_globals=self.globals,
+                          engine=self,
+                          doc_vars=self.doc_vars,
+                          loaded_excel=self.loaded_excel)
         # reset the actions list, in case it is called several times
         self.actions = []
         e = expression.parseString(expr)[0]

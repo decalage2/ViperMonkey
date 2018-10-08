@@ -61,6 +61,9 @@ import pyparsing
 
 max_emulation_time = None
 
+def excel_col_letter_to_index(x): 
+    return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
+
 def limits_exceeded():
     """
     Check to see if we are about to exceed the maximum recursion depth. Also check to 
@@ -165,9 +168,61 @@ def eval_arg(arg, context, treat_as_var_name=False):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
     
     log.debug("try eval arg: %s" % arg)
+
+    # Try handling reading value from an Excel spreadsheet cell.
+    arg_str = str(arg)
+    if (("thisworkbook." in arg_str.lower()) and
+        ("sheets(" in arg_str.lower()) and
+        ("range(" in arg_str.lower())):
+        
+        log.debug("Try as Excel cell read...")
+        
+        # Pull out the sheet name.
+        tmp_arg_str = arg_str.lower()
+        start = tmp_arg_str.index("sheets(") + len("sheets(")
+        end = start + tmp_arg_str[start:].index(")")
+        sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        
+        # Pull out the cell index.
+        start = tmp_arg_str.index("range(") + len("range(")
+        end = start + tmp_arg_str[start:].index(")")
+        cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        
+        try:
+            
+            # Load the sheet.
+            sheet = context.loaded_excel.sheet_by_name(sheet_name)
+            
+            # Pull out the cell column and row.
+            col = ""
+            row = ""
+            for c in cell_index:
+                if (c.isalpha()):
+                    col += c
+                else:
+                    row += c
+                    
+            # Convert the row and column to numeric indices for xlrd.
+            row = int(row) - 1
+            col = excel_col_letter_to_index(col)
+            
+            # Pull out the cell value.
+            val = str(sheet.cell_value(row, col))
+            
+            # Return the cell value.
+            log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
+            log.debug("Cell value = '" + val + "'")
+            return val
+        
+        except Exception as e:
+            log.error("Cannot read cell from Excel spreadsheet. " + str(e))
+
+    # Not reading from an Excel cell. Try as a VBA object.
     if (isinstance(arg, VBA_Object)):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
         return arg.eval(context=context)
+
+    # Not a VBA object.
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
 
@@ -186,7 +241,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     pass
             else:
                 log.debug("eval_arg: Do not try as variable name: %r" % arg)
-            
+                
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".

@@ -4,3 +4,4 @@ colorlog
 colorama
 pyparsing
 antlr4-python2-runtime
+xlrd
