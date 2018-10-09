@@ -914,8 +914,8 @@ def process_file (container,
                 
             except Exception as e:
                 log.error("Cannot read form strings. " + str(e))
-                traceback.print_exc()
-                raise e
+                #traceback.print_exc()
+                #raise e
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'

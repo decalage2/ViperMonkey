@@ -46,6 +46,7 @@ from statements import *
 from identifiers import *
 
 from logger import log
+from tagged_block_finder_visitor import *
 
 # --- SUB --------------------------------------------------------------------
 
@@ -58,6 +59,11 @@ class Sub(VBA_Object):
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
             self.bogus_if = tokens.bogus_if
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -69,6 +75,10 @@ class Sub(VBA_Object):
         caller_context = context
         context = Context(context=caller_context)
 
+        # Set the information about labeled code blocks in the called
+        # context. This will be used when emulating GOTOs.
+        context.tagged_blocks = self.tagged_blocks
+        
         # Set the default parameter values.
         for param in self.params:
             init_val = None
@@ -211,6 +221,11 @@ class Function(VBA_Object):
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
             self.bogus_if = tokens.bogus_if
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -222,6 +237,10 @@ class Function(VBA_Object):
         caller_context = context
         context = Context(context=caller_context)
 
+        # Set the information about labeled code blocks in the called
+        # context. This will be used when emulating GOTOs.
+        context.tagged_blocks = self.tagged_blocks
+        
         # add function name in locals:
         #context.set(self.name, None)
 

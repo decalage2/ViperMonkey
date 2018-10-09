@@ -87,6 +87,11 @@ class Context(object):
                  doc_vars=None,
                  loaded_excel=None):
 
+        # Track a dict mapping the labels of code blocks labeled with the LABEL:
+        # construct to code blocks. This will be used to evaluate GOTO statements
+        # when emulating.
+        self.tagged_blocks = {}
+
         # Track the in-memory loaded Excel workbook (xlrd workbook object).
         self.loaded_excel = loaded_excel
         
