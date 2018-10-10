@@ -41,11 +41,14 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import xlrd
+
 import array
 import os
 from hashlib import sha256
 from datetime import datetime
 from logger import log
+import base64
 
 def is_procedure(vba_object):
     """
@@ -81,8 +84,17 @@ class Context(object):
                  _locals=None,
                  context=None,
                  engine=None,
-                 doc_vars=None):
+                 doc_vars=None,
+                 loaded_excel=None):
 
+        # Track a dict mapping the labels of code blocks labeled with the LABEL:
+        # construct to code blocks. This will be used to evaluate GOTO statements
+        # when emulating.
+        self.tagged_blocks = {}
+
+        # Track the in-memory loaded Excel workbook (xlrd workbook object).
+        self.loaded_excel = loaded_excel
+        
         # Track open files.
         self.open_files = {}
 
@@ -98,6 +110,7 @@ class Context(object):
             self.globals = context.globals
             self.open_files = context.open_files
             self.closed_files = context.closed_files
+            self.loaded_excel = context.loaded_excel
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -114,6 +127,8 @@ class Context(object):
         else:
             self.engine = None
 
+        log.debug("Have xlrd loaded Excel file = " + str(self.loaded_excel is not None))
+            
         # Track data saved in document variables.
         if doc_vars is not None:
             # direct copy of the pointer to globals:
@@ -481,6 +496,12 @@ class Context(object):
 
         # System info.
         self.globals["System.OperatingSystem".lower()] = "Windows NT"
+
+        # Call type constants.
+        self.globals["vbGet".lower()] = 2
+        self.globals["vbLet".lower()] = 4
+        self.globals["vbMethod".lower()] = 1
+        self.globals["vbSet".lower()] = 8
         
     def open_file(self, fname):
         """
@@ -542,6 +563,8 @@ class Context(object):
                 start = 0
                 if ('\\' in short_name):
                     start = short_name.rindex('\\') + 1
+                if ('/' in short_name):
+                    start = short_name.rindex('/') + 1
                 short_name = out_dir + short_name[start:].strip()
                 try:
                     f = open(short_name, 'r')
@@ -609,7 +632,17 @@ class Context(object):
 
         # Finally see if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
-            
+
+    def contains(self, name):
+        try:
+            self.get(name)
+            return True
+        except KeyError:
+            return False
+
+    def contains_user_defined(self, name):
+        return ((name in self.locals) or (name in self.globals))
+        
     def get_type(self, var):
         if (not isinstance(var, basestring)):
             return None
@@ -628,11 +661,19 @@ class Context(object):
             # Can't find a doc var with this name. See if we have an internal variable
             # with this name.
             log.debug("doc var named " + var + " not found.")
-            var_value = self.get(var)
-            if (var_value is not None):
-                return self.get_doc_var(var_value)
+            try:
+                var_value = self.get(var)
+                if (var_value is not None):
+                    return self.get_doc_var(var_value)
+            except KeyError:
+                pass
 
-            # Can't find it.
+            # Can't find it. Do we have a wild card doc var to guess for
+            # this value?
+            if ("*" in self.doc_vars):
+                return self.doc_vars["*"]
+
+            # No wildcard variable. Return nothing.
             return None
 
         # Found it.
@@ -666,6 +707,28 @@ class Context(object):
         if ((do_with_prefix) and (len(self.with_prefix) > 0)):
             tmp_name = str(self.with_prefix) + str(name)
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
+
+        # Handle base64 conversion with VBA objects.
+        if (name.endswith(".text")):
+
+            # Is the root object something set to the "bin.base64" data type?
+            node_type = name.replace(".text", ".datatype")
+            try:
+                val = str(self.get(node_type)).strip()
+                if (val == "bin.base64"):
+
+                    # Try converting the text from base64.
+                    try:
+
+                        # Set the typed vale of the node to the decoded value.
+                        conv_val = base64.b64decode(str(value).strip())
+                        val_name = name.replace(".text", ".nodetypedvalue")
+                        self.set(val_name, conv_val)
+                    except Exception as e:
+                        log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                        
+            except KeyError:
+                pass
             
     def report_action(self, action, params=None, description=None):
         self.engine.report_action(action, params, description)

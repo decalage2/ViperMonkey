@@ -96,6 +96,9 @@ import string
 from logger import log
 from procedures import Function
 from procedures import Sub
+from function_call_visitor import *
+from function_defn_visitor import *
+from var_defn_visitor import *
 
 # === FUNCTIONS ==============================================================
 
@@ -140,6 +143,9 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # Track the loaded Excel spreadsheet (xlrd).
+        self.loaded_excel = None
+        
         # Track data saved in document variables.
         self.doc_vars = {}
 
@@ -334,11 +340,47 @@ class ViperMonkey(object):
             line_index, line, line_keywords = self.parse_next_line()
         return statements
 
+    def _get_external_funcs(self):
+        """
+        Get a list of external functions called in the macros.
+        """
 
+        # Get the names of all called functions, local functions, and defined variables.
+        call_visitor = function_call_visitor()
+        defn_visitor = function_defn_visitor()
+        var_visitor = var_defn_visitor()
+        for module in self.modules:
+            module.accept(call_visitor)
+            module.accept(defn_visitor)
+            module.accept(var_visitor)
+        """
+        print("************ CALLED FUNCS *************************")
+        print(call_visitor.called_funcs)
+        print("************ DEFINED FUNCS *************************")
+        print(defn_visitor.funcs)
+        print("************ DEFINED VARIABLES *************************")
+        print(var_visitor.variables)
+        """
+
+        # Eliminate variables and local functions from the list of called functions.
+        r = []
+        for f in call_visitor.called_funcs:
+            if ((f in defn_visitor.funcs) or
+                (f in var_visitor.variables) or
+                (len(f) == 0) or
+                (("." in f) and (not "Shell" in f))):
+                continue
+            r.append(f)
+        r.sort()
+        return r
+        
     def trace(self, entrypoint='*auto'):
         # TODO: use the provided entrypoint
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+        context = Context(_globals=self.globals,
+                          engine=self,
+                          doc_vars=self.doc_vars,
+                          loaded_excel=self.loaded_excel)
 
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text
@@ -346,6 +388,9 @@ class ViperMonkey(object):
         # reset the actions list, in case it is called several times
         self.actions = []
 
+        # Track the external functions called.
+        self.external_funcs = self._get_external_funcs()
+        
         # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
@@ -378,7 +423,10 @@ class ViperMonkey(object):
         :return: value of the evaluated expression
         """
         # Create the global context for the engine
-        context = Context(_globals=self.globals, engine=self, doc_vars=self.doc_vars)
+        context = Context(_globals=self.globals,
+                          engine=self,
+                          doc_vars=self.doc_vars,
+                          loaded_excel=self.loaded_excel)
         # reset the actions list, in case it is called several times
         self.actions = []
         e = expression.parseString(expr)[0]

@@ -153,6 +153,9 @@ class Mid(VbaLibraryFunc):
         log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
         return s[start - 1:start-1+length]
 
+class MidB(Mid):
+    pass
+
 class Left(VbaLibraryFunc):
     """
     Left function.
@@ -475,8 +478,12 @@ class Split(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         string = params[0]
         sep = ","
-        if (len(params) > 1):
-            sep = params[1]        
+        if ((len(params) > 1) and (isinstance(params[1], str))):
+            sep = params[1]            
+        print type(string)
+        print string
+        print type(sep)
+        print sep
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
@@ -607,6 +614,8 @@ class InStr(VbaLibraryFunc):
         if (s2 is None):
             s2 = ''
         if (isinstance(params[0], int)):
+            if (len(params) < 3):
+                return False
             start = params[0] - 1
             if (start < 0):
                 start = 0
@@ -1103,6 +1112,42 @@ class Base64Decode(VbaLibraryFunc):
 class Base64DecodeString(Base64Decode):
     pass
     
+class CleanString(VbaLibraryFunc):
+    """
+    CleanString() function removes certain characters from the character stream, or translates them
+    https://docs.microsoft.com/en-us/office/vba/api/word.application.cleanstring
+    """
+
+    def eval(self,context,params=None):
+        assert (len(params) == 1)
+        txt=params[0]
+        if (txt is None):
+            txt = ''
+        if isinstance(txt,str):
+            a = [c for c in txt]
+            for i in range(len(a)):
+                c = a[i]
+                if ord(c) == 7:
+                    if i>0 and ord(a[i-1]) == 13:
+                        a[i] = chr(9)
+                    else:
+                        a[i] = ''
+                if ord(c) == 10:
+                    if i>0 and ord(a[i-1]) == 13:
+                        a[i] = ''
+                    else:
+                        a[i] = chr(13)
+                if ord(c) == 31 or ord(c) == 172 or ord(c) == 182:
+                    a[i] = ''
+                if ord(c) == 160 or ord(c) == 176 or ord(c) == 183:
+                    a[i] = chr(32)
+            r = "".join(a)
+        else:
+            # punt for things like CleanString(99), which shows up as an integer
+            r = txt
+        log.debug("CleanString: %r returns %r" % (self,r))
+        return r
+
 class Pmt(VbaLibraryFunc):
     """
     Pmt() payment computation function.
@@ -1280,6 +1325,30 @@ class Environ(VbaLibraryFunc):
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
+class DriveExists(VbaLibraryFunc):
+    """
+    DriveExists() function for checking to see if a drive exists.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        drive = str(params[0]).lower()
+        r = False
+        # Assume the C: drive is always there.
+        if ((drive == 'c') or (drive == 'c:')):
+            r = True
+        return r
+
+class Navigate(VbaLibraryFunc):
+    """
+    Navigate() function for loading a URL in a web browser.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+        url = str(params[0])
+        context.report_action("GET", url, 'Load in browser')
+        
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
@@ -1348,6 +1417,7 @@ class Close(VbaLibraryFunc):
         if ((params is not None) and
             (len(params) == 1) and
             (params[0] is not None) and
+            (isinstance(params[0], str)) and
             (params[0].startswith('#'))):
 
             # Get the ID of the file being closed.
@@ -1412,6 +1482,16 @@ class WriteLine(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
 
+        # Get the data.
+        data = params[0]
+        if (len(params) == 3):
+            data = params[2]
+        
+        # Save writes that look like they are writing URLs.
+        data_str = str(data)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which WriteLine() is being called is not
         # being tracked. We will only handle the WriteLine() if there is only 1
         # current open file.
@@ -1426,11 +1506,6 @@ class WriteLine(VbaLibraryFunc):
         file_id = context.open_files.keys()[0]
         
         # TODO: Handle writing at a given file position.
-
-        # Get the data.
-        data = params[0]
-        if (len(params) == 3):
-            data = params[2]
 
         # Are we writing a string?
         if (isinstance(data, str)):
@@ -1455,7 +1530,175 @@ class CurDir(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return "~"
-            
+
+class KeyString(VbaLibraryFunc):
+    """
+    KeyString() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Key string value map.
+        key_vals = {
+            1 : "Left Button",
+            2 : "Right Button",
+            3 : "Cancel",
+            4 : "Middle Button",
+            8 : "Backspace",
+            9 : "Tab",
+            12 : "Clear (Num 5)",
+            13 : "Return",
+            16 : "Shift",
+            17 : "Control",
+            18 : "Alt",
+            19 : "Pause",
+            20 : "Caps Lock",
+            27 : "Esc",
+            32 : "Space",
+            33 : "Page Up",
+            34 : "Page Down",
+            35 : "End",
+            36 : "Home",
+            37 : "Left",
+            38 : "Up",
+            39 : "Right",
+            40 : "Down",
+            41 : "Not Avail",
+            42 : "Not Avail",
+            43 : "Not Avail",
+            44 : "Print Screen",
+            45 : "Insert",
+            46 : "Del",
+            47 : "Not Avail",
+            48 : "0",
+            49 : "1",
+            50 : "2",
+            51 : "3",
+            52 : "4",
+            53 : "5",
+            54 : "6",
+            55 : "7",
+            56 : "8",
+            57 : "9",
+            65 : "A",
+            66 : "B",
+            67 : "C",
+            68 : "D",
+            69 : "E",
+            70 : "F",
+            71 : "G",
+            72 : "H",
+            73 : "I",
+            74 : "J",
+            75 : "K",
+            76 : "L",
+            77 : "M",
+            78 : "N",
+            79 : "O",
+            80 : "P",
+            81 : "Q",
+            82 : "R",
+            83 : "S",
+            84 : "T",
+            85 : "U",
+            86 : "V",
+            87 : "W",
+            88 : "X",
+            89 : "Y",
+            90 : "Z",
+            96 : "Num 0",
+            97 : "Num 1",
+            98 : "Num 2",
+            99 : "Num 3",
+            100 : "Num 4",
+            101 : "Num 5",
+            102 : "Num 6",
+            103 : "Num 7",
+            104 : "Num 8",
+            105 : "Num 9",
+            106 : "Num *",
+            107 : "Num +",
+            108 : "Not Avail",
+            109 : "Num -",
+            110 : "Num .",
+            111 : "Num /",
+            112 : "F1",
+            113 : "F2",
+            114 : "F3",
+            115 : "F4",
+            116 : "F5",
+            117 : "F6",
+            118 : "F7",
+            119 : "F8",
+            120 : "F9",
+            121 : "F10",
+            122 : "F11",
+            123 : "F12",
+            124 : "F13",
+            125 : "F14",
+            126 : "F15",
+            127 : "F16",
+            128 : "F17",
+            129 : "F18",
+            130 : "F19",
+            131 : "F20",
+            132 : "F21",
+            133 : "F22",
+            134 : "F23",
+            135 : "F24",
+            144 : "Num Lock",
+            145 : "Scroll Lock",
+            160 : "Shift",
+            161 : "Shift",
+            162 : "Ctrl",
+            163 : "Ctrl",
+            164 : "Alt",
+            165 : "Alt",
+            172 : "M",
+            173 : "D",
+            174 : "C",
+            175 : "B",
+            176 : "P",
+            177 : "Q",
+            178 : "J",
+            179 : "G",
+            183 : "F",
+            186 : ";",
+            187 : "=",
+            188 : ",",
+            189 : "-",
+            190 : ".",
+            191 : "/",
+            192 : "`",
+            194 : "F15",
+            219 : "[",
+            220 : "\\",
+            221 : "]",
+            222 : "'",
+            226 : "\\"
+        }
+
+        v1 = None
+        v2 = None
+        try:
+            v1 = int(params[0])
+            if (len(params) >= 2):
+                v2 = int(params[1])
+        except Exception as e:
+            log.error("KeyString: Invalid args " + str(params) + ". " + str(e))
+            return ""
+
+        r = ""
+        if (v1 in key_vals):
+            r += key_vals[v1]
+        if (v2 is not None):
+            r += ","
+            if (v2 in key_vals):
+                key_vals[v2]
+
+        log.debug("KeyString: args = " + str(params) + ", return " + r)
+        return r
+        
 class Run(VbaLibraryFunc):
     """
     Application.Run() function.
@@ -1613,6 +1856,12 @@ class Variable(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         var = str(params[0]).strip()
+        var = var.replace("activedocument.customdocumentproperties(", "").\
+              replace(")", "").\
+              replace("'","").\
+              replace('"',"").\
+              replace('.value',"").\
+              strip()
         r = context.get_doc_var(var)
         if (r is None):
             r = ""
@@ -1650,6 +1899,12 @@ class Print(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
+
+        # Save writes that look like they are writing URLs.
+        data_str = str(params[0])
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'Debug Print')
+
         context.report_action("Debug Print", str(params[0]), '')
 
 class URLDownloadToFile(VbaLibraryFunc):
@@ -1687,9 +1942,14 @@ class CreateTextFile(VbaLibraryFunc):
 
 class Open(CreateTextFile):
     """
-    Open() file function.
+    Open() file function. Also Open() HTTP function.
     """
-    pass
+
+    def eval(self, context, params=None):
+
+        # Is this a HTTP GET?
+        if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
+            context.report_action("GET", str(params[1]), 'Interesting Function Call')
 
 class Timer(VbaLibraryFunc):
     """
@@ -1710,6 +1970,11 @@ class Write(VbaLibraryFunc):
         # Get the data being written.
         dat = str(params[0])
 
+        # Save writes that look like they are writing URLs.
+        data_str = str(dat)
+        if (("http:" in data_str) or ("https:" in data_str)):
+            context.report_action('Write URL', data_str, 'File Write')
+        
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
         # current open file.
@@ -1742,18 +2007,19 @@ class Write(VbaLibraryFunc):
         else:
             log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
-for _class in (MsgBox, Shell, Len, Mid, Left, Right,
+for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
                Sgn, Sqr, Base64Decode, Abs, Fix, Hex, String, CByte, Atn,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
-               Environ, IIf, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
+               Environ, IIf, CleanString, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
-               URLDownloadToFile, FollowHyperlink, Join, VarType):
+               URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
+               KeyString):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

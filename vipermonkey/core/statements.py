@@ -99,6 +99,7 @@ unknown_statement.setParseAction(UnknownStatement)
 # 4.2 Modules
 
 class Attribute_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -165,7 +166,7 @@ name_as_statement.setParseAction(Name_As_Statement)
 # MS-GRAMMAR: defined-type-expression = simple-name-expression / member-access-expression
 
 # TODO: for now we use a generic syntax
-type_expression = lex_identifier
+type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 # --- TYPE DECLARATIONS -------------------------------------------------------
 
@@ -297,13 +298,45 @@ statement_label_list = delimitedList(statement_label, delim=',')
 # MS-GRAMMAR: block-statement = statement-label-definition / rem-statement / statement
 # MS-GRAMMAR: statement = control-statement / data-manipulation-statement / error-handling-statement / filestatement
 
+# --- TAGGED BLOCK ------------------------------------------------------
+# Associate a block of statements with a label. This will be used to handle
+# GOTO statements.
+
+class TaggedBlock(VBA_Object):
+    """
+    A label and the block of statements associated with the label.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(TaggedBlock, self).__init__(original_str, location, tokens)
+        self.block = tokens.block
+        self.label = str(tokens.label).replace(":", "")
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Tagged Block: %s: %s' % (repr(self.label), repr(self.block))
+
+    def eval(self, context, params=None):
+
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        for curr_statement in self.block:
+            curr_statement.eval(context, params=params)
+
+tagged_block = Forward()
+label_statement = Forward()
+        
 # need to declare statement beforehand:
 statement = Forward()
 external_function = Forward()
 
 # NOTE: statements should NOT include EOS
-block_statement = rem_statement | external_function | statement | statement_label_definition
-statement_block = ZeroOrMore(block_statement + EOS.suppress())
+block_statement = rem_statement | external_function | statement
+# tagged_block broken out so it does not consume the final EOS in the statement block.
+statement_block = ZeroOrMore(tagged_block ^ (block_statement + EOS.suppress()))
+tagged_block <<= label_statement('label') + Suppress(EOS) + statement_block('block')
+tagged_block.setParseAction(TaggedBlock)
 
 # --- DIM statement ----------------------------------------------------------
 
@@ -369,6 +402,10 @@ class Dim_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Evaluate the initial variable value(s).
         init_val = ''
         if (self.init_val is not None):
@@ -476,7 +513,7 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static") | CaselessKeyword("Const")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
 dim_statement.setParseAction(Dim_Statement)
@@ -555,6 +592,10 @@ class Let_Statement(VBA_Object):
         
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
@@ -734,7 +775,9 @@ class Prop_Assign_Statement(VBA_Object):
         return str(self.prop) + " " + str(self.param) + ":=" + str(self.value)
 
     def eval(self, context, params=None):
-        pass
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
 
 prop_assign_statement = ((member_access_expression("prop") ^ (Suppress(".") + lex_identifier("prop")))+ \
                          lex_identifier('param') + Suppress(':=') + expression('value') + \
@@ -759,7 +802,49 @@ class For_Statement(VBA_Object):
         return 'For %s = %r to %r step %r' % (self.name,
                                               self.start_value, self.end_value, self.step_value)
 
+    def _handle_simple_loop(self, context, start, end, step):
+
+        # Handle simple loops used purely for obfuscation.
+        #
+        # For vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = 1 To 833127186
+        # vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = vPHpqvZhLlFhzUmTfwXoRrfZRjfRu + 1
+        # Next
+
+        # Do we just have 1 line in the loop body?
+        if (len(self.statements) != 1):
+            return (None, None)
+
+        # Are we just modifying the loop counter variable each loop iteration?
+        var_inc = str(self.name) + " = " + str(self.name)
+        body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (not body.startswith(var_inc)):
+            return (None, None)
+
+        # We are just modifying the loop variable each time. Figure out the final
+        # iteration value.
+        if (" " not in body):
+            return (None, None)
+        body = body.replace(var_inc, "").strip()
+        op = body[:body.index(" ")]
+        num = body[body.index(" ") + 1:]
+        try:
+            num = int(num)
+        except:
+            return (None, None)
+        if (op == "+"):
+            return (self.name, end + num)
+        if (op == "-"):
+            return (self.name, end - num)
+        if (op == "*"):
+            return (self.name, end * num)
+        return (None, None)
+    
     def eval(self, context, params=None):
+
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # evaluate values:
         log.debug('FOR loop: evaluating start, end, step')
 
@@ -798,6 +883,13 @@ class For_Statement(VBA_Object):
         else:
             step = 1
 
+        # See if we have a simple style loop put in purely for obfuscation.
+        var, val = self._handle_simple_loop(context, start, end, step)
+        if ((var is not None) and (val is not None)):
+            log.info("Short circuited loop. Set " + str(var) + " = " + str(val))
+            context.set(var, val)
+            return
+            
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
@@ -902,6 +994,10 @@ class For_Each_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
@@ -984,6 +1080,9 @@ class While_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        if (context.exit_func):
+            return
+        
         log.debug('WHILE loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
@@ -1070,6 +1169,10 @@ class Do_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         log.debug('DO loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
@@ -1154,6 +1257,10 @@ class Select_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Get the current value of the guard expression for the select.
         log.debug("eval select: " + str(self))
         if (not isinstance(self.select_val, VBA_Object)):
@@ -1192,6 +1299,9 @@ class Select_Clause(VBA_Object):
         return r
 
     def eval(self, context, params=None):
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
         if (hasattr(self.select_val, "eval")):
             return self.select_val.eval(context, params)
         else:
@@ -1247,6 +1357,10 @@ class Case_Clause_Atomic(VBA_Object):
         Evaluate the guard of this case against the given value.
         """
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Get the value against which to test the guard. This must already be
         # evaluated.
         test_val = params[0]
@@ -1312,6 +1426,10 @@ class Case_Clause(VBA_Object):
         Evaluate the guard of this case against the given value.
         """
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Check each clause.
         for clause in self.clauses:
             guard_val = clause.eval(context, params=params)
@@ -1332,7 +1450,9 @@ class Select_Case(VBA_Object):
         return r
 
     def eval(self, context, params=None):
-        pass
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
     
 select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").suppress() \
                 + expression("select_val")
@@ -1375,6 +1495,28 @@ class If_Statement(VBA_Object):
 
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
+    def get_children(self):
+        """
+        Return the child VBA objects of the current object.
+        """
+
+        if (self._children is not None):
+            return self._children
+        self._children = []
+        for piece in self.pieces:
+            if (isinstance(piece["body"], VBA_Object)):
+                self._children.append(piece["body"])
+            if ((isinstance(piece["body"], list)) or
+                (isinstance(piece["body"], pyparsing.ParseResults))):
+                for i in piece["body"]:
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+            if (isinstance(piece["body"], dict)):
+                for i in piece["body"].values():
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+        return self._children
+                
     def __repr__(self):
         r = ""
         first = True
@@ -1409,6 +1551,10 @@ class If_Statement(VBA_Object):
             
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Walk through each case of the if, seeing which one applies (if any).
         for piece in self.pieces:
 
@@ -1476,6 +1622,10 @@ class If_Statement_Macro(If_Statement):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # TODO: Properly evaluating this will involve supporting compile time variables
         # that can be set via options when running ViperMonkey. For now just run the then
         # block.
@@ -1520,6 +1670,8 @@ class Call_Statement(VBA_Object):
             self.name = str(self.name).replace("!", "")
         if (str(self.name).endswith("#")):
             self.name = str(self.name).replace("#", "")
+        if (str(self.name).endswith("%")):
+            self.name = str(self.name).replace("%", "")
         self.params = tokens.params
         log.debug('parsed %r' % self)
 
@@ -1528,6 +1680,10 @@ class Call_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Get argument values.
         call_params = eval_args(self.params, context=context)
         str_params = repr(call_params)
@@ -1633,6 +1789,9 @@ class Exit_For_Statement(VBA_Object):
         return 'Exit For'
 
     def eval(self, context, params=None):
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
         # Update the loop stack to indicate that the current loop should exit.
         context.loop_stack.pop()
         context.loop_stack.append(False)
@@ -1688,7 +1847,9 @@ class Redim_Statement(VBA_Object):
         return
 
 # Array redim statement
-redim_statement = CaselessKeyword('ReDim').suppress() + expression('item') + \
+redim_statement = CaselessKeyword('ReDim').suppress() + \
+                  Optional(CaselessKeyword('Preserve')) + \
+                  expression('item') + \
                   Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress() + \
                   Optional(CaselessKeyword('As') + lex_identifier).suppress()
 redim_statement.setParseAction(Redim_Statement)
@@ -1708,6 +1869,10 @@ class With_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Track the with prefix.
         if (len(context.with_prefix) > 0):
             context.with_prefix += "." + str(self.env)
@@ -1758,8 +1923,23 @@ class Goto_Statement(VBA_Object):
         return 'Goto ' + str(self.label)
 
     def eval(self, context, params=None):
-        # TODO: Currently stubbed out. Need to tie this label to the following statements somehow.
-        return
+
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
+        # Do we know the code block associated with the GOTO label?
+        if (self.label not in context.tagged_blocks):
+
+            # We don't know where to go. Punt.
+            log.error("GOTO target " + str(self.label) + " is unknown.")
+            return
+
+        # We know where to go. Get the code block to execute.
+        block = context.tagged_blocks[self.label]
+
+        # Execute the code block.
+        block.eval(context, params)
 
 # Goto statement
 goto_statement = CaselessKeyword('Goto').suppress() + lex_identifier('label')
@@ -1781,7 +1961,7 @@ class Label_Statement(VBA_Object):
         return
 
 # Goto label statement
-label_statement = identifier('label') + Suppress(':')
+label_statement <<= identifier('label') + Suppress(':')
 label_statement.setParseAction(Label_Statement)
 
 # --- ON ERROR STATEMENT -------------------------------------------------------------
@@ -1831,6 +2011,10 @@ class File_Open(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Get the file name.
 
         # Might be an expression.
@@ -1853,7 +2037,9 @@ file_type = Suppress(CaselessKeyword("For")) + \
             Optional(Suppress(CaselessKeyword("Access")) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+#file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
+#                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + file_type("type") + \
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)
 
@@ -1872,6 +2058,10 @@ class Print_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # Get the ID of the file.
         file_id = eval_arg(self.file_id, context=context)
 
@@ -1902,7 +2092,10 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
+#simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
+#                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
+#                   rem_statement | print_statement | resume_statement
+simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
                    rem_statement | print_statement | resume_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
@@ -1913,7 +2106,8 @@ statement <<= type_declaration | name_as_statement | simple_for_statement | simp
               simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
               with_statement| simple_statement | rem_statement
 
-statements_line = Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress()
+statements_line = tagged_block ^ \
+                  (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
 
@@ -1989,6 +2183,11 @@ class External_Function(VBA_Object):
         return 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
 
     def eval(self, context, params=None):
+
+        # Exit if an exit function statement was previously called.
+        if (context.exit_func):
+            return
+        
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
