@@ -78,9 +78,34 @@ class Module(VBA_Object):
             elif isinstance(token, Attribute_Statement):
                 log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
-            if isinstance(token, Global_Var_Statement):
+            elif isinstance(token, Global_Var_Statement):
                 log.debug("saving global var decl: %r = %r" % (token.name, token.value))
                 self.global_vars[token.name] = token.value
+            elif isinstance(token, Dim_Statement):
+
+                # Add the declared variables to the global variables.
+                for var in token.variables:
+
+                    # Get initial var value based on type.
+                    curr_type = var[2]
+                    curr_init_val = "NULL"
+                    if (curr_type is not None):
+
+                        # Get the initial value.
+                        if ((curr_type == "Long") or (curr_type == "Integer")):
+                            curr_init_val = 0
+                        if (curr_type == "String"):
+                            curr_init_val = ''
+                
+                        # Is this variable an array?
+                        if (var[1]):
+                            curr_type += " Array"
+                            curr_init_val = []
+
+                    # Set the initial value of the declared variable.
+                    self.global_vars[var[0]] = curr_init_val
+                    log.debug("saving global var decl: %r = %r" % (var[0], curr_init_val))
+
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)

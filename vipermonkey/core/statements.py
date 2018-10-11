@@ -57,6 +57,7 @@ from vba_object import int_convert
 
 from logger import log
 import sys
+import re
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -349,7 +350,7 @@ class Dim_Statement(VBA_Object):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
         
         # Track the initial value of the variable.
-        self.init_val = None
+        self.init_val = "NULL"
         last_var = tokens[-1:][0]
         if ((len(last_var) >= 3) and
             (last_var[len(last_var) - 2] == '=')):
@@ -963,7 +964,7 @@ for_clause = CaselessKeyword("For").suppress() \
              + Optional(step_clause('step_value'))
 
 simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
-                       + CaselessKeyword("Next").suppress() \
+                       + (CaselessKeyword("Next").suppress() | CaselessKeyword("End").suppress()) \
                        + Optional(lex_identifier) \
                        + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
 
@@ -1078,6 +1079,96 @@ class While_Statement(VBA_Object):
         r += str(self.body) + "\\nLoop"
         return r
 
+    def _eval_guard(self, curr_counter, final_val, comp_op):
+        if (comp_op == "<="):
+            return (curr_counter <= final_val)
+        if (comp_op == "<"):
+            return (curr_counter < final_val)
+        if (comp_op == ">="):
+            return (curr_counter >= final_val)
+        if (comp_op == ">"):
+            return (curr_counter > final_val)
+        if ((comp_op == "==") or (comp_op == "=")):
+            return (curr_counter == final_val)
+        log.error("Loop guard operator '" + str(comp_op) + " cannot be emulated.")
+        return False
+        
+    def _handle_simple_loop(self, context):
+
+        # Handle simple loops used purely for obfuscation.
+        #
+        # While b52 <= b35
+        # b52 = b52 + 1
+        # Wend
+
+        # Do we just have 1 line in the loop body?
+        if (len(self.body) != 1):
+            False
+
+        # Do we have a simple loop guard?
+        loop_counter = str(self.guard).strip()
+        m = re.match(r"(\w+)\s*([<>=]{1,2})\s*(\w+)", loop_counter)
+        if (m is None):
+            return False
+
+        # We have a simple loop guard. Pull out the loop variable, upper bound, and
+        # comparison op.
+        loop_counter = m.group(1)
+        comp_op = m.group(2)
+        upper_bound = m.group(3)
+        
+        # Are we just modifying the loop counter variable each loop iteration?
+        var_inc = loop_counter + " = " + loop_counter
+        body = str(self.body[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (not body.startswith(var_inc)):
+            False
+
+        # Pull out the operator and integer value used to update the loop counter
+        # in the loop body.
+        if (" " not in body):
+            return (None, None)
+        body = body.replace(var_inc, "").strip()
+        op = body[:body.index(" ")]
+        if (op not in ["+", "-", "*"]):
+            return False
+        num = body[body.index(" ") + 1:]
+        try:
+            num = int(num)
+        except:
+            False
+
+        # Now just compute the final loop counter value right here in Python.
+        curr_counter = coerce_to_int(eval_arg(loop_counter, context=context, treat_as_var_name=True))
+        final_val = eval_arg(upper_bound, context=context, treat_as_var_name=True)
+
+        # Simple case first. Set the final loop counter value if possible.
+        if ((num == 1) and (op == "+")):
+            if (comp_op == "<="):
+                curr_counter = final_val + 1
+            if (comp_op == "<"):
+                curr_counter = final_val
+
+        # Now emulate the loop in Python.
+        running = self._eval_guard(curr_counter, final_val, comp_op)
+        while (running):
+
+            # Update the loop counter.
+            if (op == "+"):
+                curr_counter += num
+            if (op == "-"):
+                curr_counter -= num
+            if (op == "*"):
+                curr_counter *= num
+
+            # See if we are done.
+            running = self._eval_guard(curr_counter, final_val, comp_op)
+
+        # Update the loop counter in the context.
+        context.set(loop_counter, curr_counter)
+
+        # We short circuited the loop evaluation.
+        return True
+    
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -1088,6 +1179,12 @@ class While_Statement(VBA_Object):
         # Do not bother running loops with empty bodies.
         if (len(self.body) == 0):
             log.debug("WHILE loop: empty body. Skipping.")
+            return
+
+        # See if we can short circuit the loop.
+        if (self._handle_simple_loop(context)):
+
+            # We short circuited the loop. Done.
             return
         
         # Track that the current loop is running.

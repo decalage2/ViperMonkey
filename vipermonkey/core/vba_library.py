@@ -480,10 +480,6 @@ class Split(VbaLibraryFunc):
         sep = ","
         if ((len(params) > 1) and (isinstance(params[1], str))):
             sep = params[1]            
-        print type(string)
-        print string
-        print type(sep)
-        print sep
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
