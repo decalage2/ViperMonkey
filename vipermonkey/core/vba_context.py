@@ -502,6 +502,16 @@ class Context(object):
         self.globals["vbLet".lower()] = 4
         self.globals["vbMethod".lower()] = 1
         self.globals["vbSet".lower()] = 8
+
+        # XlTickMark Enum
+        self.globals["xlTickMarkCross".lower()] = 4	
+        self.globals["xlTickMarkInside".lower()] = 2	
+        self.globals["xlTickMarkNone".lower()] = -4142	
+        self.globals["xlTickMarkOutside".lower()] = 3	
+
+        # XlXmlExportResult Enum
+        self.globals["xlXmlExportSuccess".lower()] = 0	
+        self.globals["xlXmlExportValidationFailed".lower()] = 1	
         
     def open_file(self, fname):
         """

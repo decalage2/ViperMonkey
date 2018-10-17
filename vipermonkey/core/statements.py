@@ -608,15 +608,23 @@ class Let_Statement(VBA_Object):
             # Handle conversion of strings to byte arrays, if needed.
             if ((context.get_type(self.name) == "Byte Array") and
                 (isinstance(value, str))):
-                tmp = []
-                for c in value:
-                    tmp.append(ord(c))
-                    # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
-                    # or not (no padding).
-                    if (not isinstance(value, from_unicode_str)):
-                        tmp.append(0)
-                value = tmp
 
+                # Do we have an actual value to assign?
+                if (value != "NULL"):
+                    tmp = []
+                    for c in value:
+                        tmp.append(ord(c))
+                        # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
+                        # or not (no padding).
+                        if (not isinstance(value, from_unicode_str)):
+                            tmp.append(0)
+                    value = tmp
+
+                # We are dealing with an unsassigned variable. Don't update
+                # the array.
+                else:
+                    return
+                    
             # Handle conversion of byte arrays to strings, if needed.
             elif ((context.get_type(self.name) == "String") and
                   (isinstance(value, list))):
