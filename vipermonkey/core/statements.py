@@ -1111,7 +1111,7 @@ class While_Statement(VBA_Object):
 
         # Do we just have 1 line in the loop body?
         if (len(self.body) != 1):
-            False
+            return False
 
         # Do we have a simple loop guard?
         loop_counter = str(self.guard).strip()
@@ -1129,12 +1129,12 @@ class While_Statement(VBA_Object):
         var_inc = loop_counter + " = " + loop_counter
         body = str(self.body[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
         if (not body.startswith(var_inc)):
-            False
+            return False
 
         # Pull out the operator and integer value used to update the loop counter
         # in the loop body.
         if (" " not in body):
-            return (None, None)
+            return False
         body = body.replace(var_inc, "").strip()
         op = body[:body.index(" ")]
         if (op not in ["+", "-", "*"]):
@@ -1143,12 +1143,16 @@ class While_Statement(VBA_Object):
         try:
             num = int(num)
         except:
-            False
+            return False
 
         # Now just compute the final loop counter value right here in Python.
         curr_counter = coerce_to_int(eval_arg(loop_counter, context=context, treat_as_var_name=True))
         final_val = eval_arg(upper_bound, context=context, treat_as_var_name=True)
-
+        try:
+            final_val = int(final_val)
+        except:
+            return False
+        
         # Simple case first. Set the final loop counter value if possible.
         if ((num == 1) and (op == "+")):
             if (comp_op == "<="):
@@ -1158,9 +1162,13 @@ class While_Statement(VBA_Object):
 
         # Now emulate the loop in Python.
         running = self._eval_guard(curr_counter, final_val, comp_op)
+        log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
+        log.debug("Short circuiting loop evaluation: Body: " + str(self.body))
         while (running):
 
             # Update the loop counter.
+            log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
+            log.debug("Short circuiting loop evaluation: Test: " + str(curr_counter) + " " + comp_op + " " + str(final_val))
             if (op == "+"):
                 curr_counter += num
             if (op == "-"):

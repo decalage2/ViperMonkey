@@ -53,6 +53,7 @@ __version__ = '0.02'
 
 import base64
 from logger import log
+import re
 
 from inspect import getouterframes, currentframe
 import sys
@@ -380,6 +381,13 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     
                 # None of those worked. We can't find the data.
                 #return "??"
+
+        # Should this be handled as a variable? Must be a valid var name to do this.
+        if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
+
+            # We did not resolve the variable. Treat it as unitialized.
+            log.debug("eval_arg: return 'NULL'")
+            return "NULL"
                 
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))
