@@ -379,8 +379,17 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     if (val is not None):
                         return val
                     
-                # None of those worked. We can't find the data.
-                #return "??"
+                # As a last resort try reading it as a wildcarded form variable.
+                wild_name = tmp[:tmp.index(".")] + "*"
+                for i in range(0, 11):
+                    tmp_name = wild_name + str(i)
+                    try:
+                        val = context.get(tmp_name)
+                        log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
+                        return val
+                    except:
+                        pass
+
 
         # Should this be handled as a variable? Must be a valid var name to do this.
         if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):

@@ -184,7 +184,8 @@ class ViperMonkey(object):
                                   '_Resize',
                                   '_SetSecureLockIcon',
                                   '_StatusTextChange',
-                                  '_TitleChange']
+                                  '_TitleChange',
+                                  '_Initialize']
                                   
     def add_compiled_module(self, m):
         """
@@ -398,6 +399,7 @@ class ViperMonkey(object):
             if entry_point in self.globals:
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
+                context.dump_all_files()
 
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
@@ -415,6 +417,7 @@ class ViperMonkey(object):
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
                         item.eval(context=context)
+                        context.dump_all_files()
                     
     def eval(self, expr):
         """

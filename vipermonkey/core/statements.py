@@ -362,8 +362,11 @@ class Dim_Statement(VBA_Object):
 
             # Is this an array?
             is_array = False
+            size = None
             if ((len(var) > 1) and (var[1] == '(')):
                 is_array = True
+                if (isinstance(var[2], int)):
+                    size = var[2]
 
             # Do we have a type for the variable?
             curr_type = None
@@ -371,7 +374,7 @@ class Dim_Statement(VBA_Object):
                 curr_type = var[-1:][0]
 
             # Save the variable info.
-            self.variables.append((var[0], is_array, curr_type))
+            self.variables.append((var[0], is_array, curr_type, size))
 
         # Handle multiple variables declared with the same type.
         tmp_vars = []
@@ -380,7 +383,7 @@ class Dim_Statement(VBA_Object):
             curr_type = var[2]
             if (curr_type is None):
                 curr_type = final_type
-            tmp_vars.append((var[0], var[1], curr_type))
+            tmp_vars.append((var[0], var[1], curr_type, var[3]))
         self.variables = tmp_vars
             
         log.debug('parsed %r' % str(self))
@@ -430,6 +433,8 @@ class Dim_Statement(VBA_Object):
                 if (var[1]):
                     curr_type += " Array"
                     curr_init_val = []
+                    if ((var[3] is not None) and (curr_type == "Byte Array")):
+                        curr_init_val = [0] * var[3]
 
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type)
@@ -498,7 +503,7 @@ lower_bound = constant_expression + CaselessKeyword('to').suppress()
 upper_bound = constant_expression
 dim_spec = Optional(lower_bound) + upper_bound
 bounds_list = delimitedList(dim_spec)
-array_dim = '(' + Optional(bounds_list).suppress() + ')'
+array_dim = '(' + Optional(bounds_list('bounds')) + ')'
 constant_name = simple_name_expression
 string_length = constant_name | integer
 fixed_length_string_spec = CaselessKeyword("string").suppress() + Suppress("*") + string_length
@@ -508,8 +513,8 @@ defined_type_expression = simple_name_expression  # TODO: | member_access_expres
 class_type_name = defined_type_expression
 as_auto_object = CaselessKeyword('as').suppress() + CaselessKeyword('new').suppress() + class_type_name
 as_clause = as_auto_object | as_type
-array_clause = array_dim + Optional(as_clause)
-untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
+array_clause = array_dim('bounds') + Optional(as_clause)
+untyped_variable_dcl = identifier + Optional(array_clause('bounds') | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))

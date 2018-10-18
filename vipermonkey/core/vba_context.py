@@ -524,6 +524,10 @@ class Context(object):
         self.open_files[fname] = {}
         self.open_files[fname]["name"] = fname
         self.open_files[fname]["contents"] = []
+
+    def dump_all_files(self):
+        for fname in self.open_files.keys():
+            self.dump_file(fname)
         
     def dump_file(self, file_id):
         """
@@ -539,7 +543,7 @@ class Context(object):
             return
         
         # Get the name of the file being closed.
-        name = self.open_files[file_id]["name"]
+        name = self.open_files[file_id]["name"].replace("#", "")
         log.info("Closing file " + name)
         
         # Get the data written to the file and track it.

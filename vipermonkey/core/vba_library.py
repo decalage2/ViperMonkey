@@ -1456,6 +1456,10 @@ class Put(VbaLibraryFunc):
         if (len(params) == 3):
             data = params[2]
 
+        # Has the file been opened?
+        if (file_id not in context.open_files):
+            context.open_file(file_id)
+            
         # Are we writing a string?
         if (isinstance(data, str)):
             for c in data:

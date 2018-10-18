@@ -913,9 +913,28 @@ def process_file (container,
                             log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Text", val))
                 
             except Exception as e:
-                log.error("Cannot read form strings. " + str(e))
-                #traceback.print_exc()
-                #raise e
+
+                # We are not getting variable names this way. Assign wildcarded names that we can use
+                # later to try to heuristically guess form variables.
+                log.warning("Cannot read form strings. " + str(e) + ". Trying fallback method.")
+                try:
+                    count = 0
+                    skip_strings = ["Tahoma"]
+                    for (subfilename, stream_path, form_string) in vba.extract_form_strings():
+                        # Skip default strings.
+                        if (form_string in skip_strings):
+                            continue
+                        global_var_name = stream_path
+                        if ("/" in global_var_name):
+                            tmp = global_var_name.split("/")
+                            if (len(tmp) == 3):
+                                global_var_name = tmp[1]
+                        global_var_name += "*" + str(count)
+                        count += 1
+                        vm.globals[global_var_name.lower()] = form_string
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, form_string))
+                except Exception as e:
+                    log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
                 
             print '-'*79
             print 'TRACING VBA CODE (entrypoint = Auto*):'
