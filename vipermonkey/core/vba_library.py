@@ -79,7 +79,7 @@ class MsgBox(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.report_action('Display Message', params[0], 'MsgBox')
+        context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
 class Len(VbaLibraryFunc):
@@ -274,7 +274,7 @@ class Shell(VbaLibraryFunc):
         command = params[0]
         log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
-        context.report_action('Execute Command', command, 'Shell function')
+        context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
 
 class Array(VbaLibraryFunc):
@@ -1343,7 +1343,7 @@ class Navigate(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) >= 1)
         url = str(params[0])
-        context.report_action("GET", url, 'Load in browser')
+        context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
         
 class IIf(VbaLibraryFunc):
     """
@@ -1396,10 +1396,10 @@ class CallByName(VbaLibraryFunc):
         if (len(params) >= 4):
             args = params[3]
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
-            context.report_action("Run", args, 'Interesting Function Call')
+            context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if (("Open" in cmd) and ("WinHttpRequest" in obj)):
-            context.report_action("GET", params[4], 'Interesting Function Call')
+            context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
             
 class Close(VbaLibraryFunc):
     """
@@ -1717,7 +1717,7 @@ class Run(VbaLibraryFunc):
         
         # Can we find the function to call?
         try:
-            context.report_action("Run", func_name, 'Interesting Function Call')
+            context.report_action("Run", func_name, 'Interesting Function Call', strip_null_bytes=True)
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
@@ -1738,7 +1738,7 @@ class WinExec(VbaLibraryFunc):
         assert (len(params) >= 1)
 
         cmd = params[0]
-        context.report_action("Run", cmd, 'Interesting Command Execution')
+        context.report_action("Run", cmd, 'Interesting Command Execution', strip_null_bytes=True)
         return ''
         
 class CreateObject(VbaLibraryFunc):
@@ -1914,8 +1914,8 @@ class URLDownloadToFile(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (len(params) >= 3):
-            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile')
-            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
 
 class FollowHyperlink(VbaLibraryFunc):
     """
@@ -1924,7 +1924,7 @@ class FollowHyperlink(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (len(params) >= 1):
-            context.report_action('Download URL', str(params[0]), 'FollowHyperLink')
+            context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
             
 class CreateTextFile(VbaLibraryFunc):
     """
@@ -1949,7 +1949,7 @@ class Open(CreateTextFile):
 
         # Is this a HTTP GET?
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
-            context.report_action("GET", str(params[1]), 'Interesting Function Call')
+            context.report_action("GET", str(params[1]), 'Interesting Function Call', strip_null_bytes=True)
 
 class Timer(VbaLibraryFunc):
     """
@@ -1973,7 +1973,7 @@ class Write(VbaLibraryFunc):
         # Save writes that look like they are writing URLs.
         data_str = str(dat)
         if (("http:" in data_str) or ("https:" in data_str)):
-            context.report_action('Write URL', data_str, 'File Write')
+            context.report_action('Write URL', data_str, 'File Write', strip_null_bytes=True)
         
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1

@@ -1816,13 +1816,13 @@ class Call_Statement(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, call_params, 'Interesting Function Call')
+            context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
         
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
-            context.report_action('Display Message', repr(call_params[0]), 'MsgBox')
+            context.report_action('Display Message', repr(call_params[0]), 'MsgBox', strip_null_bytes=True)
             # vbOK = 1
             return 1
         elif '.' in func_name:
@@ -1834,7 +1834,7 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p.replace("\x00", ""))
                     else:
                         tmp_call_params.append(p)
-            context.report_action('Object.Method Call', tmp_call_params, func_name)
+            context.report_action('Object.Method Call', tmp_call_params, func_name, strip_null_bytes=True)
         try:
 
             # Emulate the function body.
@@ -2320,13 +2320,13 @@ class External_Function(VBA_Object):
         # Log certain function calls.
         function_name = function_name.lower()
         if function_name.startswith('urldownloadtofile'):
-            context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
-            context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+            context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
         if function_name.startswith('shellexecute'):
             cmd = str(params[2]) + str(params[3])
-            context.report_action('Run Command', cmd, function_name)
+            context.report_action('Run Command', cmd, function_name, strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
 

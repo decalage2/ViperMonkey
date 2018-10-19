@@ -743,7 +743,28 @@ class Context(object):
                         
             except KeyError:
                 pass
-            
-    def report_action(self, action, params=None, description=None):
+
+    def _strip_null_bytes(self, item):
+        r = item
+        if (isinstance(item, str)):
+            r = item.replace("\x00", "")
+        if (isinstance(item, list)):
+            r = []
+            for s in item:
+                if (isinstance(s, str)):
+                    r.append(s.replace("\x00", ""))
+                else:
+                    r.append(s)
+        return r
+                    
+    def report_action(self, action, params=None, description=None, strip_null_bytes=False):
+
+        # Strip out \x00 characters if needed.
+        if (strip_null_bytes):
+            action = self._strip_null_bytes(action)
+            params = self._strip_null_bytes(params)
+            description = self._strip_null_bytes(description)
+
+        # Save the action for reporting.
         self.engine.report_action(action, params, description)
 
