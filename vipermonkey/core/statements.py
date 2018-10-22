@@ -1777,7 +1777,7 @@ class Call_Statement(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "InternetConnect", "HttpOpenRequest"]
+                 "SetExpandedStringValue", "WinExec"]
     
     def __init__(self, original_str, location, tokens):
         super(Call_Statement, self).__init__(original_str, location, tokens)
@@ -2213,8 +2213,8 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 #simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
 #                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
 #                   rem_statement | print_statement | resume_statement
-simple_statement = dim_statement | option_statement | (file_open_statement ^ prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement | doevents_statement | \
+simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
+                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
                    rem_statement | print_statement | resume_statement
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
