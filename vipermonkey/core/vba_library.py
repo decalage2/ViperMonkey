@@ -625,6 +625,12 @@ class InStr(VbaLibraryFunc):
             if (search_type not in (0, 1)):
                 search_type = 1
 
+        # Only works on lists or strings.
+        if ((not isinstance(s1, list)) and (not isinstance(s1, str))):
+            return None
+        if ((not isinstance(s2, list)) and (not isinstance(s2, str))):
+            return None
+                
         # TODO: Figure out how VB binary search works. For now just do text search.
         r = None
         if (len(s1) == 0):
