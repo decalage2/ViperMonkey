@@ -2261,7 +2261,7 @@ class External_Function(VBA_Object):
 
         # Make sure the file exists.
         if (file_id not in context.open_files):
-            log.error("File " + file_id + " not open. Cannot write.")
+            log.error("File " + str(file_id) + " not open. Cannot write.")
             return 1
         
         # We can only write single byte values for now.

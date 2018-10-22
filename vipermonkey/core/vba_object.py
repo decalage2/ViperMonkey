@@ -188,6 +188,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         start = tmp_arg_str.index("range(") + len("range(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        log.debug("Sheet name = " + sheet_name + ", cell index = " + cell_index)
         
         try:
             
