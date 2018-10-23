@@ -604,8 +604,16 @@ def strip_useless_code(vba_code):
     r = ""
     line_num = 0
     if_count = 0
+    in_func = False
     for line in vba_code.split("\n"):
 
+        # Are we in a function?
+        print line
+        if (("End Sub" in line) or ("End Function" in line)):
+            in_func = False
+        elif (("Sub " in line) or ("Function " in line)):
+            in_func = True
+        
         # Keep track of if starts so we can match up end ifs.
         line_num += 1
         if (line.strip().startswith("If ")):
@@ -636,7 +644,7 @@ def strip_useless_code(vba_code):
 
         # Does this line get stripped based on being a Dim that we will not use
         # when emulating?
-        if (is_useless_dim(line)):
+        if ((in_func) and (is_useless_dim(line))):
             log.debug("STRIP: Stripping Line (3): " + line)
             continue
         
