@@ -1121,8 +1121,12 @@ class Val(VbaLibraryFunc):
         if (hasattr(matches, "group")):
             tmp = nums.search(tmp).group(0)
 
-            # Convert this to a float.
-            r = float(tmp)
+            # Convert this to a float or int.
+            r = None
+            if ("." in tmp):
+                r = float(tmp)
+            else:
+                r = int(tmp)
             log.debug("Val: %r returns %r" % (self, r))
             return r
 
