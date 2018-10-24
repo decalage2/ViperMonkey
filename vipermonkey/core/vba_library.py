@@ -468,6 +468,14 @@ class StrConv(VbaLibraryFunc):
         log.debug("StrConv: return %r" % r)
         return r
 
+class Assert(VbaLibraryFunc):
+    """
+    Assert() debug function. Stubbed.
+    """
+
+    def eval(self, context, params=None):
+        pass
+    
 class Split(VbaLibraryFunc):
     """
     Split() string function.
@@ -647,6 +655,32 @@ class InStr(VbaLibraryFunc):
         log.debug("InStr: %r returns %r" % (self, r))
         return r
 
+class CVar(VbaLibraryFunc):
+    """
+    CVar() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 1
+
+        # We are not tracking variant types, so work as a pass-through.
+        return params[0]
+
+class IsNumeric(VbaLibraryFunc):
+    """
+    IsNumeric() function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 1
+
+        arg = str(params[0])
+        try:
+            tmp = float(arg)
+            return True
+        except:
+            return False
+    
 class InStrRev(VbaLibraryFunc):
     """
     InStrRev() string function.
@@ -2025,7 +2059,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString):
+               KeyString, CVar, IsNumeric, Assert):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

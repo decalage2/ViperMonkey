@@ -87,7 +87,7 @@ __version__ = '0.07'
 # packrat parsing cache. Do not move or remove this line.
 from pyparsing import *
 #ParserElement.enablePackrat(cache_size_limit=None)
-ParserElement.enablePackrat(cache_size_limit=10000000)
+ParserElement.enablePackrat(cache_size_limit=100000)
 
 import struct
 import multiprocessing

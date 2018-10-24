@@ -1183,6 +1183,8 @@ class While_Statement(VBA_Object):
 
             # See if we are done.
             running = self._eval_guard(curr_counter, final_val, comp_op)
+            if (self.loop_type.lower() == "until"):
+                running = (not running)
 
         # Update the loop counter in the context.
         context.set(loop_counter, curr_counter)
