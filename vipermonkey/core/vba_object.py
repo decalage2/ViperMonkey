@@ -222,6 +222,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     # Not reading from an Excel cell. Try as a VBA object.
     if (isinstance(arg, VBA_Object)):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
+        #print "2:\t\t" + str(arg)
         return arg.eval(context=context)
 
     # Not a VBA object.
@@ -408,6 +409,7 @@ def eval_args(args, context):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
+    #print "1:\t\t" + str(args)
     return map(lambda arg: eval_arg(arg, context=context), args)
 
 def coerce_to_str(obj):

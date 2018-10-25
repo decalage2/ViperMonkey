@@ -289,6 +289,7 @@ class Function(VBA_Object):
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
+                #print "4:\t\t" + str(s)
                 s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?
