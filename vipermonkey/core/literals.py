@@ -114,7 +114,7 @@ float_literal = float_literal_exp ^ float_literal_no_exp
 # MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
 
 quoted_string = QuotedString('"', escQuote='""')
-quoted_string.setParseAction(lambda t: str(t[0]))
+quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n"))
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
 quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
