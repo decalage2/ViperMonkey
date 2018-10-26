@@ -379,7 +379,8 @@ class ViperMonkey(object):
 
             # Resolve aliases of imported functions to the actual function.
             if (f in import_visitor.aliases):
-                r.append(import_visitor.funcs[f])
+                if (len(import_visitor.funcs[f]) > 0):
+                     r.append(import_visitor.funcs[f])
                 continue
 
             # Regular local function call.

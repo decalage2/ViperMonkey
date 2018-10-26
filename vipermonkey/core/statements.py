@@ -601,13 +601,21 @@ class Let_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+
+        # If a function return value is being set (LHS == current function name),
+        # treat references to the function name on the RHS as a variable rather
+        # than a function. Do this by initializing a local variable with the function
+        # name here if needed.
+        if (not context.contains(self.name, local=True)):
+            log.debug("Adding uninitialized '" + str(self.name) + "' function return var to local context.")
+            context.set(self.name, 'NULL')
         
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
         #print "6:\t\t" + str(self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
-
+        
         # set variable, non-array access.
         if (self.index is None):
 
@@ -757,8 +765,7 @@ class Let_Statement(VBA_Object):
                 # TODO: Currently we are assuming that 'On Error Resume Next' is being
                 # used. Need to actually check what is being done on error.
                 log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
-
-            
+        
 # 5.4.3.8   Let Statement
 #
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional

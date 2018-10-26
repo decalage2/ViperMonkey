@@ -103,6 +103,14 @@ class LenB(VbaLibraryFunc):
         # TODO: Somehow take the default character set into account.
         return len(params[0])
 
+class Sleep(VbaLibraryFunc):
+    """
+    Stubbed Sleep() function.
+    """
+
+    def eval(self, context, params=None):
+        pass
+
 class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
@@ -2063,7 +2071,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString, CVar, IsNumeric, Assert):
+               KeyString, CVar, IsNumeric, Assert, Sleep):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

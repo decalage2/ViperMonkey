@@ -647,7 +647,9 @@ class Context(object):
         # Finally see if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
 
-    def contains(self, name):
+    def contains(self, name, local=False):
+        if (local):
+            return (str(name).lower() in self.locals)
         try:
             self.get(name)
             return True
