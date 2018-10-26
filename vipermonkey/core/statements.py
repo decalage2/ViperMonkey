@@ -54,6 +54,7 @@ from vba_context import *
 from reserved import *
 from from_unicode_str import *
 from vba_object import int_convert
+import procedures
 
 from logger import log
 import sys
@@ -606,7 +607,8 @@ class Let_Statement(VBA_Object):
         # treat references to the function name on the RHS as a variable rather
         # than a function. Do this by initializing a local variable with the function
         # name here if needed.
-        if (not context.contains(self.name, local=True)):
+        if ((context.contains(self.name)) and
+            (isinstance(context.get(self.name), procedures.Function))):
             log.debug("Adding uninitialized '" + str(self.name) + "' function return var to local context.")
             context.set(self.name, 'NULL')
         
