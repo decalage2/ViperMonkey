@@ -2213,7 +2213,8 @@ class Print_Statement(VBA_Object):
         else:
             log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
 
-print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value")
+print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
+                  Suppress(Optional("," + lex_identifier))
 print_statement.setParseAction(Print_Statement)
 
 # --- DOEVENTS STATEMENT -------------------------------------------------------------
