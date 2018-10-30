@@ -883,7 +883,13 @@ class For_Statement(VBA_Object):
             try:
                 start = int(start)
             except:
-                pass
+
+                # Is this a single character?
+                if (len(start) == 1):
+
+                    # Looks like this Chr() should be an int.
+                    start = ord(start[0])
+
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
         # Get the end index. If this is a string, convert to an int.
@@ -892,7 +898,13 @@ class For_Statement(VBA_Object):
             try:
                 end = int(end)
             except:
-                pass
+
+                # Is this a single character?
+                if (len(start) == 1):
+
+                    # Looks like this Chr() should be an int.
+                    end = ord(end[0])
+                
         if (not isinstance(end, int)):
             end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))

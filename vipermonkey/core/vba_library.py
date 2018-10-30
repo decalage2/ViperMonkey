@@ -1932,7 +1932,7 @@ class CDbl(VbaLibraryFunc):
         assert (len(params) == 1)
         try:
             # Handle hex.
-            tmp = params[0].upper()
+            tmp = str(params[0]).upper()
             if (tmp.startswith("&H")):
                 tmp = tmp.replace("&H", "0x")
                 tmp = int(tmp, 16)
@@ -1941,7 +1941,8 @@ class CDbl(VbaLibraryFunc):
             #return round(float(params[0]), 11)
             return float(tmp)
 
-        except:
+        except Exception as e:
+            log.error("CDbl(" + str(params[0]) + ") failed. " + str(e))
             return 0
 
 class Print(VbaLibraryFunc):
