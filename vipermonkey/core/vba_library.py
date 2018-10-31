@@ -1861,6 +1861,54 @@ class Specialfolders(VbaLibraryFunc):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
 
+class Cells(VbaLibraryFunc):
+    """
+    Excel Cells() function.
+    Currently only handles Cells(x, y) calls.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we have a loaded Excel file?
+        if (context.loaded_excel is None):
+            log.warning("Cannot process Cells() call. No Excel file loaded.")
+            return "NULL"
+        
+        # Currently only handles Cells(x, y) calls.
+        if (len(params) != 2):
+            log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
+            return "NULL"
+
+        # Guess that we want the 1st sheet.
+        sheet = None
+        try:
+            sheet = context.loaded_excel.sheet_by_index(0)
+        except:
+            log.warning("Cannot process Cells() call. No sheets in file.")
+            return "NULL"
+
+        # Get the indices of the cell.
+        col = None
+        row = None
+        try:
+            col = int(params[0]) - 1
+            row = int(params[1]) - 1
+        except:
+            log.warning("Cannot process Cells() call. Row or column invalid.")
+            return "NULL"
+
+        # Return the cell contents.
+        try:
+            r = sheet.cell(col, row)
+            log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
+            return r
+
+        except:
+        
+            # Failed to read cell.
+            log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ")")
+            return "NULL"
+
 class Year(VbaLibraryFunc):
     """
     Year() function. Currently stubbed.
@@ -2072,7 +2120,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString, CVar, IsNumeric, Assert, Sleep):
+               KeyString, CVar, IsNumeric, Assert, Sleep, Cells):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
