@@ -356,7 +356,7 @@ class Dim_Statement(VBA_Object):
         if ((len(last_var) >= 3) and
             (last_var[len(last_var) - 2] == '=')):
             self.init_val = last_var[len(last_var) - 1]
-                
+            
         # Track each variable being declared.
         self.variables = []
         for var in tokens:
@@ -386,7 +386,7 @@ class Dim_Statement(VBA_Object):
                 curr_type = final_type
             tmp_vars.append((var[0], var[1], curr_type, var[3]))
         self.variables = tmp_vars
-            
+        
         log.debug('parsed %r' % str(self))
 
     def __repr__(self):
@@ -410,7 +410,7 @@ class Dim_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
-        
+
         # Evaluate the initial variable value(s).
         init_val = ''
         if (self.init_val is not None):

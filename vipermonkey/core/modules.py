@@ -86,10 +86,12 @@ class Module(VBA_Object):
                 # Add the declared variables to the global variables.
                 for var in token.variables:
 
+                    # Get the initial value.
+                    curr_init_val = var[2]
+                    
                     # Get initial var value based on type.
-                    curr_type = var[2]
-                    curr_init_val = "NULL"
-                    if (curr_type is not None):
+                    curr_type = var[3]
+                    if ((curr_type is not None) and (curr_init_val is None)):
 
                         # Get the initial value.
                         if ((curr_type == "Long") or (curr_type == "Integer")):
