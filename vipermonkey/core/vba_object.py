@@ -282,16 +282,22 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
 
-                # Try it as a form variable.
-                tmp = arg.lower()
-                try:
-                    log.debug("eval_arg: Try to load as variable " + tmp + "...")
-                    val = context.get(tmp)
-                    return val
+                # Peel off items seperated by a '.', trying them as functions.
+                arg_peeled = arg
+                while ("." in arg_peeled):
+                
+                    # Try it as a form variable.
+                    tmp = arg_peeled.lower()
+                    try:
+                        log.debug("eval_arg: Try to load as variable " + tmp + "...")
+                        val = context.get(tmp)
+                        return val
 
-                except KeyError:
-                    log.debug("eval_arg: Not found as variable")
-                    pass
+                    except KeyError:
+                        log.debug("eval_arg: Not found as variable")
+                        pass
+
+                    arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
 
                 # Try it as a function
                 func_name = arg.lower()
