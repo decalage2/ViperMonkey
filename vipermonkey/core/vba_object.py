@@ -537,7 +537,7 @@ def int_convert(arg):
     """
     if (arg == "NULL"):
         return 0
-    return int(arg)
+    return int(str(arg))
 
 def str_convert(arg):
     """

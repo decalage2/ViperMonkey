@@ -57,6 +57,7 @@ from vba_object import str_convert
 import decimal
 
 from vba_context import VBA_LIBRARY
+from vba_object import eval_arg
 import expressions
 
 from logger import log
@@ -427,7 +428,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int_convert(params[1])
+            conv = int_convert(eval_arg(params[1], context=context))
 
         # Do the conversion.
         r = params[0]

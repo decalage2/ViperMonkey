@@ -491,6 +491,11 @@ def strip_useless_code(vba_code):
             if (line.strip().startswith("Function ")):
                 log.debug("SKIP: Function decl. Keep it.")
                 continue
+
+            # Skip constdefinitions.
+            if (line.strip().startswith("Const ")):
+                log.debug("SKIP: Const decl. Keep it.")
+                continue
                 
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
