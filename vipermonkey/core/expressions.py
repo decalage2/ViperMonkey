@@ -337,7 +337,8 @@ class Function_Call(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "FileExists"]
+                 "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
+                 "FileCopy"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
