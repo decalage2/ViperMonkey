@@ -348,7 +348,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     return r
 
                 # Are we trying to load some document data?
-                print "*** tmp = '" + tmp + "'"
                 if (tmp.startswith("thisdocument.builtindocumentproperties(")):
 
                     # Try to pull the result from the document data.
