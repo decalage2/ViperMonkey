@@ -287,10 +287,10 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 while ("." in arg_peeled):
                 
                     # Try it as a form variable.
-                    tmp = arg_peeled.lower()
+                    curr_var_attempt = arg_peeled.lower()
                     try:
-                        log.debug("eval_arg: Try to load as variable " + tmp + "...")
-                        val = context.get(tmp)
+                        log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
+                        val = context.get(curr_var_attempt)
                         return val
 
                     except KeyError:
@@ -305,7 +305,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 try:
 
                     # Lookp and execute the function.
-                    log.debug("eval_arg: Try to run as function " + func_name + "...")
+                    log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = eval_arg(func, context, treat_as_var_name=True)
 
@@ -326,6 +326,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Failed. Not a function. " + str(e))
 
                 # Are we trying to load some document meta data?
+                tmp = arg.lower().strip()
                 if (tmp.startswith("activedocument.item(")):
 
                     # Try to pull the result from the document meta data.
@@ -347,6 +348,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     return r
 
                 # Are we trying to load some document data?
+                print "*** tmp = '" + tmp + "'"
                 if (tmp.startswith("thisdocument.builtindocumentproperties(")):
 
                     # Try to pull the result from the document data.
@@ -360,6 +362,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                     # ActiveDocument.Variables("ER0SNQAWT").Value
                     # Try to pull the result from the document variables.
+                    log.debug("eval_arg: look for '")
                     var = tmp.replace("activedocument.variables(", "").\
                           replace(")", "").\
                           replace("'","").\
@@ -367,9 +370,13 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace('.value',"").\
                           replace("(", "").\
                           strip()
+                    log.debug("eval_arg: look for '" + var + "' as document variable...")
                     val = context.get_doc_var(var)
                     if (val is not None):
+                        log.debug("eval_arg: got it as document variable.")
                         return val
+                    else:
+                        log.debug("eval_arg: did NOT get it as document variable.")
 
                 # Are we loading a custom document property?
                 if (tmp.startswith("activedocument.customdocumentproperties(")):
