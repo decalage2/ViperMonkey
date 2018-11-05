@@ -155,20 +155,11 @@ class VBA_Object(object):
         # Visit all the children.
         for child in self.get_children():
             child.accept(visitor)
-            
-meta = None
-        
-def eval_arg(arg, context, treat_as_var_name=False):
-    """
-    evaluate a single argument if it is a VBA_Object, otherwise return its value
-    """
 
-    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
-    # avoid that. Also check to see if emulation has taken too long.
-    if (limits_exceeded()):
-        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
-    
-    log.debug("try eval arg: %s" % arg)
+def _read_from_excel(arg):
+    """
+    Try to evaluate an argument by reading from the loaded Excel spreadsheet.
+    """
 
     # Try handling reading value from an Excel spreadsheet cell.
     arg_str = str(arg)
@@ -219,6 +210,36 @@ def eval_arg(arg, context, treat_as_var_name=False):
         except Exception as e:
             log.error("Cannot read cell from Excel spreadsheet. " + str(e))
 
+    
+meta = None
+
+def eval_arg(arg, context, treat_as_var_name=False):
+    """
+    evaluate a single argument if it is a VBA_Object, otherwise return its value
+    """
+
+    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
+    # avoid that. Also check to see if emulation has taken too long.
+    if (limits_exceeded()):
+        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+    
+    log.debug("try eval arg: %s" % arg)
+
+    # Try handling reading value from an Excel spreadsheet cell.
+    excel_val = _read_from_excel(arg)
+    if (excel_val is not None):
+        return excel_val
+
+    # Short circuit the checks and see if we are accessing some object text first.
+    arg_str = str(arg)
+    if (arg_str.endswith(".TextFrame.TextRange.Text")):
+        try:
+            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+            val = context.get_doc_var(arg_str.lower())
+            return val
+        except KeyError:
+            pass
+            
     # Not reading from an Excel cell. Try as a VBA object.
     if (isinstance(arg, VBA_Object)):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
