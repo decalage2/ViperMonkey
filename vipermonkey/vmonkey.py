@@ -158,6 +158,39 @@ def _read_doc_text(fname):
     # Return all the strings.
     return r
 
+def _get_shapes_text_values(fname):
+    """
+    Read in the text associated with Shape objects in the document.
+    NOTE: This currently is a hack.
+    """
+
+    r = []
+    try:
+        # Read the WordDocument stream.
+        ole = olefile.OleFileIO(fname, write_mode=False)
+        if (not ole.exists('worddocument')):
+            return []
+        data = ole.openstream("worddocument").read()
+
+        # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
+        # 0x0D bytes. We will look for that.
+        pat = r"\x0d[\x20-\x7e]{10,}\x0d"
+        strs = re.findall(pat, data)
+
+        # Hope that the Shape() object indexing follows the same order as the strings
+        # we found.
+        pos = 1
+        for shape_text in strs:
+            shape_text = shape_text[1:-1]
+            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            pos += 1
+            r.append((var, shape_text))
+
+    except Exception as e:
+        log.error("Cannot read associated Shapes text. " + str(e))
+
+    return r
+
 def get_doc_var_info(ole):
     """
     Get the byte offset and size of the chunk of data containing the document
@@ -862,6 +895,11 @@ def process_file (container,
             for (var_name, var_val) in _read_doc_vars(filename):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+
+            # Pull text associated with Shapes() objects.
+            for (var_name, var_val) in _get_shapes_text_values(filename):
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull out custom document properties.
             for (var_name, var_val) in _read_custom_doc_props(filename):
