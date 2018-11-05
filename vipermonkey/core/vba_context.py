@@ -41,6 +41,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import xlrd
+
 import array
 import os
 from hashlib import sha256
@@ -82,8 +84,17 @@ class Context(object):
                  _locals=None,
                  context=None,
                  engine=None,
-                 doc_vars=None):
+                 doc_vars=None,
+                 loaded_excel=None):
 
+        # Track a dict mapping the labels of code blocks labeled with the LABEL:
+        # construct to code blocks. This will be used to evaluate GOTO statements
+        # when emulating.
+        self.tagged_blocks = {}
+
+        # Track the in-memory loaded Excel workbook (xlrd workbook object).
+        self.loaded_excel = loaded_excel
+        
         # Track open files.
         self.open_files = {}
 
@@ -99,6 +110,7 @@ class Context(object):
             self.globals = context.globals
             self.open_files = context.open_files
             self.closed_files = context.closed_files
+            self.loaded_excel = context.loaded_excel
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -115,6 +127,8 @@ class Context(object):
         else:
             self.engine = None
 
+        log.debug("Have xlrd loaded Excel file = " + str(self.loaded_excel is not None))
+            
         # Track data saved in document variables.
         if doc_vars is not None:
             # direct copy of the pointer to globals:
@@ -488,6 +502,16 @@ class Context(object):
         self.globals["vbLet".lower()] = 4
         self.globals["vbMethod".lower()] = 1
         self.globals["vbSet".lower()] = 8
+
+        # XlTickMark Enum
+        self.globals["xlTickMarkCross".lower()] = 4	
+        self.globals["xlTickMarkInside".lower()] = 2	
+        self.globals["xlTickMarkNone".lower()] = -4142	
+        self.globals["xlTickMarkOutside".lower()] = 3	
+
+        # XlXmlExportResult Enum
+        self.globals["xlXmlExportSuccess".lower()] = 0	
+        self.globals["xlXmlExportValidationFailed".lower()] = 1	
         
     def open_file(self, fname):
         """
@@ -500,6 +524,10 @@ class Context(object):
         self.open_files[fname] = {}
         self.open_files[fname]["name"] = fname
         self.open_files[fname]["contents"] = []
+
+    def dump_all_files(self):
+        for fname in self.open_files.keys():
+            self.dump_file(fname)
         
     def dump_file(self, file_id):
         """
@@ -515,7 +543,7 @@ class Context(object):
             return
         
         # Get the name of the file being closed.
-        name = self.open_files[file_id]["name"]
+        name = self.open_files[file_id]["name"].replace("#", "")
         log.info("Closing file " + name)
         
         # Get the data written to the file and track it.
@@ -619,7 +647,9 @@ class Context(object):
         # Finally see if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
 
-    def contains(self, name):
+    def contains(self, name, local=False):
+        if (local):
+            return (str(name).lower() in self.locals)
         try:
             self.get(name)
             return True
@@ -715,7 +745,28 @@ class Context(object):
                         
             except KeyError:
                 pass
-            
-    def report_action(self, action, params=None, description=None):
+
+    def _strip_null_bytes(self, item):
+        r = item
+        if (isinstance(item, str)):
+            r = item.replace("\x00", "")
+        if (isinstance(item, list)):
+            r = []
+            for s in item:
+                if (isinstance(s, str)):
+                    r.append(s.replace("\x00", ""))
+                else:
+                    r.append(s)
+        return r
+                    
+    def report_action(self, action, params=None, description=None, strip_null_bytes=False):
+
+        # Strip out \x00 characters if needed.
+        if (strip_null_bytes):
+            action = self._strip_null_bytes(action)
+            params = self._strip_null_bytes(params)
+            description = self._strip_null_bytes(description)
+
+        # Save the action for reporting.
         self.engine.report_action(action, params, description)
 

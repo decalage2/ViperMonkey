@@ -84,6 +84,7 @@ class SimpleNameExpression(VBA_Object):
                 isinstance(value, procedures.Sub) or
                 isinstance(value, VbaLibraryFunc)):
                 log.debug('evaluating function %r' % value)
+                #print "3:\t\t" + str(value)
                 value = value.eval(context)
                 log.debug('evaluated function %r = %r' % (self.name, value))
             return value
@@ -336,7 +337,8 @@ class Function_Call(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "FileExists"]
+                 "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
+                 "FileCopy"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -369,7 +371,7 @@ class Function_Call(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, params, 'Interesting Function Call')
+            context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
             f = context.get(self.name)
 
@@ -559,7 +561,7 @@ expression <<= (infixNotation(expr_item,
                                       ("*", 2, opAssoc.LEFT, Multiplication),
                                       ("/", 2, opAssoc.LEFT, Division),
                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                      (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                      (CaselessKeyword("mod"), 2, opAssoc.LEFT, Mod),
                                       ("-", 2, opAssoc.LEFT, Subtraction),
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),

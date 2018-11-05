@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names declared variables.
+ViperMonkey: Visitor for collecting the names of locally defined functions
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -39,17 +39,14 @@ https://github.com/decalage2/ViperMonkey
 from visitor import *
 from statements import *
 
-class var_defn_visitor(visitor):
+class tagged_block_finder_visitor(visitor):
     """
-    Collect the names of all declared variables.
+    Collect all the tagged block (labeled block) elements.
     """
 
     def __init__(self):
-        self.variables = set()
+        self.blocks = {}
     
     def visit(self, item):
-        if (isinstance(item, Dim_Statement)):
-            for name, _, _, _ in item.variables:
-                self.variables.add(str(name))
-        if (isinstance(item, Let_Statement)):
-            self.variables.add(str(item.name))
+        if (isinstance(item, TaggedBlock)):
+            self.blocks[item.label] = item

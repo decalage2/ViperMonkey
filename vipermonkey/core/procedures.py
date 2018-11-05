@@ -46,6 +46,7 @@ from statements import *
 from identifiers import *
 
 from logger import log
+from tagged_block_finder_visitor import *
 
 # --- SUB --------------------------------------------------------------------
 
@@ -58,6 +59,11 @@ class Sub(VBA_Object):
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
             self.bogus_if = tokens.bogus_if
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -69,6 +75,10 @@ class Sub(VBA_Object):
         caller_context = context
         context = Context(context=caller_context)
 
+        # Set the information about labeled code blocks in the called
+        # context. This will be used when emulating GOTOs.
+        context.tagged_blocks = self.tagged_blocks
+        
         # Set the default parameter values.
         for param in self.params:
             init_val = None
@@ -77,13 +87,23 @@ class Sub(VBA_Object):
             context.set(param.name, init_val)
 
         # Set given parameter values.
+        self.byref_params = {}
         if params is not None:
             # TODO: handle named parameters
             for i in range(len(params)):
+
+                # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
+
+                # Is this a ByRef parameter?
+                if (self.params[i].mechanism == "ByRef"):
+
+                    # Save it so we can pull out the updated value in the Call statement.
+                    self.byref_params[(param_name, i)] = None
+                    
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
@@ -95,9 +115,13 @@ class Sub(VBA_Object):
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
+
+        # Save the values of the ByRef parameters.
+        for byref_param in self.byref_params.keys():
+            self.byref_params[byref_param] = context.get(byref_param[0].lower())
             
         # Handle subs with no return values.
-        try:
+        try:            
             context.get(self.name)
         except KeyError:
 
@@ -211,6 +235,11 @@ class Function(VBA_Object):
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
             self.bogus_if = tokens.bogus_if
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
         log.info('parsed %r' % self)
 
     def __repr__(self):
@@ -222,6 +251,10 @@ class Function(VBA_Object):
         caller_context = context
         context = Context(context=caller_context)
 
+        # Set the information about labeled code blocks in the called
+        # context. This will be used when emulating GOTOs.
+        context.tagged_blocks = self.tagged_blocks
+        
         # add function name in locals:
         #context.set(self.name, None)
 
@@ -256,6 +289,7 @@ class Function(VBA_Object):
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
+                #print "4:\t\t" + str(s)
                 s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?

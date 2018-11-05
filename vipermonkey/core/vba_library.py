@@ -57,6 +57,7 @@ from vba_object import str_convert
 import decimal
 
 from vba_context import VBA_LIBRARY
+from vba_object import eval_arg
 import expressions
 
 from logger import log
@@ -79,7 +80,7 @@ class MsgBox(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.report_action('Display Message', params[0], 'MsgBox')
+        context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
 class Len(VbaLibraryFunc):
@@ -102,6 +103,14 @@ class LenB(VbaLibraryFunc):
     def eval(self, context, params=None):
         # TODO: Somehow take the default character set into account.
         return len(params[0])
+
+class Sleep(VbaLibraryFunc):
+    """
+    Stubbed Sleep() function.
+    """
+
+    def eval(self, context, params=None):
+        pass
 
 class Mid(VbaLibraryFunc):
     """
@@ -274,7 +283,7 @@ class Shell(VbaLibraryFunc):
         command = params[0]
         log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
-        context.report_action('Execute Command', command, 'Shell function')
+        context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
 
 class Array(VbaLibraryFunc):
@@ -298,6 +307,9 @@ class UBound(VbaLibraryFunc):
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
+        if (arr is None):
+            log.error("UBound(None) cannotbe computed.")
+            return 0
         r = len(arr) - 1
         log.debug("UBound: return %r" % r)
         return r
@@ -416,7 +428,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int_convert(params[1])
+            conv = int_convert(eval_arg(params[1], context=context))
 
         # Do the conversion.
         r = params[0]
@@ -468,6 +480,14 @@ class StrConv(VbaLibraryFunc):
         log.debug("StrConv: return %r" % r)
         return r
 
+class Assert(VbaLibraryFunc):
+    """
+    Assert() debug function. Stubbed.
+    """
+
+    def eval(self, context, params=None):
+        pass
+    
 class Split(VbaLibraryFunc):
     """
     Split() string function.
@@ -478,8 +498,8 @@ class Split(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         string = params[0]
         sep = ","
-        if (len(params) > 1):
-            sep = params[1]        
+        if ((len(params) > 1) and (isinstance(params[1], str))):
+            sep = params[1]            
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
@@ -625,6 +645,12 @@ class InStr(VbaLibraryFunc):
             if (search_type not in (0, 1)):
                 search_type = 1
 
+        # Only works on lists or strings.
+        if ((not isinstance(s1, list)) and (not isinstance(s1, str))):
+            return None
+        if ((not isinstance(s2, list)) and (not isinstance(s2, str))):
+            return None
+                
         # TODO: Figure out how VB binary search works. For now just do text search.
         r = None
         if (len(s1) == 0):
@@ -641,6 +667,32 @@ class InStr(VbaLibraryFunc):
         log.debug("InStr: %r returns %r" % (self, r))
         return r
 
+class CVar(VbaLibraryFunc):
+    """
+    CVar() type conversion function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 1
+
+        # We are not tracking variant types, so work as a pass-through.
+        return params[0]
+
+class IsNumeric(VbaLibraryFunc):
+    """
+    IsNumeric() function.
+    """
+
+    def eval(self, context, params=None):
+        assert len(params) >= 1
+
+        arg = str(params[0])
+        try:
+            tmp = float(arg)
+            return True
+        except:
+            return False
+    
 class InStrRev(VbaLibraryFunc):
     """
     InStrRev() string function.
@@ -1081,8 +1133,12 @@ class Val(VbaLibraryFunc):
         if (hasattr(matches, "group")):
             tmp = nums.search(tmp).group(0)
 
-            # Convert this to a float.
-            r = float(tmp)
+            # Convert this to a float or int.
+            r = None
+            if ("." in tmp):
+                r = float(tmp)
+            else:
+                r = int(tmp)
             log.debug("Val: %r returns %r" % (self, r))
             return r
 
@@ -1343,7 +1399,7 @@ class Navigate(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) >= 1)
         url = str(params[0])
-        context.report_action("GET", url, 'Load in browser')
+        context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
         
 class IIf(VbaLibraryFunc):
     """
@@ -1396,10 +1452,10 @@ class CallByName(VbaLibraryFunc):
         if (len(params) >= 4):
             args = params[3]
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
-            context.report_action("Run", args, 'Interesting Function Call')
+            context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if (("Open" in cmd) and ("WinHttpRequest" in obj)):
-            context.report_action("GET", params[4], 'Interesting Function Call')
+            context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
             
 class Close(VbaLibraryFunc):
     """
@@ -1456,6 +1512,10 @@ class Put(VbaLibraryFunc):
         if (len(params) == 3):
             data = params[2]
 
+        # Has the file been opened?
+        if (file_id not in context.open_files):
+            context.open_file(file_id)
+            
         # Are we writing a string?
         if (isinstance(data, str)):
             for c in data:
@@ -1713,7 +1773,7 @@ class Run(VbaLibraryFunc):
         
         # Can we find the function to call?
         try:
-            context.report_action("Run", func_name, 'Interesting Function Call')
+            context.report_action("Run", func_name, 'Interesting Function Call', strip_null_bytes=True)
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
@@ -1734,7 +1794,7 @@ class WinExec(VbaLibraryFunc):
         assert (len(params) >= 1)
 
         cmd = params[0]
-        context.report_action("Run", cmd, 'Interesting Command Execution')
+        context.report_action("Run", cmd, 'Interesting Command Execution', strip_null_bytes=True)
         return ''
         
 class CreateObject(VbaLibraryFunc):
@@ -1804,6 +1864,54 @@ class Specialfolders(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
+
+class Cells(VbaLibraryFunc):
+    """
+    Excel Cells() function.
+    Currently only handles Cells(x, y) calls.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we have a loaded Excel file?
+        if (context.loaded_excel is None):
+            log.warning("Cannot process Cells() call. No Excel file loaded.")
+            return "NULL"
+        
+        # Currently only handles Cells(x, y) calls.
+        if (len(params) != 2):
+            log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
+            return "NULL"
+
+        # Guess that we want the 1st sheet.
+        sheet = None
+        try:
+            sheet = context.loaded_excel.sheet_by_index(0)
+        except:
+            log.warning("Cannot process Cells() call. No sheets in file.")
+            return "NULL"
+
+        # Get the indices of the cell.
+        col = None
+        row = None
+        try:
+            col = int(params[0]) - 1
+            row = int(params[1]) - 1
+        except:
+            log.warning("Cannot process Cells() call. Row or column invalid.")
+            return "NULL"
+
+        # Return the cell contents.
+        try:
+            r = sheet.cell(col, row)
+            log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
+            return r
+
+        except:
+        
+            # Failed to read cell.
+            log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ")")
+            return "NULL"
 
 class Year(VbaLibraryFunc):
     """
@@ -1876,7 +1984,7 @@ class CDbl(VbaLibraryFunc):
         assert (len(params) == 1)
         try:
             # Handle hex.
-            tmp = params[0].upper()
+            tmp = str(params[0]).upper()
             if (tmp.startswith("&H")):
                 tmp = tmp.replace("&H", "0x")
                 tmp = int(tmp, 16)
@@ -1885,7 +1993,8 @@ class CDbl(VbaLibraryFunc):
             #return round(float(params[0]), 11)
             return float(tmp)
 
-        except:
+        except Exception as e:
+            log.error("CDbl(" + str(params[0]) + ") failed. " + str(e))
             return 0
 
 class Print(VbaLibraryFunc):
@@ -1910,8 +2019,8 @@ class URLDownloadToFile(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (len(params) >= 3):
-            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile')
-            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
 
 class FollowHyperlink(VbaLibraryFunc):
     """
@@ -1920,7 +2029,7 @@ class FollowHyperlink(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (len(params) >= 1):
-            context.report_action('Download URL', str(params[0]), 'FollowHyperLink')
+            context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
             
 class CreateTextFile(VbaLibraryFunc):
     """
@@ -1945,7 +2054,7 @@ class Open(CreateTextFile):
 
         # Is this a HTTP GET?
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
-            context.report_action("GET", str(params[1]), 'Interesting Function Call')
+            context.report_action("GET", str(params[1]), 'Interesting Function Call', strip_null_bytes=True)
 
 class Timer(VbaLibraryFunc):
     """
@@ -1969,7 +2078,7 @@ class Write(VbaLibraryFunc):
         # Save writes that look like they are writing URLs.
         data_str = str(dat)
         if (("http:" in data_str) or ("https:" in data_str)):
-            context.report_action('Write URL', data_str, 'File Write')
+            context.report_action('Write URL', data_str, 'File Write', strip_null_bytes=True)
         
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
@@ -2015,7 +2124,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString):
+               KeyString, CVar, IsNumeric, Assert, Sleep, Cells):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

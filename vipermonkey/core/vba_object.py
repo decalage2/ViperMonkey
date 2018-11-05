@@ -53,6 +53,7 @@ __version__ = '0.02'
 
 import base64
 from logger import log
+import re
 
 from inspect import getouterframes, currentframe
 import sys
@@ -60,6 +61,9 @@ from datetime import datetime
 import pyparsing
 
 max_emulation_time = None
+
+def excel_col_letter_to_index(x): 
+    return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
 def limits_exceeded():
     """
@@ -151,9 +155,64 @@ class VBA_Object(object):
         # Visit all the children.
         for child in self.get_children():
             child.accept(visitor)
-            
-meta = None
+
+def _read_from_excel(arg):
+    """
+    Try to evaluate an argument by reading from the loaded Excel spreadsheet.
+    """
+
+    # Try handling reading value from an Excel spreadsheet cell.
+    arg_str = str(arg)
+    if (("thisworkbook." in arg_str.lower()) and
+        ("sheets(" in arg_str.lower()) and
+        ("range(" in arg_str.lower())):
         
+        log.debug("Try as Excel cell read...")
+        
+        # Pull out the sheet name.
+        tmp_arg_str = arg_str.lower()
+        start = tmp_arg_str.index("sheets(") + len("sheets(")
+        end = start + tmp_arg_str[start:].index(")")
+        sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        
+        # Pull out the cell index.
+        start = tmp_arg_str.index("range(") + len("range(")
+        end = start + tmp_arg_str[start:].index(")")
+        cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        log.debug("Sheet name = " + sheet_name + ", cell index = " + cell_index)
+        
+        try:
+            
+            # Load the sheet.
+            sheet = context.loaded_excel.sheet_by_name(sheet_name)
+            
+            # Pull out the cell column and row.
+            col = ""
+            row = ""
+            for c in cell_index:
+                if (c.isalpha()):
+                    col += c
+                else:
+                    row += c
+                    
+            # Convert the row and column to numeric indices for xlrd.
+            row = int(row) - 1
+            col = excel_col_letter_to_index(col)
+            
+            # Pull out the cell value.
+            val = str(sheet.cell_value(row, col))
+            
+            # Return the cell value.
+            log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
+            log.debug("Cell value = '" + val + "'")
+            return val
+        
+        except Exception as e:
+            log.error("Cannot read cell from Excel spreadsheet. " + str(e))
+
+    
+meta = None
+
 def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
@@ -165,9 +224,29 @@ def eval_arg(arg, context, treat_as_var_name=False):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
     
     log.debug("try eval arg: %s" % arg)
+
+    # Try handling reading value from an Excel spreadsheet cell.
+    excel_val = _read_from_excel(arg)
+    if (excel_val is not None):
+        return excel_val
+
+    # Short circuit the checks and see if we are accessing some object text first.
+    arg_str = str(arg)
+    if (arg_str.endswith(".TextFrame.TextRange.Text")):
+        try:
+            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+            val = context.get_doc_var(arg_str.lower())
+            return val
+        except KeyError:
+            pass
+            
+    # Not reading from an Excel cell. Try as a VBA object.
     if (isinstance(arg, VBA_Object)):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
+        #print "2:\t\t" + str(arg)
         return arg.eval(context=context)
+
+    # Not a VBA object.
     else:
         log.debug("eval_arg: not a VBA_Object: %r" % arg)
 
@@ -186,7 +265,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     pass
             else:
                 log.debug("eval_arg: Do not try as variable name: %r" % arg)
-            
+                
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
@@ -224,16 +303,22 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
 
-                # Try it as a form variable.
-                tmp = arg.lower()
-                try:
-                    log.debug("eval_arg: Try to load as variable " + tmp + "...")
-                    val = context.get(tmp)
-                    return val
+                # Peel off items seperated by a '.', trying them as functions.
+                arg_peeled = arg
+                while ("." in arg_peeled):
+                
+                    # Try it as a form variable.
+                    curr_var_attempt = arg_peeled.lower()
+                    try:
+                        log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
+                        val = context.get(curr_var_attempt)
+                        return val
 
-                except KeyError:
-                    log.debug("eval_arg: Not found as variable")
-                    pass
+                    except KeyError:
+                        log.debug("eval_arg: Not found as variable")
+                        pass
+
+                    arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
 
                 # Try it as a function
                 func_name = arg.lower()
@@ -241,7 +326,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 try:
 
                     # Lookp and execute the function.
-                    log.debug("eval_arg: Try to run as function " + func_name + "...")
+                    log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = eval_arg(func, context, treat_as_var_name=True)
 
@@ -262,6 +347,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Failed. Not a function. " + str(e))
 
                 # Are we trying to load some document meta data?
+                tmp = arg.lower().strip()
                 if (tmp.startswith("activedocument.item(")):
 
                     # Try to pull the result from the document meta data.
@@ -296,6 +382,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                     # ActiveDocument.Variables("ER0SNQAWT").Value
                     # Try to pull the result from the document variables.
+                    log.debug("eval_arg: look for '")
                     var = tmp.replace("activedocument.variables(", "").\
                           replace(")", "").\
                           replace("'","").\
@@ -303,9 +390,13 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace('.value',"").\
                           replace("(", "").\
                           strip()
+                    log.debug("eval_arg: look for '" + var + "' as document variable...")
                     val = context.get_doc_var(var)
                     if (val is not None):
+                        log.debug("eval_arg: got it as document variable.")
                         return val
+                    else:
+                        log.debug("eval_arg: did NOT get it as document variable.")
 
                 # Are we loading a custom document property?
                 if (tmp.startswith("activedocument.customdocumentproperties(")):
@@ -323,8 +414,24 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     if (val is not None):
                         return val
                     
-                # None of those worked. We can't find the data.
-                #return "??"
+                # As a last resort try reading it as a wildcarded form variable.
+                wild_name = tmp[:tmp.index(".")] + "*"
+                for i in range(0, 11):
+                    tmp_name = wild_name + str(i)
+                    try:
+                        val = context.get(tmp_name)
+                        log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
+                        return val
+                    except:
+                        pass
+
+
+        # Should this be handled as a variable? Must be a valid var name to do this.
+        if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
+
+            # We did not resolve the variable. Treat it as unitialized.
+            log.debug("eval_arg: return 'NULL'")
+            return "NULL"
                 
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))
@@ -335,6 +442,7 @@ def eval_args(args, context):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
+    #print "1:\t\t" + str(args)
     return map(lambda arg: eval_arg(arg, context=context), args)
 
 def coerce_to_str(obj):
@@ -456,7 +564,7 @@ def int_convert(arg):
     """
     if (arg == "NULL"):
         return 0
-    return int(arg)
+    return int(str(arg))
 
 def str_convert(arg):
     """
