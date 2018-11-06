@@ -128,7 +128,7 @@ from core import *
     
 # === MAIN (for tests) ===============================================================================================
 
-def _read_doc_text(fname):
+def _read_doc_text(fname, data=None):
     """
     Use a heuristic to read in the document text. The current
     heuristic (basically run strings on the document file) is not
@@ -140,14 +140,14 @@ def _read_doc_text(fname):
     """
 
     # Read in the file.
-    data = ""
-    try:
-        f = open(fname, 'r')
-        data = f.read()
-        f.close()
-    except Exception as e:
-        log.error("Cannot read document text from " + str(fname) + ". " + str(e))
-        return ""
+    if data == None:
+        try:
+            f = open(fname, 'r')
+            data = f.read()
+            f.close()
+        except Exception as e:
+            log.error("Cannot read document text from " + str(fname) + ". " + str(e))
+            return ""
 
     # Pull strings from doc.
     str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
@@ -859,7 +859,10 @@ def process_file (container,
 
             # Read in document metadata.
             try:
-                ole = olefile.OleFileIO(filename)
+                if data:
+                    ole = olefile.OleFileIO(data)
+                else:
+                    ole = olefile.OleFileIO(filename)
                 vba_library.meta = ole.get_metadata()
                 vba_object.meta = vba_library.meta
             except Exception as e:
@@ -869,7 +872,10 @@ def process_file (container,
             # If this is an Excel spreadsheet, read it in with xlrd.
             try:
                 log.debug("Trying to load " + filename + " with xlrd...")
-                vm.loaded_excel = xlrd.open_workbook(filename)
+                if data:
+                    vm.loaded_excel = xlrd.open_workbook(file_contents=data)
+                else:
+                    vm.loaded_excel = xlrd.open_workbook(filename)
             except Exception as e:
                 log.error("Reading in file as Excel failed. " + str(e))
                 
@@ -891,23 +897,27 @@ def process_file (container,
                 if (m != "empty"):
                     vm.add_compiled_module(m)
 
+            if data:
+                vbafile = data
+            else:
+                vbafile = filename
             # Pull out document variables.
-            for (var_name, var_val) in _read_doc_vars(filename):
+            for (var_name, var_val) in _read_doc_vars(vbafile):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull text associated with Shapes() objects.
-            for (var_name, var_val) in _get_shapes_text_values(filename):
+            for (var_name, var_val) in _get_shapes_text_values(vbafile):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull out custom document properties.
-            for (var_name, var_val) in _read_custom_doc_props(filename):
+            for (var_name, var_val) in _read_custom_doc_props(vbafile):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull out the document text.
-            vm.doc_text = _read_doc_text(filename)
+            vm.doc_text = _read_doc_text(filename, data=data)
                 
             try:
                 # Pull out form variables.
