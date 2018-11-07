@@ -487,6 +487,17 @@ class Assert(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         pass
+
+class Shapes(VbaLibraryFunc):
+    """
+    Shapes() object reference. Stubbed.
+    """
+
+    def eval(self, context, params=None):
+
+        # Just return the string representation of the access. This is used in
+        # vba_object._read_from_object_text()
+        return "Shapes('" + str(params[0]) + "')"
     
 class Split(VbaLibraryFunc):
     """
@@ -2124,7 +2135,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString, CVar, IsNumeric, Assert, Sleep, Cells):
+               KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

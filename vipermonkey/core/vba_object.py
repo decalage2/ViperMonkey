@@ -60,6 +60,8 @@ import sys
 from datetime import datetime
 import pyparsing
 
+import expressions
+
 max_emulation_time = None
 
 def excel_col_letter_to_index(x): 
@@ -210,7 +212,34 @@ def _read_from_excel(arg):
         except Exception as e:
             log.error("Cannot read cell from Excel spreadsheet. " + str(e))
 
-    
+def _read_from_object_text(arg, context):
+    """
+    Try to read in a value from the text associated with a object like a Shape.
+    """
+
+    # Do we have an object text access?
+    arg_str = str(arg)
+    if ((arg_str.endswith(".TextFrame.TextRange.Text")) and
+        isinstance(arg, expressions.MemberAccessExpression)):
+
+        try:
+
+            # Yes we do. 
+            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+
+            # Eval the leftmost prefix element of the member access expression first.
+            log.debug("eval_obj_text: Old member access lhs = " + str(arg.lhs))
+            lhs = arg.lhs.eval(context)
+            log.debug("eval_obj_text: Evalled member access lhs = " + str(lhs))
+
+            # Try to get this as a doc var.
+            doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
+            val = context.get_doc_var(doc_var_name.lower())
+            return val
+
+        except KeyError:
+            return None
+            
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -223,7 +252,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     if (limits_exceeded()):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
     
-    log.debug("try eval arg: %s" % arg)
+    log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
 
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg)
@@ -231,14 +260,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
         return excel_val
 
     # Short circuit the checks and see if we are accessing some object text first.
-    arg_str = str(arg)
-    if (arg_str.endswith(".TextFrame.TextRange.Text")):
-        try:
-            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
-            val = context.get_doc_var(arg_str.lower())
-            return val
-        except KeyError:
-            pass
+    obj_text_val = _read_from_object_text(arg, context)
+    if (obj_text_val is not None):
+        return obj_text_val
             
     # Not reading from an Excel cell. Try as a VBA object.
     if (isinstance(arg, VBA_Object)):
@@ -506,11 +530,13 @@ def coerce_args(orig_args):
     # Find the 1st type in the arg list.
     first_type = None
     have_other_type = False
+    all_null = True
     for arg in args:
 
         # Skip NULL values since they can be int or str based on context.
         if (arg == "NULL"):
             continue
+        all_null = False
         if (isinstance(arg, str)):
             if (first_type is None):
                 first_type = "str"
@@ -522,6 +548,10 @@ def coerce_args(orig_args):
         else:
             have_other_type = True
             break
+
+    # If everything is NULL lets treat this as an int.
+    if (all_null):
+        first_type = "int"
         
     # Leave things alone if we have any non-int or str args.
     if (have_other_type):
