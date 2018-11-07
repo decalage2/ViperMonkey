@@ -1,4 +1,5 @@
 oletools
+olefile
 prettytable
 colorlog
 colorama
