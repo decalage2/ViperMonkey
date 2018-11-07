@@ -617,6 +617,11 @@ class Let_Statement(VBA_Object):
         #print "6:\t\t" + str(self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
+
+        # Is this setting an interesting field in a COM object?
+        if ((str(self.name).endswith(".Arguments")) or
+            (str(self.name).endswith(".Path"))):
+            context.report_action(self.name, value, 'Possible Scheduled Task Setup', strip_null_bytes=True)
         
         # set variable, non-array access.
         if (self.index is None):
