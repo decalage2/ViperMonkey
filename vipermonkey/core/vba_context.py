@@ -619,7 +619,7 @@ class Context(object):
         elif name in self.globals:
             log.debug('Found %r in globals' % name)
             return self.globals[name]
-        # finally, search in the global VBA library:
+        # next, search in the global VBA library:
         elif name in VBA_LIBRARY:
             log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]

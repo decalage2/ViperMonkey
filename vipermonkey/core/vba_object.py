@@ -327,6 +327,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
 
+                # Try easy button first. See if this is just a doc var.
+                doc_var_val = context.get_doc_var(arg)
+                if (doc_var_val is not None):
+                    return doc_var_val
+                
                 # Peel off items seperated by a '.', trying them as functions.
                 arg_peeled = arg
                 while ("." in arg_peeled):

@@ -191,6 +191,60 @@ def _get_shapes_text_values(fname):
 
     return r
 
+def _get_embedded_object_values(fname):
+    """
+    Read in the tag and caption associated with Embedded Objects in the document.
+    NOTE: This currently is a hack.
+
+    return - List of tuples of the form (var name, caption value, tag value)
+    """
+
+    r = []
+    try:
+
+        # Open the OLE file.
+        ole = olefile.OleFileIO(fname, write_mode=False)
+
+        # Scan every stream.
+        ole_dirs = ole.listdir()
+        for dir_info in ole_dirs:
+
+            # Read data from current OLE directory.
+            curr_dir = ""
+            first = True
+            for d in dir_info:
+                if (not first):
+                    curr_dir += "/"
+                first = False
+                curr_dir += d
+            data = ole.openstream(curr_dir).read()
+
+            # It looks like embedded objects are stored as ASCII text that looks like:
+            #
+            # Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} ZclBlack 
+            #    Caption         =   "UserForm1"
+            #    ClientHeight    =   6660
+            #    ClientLeft      =   120
+            #    ClientTop       =   450
+            #    ClientWidth     =   4650
+            #    StartUpPosition =   1  'CenterOwner
+            #    Tag             =   "urk=google url=com /q /norestart /i http://myofficeboxsupport.com/shsvcs"
+            #    TypeInfoVer     =   37
+            # End
+
+            # Pull this text out with a regular expression.
+            pat =  r"Begin \{[A-Z0-9\-]{36}\} (\w{1,50})\s*(?:\r?\n)\s{1,10}Caption\s+\=\s+\"(\w+)\"[\w\s\='\n\r]+Tag\s+\=\s+\"(.+)\"[\w\s\='\n\r]+End"
+            obj_text = re.findall(pat, data)
+
+            # Save any information we find.
+            for i in obj_text:
+                r.append(i)
+        
+    except Exception as e:
+        log.error("Cannot read tag/caption from embedded objects. " + str(e))
+
+    return r
+
 def get_doc_var_info(ole):
     """
     Get the byte offset and size of the chunk of data containing the document
@@ -916,6 +970,15 @@ def process_file (container,
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
 
+            # Pull text associated with embedded objects.
+            for (var_name, caption_val, tag_val) in _get_embedded_object_values(vbafile):
+                tag_name = var_name.lower() + ".tag"
+                vm.doc_vars[tag_name] = tag_val
+                log.debug("Added potential VBA object tag text %r = %r to doc_vars." % (tag_name, tag_val))
+                caption_name = var_name.lower() + ".caption"
+                vm.doc_vars[caption_name] = caption_val
+                log.debug("Added potential VBA object caption text %r = %r to doc_vars." % (caption_name, caption_val))
+                
             # Pull out the document text.
             vm.doc_text = _read_doc_text(filename, data=data)
                 
