@@ -186,6 +186,20 @@ def _get_shapes_text_values(fname):
             pos += 1
             r.append((var, shape_text))
 
+        # It looks like maybe(?) the shapes text appears as wide char blocks bounded by
+        # 0x0D bytes. We will look for that.
+        pat = r"\x0d(?:\x00[\x20-\x7e]){10,}\x00?\x0d"
+        strs = re.findall(pat, data)
+        
+        # Hope that the Shape() object indexing follows the same order as the strings
+        # we found.
+        pos = 1
+        for shape_text in strs:
+            shape_text = shape_text[1:-1].replace("\x00", "")
+            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            pos += 1
+            r.append((var, shape_text))
+
     except Exception as e:
         log.error("Cannot read associated Shapes text. " + str(e))
 
