@@ -498,6 +498,7 @@ def collapse_macro_if_blocks(vba_code):
                 log.debug("Start block " + strip_line)
                 curr_blocks = []
                 curr_block = []
+                r += "' STRIPPED LINE\n"
                 continue
 
             # Not the start of an #if. Save the line.
@@ -517,6 +518,7 @@ def collapse_macro_if_blocks(vba_code):
 
             # Start a new block.
             curr_block = []
+            r += "' STRIPPED LINE\n"
             continue
 
         # Have we finished the #if?
@@ -741,17 +743,20 @@ def strip_useless_code(vba_code):
             (not line.strip().startswith("End Sub")) and
             (not line.strip().startswith("End Function"))):
             log.debug("STRIP: Stripping Line (1): " + line)
+            r += "' STRIPPED LINE\n"
             continue
 
         # Does this line get stripped based on a useless function call?
         if (is_useless_call(line)):
             log.debug("STRIP: Stripping Line (2): " + line)
+            r += "' STRIPPED LINE\n"
             continue
 
         # Does this line get stripped based on being a Dim that we will not use
         # when emulating?
         if ((in_func) and (is_useless_dim(line))):
             log.debug("STRIP: Stripping Line (3): " + line)
+            r += "' STRIPPED LINE\n"
             continue
         
         # The line is useful. Keep it.
