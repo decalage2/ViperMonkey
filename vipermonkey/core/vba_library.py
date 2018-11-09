@@ -1467,6 +1467,9 @@ class CallByName(VbaLibraryFunc):
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if (("Open" in cmd) and ("WinHttpRequest" in obj)):
             context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
+        # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
+        if ((cmd == "Arguments") or (cmd == "Path")):
+            context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
             
 class Close(VbaLibraryFunc):
     """
