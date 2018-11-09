@@ -64,6 +64,12 @@ import expressions
 
 max_emulation_time = None
 
+class VbaLibraryFunc(object):
+    """
+    Marker class to tell if a class implements a VBA function.
+    """
+    pass
+
 def excel_col_letter_to_index(x): 
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
@@ -251,7 +257,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     # avoid that. Also check to see if emulation has taken too long.
     if (limits_exceeded()):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
-    
+
     log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
 
     # Try handling reading value from an Excel spreadsheet cell.
@@ -263,11 +269,10 @@ def eval_arg(arg, context, treat_as_var_name=False):
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
         return obj_text_val
-            
+
     # Not reading from an Excel cell. Try as a VBA object.
-    if (isinstance(arg, VBA_Object)):
+    if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
-        #print "2:\t\t" + str(arg)
         return arg.eval(context=context)
 
     # Not a VBA object.
@@ -289,7 +294,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     pass
             else:
                 log.debug("eval_arg: Do not try as variable name: %r" % arg)
-                
+
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
@@ -331,7 +336,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 doc_var_val = context.get_doc_var(arg)
                 if (doc_var_val is not None):
                     return doc_var_val
-                
+
                 # Peel off items seperated by a '.', trying them as functions.
                 arg_peeled = arg
                 while ("." in arg_peeled):
@@ -471,7 +476,6 @@ def eval_args(args, context):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    #print "1:\t\t" + str(args)
     return map(lambda arg: eval_arg(arg, context=context), args)
 
 def coerce_to_str(obj):
@@ -599,7 +603,10 @@ def int_convert(arg):
     """
     if (arg == "NULL"):
         return 0
-    return int(str(arg))
+    arg_str = str(arg)
+    if ("." in arg_str):
+        arg_str = arg_str[:arg_str.index(".")]
+    return int(arg_str)
 
 def str_convert(arg):
     """

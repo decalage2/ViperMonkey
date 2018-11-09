@@ -614,7 +614,6 @@ class Let_Statement(VBA_Object):
         
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
-        #print "6:\t\t" + str(self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
 
@@ -947,7 +946,6 @@ class For_Statement(VBA_Object):
                 log.debug('FOR loop eval statement: %r' % s)
                 if (not isinstance(s, VBA_Object)):
                     continue
-                #print "5:\t\t" + str(s)
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?

@@ -50,7 +50,7 @@ from operators import *
 import procedures
 from vba_object import eval_arg
 from vba_object import int_convert
-from vba_library import VbaLibraryFunc
+from vba_object import VbaLibraryFunc
 
 from logger import log
 
@@ -84,7 +84,6 @@ class SimpleNameExpression(VBA_Object):
                 isinstance(value, procedures.Sub) or
                 isinstance(value, VbaLibraryFunc)):
                 log.debug('evaluating function %r' % value)
-                #print "3:\t\t" + str(value)
                 value = value.eval(context)
                 log.debug('evaluated function %r = %r' % (self.name, value))
             return value

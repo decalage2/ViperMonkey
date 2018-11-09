@@ -58,6 +58,7 @@ import decimal
 
 from vba_context import VBA_LIBRARY
 from vba_object import eval_arg
+from vba_object import VbaLibraryFunc
 import expressions
 
 from logger import log
@@ -67,12 +68,6 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 # TODO: Excel
 # TODO: other MS Office apps?
-
-class VbaLibraryFunc(object):
-    """
-    Marker class to tell if a class implements a VBA function.
-    """
-    pass
     
 class MsgBox(VbaLibraryFunc):
     """
@@ -89,8 +84,9 @@ class Len(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        val = str_convert(params[0])
         if (hasattr(params[0], '__len__')):
-            return len(params[0])
+            return len(val)
         else:
             log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
             return 0
@@ -1507,7 +1503,7 @@ class Close(VbaLibraryFunc):
 
         # We are actually closing a file.
         context.dump_file(file_id)
-                
+        
 class Put(VbaLibraryFunc):
     """
     File Put statement.

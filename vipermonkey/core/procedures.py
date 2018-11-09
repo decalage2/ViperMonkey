@@ -255,8 +255,11 @@ class Function(VBA_Object):
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
         
-        # add function name in locals:
-        #context.set(self.name, None)
+        # add function name in locals if the function takes 0 arguments. This is
+        # needed since otherwise it is not possible to differentiate a function call
+        # from a reference to the function return value in the function body.
+        if (len(self.params) == 0):
+            context.set(self.name, 'NULL')
 
         # Set the default parameter values.
         for param in self.params:
@@ -289,7 +292,6 @@ class Function(VBA_Object):
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
-                #print "4:\t\t" + str(s)
                 s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?
