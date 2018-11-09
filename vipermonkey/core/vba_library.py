@@ -68,7 +68,17 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 # TODO: Excel
 # TODO: other MS Office apps?
-    
+
+class Format(VbaLibraryFunc):
+    """
+    VBA Format function
+    """
+
+    def eval(self, context, params=None):
+        r = params[0]
+        log.debug("Format(%r): return %r" % (self.arg, r))
+        return r
+
 class MsgBox(VbaLibraryFunc):
     """
     6.1.2.8.1.13 MsgBox
@@ -594,7 +604,7 @@ class Replace(VbaLibraryFunc):
         if (pat is None):
             pat = ''
         rep = params[2]
-        if (rep is None):
+        if ((rep is None) or (rep == 0)):
             rep = ''
         r = string.replace(pat, rep)
         log.debug("Replace: return %r" % r)
@@ -2134,7 +2144,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
-               KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes):
+               KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
+               Format):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

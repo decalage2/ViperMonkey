@@ -123,7 +123,7 @@ reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | Caseless
                      | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
                      | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
                      | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
-                     | CaselessKeyword('Function')) | CaselessKeyword('Format')
+                     | CaselessKeyword('Function'))
 
 TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
                                            Combine(Literal('.') + lex_identifier) | \

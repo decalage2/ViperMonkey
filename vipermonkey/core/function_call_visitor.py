@@ -58,8 +58,6 @@ class function_call_visitor(visitor):
             self.called_funcs.add("Chr")
         if (isinstance(item, Asc)):
             self.called_funcs.add("Asc")
-        if (isinstance(item, Format)):
-            self.called_funcs.add("Format")
         if (isinstance(item, StrReverse)):
             self.called_funcs.add("StrReverse")
         if (isinstance(item, Environ)):

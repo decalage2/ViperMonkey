@@ -175,9 +175,12 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
                              OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
-                             CaselessKeyword('End') + CaselessKeyword('Type')
+                             CaselessKeyword('End') + CaselessKeyword('Type') + \
+                             ZeroOrMore( Literal(':') + (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
+                             lex_identifier + Suppress(EOS) + \
+                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
+                             CaselessKeyword('End') + CaselessKeyword('Type') )
 
-# TODO: Add in simple type declarations.
 type_declaration = type_declaration_composite
 
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
