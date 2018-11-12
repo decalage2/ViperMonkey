@@ -59,6 +59,7 @@ import decimal
 from vba_context import VBA_LIBRARY
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
+from vba_object import excel_col_letter_to_index
 import expressions
 
 from logger import log
@@ -1933,6 +1934,64 @@ class Cells(VbaLibraryFunc):
             log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ")")
             return "NULL"
 
+class Range(VbaLibraryFunc):
+    """
+    Excel Range() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we have a loaded Excel file?
+        if (context.loaded_excel is None):
+            log.warning("Cannot process Range() call. No Excel file loaded.")
+            return "NULL"
+        
+        # Currently only handles Range(x) calls.
+        if (len(params) != 1):
+            log.warning("Only 1 argument Range() calls supported. Returning NULL.")
+            return "NULL"
+
+        # Guess that we want the 1st sheet.
+        sheet = None
+        try:
+            sheet = context.loaded_excel.sheet_by_index(0)
+        except:
+            log.warning("Cannot process Cells() call. No sheets in file.")
+            return "NULL"
+
+        # Get the cell contents.
+        try:
+
+            # Pull out the cell index.
+            cell_index = str(params[0]).replace('"', "").replace("'", "")
+
+            # Pull out the cell column and row.
+            col = ""
+            row = ""
+            for c in cell_index:
+                if (c.isalpha()):
+                    col += c
+                else:
+                    row += c
+                    
+            # Convert the row and column to numeric indices for xlrd.
+            row = int(row) - 1
+            col = excel_col_letter_to_index(col)
+            
+            # Pull out the cell value.
+            val = str(sheet.cell_value(row, col))
+            
+            # Return the cell value.
+            log.info("Read cell (" + str(cell_index) + ") from sheet 1")
+            log.debug("Cell value = '" + val + "'")
+            return val            
+
+        except Exception as e:
+        
+            # Failed to read cell.
+            log.warning("Failed to read Range(" + str(params[0]) + "). " + str(e))
+            return "NULL"
+        
 class Year(VbaLibraryFunc):
     """
     Year() function. Currently stubbed.
@@ -2145,7 +2204,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format):
+               Format, Range):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
