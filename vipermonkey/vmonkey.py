@@ -181,10 +181,18 @@ def _get_shapes_text_values(fname):
         # we found.
         pos = 1
         for shape_text in strs:
+
+            # Access value with .TextFrame.TextRange.Text accessor.
             shape_text = shape_text[1:-1]
             var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
-            pos += 1
             r.append((var, shape_text))
+
+            # Access value with .TextFrame.ContainingRange accessor.
+            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+            r.append((var, shape_text))
+            
+            # Move to next shape.
+            pos += 1
 
         # It looks like maybe(?) the shapes text appears as wide char blocks bounded by
         # 0x0D bytes. We will look for that.
@@ -195,14 +203,23 @@ def _get_shapes_text_values(fname):
         # we found.
         pos = 1
         for shape_text in strs:
+
+            # Access value with .TextFrame.TextRange.Text accessor.
             shape_text = shape_text[1:-1].replace("\x00", "")
             var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
-            pos += 1
             r.append((var, shape_text))
-
+            
+            # Access value with .TextFrame.ContainingRange accessor.
+            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+            r.append((var, shape_text))
+            
+            # Move to next shape.
+            pos += 1
+            
     except Exception as e:
         log.error("Cannot read associated Shapes text. " + str(e))
 
+    print r
     return r
 
 def _get_embedded_object_values(fname):
