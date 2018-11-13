@@ -219,7 +219,6 @@ def _get_shapes_text_values(fname):
     except Exception as e:
         log.error("Cannot read associated Shapes text. " + str(e))
 
-    print r
     return r
 
 def _get_embedded_object_values(fname):
