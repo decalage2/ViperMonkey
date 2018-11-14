@@ -229,23 +229,28 @@ def _read_from_object_text(arg, context):
          (arg_str.endswith(".TextFrame.ContainingRange"))) and
         isinstance(arg, expressions.MemberAccessExpression)):
 
-        try:
-
-            # Yes we do. 
-            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
-
-            # Eval the leftmost prefix element of the member access expression first.
-            log.debug("eval_obj_text: Old member access lhs = " + str(arg.lhs))
-            lhs = arg.lhs.eval(context)
-            log.debug("eval_obj_text: Evalled member access lhs = " + str(lhs))
-
-            # Try to get this as a doc var.
-            doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
-            val = context.get_doc_var(doc_var_name.lower())
+        # Yes we do. 
+        log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+        
+        # Eval the leftmost prefix element of the member access expression first.
+        log.debug("eval_obj_text: Old member access lhs = " + str(arg.lhs))
+        lhs = arg.lhs.eval(context)
+        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))            
+        
+        # Try to get this as a doc var.
+        doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
+        log.debug("eval_arg: Looking for object text " + str(doc_var_name))
+        val = context.get_doc_var(doc_var_name.lower())
+        if (val is not None):
             return val
 
-        except KeyError:
-            return None
+        # Not found. Try looking for the object with index 1.
+        lhs_str = str(lhs)
+        new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
+        doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
+        log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
+        val = context.get_doc_var(doc_var_name.lower())
+        return val
             
 meta = None
 
