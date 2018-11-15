@@ -406,7 +406,7 @@ class Function_Call(VBA_Object):
 
                         # Call function.
                         r = f.eval(context=context, params=params)
-
+                        
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
                             for byref_param_info in f.byref_params.keys():

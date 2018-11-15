@@ -77,7 +77,7 @@ class Format(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         r = params[0]
-        log.debug("Format(%r): return %r" % (self.arg, r))
+        log.debug("Format(%r): return %r" % (self, r))
         return r
 
 class MsgBox(VbaLibraryFunc):
