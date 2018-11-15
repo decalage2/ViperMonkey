@@ -164,7 +164,7 @@ class VBA_Object(object):
         for child in self.get_children():
             child.accept(visitor)
 
-def _read_from_excel(arg):
+def _read_from_excel(arg, context):
     """
     Try to evaluate an argument by reading from the loaded Excel spreadsheet.
     """
@@ -187,7 +187,7 @@ def _read_from_excel(arg):
         start = tmp_arg_str.index("range(") + len("range(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
-        log.debug("Sheet name = " + sheet_name + ", cell index = " + cell_index)
+        log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
         
         try:
             
@@ -267,7 +267,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
 
     # Try handling reading value from an Excel spreadsheet cell.
-    excel_val = _read_from_excel(arg)
+    excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
         return excel_val
 

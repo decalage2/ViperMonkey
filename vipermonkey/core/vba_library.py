@@ -89,6 +89,29 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class Switch(VbaLibraryFunc):
+    """
+    Switch() logic flow function.
+    """
+
+    def eval(self, context, params=None):
+
+        # We need an even number of parameters.
+        if ((len(params) == 0) or
+            (len(params) % 2 != 0)):
+            return 'NULL'
+
+        # Return the 1st true case.
+        pos = 0
+        while (pos < (len(params) - 1)):
+            if (params[pos] == True):
+                log.debug("Switch(%r): return %r" % (self, params[pos + 1]))
+                return params[pos + 1]
+            pos += 2
+
+        # If we get here nothing is true.
+        return 'NULL'
+            
 class Len(VbaLibraryFunc):
     """
     Len() function.
@@ -2204,7 +2227,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range):
+               Format, Range, Switch):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
