@@ -177,9 +177,38 @@ def _get_shapes_text_values_xml(fname):
 
     # It is an XML file. Get all strings surrounded by <w:t> ... </w:t> tags.
     log.warning("Looking for Shapes() strings in Flat OPC XML file...")
-    pat = r"\<w\:t\>([^\<]+)\</w\:t\>"
+    pat = r"\<w\:t[^\>]*\>([^\<]+)\</w\:t\>"
     strs = re.findall(pat, contents)
 
+    # These could be broken up with many <w:t> ... </w:t> tags. See if we need to
+    # reassemble strings.
+    if (len(strs) > 5):
+
+        # Reassemble command strings broken up by 'cmd'.
+        curr_str = None
+        new_strs = []
+        for s in strs:
+
+            # Start of new command string?
+            if (s.lower().startswith("cmd")):
+
+                # Save the previous command string?
+                if (curr_str is not None):
+                    new_strs.append(curr_str)
+
+                # Start new string.
+                curr_str = ""
+
+            # Save current part of command string.
+            curr_str += s
+
+        # Save the last command string.
+        if (curr_str is not None):
+            new_strs.append(curr_str)
+
+        # Use these as the Shape() strings.
+        strs = new_strs
+    
     # Hope that the Shape() object indexing follows the same order as the strings
     # we found.
     r = []
@@ -187,7 +216,7 @@ def _get_shapes_text_values_xml(fname):
     for shape_text in strs:
         
         # Access value with .TextFrame.TextRange.Text accessor.
-        shape_text = shape_text[1:-1]
+        shape_text = shape_text.replace("&amp;", "&")
         var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
         r.append((var, shape_text))
         
@@ -197,7 +226,7 @@ def _get_shapes_text_values_xml(fname):
         
         # Move to next shape.
         pos += 1
-            
+
     return r
     
 def _get_shapes_text_values(fname):
