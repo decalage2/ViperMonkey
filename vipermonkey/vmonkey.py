@@ -158,6 +158,48 @@ def _read_doc_text(fname, data=None):
     # Return all the strings.
     return r
 
+def _get_shapes_text_values_xml(fname):
+    """
+    Read in the text associated with Shape objects in a document saved
+    as Flat OPC XML files.
+
+    NOTE: This currently is a hack.
+    """
+
+    # Read in the file contents.
+    f = open(fname, "r")
+    contents = f.read().strip()
+    f.close()
+
+    # Is this an XML file?
+    if (not contents.startswith("<?xml")):
+        return []
+
+    # It is an XML file. Get all strings surrounded by <w:t> ... </w:t> tags.
+    log.warning("Looking for Shapes() strings in Flat OPC XML file...")
+    pat = r"\<w\:t\>([^\<]+)\</w\:t\>"
+    strs = re.findall(pat, contents)
+
+    # Hope that the Shape() object indexing follows the same order as the strings
+    # we found.
+    r = []
+    pos = 1
+    for shape_text in strs:
+        
+        # Access value with .TextFrame.TextRange.Text accessor.
+        shape_text = shape_text[1:-1]
+        var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+        r.append((var, shape_text))
+        
+        # Access value with .TextFrame.ContainingRange accessor.
+        var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+        r.append((var, shape_text))
+        
+        # Move to next shape.
+        pos += 1
+            
+    return r
+    
 def _get_shapes_text_values(fname):
     """
     Read in the text associated with Shape objects in the document.
@@ -217,7 +259,13 @@ def _get_shapes_text_values(fname):
             pos += 1
             
     except Exception as e:
+
+        # Report the error.
         log.error("Cannot read associated Shapes text. " + str(e))
+
+        # See if we can read Shapes() info from an XML file.
+        if ("not an OLE2 structured storage file" in str(e)):
+            r = _get_shapes_text_values_xml(fname)
 
     return r
 
