@@ -175,46 +175,53 @@ def _get_shapes_text_values_xml(fname):
     if (not contents.startswith("<?xml")):
         return []
 
-    # It is an XML file. Get all strings surrounded by <w:t> ... </w:t> tags.
+    # It is an XML file.
     log.warning("Looking for Shapes() strings in Flat OPC XML file...")
-    pat = r"\<w\:t[^\>]*\>([^\<]+)\</w\:t\>"
-    strs = re.findall(pat, contents)
 
-    # These could be broken up with many <w:t> ... </w:t> tags. See if we need to
-    # reassemble strings.
-    if (len(strs) > 5):
+    # Pull out the text surrounded by <w:txbxContent> ... </w:txbxContent>.
+    # These big blocks hold the XML for each piece of Shapes() text.
+    blocks = []
+    start = contents.index("<w:txbxContent>") + len("<w:txbxContent>")
+    end = contents.index("</w:txbxContent>")
+    while (start is not None):
+        blocks.append(contents[start:end])
+        if ("<w:txbxContent>" in contents[end:]):
+            start = end + contents[end:].index("<w:txbxContent>") + len("<w:txbxContent>")
+            end = end + len("</w:txbxContent>") + contents[end + len("</w:txbxContent>"):].index("</w:txbxContent>")
+        else:
+            start = None
+            end = None
+            break
+    cmd_strs = []
+    for block in blocks:
 
-        # Reassemble command strings broken up by 'cmd'.
-        curr_str = None
-        new_strs = []
-        for s in strs:
+        # Get all strings surrounded by <w:t> ... </w:t> tags in the block.
+        pat = r"\<w\:t[^\>]*\>([^\<]+)\</w\:t\>"
+        strs = re.findall(pat, block)
 
-            # Start of new command string?
-            if (s.lower().startswith("cmd")):
+        # These could be broken up with many <w:t> ... </w:t> tags. See if we need to
+        # reassemble strings.
+        if (len(strs) > 1):
 
-                # Save the previous command string?
-                if (curr_str is not None):
-                    new_strs.append(curr_str)
+            # Reassemble command string.
+            curr_str = ""
+            for s in strs:
 
-                # Start new string.
-                curr_str = ""
+                # Save current part of command string.
+                curr_str += s
 
-            # Save current part of command string.
-            curr_str += s
+            # Use this as the Shape() strings.
+            strs = [curr_str]
 
-        # Save the last command string.
-        if (curr_str is not None):
-            new_strs.append(curr_str)
-
-        # Use these as the Shape() strings.
-        strs = new_strs
-    
+        # Save the string from this block.
+        cmd_strs.append(strs[0])
+            
     # Hope that the Shape() object indexing follows the same order as the strings
     # we found.
     r = []
     pos = 1
-    for shape_text in strs:
-        
+    for shape_text in cmd_strs:
+
         # Access value with .TextFrame.TextRange.Text accessor.
         shape_text = shape_text.replace("&amp;", "&")
         var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
