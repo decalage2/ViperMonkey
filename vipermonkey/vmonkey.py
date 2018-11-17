@@ -165,7 +165,6 @@ def _get_shapes_text_values_xml(fname):
 
     NOTE: This currently is a hack.
     """
-    import re
 
     if len(re.findall('mso-application progid="Word.Document"',fname)) == 0:
         # it's probably a filename, not a blob of data..
