@@ -166,14 +166,14 @@ def _get_shapes_text_values_xml(fname):
     NOTE: This currently is a hack.
     """
 
-    if len(re.findall('mso-application progid="Word.Document"',fname)) == 0:
+    if fname.startswith("<?xml"):
+        contents=fname
+    else:
         # it's probably a filename, not a blob of data..
         # Read in the file contents.
         f = open(fname, "r")
         contents = f.read().strip()
         f.close()
-    else:
-        contents=fname
 
     # Is this an XML file?
     if (not contents.startswith("<?xml")):
