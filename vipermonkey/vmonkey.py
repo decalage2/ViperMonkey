@@ -528,13 +528,14 @@ def is_useless_dim(line):
             ("=" not in line) and
             (not line.strip().endswith("_")))
 
-def is_interesting_call(line, external_funcs):
+def is_interesting_call(line, external_funcs, local_funcs):
 
     # Is this an interesting function call?
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print"]
+    log_funcs.extend(local_funcs)
     for func in log_funcs:
         if (func in line):
             return True
@@ -649,14 +650,14 @@ def collapse_macro_if_blocks(vba_code):
     # Return the stripped VBA.
     return r
     
-def strip_useless_code(vba_code):
+def strip_useless_code(vba_code, local_funcs):
     """
     Strip statements that have no usefull effect from the given VB. The
     stripped statements are commented out.
     """
 
     # Track data change callback function names.
-    change_callbacks = set()
+    change_callbacks = set()    
     
     # Find all assigned variables and track what line the variable was assigned on.
     assign_re = re.compile("\s*(\w+(\.\w+)*)\s*=\s*")
@@ -695,7 +696,7 @@ def strip_useless_code(vba_code):
                 log.debug("SKIP: Function decl. Keep it.")
                 continue
 
-            # Skip constdefinitions.
+            # Skip const definitions.
             if (line.strip().startswith("Const ")):
                 log.debug("SKIP: Const decl. Keep it.")
                 continue
@@ -716,7 +717,7 @@ def strip_useless_code(vba_code):
                 continue
 
             # Skip calls to various interesting calls.
-            if (is_interesting_call(line, external_funcs)):
+            if (is_interesting_call(line, external_funcs, local_funcs)):
                 continue
             
             # Skip lines where the '=' is part of a boolean expression.
@@ -816,7 +817,6 @@ def strip_useless_code(vba_code):
     for line in vba_code.split("\n"):
 
         # Are we in a function?
-        print line
         if (("End Sub" in line) or ("End Function" in line)):
             in_func = False
         elif (("Sub " in line) or ("Function " in line)):
@@ -892,8 +892,12 @@ def strip_useless_code(vba_code):
         
     return r
     
-def parse_stream(subfilename, stream_path=None,
-                 vba_filename=None, vba_code=None, strip_useless=False):
+def parse_stream(subfilename,
+                 stream_path=None,
+                 vba_filename=None,
+                 vba_code=None,
+                 strip_useless=False,
+                 local_funcs=[]):
 
     # Are the arguments all in a single tuple?
     if (stream_path is None):
@@ -905,7 +909,7 @@ def parse_stream(subfilename, stream_path=None,
     # Filter cruft from the VBA.
     vba_code = filter_vba(vba_code)
     if (strip_useless):
-        vba_code = strip_useless_code(vba_code)
+        vba_code = strip_useless_code(vba_code, local_funcs)
     print '-'*79
     print 'VBA MACRO %s ' % vba_filename
     print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
@@ -936,13 +940,30 @@ def parse_stream(subfilename, stream_path=None,
     # Return the parsed macro.
     return m
 
+def get_all_local_funcs(vba):
+    """
+    Get the names of all locally defined functions.
+    """
+    pat = r"(?:Sub |Function )([^\(]+)"
+    r = []
+    for (_, _, _, vba_code) in vba.extract_macros():
+        for line in vba_code.split("\n"):
+            names = re.findall(pat, line)
+            r.extend(names)
+    return r
+            
 def parse_streams_serial(vba, strip_useless=False):
     """
     Parse all the VBA streams and return list of parsed module objects (serial version).
     """
+
+    # Get the names of all the locally defined functions.
+    local_funcs = get_all_local_funcs(vba)
+    
+    # Parse the VBA streams.
     r = []
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
-        m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless)
+        m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
         if (m is None):
             return None
         r.append(m)
