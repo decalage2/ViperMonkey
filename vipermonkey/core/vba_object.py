@@ -73,7 +73,7 @@ class VbaLibraryFunc(object):
 def excel_col_letter_to_index(x): 
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
-def limits_exceeded():
+def limits_exceeded(throw_error=False):
     """
     Check to see if we are about to exceed the maximum recursion depth. Also check to 
     see if emulation is taking too long (if needed).
@@ -90,8 +90,12 @@ def limits_exceeded():
 
     if (recursion_exceeded):
         log.error("Call recursion depth approaching limit.")
+        if (throw_error):
+            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting.")
     if (time_exceeded):
         log.error("Emulation time exceeded.")
+        if (throw_error):
+            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting.")
         
     return (recursion_exceeded or time_exceeded)
 
@@ -132,6 +136,9 @@ class VBA_Object(object):
         Return the child VBA objects of the current object.
         """
 
+        # Check for timeouts.
+        limits_exceeded(throw_error=True)
+        
         # The default behavior is to count any VBA_Object attribute as
         # a child.
         if (self._children is not None):
@@ -157,6 +164,9 @@ class VBA_Object(object):
         Visitor design pattern support. Accept a visitor.
         """
 
+        # Check for timeouts.
+        limits_exceeded(throw_error=True)
+        
         # Visit the current item.
         visitor.visit(self)
 

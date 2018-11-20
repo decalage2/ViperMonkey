@@ -899,6 +899,9 @@ def parse_stream(subfilename,
                  strip_useless=False,
                  local_funcs=[]):
 
+    # Check for timeouts.
+    vba_object.limits_exceeded(throw_error=True)
+    
     # Are the arguments all in a single tuple?
     if (stream_path is None):
         subfilename, stream_path, vba_filename, vba_code = subfilename
@@ -937,6 +940,9 @@ def parse_stream(subfilename,
             print "Parse Error. Processing Aborted."
             return None
 
+    # Check for timeouts.
+    vba_object.limits_exceeded(throw_error=True)
+        
     # Return the parsed macro.
     return m
 
