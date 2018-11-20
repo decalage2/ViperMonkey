@@ -244,7 +244,17 @@ def _read_from_object_text(arg, context):
         
         # Eval the leftmost prefix element of the member access expression first.
         log.debug("eval_obj_text: Old member access lhs = " + str(arg.lhs))
-        lhs = arg.lhs.eval(context)
+        if (hasattr(arg.lhs, "eval")):
+            lhs = arg.lhs.eval(context)
+        else:
+
+            # Look this up as a variable name.
+            var_name = str(arg.lhs)
+            try:
+                lhs = context.get(var_name)
+            except KeyError:
+                lhs = var_name
+                
         log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))            
         
         # Try to get this as a doc var.
@@ -256,6 +266,7 @@ def _read_from_object_text(arg, context):
 
         # Not found. Try looking for the object with index 1.
         lhs_str = str(lhs)
+        print lhs_str
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
