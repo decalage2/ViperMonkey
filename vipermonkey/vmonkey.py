@@ -227,6 +227,10 @@ def _get_shapes_text_values_xml(fname):
     pos = 1
     for shape_text in cmd_strs:
 
+        # Skip strings that are too short.
+        if (len(shape_text) < 100):
+            continue
+        
         # Access value with .TextFrame.TextRange.Text accessor.
         shape_text = shape_text.replace("&amp;", "&")
         var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
@@ -257,7 +261,7 @@ def _get_shapes_text_values(fname):
 
         # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
         # 0x0D bytes. We will look for that.
-        pat = r"\x0d[\x20-\x7e]{10,}\x0d"
+        pat = r"\x0d[\x20-\x7e]{100,}\x0d"
         strs = re.findall(pat, data)
 
         # Hope that the Shape() object indexing follows the same order as the strings
