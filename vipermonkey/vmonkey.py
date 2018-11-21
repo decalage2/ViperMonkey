@@ -172,7 +172,8 @@ def _get_shapes_text_values_xml(fname):
     f.close()
 
     # Is this an XML file?
-    if (not contents.startswith("<?xml")):
+    if ((not contents.startswith("<?xml")) or
+        ("<w:txbxContent>" not in contents)):
         return []
 
     # It is an XML file.
