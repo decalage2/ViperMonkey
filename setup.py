@@ -48,7 +48,7 @@ setup(
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
     install_requires=["oletools", "prettytable", "colorlog", "colorama",
-                      "pyparsing", 'unidecode'],
+                      "pyparsing", "unidecode", "xlrd"],
     packages=["vipermonkey", "vipermonkey.core"],
     #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
     entry_points=entry_points,
