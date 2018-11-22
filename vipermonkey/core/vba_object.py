@@ -266,7 +266,6 @@ def _read_from_object_text(arg, context):
 
         # Not found. Try looking for the object with index 1.
         lhs_str = str(lhs)
-        print lhs_str
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
@@ -498,12 +497,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
         log.debug("eval_arg: return " + str(arg))
         return arg
 
-def eval_args(args, context):
+def eval_args(args, context, treat_as_var_name=False):
     """
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    return map(lambda arg: eval_arg(arg, context=context), args)
+    return map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
 
 def coerce_to_str(obj):
     """

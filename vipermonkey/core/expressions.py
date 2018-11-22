@@ -359,7 +359,8 @@ class Function_Call(VBA_Object):
         return '%s(%r)' % (self.name, parms)
 
     def eval(self, context, params=None):
-        params = eval_args(self.params, context=context)
+        log.debug("Function_Call: eval params: " + str(self.params))
+        params = eval_args(self.params, context=context, treat_as_var_name=True)
         str_params = repr(params)[1:-1]
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."

@@ -258,7 +258,7 @@ def _get_shapes_text_values(fname):
         if (not ole.exists('worddocument')):
             return []
         data = ole.openstream("worddocument").read()
-
+        
         # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
         # 0x0D bytes. We will look for that.
         pat = r"\x0d[\x20-\x7e]{100,}\x0d"
@@ -273,7 +273,7 @@ def _get_shapes_text_values(fname):
             shape_text = shape_text[1:-1]
             var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
-
+            
             # Access value with .TextFrame.ContainingRange accessor.
             var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
             r.append((var, shape_text))
