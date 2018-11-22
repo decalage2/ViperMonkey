@@ -1835,7 +1835,7 @@ class Call_Statement(VBA_Object):
         
         # Get argument values.
         log.debug("Call: eval params: " + str(self.params))
-        call_params = eval_args(self.params, context=context, treat_as_var_name=True)
+        call_params = eval_args(self.params, context=context)
         str_params = repr(call_params)
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."

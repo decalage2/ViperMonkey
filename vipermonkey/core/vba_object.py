@@ -309,15 +309,15 @@ def eval_arg(arg, context, treat_as_var_name=False):
         if (isinstance(arg, str)):
 
             # Simple case first. Is this a variable?
-            if (treat_as_var_name):
-                try:
-                    log.debug("eval_arg: Try as variable name: %r" % arg)
-                    return context.get(arg)
-                except:
+            try:
+                log.debug("eval_arg: Try as variable name: %r" % arg)
+                r = context.get(arg)
+                return r
+            except:
                     
-                    # No it is not. Try more complicated cases.
-                    log.debug("eval_arg: Not found as variable name: %r" % arg)
-                    pass
+                # No it is not. Try more complicated cases.
+                log.debug("eval_arg: Not found as variable name: %r" % arg)
+                pass
             else:
                 log.debug("eval_arg: Do not try as variable name: %r" % arg)
 
