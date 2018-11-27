@@ -477,8 +477,8 @@ function_call <<= CaselessKeyword("nothing") | \
 function_call.setParseAction(Function_Call)
 
 function_call_limited <<= CaselessKeyword("nothing") | \
-                          (NotAny(reserved_keywords) + lex_identifier('name') + \
-                           ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
+                          (NotAny(reserved_keywords) + lex_identifier('name') + Suppress(Optional('$')) + Suppress(Optional('#')) + \
+                           ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
                             # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
                             # parsed as function_call_limited "foo .bar". The real way this should be
                             # parsed is to require at least 1 space between the function name and the
@@ -766,6 +766,7 @@ class BoolExpr(VBA_Object):
 
     def eval(self, context, params=None):
 
+        #print "EVAL: " + str(self)                
         # Unary operator?
         if (self.lhs is None):
 
@@ -778,6 +779,8 @@ class BoolExpr(VBA_Object):
                 return ''
 
             # Evalue the unary expression.
+            #print "RHS (1): " + str(rhs)
+            #print self.op.lower()
             if (self.op.lower() == "not"):
                 return (not rhs)
             else:
@@ -785,13 +788,17 @@ class BoolExpr(VBA_Object):
                 return ''
                 
         # If we get here we always have a LHS. Evaluate that in the current context.
+        #print "HERE: 1"
         lhs = self.lhs
         try:
             lhs = eval_arg(self.lhs, context)
+            #print "HERE: 2"
         except AttributeError:
             pass
 
         # Do we have an operator or just a variable reference?
+        #print "LHS: " + str(lhs)
+        #print self.op
         if (self.op is None):
 
             # Variable reference. Return its value.
@@ -801,9 +808,12 @@ class BoolExpr(VBA_Object):
         rhs = self.rhs
         try:
             rhs = eval_arg(self.rhs, context)
-        except AttributeError:
+            #print "HERE: 3"
+        except AttributeError as e:
+            #print e
             pass
 
+        #print "RHS (2): " + str(rhs)
         # Evaluate the expression.
         if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
             return lhs and rhs
