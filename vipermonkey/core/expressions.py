@@ -703,8 +703,14 @@ class BoolExprItem(VBA_Object):
         elif (self.op == "<>"):
             return lhs != rhs
         elif (self.op.lower() == "like"):
-            # TODO: Actually convert VBA regexes to Python regexes.
+            # TODO: Actually convert VBA regexes fully to Python regexes.
             try:
+                rhs = rhs.replace(".", "\\.")
+                rhs = rhs.replace("*", ".*")
+                rhs = rhs.replace("(", "\\(").replace(")", "\\)")
+                rhs = rhs.replace("[", "\\[").replace("]", "\\]")
+                rhs = rhs.replace("{", "\\{").replace("}", "\\}")
+                rhs = rhs.replace("|", "\\|")
                 return (re.match(rhs, lhs) is not None)
             except Exception as e:
                 log.error("BoolExprItem: 'Like' re match failed. " + str(e))
