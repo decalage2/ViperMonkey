@@ -1832,6 +1832,12 @@ class Call_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+
+        # Reset the called function name if this is an alias for an imported external
+        # DLL function.
+        dll_func_name = context.get_true_name(self.name)
+        if (dll_func_name is not None):
+            self.name = dll_func_name
         
         # Get argument values.
         log.debug("Call: eval params: " + str(self.params))

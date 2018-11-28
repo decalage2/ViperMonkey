@@ -239,13 +239,17 @@ def _get_shapes_text_values_xml(fname):
         # Access value with .TextFrame.ContainingRange accessor.
         var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
         r.append((var, shape_text))
+
+        # Access value with .AlternativeText accessor.
+        var = "Shapes('" + str(pos) + "').AlternativeText"
+        r.append((var, shape_text))
         
         # Move to next shape.
         pos += 1
 
     return r
     
-def _get_shapes_text_values(fname):
+def _get_shapes_text_values(fname, stream):
     """
     Read in the text associated with Shape objects in the document.
     NOTE: This currently is a hack.
@@ -255,9 +259,9 @@ def _get_shapes_text_values(fname):
     try:
         # Read the WordDocument stream.
         ole = olefile.OleFileIO(fname, write_mode=False)
-        if (not ole.exists('worddocument')):
+        if (not ole.exists(stream)):
             return []
-        data = ole.openstream("worddocument").read()
+        data = ole.openstream(stream).read()
         
         # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
         # 0x0D bytes. We will look for that.
@@ -277,13 +281,18 @@ def _get_shapes_text_values(fname):
             # Access value with .TextFrame.ContainingRange accessor.
             var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
             r.append((var, shape_text))
+
+            # Access value with .AlternativeText accessor.
+            var = "Shapes('" + str(pos) + "').AlternativeText"
+            r.append((var, shape_text))
             
             # Move to next shape.
             pos += 1
 
         # It looks like maybe(?) the shapes text appears as wide char blocks bounded by
         # 0x0D bytes. We will look for that.
-        pat = r"\x0d(?:\x00[\x20-\x7e]){10,}\x00?\x0d"
+        #pat = r"\x0d(?:\x00[\x20-\x7e]){10,}\x00?\x0d"
+        pat = r"(?:\x00[\x20-\x7e]){100,}"
         strs = re.findall(pat, data)
         
         # Hope that the Shape() object indexing follows the same order as the strings
@@ -298,6 +307,10 @@ def _get_shapes_text_values(fname):
             
             # Access value with .TextFrame.ContainingRange accessor.
             var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+            r.append((var, shape_text))
+
+            # Access value with .AlternativeText accessor.
+            var = "Shapes('" + str(pos) + "').AlternativeText"
             r.append((var, shape_text))
             
             # Move to next shape.
@@ -1116,10 +1129,16 @@ def process_file (container,
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull text associated with Shapes() objects.
-            for (var_name, var_val) in _get_shapes_text_values(vbafile):
+            got_it = False
+            for (var_name, var_val) in _get_shapes_text_values(vbafile, 'worddocument'):
+                got_it = True
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
-
+            if (not got_it):
+                for (var_name, var_val) in _get_shapes_text_values(vbafile, '1table'):
+                    vm.doc_vars[var_name.lower()] = var_val
+                    log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+                    
             # Pull out custom document properties.
             for (var_name, var_val) in _read_custom_doc_props(vbafile):
                 vm.doc_vars[var_name.lower()] = var_val

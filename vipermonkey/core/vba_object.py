@@ -236,26 +236,33 @@ def _read_from_object_text(arg, context):
     # Do we have an object text access?
     arg_str = str(arg)
     if (((arg_str.endswith(".TextFrame.TextRange.Text")) or
+         (arg_str.endswith(".AlternativeText")) or
          (arg_str.endswith(".TextFrame.ContainingRange"))) and
         isinstance(arg, expressions.MemberAccessExpression)):
 
         # Yes we do. 
+        print "---------------------------------"
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+
+        # Drop off ActiveDocument prefix.
+        lhs = arg.lhs
+        if (str(lhs) == "ActiveDocument"):
+            lhs = arg.rhs[0]
         
         # Eval the leftmost prefix element of the member access expression first.
-        log.debug("eval_obj_text: Old member access lhs = " + str(arg.lhs))
-        if (hasattr(arg.lhs, "eval")):
-            lhs = arg.lhs.eval(context)
+        log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+        if (hasattr(lhs, "eval")):
+            lhs = lhs.eval(context)
         else:
 
             # Look this up as a variable name.
-            var_name = str(arg.lhs)
+            var_name = str(lhs)
             try:
                 lhs = context.get(var_name)
             except KeyError:
                 lhs = var_name
                 
-        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))            
+        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"

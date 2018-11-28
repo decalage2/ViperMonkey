@@ -87,6 +87,10 @@ class Context(object):
                  doc_vars=None,
                  loaded_excel=None):
 
+        # Track mapping from bogus alias name of DLL imported functions to
+        # real names.
+        self.dll_func_true_names = {}
+        
         # Track a dict mapping the labels of code blocks labeled with the LABEL:
         # construct to code blocks. This will be used to evaluate GOTO statements
         # when emulating.
@@ -111,6 +115,7 @@ class Context(object):
             self.open_files = context.open_files
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
+            self.dll_func_true_names = context.dll_func_true_names
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -732,6 +737,14 @@ class Context(object):
         # XlXmlExportResult Enum
         self.globals["xlXmlExportSuccess".lower()] = 0	
         self.globals["xlXmlExportValidationFailed".lower()] = 1	
+
+    def get_true_name(self, name):
+        """
+        Get the true name of an aliased function imported from a DLL.
+        """
+        if (name in self.dll_func_true_names):
+            return self.dll_func_true_names[name]
+        return None
         
     def open_file(self, fname):
         """
