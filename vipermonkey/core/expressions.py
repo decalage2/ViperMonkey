@@ -172,8 +172,39 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_application_run(self, context):
+        """
+        Handle functions called with Application.Run()
+        """
+
+        # Is this an Application.Run() instance?
+        if (not str(self).startswith("Application.Run(")):
+            return None
+
+        # Pull out the function name and arguments.
+        if (len(self.rhs[0].params) == 0):
+            return None
+        func_name = str(self.rhs[0].params[0])
+        func_args = []
+        if (len(self.rhs[0].params) > 1):
+            func_args = self.rhs[0].params[1:]
+        func_args = eval_args(func_args, context)
+
+        # See if we can run the other function.
+        log.debug("Try indirect run of function '" + func_name + "'")
+        try:
+            s = context.get(func_name)
+            return s.eval(context=context, params=func_args)
+        except KeyError:
+            return None
+        
     def eval(self, context, params=None):
 
+        # See if this is a function call like Application.Run("foo", 12, 13).
+        call_retval = self._handle_application_run(context)
+        if (call_retval is not None):
+            return call_retval
+        
         # Handle accessing document variables as a special case.
         tmp = self.__repr__().lower()
         if (tmp.startswith("activedocument.variables(")):
