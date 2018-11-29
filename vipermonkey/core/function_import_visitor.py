@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names of all called functions
+ViperMonkey: Visitor for collecting the names of locally defined functions
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -37,29 +37,20 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from statements import *
-from expressions import *
-from lib_functions import *
+from procedures import *
 
-class function_call_visitor(visitor):
+class function_import_visitor(visitor):
     """
-    Collect the names of all called functions.
+    Collect the names and aliases of all functions imported from DLLs.
     """
 
     def __init__(self):
-        self.called_funcs = set()
+        self.names = set()
+        self.aliases = set()
+        self.funcs = {}
     
     def visit(self, item):
-        if (isinstance(item, Call_Statement)):
-            self.called_funcs.add(str(item.name))
-        if (isinstance(item, Function_Call)):
-            self.called_funcs.add(str(item.name))
-        if (isinstance(item, Chr)):
-            self.called_funcs.add("Chr")
-        if (isinstance(item, Asc)):
-            self.called_funcs.add("Asc")
-        if (isinstance(item, StrReverse)):
-            self.called_funcs.add("StrReverse")
-        if (isinstance(item, Environ)):
-            self.called_funcs.add("Environ")
-        
+        if (isinstance(item, External_Function)):
+            self.funcs[str(item.name)] = str(item.alias_name)
+            self.names.add(str(item.alias_name))
+            self.aliases.add(str(item.name))

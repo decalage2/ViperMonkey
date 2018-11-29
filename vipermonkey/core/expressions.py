@@ -50,7 +50,7 @@ from operators import *
 import procedures
 from vba_object import eval_arg
 from vba_object import int_convert
-from vba_library import VbaLibraryFunc
+from vba_object import VbaLibraryFunc
 
 from logger import log
 
@@ -172,8 +172,39 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_application_run(self, context):
+        """
+        Handle functions called with Application.Run()
+        """
+
+        # Is this an Application.Run() instance?
+        if (not str(self).startswith("Application.Run(")):
+            return None
+
+        # Pull out the function name and arguments.
+        if (len(self.rhs[0].params) == 0):
+            return None
+        func_name = str(self.rhs[0].params[0])
+        func_args = []
+        if (len(self.rhs[0].params) > 1):
+            func_args = self.rhs[0].params[1:]
+        func_args = eval_args(func_args, context)
+
+        # See if we can run the other function.
+        log.debug("Try indirect run of function '" + func_name + "'")
+        try:
+            s = context.get(func_name)
+            return s.eval(context=context, params=func_args)
+        except KeyError:
+            return None
+        
     def eval(self, context, params=None):
 
+        # See if this is a function call like Application.Run("foo", 12, 13).
+        call_retval = self._handle_application_run(context)
+        if (call_retval is not None):
+            return call_retval
+        
         # Handle accessing document variables as a special case.
         tmp = self.__repr__().lower()
         if (tmp.startswith("activedocument.variables(")):
@@ -336,7 +367,8 @@ class Function_Call(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "FileExists"]
+                 "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
+                 "FileCopy"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)
@@ -358,6 +390,7 @@ class Function_Call(VBA_Object):
         return '%s(%r)' % (self.name, parms)
 
     def eval(self, context, params=None):
+        log.debug("Function_Call: eval params: " + str(self.params))
         params = eval_args(self.params, context=context)
         str_params = repr(params)[1:-1]
         if (len(str_params) > 80):
@@ -369,7 +402,7 @@ class Function_Call(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, params, 'Interesting Function Call')
+            context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
             f = context.get(self.name)
 
@@ -405,7 +438,7 @@ class Function_Call(VBA_Object):
 
                         # Call function.
                         r = f.eval(context=context, params=params)
-
+                        
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
                             for byref_param_info in f.byref_params.keys():
@@ -469,14 +502,16 @@ expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedLi
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
-                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + Suppress(Optional('$')) + \
+                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + \
+                   Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + \
                    Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | \
                    Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
 function_call.setParseAction(Function_Call)
 
 function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + \
-                           ((Suppress(Optional('$')) + Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
+                           Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + \
+                           ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
                             # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
                             # parsed as function_call_limited "foo .bar". The real way this should be
                             # parsed is to require at least 1 space between the function name and the
@@ -538,7 +573,7 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
             ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
-              simple_name_expression | vbformat | asc | strReverse | literal | file_pointer)
+              simple_name_expression | asc | strReverse | literal | file_pointer)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -559,7 +594,7 @@ expression <<= (infixNotation(expr_item,
                                       ("*", 2, opAssoc.LEFT, Multiplication),
                                       ("/", 2, opAssoc.LEFT, Division),
                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                      (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                      (CaselessKeyword("mod"), 2, opAssoc.LEFT, Mod),
                                       ("-", 2, opAssoc.LEFT, Subtraction),
                                       ("+", 2, opAssoc.LEFT, Sum),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
@@ -593,8 +628,6 @@ chr_const = Suppress(
 chr_const.setParseAction(Chr)
 asc_const = Suppress(CaselessKeyword('Asc') + '(') + expr_const + Suppress(')')
 asc_const.setParseAction(Asc)
-vbformat = Suppress(CaselessKeyword('Format') + '(') + expr_const + Suppress(')')
-vbformat.setParseAction(Format)
 strReverse_const = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expr_const + Suppress(Literal(')'))
 strReverse_const.setParseAction(StrReverse)
 environ_const = Suppress(CaselessKeyword('Environ') + '(') + expr_const + Suppress(')')
@@ -703,8 +736,14 @@ class BoolExprItem(VBA_Object):
         elif (self.op == "<>"):
             return lhs != rhs
         elif (self.op.lower() == "like"):
-            # TODO: Actually convert VBA regexes to Python regexes.
+            # TODO: Actually convert VBA regexes fully to Python regexes.
             try:
+                rhs = rhs.replace(".", "\\.")
+                rhs = rhs.replace("*", ".*")
+                rhs = rhs.replace("(", "\\(").replace(")", "\\)")
+                rhs = rhs.replace("[", "\\[").replace("]", "\\]")
+                rhs = rhs.replace("{", "\\{").replace("}", "\\}")
+                rhs = rhs.replace("|", "\\|")
                 return (re.match(rhs, lhs) is not None)
             except Exception as e:
                 log.error("BoolExprItem: 'Like' re match failed. " + str(e))
@@ -766,6 +805,7 @@ class BoolExpr(VBA_Object):
 
     def eval(self, context, params=None):
 
+        #print "EVAL: " + str(self)                
         # Unary operator?
         if (self.lhs is None):
 
@@ -778,6 +818,8 @@ class BoolExpr(VBA_Object):
                 return ''
 
             # Evalue the unary expression.
+            #print "RHS (1): " + str(rhs)
+            #print self.op.lower()
             if (self.op.lower() == "not"):
                 return (not rhs)
             else:
@@ -785,13 +827,17 @@ class BoolExpr(VBA_Object):
                 return ''
                 
         # If we get here we always have a LHS. Evaluate that in the current context.
+        #print "HERE: 1"
         lhs = self.lhs
         try:
             lhs = eval_arg(self.lhs, context)
+            #print "HERE: 2"
         except AttributeError:
             pass
 
         # Do we have an operator or just a variable reference?
+        #print "LHS: " + str(lhs)
+        #print self.op
         if (self.op is None):
 
             # Variable reference. Return its value.
@@ -801,9 +847,12 @@ class BoolExpr(VBA_Object):
         rhs = self.rhs
         try:
             rhs = eval_arg(self.rhs, context)
-        except AttributeError:
+            #print "HERE: 3"
+        except AttributeError as e:
+            #print e
             pass
 
+        #print "RHS (2): " + str(rhs)
         # Evaluate the expression.
         if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
             return lhs and rhs

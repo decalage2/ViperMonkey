@@ -87,13 +87,23 @@ class Sub(VBA_Object):
             context.set(param.name, init_val)
 
         # Set given parameter values.
+        self.byref_params = {}
         if params is not None:
             # TODO: handle named parameters
             for i in range(len(params)):
+
+                # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
+
+                # Is this a ByRef parameter?
+                if (self.params[i].mechanism == "ByRef"):
+
+                    # Save it so we can pull out the updated value in the Call statement.
+                    self.byref_params[(param_name, i)] = None
+                    
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
@@ -105,9 +115,13 @@ class Sub(VBA_Object):
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
+
+        # Save the values of the ByRef parameters.
+        for byref_param in self.byref_params.keys():
+            self.byref_params[byref_param] = context.get(byref_param[0].lower())
             
         # Handle subs with no return values.
-        try:
+        try:            
             context.get(self.name)
         except KeyError:
 
@@ -241,8 +255,11 @@ class Function(VBA_Object):
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
         
-        # add function name in locals:
-        #context.set(self.name, None)
+        # add function name in locals if the function takes 0 arguments. This is
+        # needed since otherwise it is not possible to differentiate a function call
+        # from a reference to the function return value in the function body.
+        if (len(self.params) == 0):
+            context.set(self.name, 'NULL')
 
         # Set the default parameter values.
         for param in self.params:

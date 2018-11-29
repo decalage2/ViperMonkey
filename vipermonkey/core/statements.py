@@ -54,9 +54,11 @@ from vba_context import *
 from reserved import *
 from from_unicode_str import *
 from vba_object import int_convert
+import procedures
 
 from logger import log
 import sys
+import re
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -173,9 +175,12 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
                              OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
-                             CaselessKeyword('End') + CaselessKeyword('Type')
+                             CaselessKeyword('End') + CaselessKeyword('Type') + \
+                             ZeroOrMore( Literal(':') + (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
+                             lex_identifier + Suppress(EOS) + \
+                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
+                             CaselessKeyword('End') + CaselessKeyword('Type') )
 
-# TODO: Add in simple type declarations.
 type_declaration = type_declaration_composite
 
 # --- FUNCTION TYPE DECLARATIONS ---------------------------------------------
@@ -349,20 +354,23 @@ class Dim_Statement(VBA_Object):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
         
         # Track the initial value of the variable.
-        self.init_val = None
+        self.init_val = "NULL"
         last_var = tokens[-1:][0]
         if ((len(last_var) >= 3) and
             (last_var[len(last_var) - 2] == '=')):
             self.init_val = last_var[len(last_var) - 1]
-                
+            
         # Track each variable being declared.
         self.variables = []
         for var in tokens:
 
             # Is this an array?
             is_array = False
+            size = None
             if ((len(var) > 1) and (var[1] == '(')):
                 is_array = True
+                if (isinstance(var[2], int)):
+                    size = var[2]
 
             # Do we have a type for the variable?
             curr_type = None
@@ -370,7 +378,7 @@ class Dim_Statement(VBA_Object):
                 curr_type = var[-1:][0]
 
             # Save the variable info.
-            self.variables.append((var[0], is_array, curr_type))
+            self.variables.append((var[0], is_array, curr_type, size))
 
         # Handle multiple variables declared with the same type.
         tmp_vars = []
@@ -379,9 +387,9 @@ class Dim_Statement(VBA_Object):
             curr_type = var[2]
             if (curr_type is None):
                 curr_type = final_type
-            tmp_vars.append((var[0], var[1], curr_type))
+            tmp_vars.append((var[0], var[1], curr_type, var[3]))
         self.variables = tmp_vars
-            
+        
         log.debug('parsed %r' % str(self))
 
     def __repr__(self):
@@ -405,7 +413,7 @@ class Dim_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
-        
+
         # Evaluate the initial variable value(s).
         init_val = ''
         if (self.init_val is not None):
@@ -429,6 +437,8 @@ class Dim_Statement(VBA_Object):
                 if (var[1]):
                     curr_type += " Array"
                     curr_init_val = []
+                    if ((var[3] is not None) and (curr_type == "Byte Array")):
+                        curr_init_val = [0] * var[3]
 
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type)
@@ -497,7 +507,7 @@ lower_bound = constant_expression + CaselessKeyword('to').suppress()
 upper_bound = constant_expression
 dim_spec = Optional(lower_bound) + upper_bound
 bounds_list = delimitedList(dim_spec)
-array_dim = '(' + Optional(bounds_list).suppress() + ')'
+array_dim = '(' + Optional(bounds_list('bounds')) + ')'
 constant_name = simple_name_expression
 string_length = constant_name | integer
 fixed_length_string_spec = CaselessKeyword("string").suppress() + Suppress("*") + string_length
@@ -507,8 +517,8 @@ defined_type_expression = simple_name_expression  # TODO: | member_access_expres
 class_type_name = defined_type_expression
 as_auto_object = CaselessKeyword('as').suppress() + CaselessKeyword('new').suppress() + class_type_name
 as_clause = as_auto_object | as_type
-array_clause = array_dim + Optional(as_clause)
-untyped_variable_dcl = identifier + Optional(array_clause | as_clause)
+array_clause = array_dim('bounds') + Optional(as_clause)
+untyped_variable_dcl = identifier + Optional(array_clause('bounds') | as_clause)
 typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
@@ -595,27 +605,49 @@ class Let_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+
+        # If a function return value is being set (LHS == current function name),
+        # treat references to the function name on the RHS as a variable rather
+        # than a function. Do this by initializing a local variable with the function
+        # name here if needed.
+        if ((context.contains(self.name)) and
+            (isinstance(context.get(self.name), procedures.Function))):
+            log.debug("Adding uninitialized '" + str(self.name) + "' function return var to local context.")
+            context.set(self.name, 'NULL')
         
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
 
+        # Is this setting an interesting field in a COM object?
+        if ((str(self.name).endswith(".Arguments")) or
+            (str(self.name).endswith(".Path"))):
+            context.report_action(self.name, value, 'Possible Scheduled Task Setup', strip_null_bytes=True)
+        
         # set variable, non-array access.
         if (self.index is None):
 
             # Handle conversion of strings to byte arrays, if needed.
             if ((context.get_type(self.name) == "Byte Array") and
                 (isinstance(value, str))):
-                tmp = []
-                for c in value:
-                    tmp.append(ord(c))
-                    # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
-                    # or not (no padding).
-                    if (not isinstance(value, from_unicode_str)):
-                        tmp.append(0)
-                value = tmp
 
+                # Do we have an actual value to assign?
+                if (value != "NULL"):
+                    tmp = []
+                    for c in value:
+                        tmp.append(ord(c))
+                        # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
+                        # or not (no padding).
+                        if (not isinstance(value, from_unicode_str)):
+                            tmp.append(0)
+                    value = tmp
+
+                # We are dealing with an unsassigned variable. Don't update
+                # the array.
+                else:
+                    return
+                    
             # Handle conversion of byte arrays to strings, if needed.
             elif ((context.get_type(self.name) == "String") and
                   (isinstance(value, list))):
@@ -742,8 +774,7 @@ class Let_Statement(VBA_Object):
                 # TODO: Currently we are assuming that 'On Error Resume Next' is being
                 # used. Need to actually check what is being done on error.
                 log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
-
-            
+        
 # 5.4.3.8   Let Statement
 #
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
@@ -859,7 +890,13 @@ class For_Statement(VBA_Object):
             try:
                 start = int(start)
             except:
-                pass
+
+                # Is this a single character?
+                if (len(start) == 1):
+
+                    # Looks like this Chr() should be an int.
+                    start = ord(start[0])
+
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
         # Get the end index. If this is a string, convert to an int.
@@ -868,7 +905,13 @@ class For_Statement(VBA_Object):
             try:
                 end = int(end)
             except:
-                pass
+
+                # Is this a single character?
+                if (len(start) == 1):
+
+                    # Looks like this Chr() should be an int.
+                    end = ord(end[0])
+                
         if (not isinstance(end, int)):
             end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
@@ -963,7 +1006,7 @@ for_clause = CaselessKeyword("For").suppress() \
              + Optional(step_clause('step_value'))
 
 simple_for_statement = for_clause + Suppress(EOS) + statement_block('statements') \
-                       + CaselessKeyword("Next").suppress() \
+                       + (CaselessKeyword("Next").suppress() | CaselessKeyword("End").suppress()) \
                        + Optional(lex_identifier) \
                        + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
 
@@ -1078,6 +1121,106 @@ class While_Statement(VBA_Object):
         r += str(self.body) + "\\nLoop"
         return r
 
+    def _eval_guard(self, curr_counter, final_val, comp_op):
+        if (comp_op == "<="):
+            return (curr_counter <= final_val)
+        if (comp_op == "<"):
+            return (curr_counter < final_val)
+        if (comp_op == ">="):
+            return (curr_counter >= final_val)
+        if (comp_op == ">"):
+            return (curr_counter > final_val)
+        if ((comp_op == "==") or (comp_op == "=")):
+            return (curr_counter == final_val)
+        log.error("Loop guard operator '" + str(comp_op) + " cannot be emulated.")
+        return False
+        
+    def _handle_simple_loop(self, context):
+
+        # Handle simple loops used purely for obfuscation.
+        #
+        # While b52 <= b35
+        # b52 = b52 + 1
+        # Wend
+
+        # Do we just have 1 line in the loop body?
+        if (len(self.body) != 1):
+            return False
+
+        # Do we have a simple loop guard?
+        loop_counter = str(self.guard).strip()
+        m = re.match(r"(\w+)\s*([<>=]{1,2})\s*(\w+)", loop_counter)
+        if (m is None):
+            return False
+
+        # We have a simple loop guard. Pull out the loop variable, upper bound, and
+        # comparison op.
+        loop_counter = m.group(1)
+        comp_op = m.group(2)
+        upper_bound = m.group(3)
+        
+        # Are we just modifying the loop counter variable each loop iteration?
+        var_inc = loop_counter + " = " + loop_counter
+        body = str(self.body[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (not body.startswith(var_inc)):
+            return False
+
+        # Pull out the operator and integer value used to update the loop counter
+        # in the loop body.
+        if (" " not in body):
+            return False
+        body = body.replace(var_inc, "").strip()
+        op = body[:body.index(" ")]
+        if (op not in ["+", "-", "*"]):
+            return False
+        num = body[body.index(" ") + 1:]
+        try:
+            num = int(num)
+        except:
+            return False
+
+        # Now just compute the final loop counter value right here in Python.
+        curr_counter = coerce_to_int(eval_arg(loop_counter, context=context, treat_as_var_name=True))
+        final_val = eval_arg(upper_bound, context=context, treat_as_var_name=True)
+        try:
+            final_val = int(final_val)
+        except:
+            return False
+        
+        # Simple case first. Set the final loop counter value if possible.
+        if ((num == 1) and (op == "+")):
+            if (comp_op == "<="):
+                curr_counter = final_val + 1
+            if (comp_op == "<"):
+                curr_counter = final_val
+
+        # Now emulate the loop in Python.
+        running = self._eval_guard(curr_counter, final_val, comp_op)
+        log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
+        log.debug("Short circuiting loop evaluation: Body: " + str(self.body))
+        while (running):
+
+            # Update the loop counter.
+            log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
+            log.debug("Short circuiting loop evaluation: Test: " + str(curr_counter) + " " + comp_op + " " + str(final_val))
+            if (op == "+"):
+                curr_counter += num
+            if (op == "-"):
+                curr_counter -= num
+            if (op == "*"):
+                curr_counter *= num
+
+            # See if we are done.
+            running = self._eval_guard(curr_counter, final_val, comp_op)
+            if (self.loop_type.lower() == "until"):
+                running = (not running)
+
+        # Update the loop counter in the context.
+        context.set(loop_counter, curr_counter)
+
+        # We short circuited the loop evaluation.
+        return True
+    
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -1088,6 +1231,12 @@ class While_Statement(VBA_Object):
         # Do not bother running loops with empty bodies.
         if (len(self.body) == 0):
             log.debug("WHILE loop: empty body. Skipping.")
+            return
+
+        # See if we can short circuit the loop.
+        if (self._handle_simple_loop(context)):
+
+            # We short circuited the loop. Done.
             return
         
         # Track that the current loop is running.
@@ -1659,7 +1808,7 @@ class Call_Statement(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec"]
+                 "SetExpandedStringValue", "WinExec", "FileCopy"]
     
     def __init__(self, original_str, location, tokens):
         super(Call_Statement, self).__init__(original_str, location, tokens)
@@ -1683,8 +1832,15 @@ class Call_Statement(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+
+        # Reset the called function name if this is an alias for an imported external
+        # DLL function.
+        dll_func_name = context.get_true_name(self.name)
+        if (dll_func_name is not None):
+            self.name = dll_func_name
         
         # Get argument values.
+        log.debug("Call: eval params: " + str(self.params))
         call_params = eval_args(self.params, context=context)
         str_params = repr(call_params)
         if (len(str_params) > 80):
@@ -1698,13 +1854,13 @@ class Call_Statement(VBA_Object):
                 save = True
                 break
         if (save):
-            context.report_action(self.name, call_params, 'Interesting Function Call')
+            context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
         
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
-            context.report_action('Display Message', repr(call_params[0]), 'MsgBox')
+            context.report_action('Display Message', repr(call_params[0]), 'MsgBox', strip_null_bytes=True)
             # vbOK = 1
             return 1
         elif '.' in func_name:
@@ -1716,7 +1872,7 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p.replace("\x00", ""))
                     else:
                         tmp_call_params.append(p)
-            context.report_action('Object.Method Call', tmp_call_params, func_name)
+            context.report_action('Object.Method Call', tmp_call_params, func_name, strip_null_bytes=True)
         try:
 
             # Emulate the function body.
@@ -2082,7 +2238,8 @@ class Print_Statement(VBA_Object):
         else:
             log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
 
-print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value")
+print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
+                  Suppress(Optional("," + lex_identifier))
 print_statement.setParseAction(Print_Statement)
 
 # --- DOEVENTS STATEMENT -------------------------------------------------------------
@@ -2143,7 +2300,7 @@ class External_Function(VBA_Object):
 
         # Make sure the file exists.
         if (file_id not in context.open_files):
-            log.error("File " + file_id + " not open. Cannot write.")
+            log.error("File " + str(file_id) + " not open. Cannot write.")
             return 1
         
         # We can only write single byte values for now.
@@ -2202,13 +2359,13 @@ class External_Function(VBA_Object):
         # Log certain function calls.
         function_name = function_name.lower()
         if function_name.startswith('urldownloadtofile'):
-            context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile')
-            context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile')
+            context.report_action('Download URL', params[1], 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+            context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
         if function_name.startswith('shellexecute'):
             cmd = str(params[2]) + str(params[3])
-            context.report_action('Run Command', cmd, function_name)
+            context.report_action('Run Command', cmd, function_name, strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
 
