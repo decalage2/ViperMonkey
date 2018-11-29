@@ -93,6 +93,8 @@ class Sub(VBA_Object):
             for i in range(len(params)):
 
                 # Set the parameter value.
+                if (i >= len(self.params)):
+                    break
                 param_name = self.params[i].name
                 param_value = params[i]
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))

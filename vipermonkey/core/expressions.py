@@ -193,7 +193,9 @@ class MemberAccessExpression(VBA_Object):
         # See if we can run the other function.
         log.debug("Try indirect run of function '" + func_name + "'")
         try:
-            s = context.get(func_name)
+            s = func_name
+            while (isinstance(s, str)):
+                s = context.get(s)
             if (s is None):
                 return None
             return s.eval(context=context, params=func_args)
@@ -393,7 +395,12 @@ class Function_Call(VBA_Object):
 
     def eval(self, context, params=None):
         log.debug("Function_Call: eval params: " + str(self.params))
-        params = eval_args(self.params, context=context)
+        params = None
+        if (self.name == "CallByName"):
+            params = eval_args(self.params[1:], context=context)
+            params = [self.params[0]] + params
+        else:
+            params = eval_args(self.params, context=context)
         str_params = repr(params)[1:-1]
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."

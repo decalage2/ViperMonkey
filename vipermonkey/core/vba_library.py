@@ -1487,6 +1487,8 @@ class CallByName(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) >= 3)
+
+        # Report interesting external commands run.
         cmd = params[1]
         obj = str(params[0])
         args = ''
@@ -1500,6 +1502,18 @@ class CallByName(VbaLibraryFunc):
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
             context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
+
+        # Are we using this to read text from a GUI element?
+        if ((cmd == "Tag") or (cmd == "Text")):
+
+            # Looks like it. Lets return the text. This is read from a for variable.
+            try:
+                return context.get(str(params[0]) + "." + cmd)
+            except KeyError:
+                pass
+
+        # Do nothing.
+        return None
             
 class Close(VbaLibraryFunc):
     """
