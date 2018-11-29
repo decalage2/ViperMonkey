@@ -2272,6 +2272,14 @@ for name, value in (
         ('vbVerticalTab', '\v'),
         ('vbNullString', ''),
         ('vbObjectError', -2147221504),
+
+        # Shell Constants
+        ('vbHide', 0),
+        ('vbNormalFocus', 1),
+        ('vbMinimizedFocus.', 2),
+        ('vbMaximizedFocus', 3),
+        ('vbNormalNoFocus', 4),
+        ('vbMinimizedNoFocus', 6),
 ):
     VBA_LIBRARY[name.lower()] = value
 

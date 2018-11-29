@@ -8,6 +8,13 @@ and deobfuscate malicious VBA Macros contained in Microsoft Office files
 See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
 
+**Quick links:**
+[Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
+[Contact the Author](http://decalage.info/contact) -
+[Repository](https://github.com/decalage2/ViperMonkey) -
+[Updates on Twitter](https://twitter.com/decalage2)
+
+
 **DISCLAIMER**:
 - ViperMonkey is an experimental VBA Engine targeted at analyzing maldocs. It works on some but not all maldocs. 
 - VBA parsing and emulation is *extremely* slow for now (see the speedup section for how to improve the speed).
@@ -15,6 +22,61 @@ for real-life examples of malware deobfucation with ViperMonkey.
 Office applications, and all the DLLs and ActiveX objects that can be called from VBA.
 - This open-source project is only developed on my scarce spare time, so do not expect
 miracles. Any help from you will be very appreciated!
+
+Download and Install:
+---------------------
+
+For performance reasons, it is highly recommended to use PyPy, but it is
+also possible to run Vipermonkey with the normal Python interpreter
+(CPython).
+
+**Installation using PyPy**
+
+1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
+2. Check if pip is installed for pypy: run `pypy -m pip`
+3. If pip is not installed yet, run `pypy -m ensurepip` on Windows, or `sudo -H pypy -m ensurepip` on Linux/Mac
+4. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+5. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
+6. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
+7. Check that Vipermonkey runs without error: `pypy vmonkey.py`
+
+**Installation using CPython**
+
+1. Make sure you have the latest Python 2.7 installed: https://www.python.org/downloads/
+2. Use pip to download and install vipermonkey with all its dependencies,
+   by running the following command on Windows:
+```
+pip install -U https://github.com/decalage2/ViperMonkey/archive/master.zip
+```
+On Linux/Mac:
+```
+sudo -H pip install -U https://github.com/decalage2/ViperMonkey/archive/master.zip
+```
+3. Check that Vipermonkey runs without error: open a shell/cmd window
+   in any directory, an simply run `vmonkey`
+
+
+Usage:
+------
+
+To parse and interpret VBA macros from a document, use the vmonkey script:
+
+```text
+vmonkey <file>
+```
+
+To make analysis faster (see the Speedup section), do:
+
+```text
+pypy vmonkey.py -s <file>
+```
+
+If the output is too verbose and too slow, you may reduce the logging level using the
+-l option:
+
+```text
+vmonkey -l warning <file>
+```
 
 **oletools Version**
 
@@ -72,11 +134,6 @@ starting from multiple non-standard entry points, use the command line
 option '-i "Foo,Bar,Baz"' (note that the entry point function names
 are comma seperated and must appear in a double quoted string).
 
-**Quick links:**
-[Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
-[Contact the Author](http://decalage.info/contact) -
-[Repository](https://github.com/decalage2/ViperMonkey) -
-[Updates on Twitter](https://twitter.com/decalage2)
 
 [//]: # (Home page http://www.decalage.info/vipermonkey)
 [//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
@@ -128,44 +185,6 @@ News
 - 2016-09-26 v0.02: First published version
 - 2015-02-28 v0.01: [First development version](https://twitter.com/decalage2/status/571778745222242305)
 - see changelog in source code for more info.
-
-Download and Install:
----------------------
-
-For now, there is no package on PyPI for automated installation. It must be done manually:
-
-- Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
-- Extract it in the folder of your choice
-- Install dependencies by running `sudo -H pip install -U -r requirements.txt` on Linux/Mac
-or `pip install -U -r requirements.txt` on Windows
-
-Usage:
-------
-
-To parse and interpret VBA macros from a document, use the vmonkey script:
-
-```text
-python vmonkey.py <file>
-```
-
-To make analysis faster (see the Speedup section), do:
-
-```text
-pypy vmonkey.py -s <file>
-```
-
-If the output is too verbose and too slow, you may reduce the logging level using the
--l option:
-
-```text
-python vmonkey.py -l warning <file>
-```
-
-Documentation:
---------------
-
-Winter is coming.
-
 
 How to Suggest Improvements, Report Issues or Contribute:
 ---------------------------------------------------------

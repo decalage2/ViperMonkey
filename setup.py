@@ -47,7 +47,7 @@ setup(
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
-    install_requires=["oletools", "prettytable", "colorlog", "colorama",
+    install_requires=["oletools", "olefile", "prettytable", "colorlog", "colorama",
                       "pyparsing", "unidecode", "xlrd"],
     packages=["vipermonkey", "vipermonkey.core"],
     #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
