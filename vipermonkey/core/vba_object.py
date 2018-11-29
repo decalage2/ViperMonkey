@@ -53,18 +53,27 @@ __version__ = '0.02'
 
 import base64
 from logger import log
+import re
 
 from inspect import getouterframes, currentframe
 import sys
 from datetime import datetime
 import pyparsing
 
+import expressions
+
 max_emulation_time = None
+
+class VbaLibraryFunc(object):
+    """
+    Marker class to tell if a class implements a VBA function.
+    """
+    pass
 
 def excel_col_letter_to_index(x): 
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
-def limits_exceeded():
+def limits_exceeded(throw_error=False):
     """
     Check to see if we are about to exceed the maximum recursion depth. Also check to 
     see if emulation is taking too long (if needed).
@@ -81,8 +90,12 @@ def limits_exceeded():
 
     if (recursion_exceeded):
         log.error("Call recursion depth approaching limit.")
+        if (throw_error):
+            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting.")
     if (time_exceeded):
         log.error("Emulation time exceeded.")
+        if (throw_error):
+            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting.")
         
     return (recursion_exceeded or time_exceeded)
 
@@ -123,6 +136,9 @@ class VBA_Object(object):
         Return the child VBA objects of the current object.
         """
 
+        # Check for timeouts.
+        limits_exceeded(throw_error=True)
+        
         # The default behavior is to count any VBA_Object attribute as
         # a child.
         if (self._children is not None):
@@ -148,26 +164,20 @@ class VBA_Object(object):
         Visitor design pattern support. Accept a visitor.
         """
 
+        # Check for timeouts.
+        limits_exceeded(throw_error=True)
+        
         # Visit the current item.
         visitor.visit(self)
 
         # Visit all the children.
         for child in self.get_children():
             child.accept(visitor)
-            
-meta = None
-        
-def eval_arg(arg, context, treat_as_var_name=False):
-    """
-    evaluate a single argument if it is a VBA_Object, otherwise return its value
-    """
 
-    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
-    # avoid that. Also check to see if emulation has taken too long.
-    if (limits_exceeded()):
-        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
-    
-    log.debug("try eval arg: %s" % arg)
+def _read_from_excel(arg, context):
+    """
+    Try to evaluate an argument by reading from the loaded Excel spreadsheet.
+    """
 
     # Try handling reading value from an Excel spreadsheet cell.
     arg_str = str(arg)
@@ -187,6 +197,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         start = tmp_arg_str.index("range(") + len("range(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
         
         try:
             
@@ -217,8 +228,82 @@ def eval_arg(arg, context, treat_as_var_name=False):
         except Exception as e:
             log.error("Cannot read cell from Excel spreadsheet. " + str(e))
 
+def _read_from_object_text(arg, context):
+    """
+    Try to read in a value from the text associated with a object like a Shape.
+    """
+
+    # Do we have an object text access?
+    arg_str = str(arg)
+    if (((arg_str.endswith(".TextFrame.TextRange.Text")) or
+         (arg_str.endswith(".AlternativeText")) or
+         (arg_str.endswith(".TextFrame.ContainingRange"))) and
+        isinstance(arg, expressions.MemberAccessExpression)):
+
+        # Yes we do. 
+        log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+
+        # Drop off ActiveDocument prefix.
+        lhs = arg.lhs
+        if (str(lhs) == "ActiveDocument"):
+            lhs = arg.rhs[0]
+        
+        # Eval the leftmost prefix element of the member access expression first.
+        log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+        if (hasattr(lhs, "eval")):
+            lhs = lhs.eval(context)
+        else:
+
+            # Look this up as a variable name.
+            var_name = str(lhs)
+            try:
+                lhs = context.get(var_name)
+            except KeyError:
+                lhs = var_name
+                
+        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+        
+        # Try to get this as a doc var.
+        doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
+        log.debug("eval_arg: Looking for object text " + str(doc_var_name))
+        val = context.get_doc_var(doc_var_name.lower())
+        if (val is not None):
+            return val
+
+        # Not found. Try looking for the object with index 1.
+        lhs_str = str(lhs)
+        new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
+        doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
+        log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
+        val = context.get_doc_var(doc_var_name.lower())
+        return val
+            
+meta = None
+
+def eval_arg(arg, context, treat_as_var_name=False):
+    """
+    evaluate a single argument if it is a VBA_Object, otherwise return its value
+    """
+
+    # pypy seg faults sometimes if the recursion depth is exceeded. Try to
+    # avoid that. Also check to see if emulation has taken too long.
+    if (limits_exceeded()):
+        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+
+    log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
+
+    # Try handling reading value from an Excel spreadsheet cell.
+    excel_val = _read_from_excel(arg, context)
+    if (excel_val is not None):
+        return excel_val
+
+    # Short circuit the checks and see if we are accessing some object text first.
+    obj_text_val = _read_from_object_text(arg, context)
+    if (obj_text_val is not None):
+        return obj_text_val
+
     # Not reading from an Excel cell. Try as a VBA object.
-    if (isinstance(arg, VBA_Object)):
+    if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
         return arg.eval(context=context)
 
@@ -230,18 +315,18 @@ def eval_arg(arg, context, treat_as_var_name=False):
         if (isinstance(arg, str)):
 
             # Simple case first. Is this a variable?
-            if (treat_as_var_name):
-                try:
-                    log.debug("eval_arg: Try as variable name: %r" % arg)
-                    return context.get(arg)
-                except:
+            try:
+                log.debug("eval_arg: Try as variable name: %r" % arg)
+                r = context.get(arg)
+                return r
+            except:
                     
-                    # No it is not. Try more complicated cases.
-                    log.debug("eval_arg: Not found as variable name: %r" % arg)
-                    pass
+                # No it is not. Try more complicated cases.
+                log.debug("eval_arg: Not found as variable name: %r" % arg)
+                pass
             else:
                 log.debug("eval_arg: Do not try as variable name: %r" % arg)
-                
+
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
@@ -279,16 +364,27 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
 
-                # Try it as a form variable.
-                tmp = arg.lower()
-                try:
-                    log.debug("eval_arg: Try to load as variable " + tmp + "...")
-                    val = context.get(tmp)
-                    return val
+                # Try easy button first. See if this is just a doc var.
+                doc_var_val = context.get_doc_var(arg)
+                if (doc_var_val is not None):
+                    return doc_var_val
 
-                except KeyError:
-                    log.debug("eval_arg: Not found as variable")
-                    pass
+                # Peel off items seperated by a '.', trying them as functions.
+                arg_peeled = arg
+                while ("." in arg_peeled):
+                
+                    # Try it as a form variable.
+                    curr_var_attempt = arg_peeled.lower()
+                    try:
+                        log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
+                        val = context.get(curr_var_attempt)
+                        return val
+
+                    except KeyError:
+                        log.debug("eval_arg: Not found as variable")
+                        pass
+
+                    arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
 
                 # Try it as a function
                 func_name = arg.lower()
@@ -296,7 +392,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 try:
 
                     # Lookp and execute the function.
-                    log.debug("eval_arg: Try to run as function " + func_name + "...")
+                    log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = eval_arg(func, context, treat_as_var_name=True)
 
@@ -317,6 +413,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Failed. Not a function. " + str(e))
 
                 # Are we trying to load some document meta data?
+                tmp = arg.lower().strip()
                 if (tmp.startswith("activedocument.item(")):
 
                     # Try to pull the result from the document meta data.
@@ -351,6 +448,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                     # ActiveDocument.Variables("ER0SNQAWT").Value
                     # Try to pull the result from the document variables.
+                    log.debug("eval_arg: look for '")
                     var = tmp.replace("activedocument.variables(", "").\
                           replace(")", "").\
                           replace("'","").\
@@ -358,9 +456,13 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace('.value',"").\
                           replace("(", "").\
                           strip()
+                    log.debug("eval_arg: look for '" + var + "' as document variable...")
                     val = context.get_doc_var(var)
                     if (val is not None):
+                        log.debug("eval_arg: got it as document variable.")
                         return val
+                    else:
+                        log.debug("eval_arg: did NOT get it as document variable.")
 
                 # Are we loading a custom document property?
                 if (tmp.startswith("activedocument.customdocumentproperties(")):
@@ -378,19 +480,35 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     if (val is not None):
                         return val
                     
-                # None of those worked. We can't find the data.
-                #return "??"
+                # As a last resort try reading it as a wildcarded form variable.
+                wild_name = tmp[:tmp.index(".")] + "*"
+                for i in range(0, 11):
+                    tmp_name = wild_name + str(i)
+                    try:
+                        val = context.get(tmp_name)
+                        log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
+                        return val
+                    except:
+                        pass
+
+
+        # Should this be handled as a variable? Must be a valid var name to do this.
+        if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
+
+            # We did not resolve the variable. Treat it as unitialized.
+            log.debug("eval_arg: return 'NULL'")
+            return "NULL"
                 
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))
         return arg
 
-def eval_args(args, context):
+def eval_args(args, context, treat_as_var_name=False):
     """
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    return map(lambda arg: eval_arg(arg, context=context), args)
+    return map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
 
 def coerce_to_str(obj):
     """
@@ -453,11 +571,13 @@ def coerce_args(orig_args):
     # Find the 1st type in the arg list.
     first_type = None
     have_other_type = False
+    all_null = True
     for arg in args:
 
         # Skip NULL values since they can be int or str based on context.
         if (arg == "NULL"):
             continue
+        all_null = False
         if (isinstance(arg, str)):
             if (first_type is None):
                 first_type = "str"
@@ -469,6 +589,10 @@ def coerce_args(orig_args):
         else:
             have_other_type = True
             break
+
+    # If everything is NULL lets treat this as an int.
+    if (all_null):
+        first_type = "int"
         
     # Leave things alone if we have any non-int or str args.
     if (have_other_type):
@@ -511,7 +635,10 @@ def int_convert(arg):
     """
     if (arg == "NULL"):
         return 0
-    return int(arg)
+    arg_str = str(arg)
+    if ("." in arg_str):
+        arg_str = arg_str[:arg_str.index(".")]
+    return int(arg_str)
 
 def str_convert(arg):
     """

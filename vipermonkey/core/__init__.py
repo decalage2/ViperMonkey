@@ -83,6 +83,8 @@ __version__ = '0.04'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import sys
+
 # TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
 
@@ -98,6 +100,7 @@ from procedures import Function
 from procedures import Sub
 from function_call_visitor import *
 from function_defn_visitor import *
+from function_import_visitor import *
 from var_defn_visitor import *
 
 # === FUNCTIONS ==============================================================
@@ -184,7 +187,8 @@ class ViperMonkey(object):
                                   '_Resize',
                                   '_SetSecureLockIcon',
                                   '_StatusTextChange',
-                                  '_TitleChange']
+                                  '_TitleChange',
+                                  '_Initialize']
                                   
     def add_compiled_module(self, m):
         """
@@ -349,10 +353,12 @@ class ViperMonkey(object):
         call_visitor = function_call_visitor()
         defn_visitor = function_defn_visitor()
         var_visitor = var_defn_visitor()
+        import_visitor = function_import_visitor()
         for module in self.modules:
             module.accept(call_visitor)
             module.accept(defn_visitor)
             module.accept(var_visitor)
+            module.accept(import_visitor)
         """
         print("************ CALLED FUNCS *************************")
         print(call_visitor.called_funcs)
@@ -370,7 +376,17 @@ class ViperMonkey(object):
                 (len(f) == 0) or
                 (("." in f) and (not "Shell" in f))):
                 continue
+
+            # Resolve aliases of imported functions to the actual function.
+            if (f in import_visitor.aliases):
+                if (len(import_visitor.funcs[f]) > 0):
+                     r.append(import_visitor.funcs[f])
+                continue
+
+            # Regular local function call.
             r.append(f)
+
+        # Sort and return the fingerprint function list.
         r.sort()
         return r
         
@@ -398,6 +414,7 @@ class ViperMonkey(object):
             if entry_point in self.globals:
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
+                context.dump_all_files()
 
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
@@ -415,6 +432,7 @@ class ViperMonkey(object):
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
                         item.eval(context=context)
+                        context.dump_all_files()
                     
     def eval(self, expr):
         """
