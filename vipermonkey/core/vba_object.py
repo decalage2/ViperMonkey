@@ -241,7 +241,6 @@ def _read_from_object_text(arg, context):
         isinstance(arg, expressions.MemberAccessExpression)):
 
         # Yes we do. 
-        print "---------------------------------"
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
 
         # Drop off ActiveDocument prefix.
