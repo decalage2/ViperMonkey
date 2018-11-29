@@ -194,6 +194,8 @@ class MemberAccessExpression(VBA_Object):
         log.debug("Try indirect run of function '" + func_name + "'")
         try:
             s = context.get(func_name)
+            if (s is None):
+                return None
             return s.eval(context=context, params=func_args)
         except KeyError:
             return None
