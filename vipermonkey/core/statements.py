@@ -59,6 +59,7 @@ import procedures
 from logger import log
 import sys
 import re
+import base64
 
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
@@ -620,6 +621,17 @@ class Let_Statement(VBA_Object):
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
 
+        # Doing base64 decode with VBA?
+        if ((self.name == ".Text") and
+            (context.contains(".DataType")) and
+            (context.get(".DataType").lower().strip().endswith("base64"))):
+
+            # Try converting the text from base64.
+            try:
+                value = base64.b64decode(str(value).strip())
+            except Exception as e:
+                log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                
         # Is this setting an interesting field in a COM object?
         if ((str(self.name).endswith(".Arguments")) or
             (str(self.name).endswith(".Path"))):

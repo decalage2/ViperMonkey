@@ -863,8 +863,14 @@ class Context(object):
             # TODO: raise a custom VBA exception?
 
     def get(self, name):
-
-        # First try to get the item using the current with context.
+        
+        # See if this is an aliased reference to an objects .Text field.
+        if (((name == "NodeTypedValue") or (name == ".NodeTypedValue")) and
+            (not name in self.locals) and
+            (".Text".lower() in self.locals)):
+            return self.get(".Text")
+        
+        # Try to get the item using the current with context.
         tmp_name = str(self.with_prefix) + str(name)
         try:
             return self._get(tmp_name)
