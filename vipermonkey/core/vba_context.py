@@ -49,6 +49,7 @@ from hashlib import sha256
 from datetime import datetime
 from logger import log
 import base64
+import re
 
 def is_procedure(vba_object):
     """
@@ -925,7 +926,9 @@ class Context(object):
 
             # Can't find it. Do we have a wild card doc var to guess for
             # this value? Only do this if it looks like we have a valid doc var name.
-            if ((" " not in var) and ("*" in self.doc_vars)):
+            if ((re.match(r"^[a-zA-Z_][\w\d]*$", str(var)) is not None) and
+                ("*" in self.doc_vars)):
+                print "Got " + var + " = " + self.doc_vars["*"] + " as wildcard"
                 return self.doc_vars["*"]
 
             # No wildcard variable. Return nothing.

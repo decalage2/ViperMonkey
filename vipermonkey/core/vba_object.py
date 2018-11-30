@@ -265,9 +265,10 @@ def _read_from_object_text(arg, context):
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
-        log.debug("eval_arg: Looking for object text " + str(doc_var_name))
+        log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         if (val is not None):
+            log.debug("eval_obj_text: Found " + str(doc_var_name) + " = " + str(val))
             return val
 
         # Not found. Try looking for the object with index 1.
