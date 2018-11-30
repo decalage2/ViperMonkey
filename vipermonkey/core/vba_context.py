@@ -924,8 +924,8 @@ class Context(object):
                 pass
 
             # Can't find it. Do we have a wild card doc var to guess for
-            # this value?
-            if ("*" in self.doc_vars):
+            # this value? Only do this if it looks like we have a valid doc var name.
+            if ((" " not in var) and ("*" in self.doc_vars)):
                 return self.doc_vars["*"]
 
             # No wildcard variable. Return nothing.
