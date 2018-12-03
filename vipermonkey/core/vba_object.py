@@ -235,7 +235,7 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
-    if (((arg_str.endswith(".TextFrame.TextRange.Text")) or
+    if (((arg_str.endswith("TextRange.Text")) or
          (arg_str.endswith(".AlternativeText")) or
          (arg_str.endswith(".TextFrame.ContainingRange"))) and
         isinstance(arg, expressions.MemberAccessExpression)):
@@ -265,6 +265,7 @@ def _read_from_object_text(arg, context):
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
+        doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
         log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         if (val is not None):
@@ -275,6 +276,7 @@ def _read_from_object_text(arg, context):
         lhs_str = str(lhs)
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
+        doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
