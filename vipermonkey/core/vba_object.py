@@ -293,7 +293,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     if (limits_exceeded()):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
 
-    log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
+    log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
 
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg, context)

@@ -44,6 +44,7 @@ __version__ = '0.02'
 from pyparsing import *
 
 from logger import log
+from vba_object import VBA_Object
 
 # --- BOOLEAN ------------------------------------------------------------
 
@@ -113,8 +114,21 @@ float_literal = float_literal_exp ^ float_literal_no_exp
 # MS-GRAMMAR: double-quote = %x0022 ; "
 # MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
 
-quoted_string = QuotedString('"', escQuote='""')
-quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n").replace("\t", "\\t"))
+class String(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(String, self).__init__(original_str, location, tokens)
+        self.value = tokens.value
+        log.debug('parsed %r as String' % self)
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, context, params=None):
+        return self.value.replace("\n", "\\n").replace("\t", "\\t")
+
+quoted_string = QuotedString('"', escQuote='""')('value')
+#quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n").replace("\t", "\\t"))
+quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
 quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
