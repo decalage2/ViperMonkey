@@ -915,11 +915,14 @@ class For_Statement(VBA_Object):
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
             try:
-                end = int(end)
+                if (end == "NULL"):
+                    end = 0
+                else:
+                    end = int(end)
             except:
 
                 # Is this a single character?
-                if (len(start) == 1):
+                if (len(end) == 1):
 
                     # Looks like this Chr() should be an int.
                     end = ord(end[0])
