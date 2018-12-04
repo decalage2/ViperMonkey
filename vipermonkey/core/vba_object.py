@@ -245,7 +245,7 @@ def _read_from_object_text(arg, context):
 
         # Drop off ActiveDocument prefix.
         lhs = arg.lhs
-        if (str(lhs) == "ActiveDocument"):
+        if ((str(lhs) == "ActiveDocument") or (str(lhs) == "ThisDocument")):
             lhs = arg.rhs[0]
         
         # Eval the leftmost prefix element of the member access expression first.
