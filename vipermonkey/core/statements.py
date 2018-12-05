@@ -2335,15 +2335,16 @@ class External_Function(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(External_Function, self).__init__(original_str, location, tokens)
-        self.name = tokens.function_name
+        self.name = str(tokens.function_name)
         self.params = tokens.params
-        self.lib_name = tokens.lib_name
+        self.lib_name = str(tokens.lib_name)
         # normalize lib name: remove quotes, lowercase, add .dll if no extension
         if isinstance(self.lib_name, basestring):
-            self.lib_name = tokens.lib_name.strip('"').lower()
+            self.lib_name = str(tokens.lib_name).strip('"').lower()
             if '.' not in self.lib_name:
                 self.lib_name += '.dll'
-        self.alias_name = tokens.alias_name
+        self.lib_name = str(self.lib_name)
+        self.alias_name = str(tokens.alias_name)
         if isinstance(self.alias_name, basestring):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
