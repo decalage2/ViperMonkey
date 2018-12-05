@@ -237,7 +237,7 @@ def _read_from_object_text(arg, context):
     arg_str = str(arg)
     if (((arg_str.endswith("TextRange.Text")) or
          (arg_str.endswith(".AlternativeText")) or
-         (arg_str.endswith(".TextFrame.ContainingRange"))) and
+         (arg_str.endswith(".ContainingRange"))) and
         isinstance(arg, expressions.MemberAccessExpression)):
 
         # Yes we do. 
