@@ -747,6 +747,8 @@ class BoolExprItem(VBA_Object):
         elif (self.op.lower() == "like"):
             # TODO: Actually convert VBA regexes fully to Python regexes.
             try:
+                rhs = str(rhs)
+                lhs = str(lhs)
                 rhs = rhs.replace(".", "\\.")
                 rhs = rhs.replace("*", ".*")
                 rhs = rhs.replace("(", "\\(").replace(")", "\\)")
