@@ -372,6 +372,8 @@ class Dim_Statement(VBA_Object):
                 is_array = True
                 if (isinstance(var[2], int)):
                     size = var[2]
+                if ((len(var) > 3) and (isinstance(var[3], int))):
+                    size = var[3]
 
             # Do we have a type for the variable?
             curr_type = None

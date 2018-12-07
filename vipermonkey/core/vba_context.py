@@ -50,6 +50,8 @@ from datetime import datetime
 from logger import log
 import base64
 import re
+import random
+import string
 
 def is_procedure(vba_object):
     """
@@ -161,7 +163,8 @@ class Context(object):
         self.globals["Now".lower()] = datetime.now()
 
         # Fake up a user name.
-        self.globals["Application.UserName".lower()] = "--"
+        rand_name = ''.join(random.choice(string.ascii_uppercase + string.digits + " ") for _ in range(random.randint(10, 50)))
+        self.globals["Application.UserName".lower()] = rand_name
         
         # Add some attributes we are handling as global variables.
         self.globals["vbDirectory".lower()] = "vbDirectory"

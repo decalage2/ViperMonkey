@@ -745,20 +745,18 @@ class BoolExprItem(VBA_Object):
         elif (self.op == "<>"):
             return lhs != rhs
         elif (self.op.lower() == "like"):
-            # TODO: Actually convert VBA regexes fully to Python regexes.
+            
+            # Try as a Python regex.
             try:
                 rhs = str(rhs)
                 lhs = str(lhs)
-                rhs = rhs.replace(".", "\\.")
-                rhs = rhs.replace("*", ".*")
-                rhs = rhs.replace("(", "\\(").replace(")", "\\)")
-                rhs = rhs.replace("[", "\\[").replace("]", "\\]")
-                rhs = rhs.replace("{", "\\{").replace("}", "\\}")
-                rhs = rhs.replace("|", "\\|")
                 return (re.match(rhs, lhs) is not None)
             except Exception as e:
-                log.error("BoolExprItem: 'Like' re match failed. " + str(e))
-                return False
+
+                # Not a valid Pyhton regex. Just check string equality.
+                rhs = str(rhs)
+                lhs = str(lhs)
+                return (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
