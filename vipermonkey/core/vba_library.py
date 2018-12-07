@@ -70,6 +70,36 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+class WeekDay(VbaLibraryFunc):
+    """
+    VBA WeekDay function
+    """
+
+    def eval(self, context, params=None):
+
+        # Get date string.
+        if (len(params) == 0):
+            return 1
+        date_str = params[0].replace("#", "")
+        date_obj = None
+        
+        # TODO: Handle more and more date formats.
+
+        # 4/20/1889
+        if (date_str.count("/") == 2):
+            try:
+                date_obj = datetime.strptime(date_str, '%m/%d/%Y')
+            except:
+                pass
+
+        if (date_obj is not None):
+            r = date_obj.weekday()
+            # Looks like VBA week day is off by 2 from Python week day.
+            r += 2
+            log.debug("WeekDay(%r): return %r" % (date_str, r))
+            return r
+        return 1
+
 class Format(VbaLibraryFunc):
     """
     VBA Format function
@@ -2245,7 +2275,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch):
+               Format, Range, Switch, WeekDay):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
