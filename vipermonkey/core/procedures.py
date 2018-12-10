@@ -209,12 +209,18 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
+sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+                   + Optional(params_list_paren) + Suppress(':')
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
-sub = (sub_start + \
-       Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
-       Optional(bad_if_statement('bogus_if')) + \
-       Suppress(Optional(bad_next_statement)) + \
-       sub_end)
+sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+multiline_sub = (sub_start + \
+                 Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                 Optional(bad_if_statement('bogus_if')) + \
+                 Suppress(Optional(bad_next_statement)) + \
+                 sub_end)
+# Static Sub autoopEN(): Call atecyx: End Sub
+singleline_sub = sub_start_single + simple_statements_line('statements') + sub_end_single
+sub = singleline_sub | multiline_sub
 sub.setParseAction(Sub)
 
 # for line parser:

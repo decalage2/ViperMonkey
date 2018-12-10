@@ -301,6 +301,8 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         assert len(params) == 1
+
+        # Get the poperty we are looking for.
         prop = params[0]
 
         # Make sure we read in the metadata.

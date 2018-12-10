@@ -201,11 +201,34 @@ class MemberAccessExpression(VBA_Object):
             return s.eval(context=context, params=func_args)
         except KeyError:
             return None
+
+    def _handle_docprops_read(self, context):
+        """
+        Handle data reads with ActiveDocument.BuiltInDocumentProperties(...).
+        """
+
+        # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
+        # Is this an Application.Run() instance?
+        if (not str(self).startswith("ActiveDocument.BuiltInDocumentProperties(")):
+            return None
+
+        # Pull out the name of the property to read.
+        if (len(self.rhs[0].params) == 0):
+            return None
+        field_name = eval_arg(self.rhs[0].params[0], context)
+        
+        # Try to pull the result from the document data.
+        return context.get_doc_var(field_name)
         
     def eval(self, context, params=None):
 
         # See if this is a function call like Application.Run("foo", 12, 13).
         call_retval = self._handle_application_run(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # See if this is a function call like ActiveDocument.BuiltInDocumentProperties("foo").
+        call_retval = self._handle_docprops_read(context)
         if (call_retval is not None):
             return call_retval
         

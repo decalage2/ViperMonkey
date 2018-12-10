@@ -623,16 +623,14 @@ class Let_Statement(VBA_Object):
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
 
-        # Doing base64 decode with VBA?
-        if ((self.name == ".Text") and
-            (context.contains(".DataType")) and
-            (context.get(".DataType").lower().strip().endswith("base64"))):
+        # Doing base64 decode with VBA? Maybe?
+        if (self.name == ".Text"):
 
             # Try converting the text from base64.
             try:
                 value = base64.b64decode(str(value).strip())
             except Exception as e:
-                log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                log.warning("base64 conversion of '" + str(value) + "' failed. " + str(e))
                 
         # Is this setting an interesting field in a COM object?
         if ((str(self.name).endswith(".Arguments")) or
@@ -2269,9 +2267,10 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 #simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
 #                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
 #                   rem_statement | print_statement | resume_statement
-simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
-                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-                   rem_statement | print_statement | resume_statement
+simple_statement = NotAny(Regex(r"End\s+Sub")) + \
+                   (dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
+                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
+                    rem_statement | print_statement | resume_statement)
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
 # statement has to be declared beforehand using Forward(), so here we use
