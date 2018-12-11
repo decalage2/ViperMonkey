@@ -188,7 +188,8 @@ class ViperMonkey(object):
                                   '_SetSecureLockIcon',
                                   '_StatusTextChange',
                                   '_TitleChange',
-                                  '_Initialize']
+                                  '_Initialize',
+                                  '_Click']
                                   
     def add_compiled_module(self, m):
         """
