@@ -154,15 +154,25 @@ class MemberAccessExpression(VBA_Object):
     Handle member access expressions.
     """
 
-    def __init__(self, original_str, location, tokens):
-        super(MemberAccessExpression, self).__init__(original_str, location, tokens)
-        tokens = tokens[0][0]
-        self.rhs = tokens[1:]
-        self.lhs = tokens.lhs
-        self.rhs1 = ""
-        if (hasattr(tokens, "rhs1")):
-            self.rhs1 = tokens.rhs1
-        log.debug('parsed %r as MemberAccessExpression' % self)
+    def __init__(self, original_str, location, tokens, raw_fields=None):
+
+        # Are we manually creating a member access object?
+        if (raw_fields is not None):
+            self.lhs = raw_fields[0]
+            self.rhs = raw_fields[1]
+            self.rhs1 = raw_fields[2]
+            log.debug('Manually created MemberAccessExpression %r' % self)
+
+        # Make a member access object from parse results.
+        else:
+            super(MemberAccessExpression, self).__init__(original_str, location, tokens)
+            tokens = tokens[0][0]
+            self.rhs = tokens[1:]
+            self.lhs = tokens.lhs
+            self.rhs1 = ""
+            if (hasattr(tokens, "rhs1")):
+                self.rhs1 = tokens.rhs1
+            log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
         r = str(self.lhs)
@@ -261,6 +271,14 @@ class MemberAccessExpression(VBA_Object):
             # This is not a builtin. Evaluate it
             tmp_rhs = eval_arg(rhs, context)
             return tmp_rhs
+
+        # Did the lhs resolve to something new?
+        elif (str(self.lhs) != str(tmp_lhs)):
+
+            # Construct a new member access object and return that.
+            return MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
+
+        # Punt and just try to eval this as a string.
         else:
             return eval_arg(self.__repr__(), context)
 

@@ -262,6 +262,7 @@ def _read_from_object_text(arg, context):
                 lhs = var_name
                 
         log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+        print type(lhs)
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
@@ -325,6 +326,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
             try:
                 log.debug("eval_arg: Try as variable name: %r" % arg)
                 r = context.get(arg)
+                log.debug("eval_arg: Got %r = %r" % (arg, r))
                 return r
             except:
                     
