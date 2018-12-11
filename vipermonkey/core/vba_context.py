@@ -742,6 +742,12 @@ class Context(object):
         self.globals["xlXmlExportSuccess".lower()] = 0	
         self.globals["xlXmlExportValidationFailed".lower()] = 1	
 
+        # XLPrintErrors Enum
+        self.globals["xlPrintErrorsBlank".lower()] = 1	
+        self.globals["xlPrintErrorsDash".lower()] = 2	
+        self.globals["xlPrintErrorsDisplayed".lower()] = 0	
+        self.globals["xlPrintErrorsNA".lower()] = 3	
+        
     def get_true_name(self, name):
         """
         Get the true name of an aliased function imported from a DLL.
