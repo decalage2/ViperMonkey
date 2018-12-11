@@ -235,10 +235,12 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
+    # SHAPES: 'Shapes('FrXXBbPlWaco').TextFrame.TextRange'
     if (((arg_str.endswith("TextRange.Text")) or
+         (arg_str.endswith("TextFrame.TextRange")) or
          (arg_str.endswith(".AlternativeText")) or
          (arg_str.endswith(".ContainingRange"))) and
-        isinstance(arg, expressions.MemberAccessExpression)):
+        ("MemberAccessExpression" in str(type(arg)))):
 
         # Yes we do. 
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
@@ -262,7 +264,6 @@ def _read_from_object_text(arg, context):
                 lhs = var_name
                 
         log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
-        print type(lhs)
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
@@ -299,7 +300,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
 
     log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
-
+    
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
@@ -312,8 +313,23 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
     # Not reading from an Excel cell. Try as a VBA object.
     if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
+
+        # Handle cases where wscriptshell.run() is being called and there is a local run() function.
+        if ((".run(" in str(arg).lower()) and (context.contains("run"))):
+            print "TODO: HANDLE LOGGING RUN!!!!"
+            return 0
+
+        # Handle as a regular VBA object.
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
-        return arg.eval(context=context)
+        r = arg.eval(context=context)
+
+        # Is this a Shapes() access that still needs to be handled?
+        if (str(r).startswith("Shapes(")):
+            log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
+            return eval_arg(r, context)
+
+        # Regular VBA object.
+        return r
 
     # Not a VBA object.
     else:
@@ -517,7 +533,8 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    return map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    return r
 
 def coerce_to_str(obj):
     """
@@ -622,7 +639,7 @@ def coerce_args(orig_args):
             else:
                 new_args.append(arg)
 
-        #log.debug("Coerce to str " + str(new_args))
+        log.debug("Coerce to str " + str(new_args))
         return coerce_args_to_str(new_args)
 
     else:
@@ -634,8 +651,8 @@ def coerce_args(orig_args):
                 new_args.append(0)
             else:
                 new_args.append(arg)
-
-        #log.debug("Coerce to int " + str(new_args))
+                
+        log.debug("Coerce to int " + str(new_args))
         return coerce_args_to_int(new_args)
 
 def int_convert(arg):

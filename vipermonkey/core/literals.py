@@ -124,7 +124,9 @@ class String(VBA_Object):
         return str(self.value)
 
     def eval(self, context, params=None):
-        return self.value.replace("\n", "\\n").replace("\t", "\\t")
+        r = self.value.replace("\n", "\\n").replace("\t", "\\t")
+        log.debug("String.eval: return " + r)
+        return r
 
 quoted_string = QuotedString('"', escQuote='""')('value')
 #quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n").replace("\t", "\\t"))

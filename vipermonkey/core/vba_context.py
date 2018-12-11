@@ -937,7 +937,6 @@ class Context(object):
             # this value? Only do this if it looks like we have a valid doc var name.
             if ((re.match(r"^[a-zA-Z_][\w\d]*$", str(var)) is not None) and
                 ("*" in self.doc_vars)):
-                print "Got " + var + " = " + self.doc_vars["*"] + " as wildcard"
                 return self.doc_vars["*"]
 
             # No wildcard variable. Return nothing.
