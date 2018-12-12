@@ -249,15 +249,20 @@ def _get_shapes_text_values_xml(fname):
 
     return r
 
-def _get_ole_textbox_values(fname, stream):
+def _get_ole_textbox_values(obj, stream):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a hack.
     """
 
-    f = open(fname, "rb")
-    data = f.read()
-    f.close()
+    if obj[0:4] == '\xd0\xcf\x11\xe0':
+        #its the data blob
+        data = obj
+    else:
+        f = open(fname, "rb")
+        data = f.read()
+        f.close()
+
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
     index = 0
     r = []
