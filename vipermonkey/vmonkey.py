@@ -248,7 +248,54 @@ def _get_shapes_text_values_xml(fname):
         pos += 1
 
     return r
+
+def _get_ole_textbox_values(fname, stream):
+    """
+    Read in the text associated with embedded OLE form textbox objects.
+    NOTE: This currently is a hack.
+    """
+
+    f = open(fname, "rb")
+    data = f.read()
+    f.close()
+    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
+    index = 0
+    r = []
+    while ("Microsoft Forms 2.0 TextBox" in data[index:]):
+
+        # Break out the data for an embedded OLE textbox form.
+        index = data.index("Microsoft Forms 2.0 TextBox")
+        end = index + 5000
+        if (end > len(data)):
+            end = len(data) - 1
+        chunk = data[index : end]
+        strs = re.findall(pat, chunk)
     
+        # 3rd string looks like the name of the ole form object.
+        if (len(strs) < 5):
+            continue
+        name = strs[3].replace("\x00", "")
+
+        # Item after that looks like start of text of the object.
+        text = strs[4].replace("\x00", "")
+
+        # Looks like more text comes after the "SummaryInformation" tag.
+        i = 4
+        for s in strs[4:]:
+            if ((s.replace("\x00", "").strip() == "SummaryInformation") and
+                (i < len(strs))):
+                text += strs[i + 1].replace("\x00", "")
+            i += 1
+
+        # Save the form name and text value.
+        r.append((name, text))
+
+        # Move to next chunk.
+        index = end
+
+    # Return the OLE form textbox information.
+    return r
+        
 def _get_shapes_text_values(fname, stream):
     """
     Read in the text associated with Shape objects in the document.
@@ -1119,11 +1166,11 @@ def process_file (container,
                 if (m != "empty"):
                     vm.add_compiled_module(m)
 
+            # Pull out document variables.
             if data:
                 vbafile = data
             else:
                 vbafile = filename
-            # Pull out document variables.
             for (var_name, var_val) in _read_doc_vars(vbafile):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
@@ -1138,6 +1185,14 @@ def process_file (container,
                 for (var_name, var_val) in _get_shapes_text_values(vbafile, '1table'):
                     vm.doc_vars[var_name.lower()] = var_val
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+
+            # Pull out embedded OLE form textbox text.
+            for (var_name, var_val) in _get_ole_textbox_values(vbafile, 'worddocument'):
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
+                var_name = "ActiveDocument." + var_name
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
                     
             # Pull out custom document properties.
             for (var_name, var_val) in _read_custom_doc_props(vbafile):

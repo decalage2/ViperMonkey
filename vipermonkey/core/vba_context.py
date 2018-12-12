@@ -939,7 +939,19 @@ class Context(object):
                 ("*" in self.doc_vars)):
                 return self.doc_vars["*"]
 
-            # No wildcard variable. Return nothing.
+            # See if this is in the ActiveDocument.
+            if ("." in var):
+
+                # Get the new name looking for the var in ActiveDocument.
+                var = "activedocument." + var[var.index(".") + 1:]
+                if (var in self.doc_vars):
+
+                    # Found it.
+                    r = self.doc_vars[var]
+                    log.debug("Found doc var " + var + " = " + str(r))
+                    return r
+                
+            # No variable. Return nothing.
             return None
 
         # Found it.
