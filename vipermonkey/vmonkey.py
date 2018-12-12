@@ -1156,11 +1156,8 @@ def _process_file (filename, data,
 
             # If this is an Excel spreadsheet, read it in with xlrd.
             try:
-                log.debug("Trying to load " + filename + " with xlrd...")
-                if data:
-                    vm.loaded_excel = xlrd.open_workbook(file_contents=data)
-                else:
-                    vm.loaded_excel = xlrd.open_workbook(filename)
+                log.debug("Trying to load with xlrd...")
+                vm.loaded_excel = xlrd.open_workbook(file_contents=data)
             except Exception as e:
                 log.error("Reading in file as Excel failed. " + str(e))
                 
