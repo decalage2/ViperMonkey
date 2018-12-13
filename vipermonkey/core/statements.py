@@ -852,36 +852,73 @@ class For_Statement(VBA_Object):
         # For vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = 1 To 833127186
         # vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = vPHpqvZhLlFhzUmTfwXoRrfZRjfRu + 1
         # Next
-
+        #
+        # For XfDQcHXF4W = 1 To I6nB6p5Bio
+        #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
+        # Next XfDQcHXF4W
+        
         # Do we just have 1 line in the loop body?
         if (len(self.statements) != 1):
             return (None, None)
 
-        # Are we just modifying the loop counter variable each loop iteration?
-        var_inc = str(self.name) + " = " + str(self.name)
+        # Are we just modifying a single variable each loop iteration by a single literal value?
         body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
-        if (not body.startswith(var_inc)):
+        #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
+        fields = body.split(" ")
+        if (len(fields) != 5):
+            return (None, None)
+        op = fields[3].strip()
+        num = fields[4].strip()
+        var = fields[0].strip()
+        if (var != fields[2].strip()):
+            return (None, None)
+        if (not num.isdigit()):
+            return (None, None)
+        if (op not in ['+', '-', '*']):
             return (None, None)
 
-        # We are just modifying the loop variable each time. Figure out the final
-        # iteration value.
-        if (" " not in body):
-            return (None, None)
-        body = body.replace(var_inc, "").strip()
-        op = body[:body.index(" ")]
-        num = body[body.index(" ") + 1:]
+        # Get the initial value of variable being modified in the loop.
+        init_val = None
+        try:
+
+            # Get the initial value if there is one.
+            init_val = context.get(var)
+
+            # Can only handle integers.
+            if (not str(init_val).isdigit()):
+                return (None, None)
+            init_val = int(str(init_val))
+
+        except KeyError:
+
+            # The variable is undeclared/uninitialized. Default to 0.
+            init_val = 0
+
+        # Figure out the # of loop iterations that will run.
+        num_iters = (end - start + 1)/step
+            
+        # We are just modifying a variable each time. Figure out the final
+        # value of the variable modified in the loop.
         try:
             num = int(num)
         except:
             return (None, None)
+        r = None
         if (op == "+"):
-            return (self.name, end + num)
-        if (op == "-"):
-            return (self.name, end - num)
-        if (op == "*"):
-            return (self.name, end * num)
-        return (None, None)
-    
+            r = (var, init_val + num_iters*num)
+        elif (op == "-"):
+            r = (var, init_val - num_iters*num)
+        elif (op == "*"):
+            r = (var, init_val * pow(num, num_iters))
+        else:
+            return (None, None)
+
+        # Set the final value of the loop index variable.
+        context.set(self.name, end + step)
+
+        # Return the loop result.
+        return r
+        
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -931,28 +968,30 @@ class For_Statement(VBA_Object):
             end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
-        # Set start and end to valid values.
-        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
-            end = VBA_Object.loop_upper_bound
-            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+        # Get the loop step value.
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
 
+        # Set the loop index variable to the start value.
+        context.set(self.name, start)
+            
         # See if we have a simple style loop put in purely for obfuscation.
         var, val = self._handle_simple_loop(context, start, end, step)
         if ((var is not None) and (val is not None)):
             log.info("Short circuited loop. Set " + str(var) + " = " + str(val))
             context.set(var, val)
             return
-            
+
+        # Set end to valid values.
+        if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
+            end = VBA_Object.loop_upper_bound
+            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+        
         # Track that the current loop is running.
         context.loop_stack.append(True)
-
-        # Set the loop index variable to the start value.
-        context.set(self.name, start)
 
         # Loop until the loop is broken out of or we hit the last index.
         while (context.get(self.name) <= end):
