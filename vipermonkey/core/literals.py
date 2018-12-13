@@ -117,8 +117,8 @@ float_literal = float_literal_exp ^ float_literal_no_exp
 class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
-        self.value = tokens.value
-        log.debug('parsed %r as String' % self)
+        self.value = tokens[0]
+        log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
         return str(self.value)

@@ -2377,14 +2377,14 @@ class External_Function(VBA_Object):
         super(External_Function, self).__init__(original_str, location, tokens)
         self.name = str(tokens.function_name)
         self.params = tokens.params
-        self.lib_name = str(tokens.lib_name)
+        self.lib_name = str(tokens.lib_info.lib_name)
         # normalize lib name: remove quotes, lowercase, add .dll if no extension
         if isinstance(self.lib_name, basestring):
             self.lib_name = str(tokens.lib_name).strip('"').lower()
             if '.' not in self.lib_name:
                 self.lib_name += '.dll'
         self.lib_name = str(self.lib_name)
-        self.alias_name = str(tokens.alias_name)
+        self.alias_name = str(tokens.lib_info.alias_name)
         if isinstance(self.alias_name, basestring):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
@@ -2419,12 +2419,15 @@ class External_Function(VBA_Object):
             context.report_action('Write File', params[2], 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
-        if function_name.startswith('shellexecute'):
+        elif function_name.startswith('shellexecute'):
             cmd = str(params[2]) + str(params[3])
             context.report_action('Run Command', cmd, function_name, strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
-
+        else:
+            call_str = str(self.alias_name) + "(" + str(params) + ")"
+            context.report_action('External Call', call_str, str(self.lib_name) + " / " + str(self.alias_name))
+        
         # Simulate certain external calls of interest.
         if (function_name.startswith('createfile')):
             return self._createfile(params, context)
@@ -2453,5 +2456,5 @@ lib_info = CaselessKeyword('Lib').suppress() + quoted_string('lib_name') \
 # TODO: identifier or lex_identifier
 external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Optional(CaselessKeyword('PtrSafe')) + \
                                                 (CaselessKeyword('Function') | CaselessKeyword('Sub'))) + \
-                                                lex_identifier('function_name') + lib_info + Optional(params_list_paren) + Optional(function_type2)
+                                                lex_identifier('function_name') + lib_info('lib_info') + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)

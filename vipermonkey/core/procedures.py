@@ -97,6 +97,12 @@ class Sub(VBA_Object):
                     break
                 param_name = self.params[i].name
                 param_value = params[i]
+
+                # Handle empty string parameters.
+                if ((param_value == 0) and (self.params[i].my_type == "String")):
+                    param_value = ""
+
+                # Add the parameter value to the local function context.
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
 
@@ -286,6 +292,12 @@ class Function(VBA_Object):
                 # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
+
+                # Handle empty string parameters.
+                if ((param_value == 0) and (self.params[i].my_type == "String")):
+                    param_value = ""
+
+                # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 context.set(param_name, param_value)
 
