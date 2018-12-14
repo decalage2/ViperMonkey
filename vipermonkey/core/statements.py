@@ -2404,8 +2404,6 @@ class External_Function(VBA_Object):
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
-        # TODO: use separate classes for each known DLL and methods for functions?
-        # TODO: use the alias name instead of the name!
         if self.alias_name:
             function_name = self.alias_name
         else:
@@ -2439,7 +2437,7 @@ class External_Function(VBA_Object):
             return self._closehandle(params, context)
         
         # TODO: return result according to the known DLLs and functions
-        log.error('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
+        log.warning('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
         return 0
 
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
