@@ -166,14 +166,19 @@ def _get_shapes_text_values_xml(fname):
     NOTE: This currently is a hack.
     """
 
+    contents = None
     if fname.startswith("<?xml"):
         contents=fname
     else:
+
         # it's probably a filename, not a blob of data..
         # Read in the file contents.
-        f = open(fname, "r")
-        contents = f.read().strip()
-        f.close()
+        try:
+            f = open(fname, "r")
+            contents = f.read().strip()
+            f.close()
+        except:
+            contents = fname
 
     # Is this an XML file?
     if ((not contents.startswith("<?xml")) or
@@ -259,9 +264,13 @@ def _get_ole_textbox_values(obj, stream):
         #its the data blob
         data = obj
     else:
-        f = open(fname, "rb")
-        data = f.read()
-        f.close()
+        fname = obj
+        try:
+            f = open(fname, "rb")
+            data = f.read()
+            f.close()
+        except:
+            data = obj
 
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
     index = 0
