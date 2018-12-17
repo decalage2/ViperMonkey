@@ -962,8 +962,15 @@ class Context(object):
     # TODO: set_global?
 
     def set(self, name, value, var_type=None, do_with_prefix=True):
+
+        # Does the name make sense?
         if (not isinstance(name, basestring)):
             return
+
+        # Does the value make sense?
+        if (value is None):
+            return
+        
         # convert to lowercase
         name = name.lower()
         if name in self.locals:
