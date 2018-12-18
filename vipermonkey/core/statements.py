@@ -2388,6 +2388,8 @@ class External_Function(VBA_Object):
         if isinstance(self.alias_name, basestring):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
+        if (len(self.alias_name.strip()) == 0):
+            self.alias_name = self.name
         self.return_type = tokens.return_type
         self.vars = {}
         log.debug('parsed %r' % self)
