@@ -352,6 +352,21 @@ class Shell(VbaLibraryFunc):
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
 
+class ShellExecute(Shell):
+    """
+    shell.application.ShellExecute() function.
+    """
+    
+    def eval(self, context, params=None):
+
+        if (len(params) < 2):
+            return 0
+        command = str(params[0])
+        args = str(params[1])
+        log.info('ShellExecute(%r %r)' % (command, args))
+        context.report_action('Execute Command', command + " " + args, 'Shell function', strip_null_bytes=True)
+        return 0
+    
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -2277,7 +2292,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch, WeekDay):
+               Format, Range, Switch, WeekDay, ShellExecute):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
