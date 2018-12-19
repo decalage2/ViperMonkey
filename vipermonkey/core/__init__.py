@@ -189,7 +189,8 @@ class ViperMonkey(object):
                                   '_StatusTextChange',
                                   '_TitleChange',
                                   '_Initialize',
-                                  '_Click']
+                                  '_Click',
+                                  '_BeforeClose']
                                   
     def add_compiled_module(self, m):
         """
