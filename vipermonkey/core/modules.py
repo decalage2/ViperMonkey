@@ -66,6 +66,10 @@ class Module(VBA_Object):
         self.subs = {}
         self.global_vars = {}
         for token in tokens:
+            if isinstance(token, If_Statement_Macro):
+                for n in token.external_functions.keys():
+                    log.debug("saving external func decl: %r" % n)
+                    self.external_functions[n] = token.external_functions[n]
             if isinstance(token, Sub):
                 log.debug("saving sub decl: %r" % token.name)
                 self.subs[token.name] = token
@@ -161,7 +165,7 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 empty_line = EOL.suppress()
 
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line))
+module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line) | simple_if_statement_macro)
 
 module_body = module_declaration + module_code
 

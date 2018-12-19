@@ -435,7 +435,15 @@ class Function_Call(VBA_Object):
         return '%s(%r)' % (self.name, parms)
 
     def eval(self, context, params=None):
+
         log.debug("Function_Call: eval params: " + str(self.params))
+
+        # Reset the called function name if this is an alias for an imported external
+        # DLL function.
+        dll_func_name = context.get_true_name(self.name)
+        if (dll_func_name is not None):
+            self.name = dll_func_name
+
         params = None
         if (self.name == "CallByName"):
             params = eval_args(self.params[1:], context=context)

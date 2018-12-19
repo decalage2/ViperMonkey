@@ -1821,7 +1821,12 @@ class If_Statement_Macro(If_Statement):
 
     def __init__(self, original_str, location, tokens):
         super(If_Statement_Macro, self).__init__(original_str, location, tokens)
-        pass
+        self.external_functions = {}
+        for piece in self.pieces:
+            for token in piece["body"]:
+                if isinstance(token, External_Function):
+                    log.debug("saving VBA macro external func decl: %r" % token.name)
+                    self.external_functions[token.name] = token
 
     def eval(self, context, params=None):
 
