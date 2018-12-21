@@ -642,21 +642,23 @@ def is_useless_call(line):
 
     # These are the functions that do nothing if they appear on a line by themselves.
     # TODO: Add more functions as needed.
-    useless_funcs = set(["Cos", "Log", "Cos", "Exp", "Sin", "Tan"])
+    useless_funcs = set(["Cos", "Log", "Cos", "Exp", "Sin", "Tan", "DoEvents"])
 
     # Is this an assignment line?
     if ("=" in line):
         return False
 
-    # Is this a function call?
-    if ("(" not in line):
-        return False
-    
     # Nothing is being assigned. See if a useless function is called and the
     # return value is not used.
     line = line.replace(" ", "")
-    called_func = line[:line.index("(")]
-    return (called_func in useless_funcs)
+    called_func = line
+    if ("(" in line):
+        called_func = line[:line.index("(")]
+    called_func = called_func.strip()
+    for func in useless_funcs:
+        if (called_func == func):
+            return True
+    return False
 
 def collapse_macro_if_blocks(vba_code):
     """

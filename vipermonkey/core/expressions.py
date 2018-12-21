@@ -229,6 +229,20 @@ class MemberAccessExpression(VBA_Object):
         
         # Try to pull the result from the document data.
         return context.get_doc_var(field_name)
+
+    def _handle_docvars_read(self, context):
+        """
+        Handle data reads from a document variable.
+        """
+
+        # Try an actual doc var read first.
+        tmp = self.__repr__().lower()
+        if (tmp.startswith("activedocument.variables(")):
+            return eval_arg(self.__repr__(), context)
+
+        # Now widen this up to more general data that can be read from the
+        # doc.        
+        return context.get_doc_var(tmp)
         
     def eval(self, context, params=None):
 
@@ -243,9 +257,9 @@ class MemberAccessExpression(VBA_Object):
             return call_retval
         
         # Handle accessing document variables as a special case.
-        tmp = self.__repr__().lower()
-        if (tmp.startswith("activedocument.variables(")):
-            return eval_arg(self.__repr__(), context)
+        call_retval = self._handle_docvars_read(context)
+        if (call_retval is not None):
+            return call_retval
             
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
@@ -275,8 +289,18 @@ class MemberAccessExpression(VBA_Object):
         # Did the lhs resolve to something new?
         elif (str(self.lhs) != str(tmp_lhs)):
 
-            # Construct a new member access object and return that.
-            return MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
+            # Construct a new partially resolved member access object.
+            r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
+            
+            # See if we can now resolve this to a doc var read.
+            call_retval = r._handle_docvars_read(context)
+            if (call_retval is not None):
+                log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
+                return call_retval
+            
+            # Cannot resolve directly. Return the member access object.
+            log.debug("MemberAccess: Return new access object " + str(r))
+            return r
 
         # Punt and just try to eval this as a string.
         else:

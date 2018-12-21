@@ -929,7 +929,10 @@ class Context(object):
             try:
                 var_value = self.get(var)
                 if (var_value is not None):
-                    return self.get_doc_var(var_value)
+                    r = self.get_doc_var(var_value)
+                    if (r is not None):
+                        return r
+                    return var_value
             except KeyError:
                 pass
 
