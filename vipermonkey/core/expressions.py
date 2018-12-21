@@ -437,7 +437,7 @@ class Function_Call(VBA_Object):
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
-                 "FileCopy", "Load"]
+                 "FileCopy", "Load", "ShellExecute"]
     
     def __init__(self, original_str, location, tokens):
         super(Function_Call, self).__init__(original_str, location, tokens)

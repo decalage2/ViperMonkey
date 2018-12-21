@@ -83,7 +83,7 @@ class Module(VBA_Object):
                 log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
             elif isinstance(token, Global_Var_Statement):
-                log.debug("saving global var decl: %r = %r" % (token.name, token.value))
+                log.debug("saving global var decl (0): %r = %r" % (token.name, token.value))
                 self.global_vars[token.name] = token.value
             elif isinstance(token, Dim_Statement):
 
@@ -91,14 +91,18 @@ class Module(VBA_Object):
                 for var in token.variables:
 
                     # Get the initial value.
-                    curr_init_val = var[2]
+                    print(var)
+                    curr_init_val = token.init_val
                     
                     # Get initial var value based on type.
-                    curr_type = var[3]
-                    if ((curr_type is not None) and (curr_init_val is None)):
+                    curr_type = var[2]
+                    if ((curr_type is not None) and
+                        ((curr_init_val is None) or (curr_init_val is "NULL"))):
 
                         # Get the initial value.
-                        if ((curr_type == "Long") or (curr_type == "Integer")):
+                        if ((curr_type == "Long") or
+                            (curr_type == "Integer") or
+                            (curr_type == "Byte")):
                             curr_init_val = 0
                         if (curr_type == "String"):
                             curr_init_val = ''
@@ -106,11 +110,14 @@ class Module(VBA_Object):
                         # Is this variable an array?
                         if (var[1]):
                             curr_type += " Array"
-                            curr_init_val = []
-
+                            if ((len(var) >= 4) and (var[3] is not None)):
+                                curr_init_val = [curr_init_val] * var[3]
+                            else:
+                                curr_init_val = []
+                                
                     # Set the initial value of the declared variable.
                     self.global_vars[var[0]] = curr_init_val
-                    log.debug("saving global var decl: %r = %r" % (var[0], curr_init_val))
+                    log.debug("saving global var decl (1): %r = %r" % (var[0], curr_init_val))
 
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print

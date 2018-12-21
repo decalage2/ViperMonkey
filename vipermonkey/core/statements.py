@@ -535,7 +535,7 @@ dim_statement.setParseAction(Dim_Statement)
 
 class Global_Var_Statement(VBA_Object):
     """
-    Dim statement
+    Dim statement, global variable.
     """
 
     def __init__(self, original_str, location, tokens):
