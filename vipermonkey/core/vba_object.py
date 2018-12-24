@@ -91,11 +91,11 @@ def limits_exceeded(throw_error=False):
     if (recursion_exceeded):
         log.error("Call recursion depth approaching limit.")
         if (throw_error):
-            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting.")
+            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting analysis.")
     if (time_exceeded):
         log.error("Emulation time exceeded.")
         if (throw_error):
-            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting.")
+            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting analysis.")
         
     return (recursion_exceeded or time_exceeded)
 
@@ -296,8 +296,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
     # pypy seg faults sometimes if the recursion depth is exceeded. Try to
     # avoid that. Also check to see if emulation has taken too long.
-    if (limits_exceeded()):
-        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+    limits_exceeded(throw_error=True)
 
     log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
     

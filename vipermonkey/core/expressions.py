@@ -523,6 +523,10 @@ class Function_Call(VBA_Object):
                         
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
+                            print "******************"
+                            print self
+                            print f.byref_params.keys
+                            print self.params
                             for byref_param_info in f.byref_params.keys():
                                 arg_var_name = str(self.params[byref_param_info[1]])
                                 context.set(arg_var_name, f.byref_params[byref_param_info])

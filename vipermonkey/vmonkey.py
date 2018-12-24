@@ -1331,8 +1331,9 @@ def _process_file (filename, data,
             print ''
             return ([], [])
     except Exception as e:
-        if ("SystemExit" not in str(e)):
+        if (("SystemExit" not in str(e)) and (". Aborting analysis." not in str(e))):
             traceback.print_exc()
+        log.error(str(e))
         return None
 
 def process_file_scanexpr (container, filename, data):
