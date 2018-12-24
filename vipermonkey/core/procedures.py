@@ -115,11 +115,22 @@ class Sub(VBA_Object):
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
+        context.got_error = False
         for s in self.statements:
+
+            # Emulate the current statement.
             log.debug('Sub %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
 
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
@@ -309,6 +320,7 @@ class Function(VBA_Object):
                 
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
+        context.got_error = False
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
@@ -318,6 +330,14 @@ class Function(VBA_Object):
             if (context.exit_func):
                 break
 
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)

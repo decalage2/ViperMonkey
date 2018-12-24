@@ -1013,7 +1013,12 @@ class For_Statement(VBA_Object):
                     done = True
                     break
 
-            # Finished with the loop due to 'Exit For'?
+                # Was there an error that will make us jump to an error handler?
+                if (context.must_handle_error()):
+                    done = True
+                    break
+                
+            # Finished with the loop due to 'Exit For' or error?
             if (done):
                 break
 
@@ -1025,6 +1030,10 @@ class For_Statement(VBA_Object):
         context.loop_stack.pop()
         log.debug('FOR loop: end.')
 
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+        
 # 5.6.16.6 Bound Variable Expressions
 #
 # A <bound-variable-expression> is invalid if it is classified as something other than a variable
@@ -1134,7 +1143,12 @@ class For_Each_Statement(VBA_Object):
                         done = True
                         break
 
-                # Finished with the loop due to 'Exit For'?
+                    # Was there an error that will make us jump to an error handler?
+                    if (context.must_handle_error()):
+                        done = True
+                        break
+                    
+                # Finished with the loop due to 'Exit For' or error?
                 if (done):
                     break
 
@@ -1147,6 +1161,10 @@ class For_Each_Statement(VBA_Object):
         context.loop_stack.pop()
         log.debug('FOR EACH loop: end.')
 
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+        
 for_each_clause = CaselessKeyword("For").suppress() \
                   + CaselessKeyword("Each").suppress() \
                   + lex_identifier("item") \
@@ -1336,7 +1354,12 @@ class While_Statement(VBA_Object):
                     done = True
                     break
 
-            # Finished with the loop due to 'Exit For'?
+                # Was there an error that will make us jump to an error handler?
+                if (context.must_handle_error()):
+                    done = True
+                    break
+
+            # Finished with the loop due to 'Exit For' or error?
             if (done):
                 break
         
@@ -1344,6 +1367,10 @@ class While_Statement(VBA_Object):
         context.loop_stack.pop()
         log.debug('WHILE loop: end.')
 
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+        
 while_type = CaselessKeyword("While") | CaselessKeyword("Until")
         
 while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
@@ -1419,6 +1446,11 @@ class Do_Statement(VBA_Object):
                     done = True
                     break
 
+                # Was there an error that will make us jump to an error handler?
+                if (context.must_handle_error()):
+                    done = True
+                    break
+                
             # Finished with the loop due to 'Exit For'?
             if (done):
                 break
@@ -1434,6 +1466,10 @@ class Do_Statement(VBA_Object):
         context.loop_stack.pop()
         log.debug('DO loop: end.')
 
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+        
 simple_do_statement = Suppress(CaselessKeyword("Do")) + Suppress(EOS) + \
                       Group(statement_block('body')) + \
                       Suppress(CaselessKeyword("Loop")) + Optional(while_type("type") + boolean_expression("guard"))
@@ -1483,10 +1519,20 @@ class Select_Statement(VBA_Object):
                 # Evaluate the body of this case.
                 log.debug("eval select: take case " + str(case))
                 for statement in case.body:
+
+                    # Emulate the statement.
                     if (not isinstance(statement, VBA_Object)):
                         continue
                     statement.eval(context, params)
 
+                    # Was there an error that will make us jump to an error handler?
+                    if (context.must_handle_error()):
+                        break
+
+                # Run the error handler if we have one and we broke out of the statement
+                # loop with an error.
+                context.handle_error(params)
+                    
                 # Done with the select.
                 break
 
@@ -2097,9 +2143,16 @@ class With_Statement(VBA_Object):
         # Evaluate each statement in the with block.
         log.debug("START WITH")
         for s in self.body:
+
+            # Emulate the statement.
             if (not isinstance(s, VBA_Object)):
                 continue
             s.eval(context)
+
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            
         log.debug("END WITH")
             
         # Remove the current with prefix.
@@ -2108,6 +2161,10 @@ class With_Statement(VBA_Object):
         else:
             end = context.with_prefix.rindex(".")
             context.with_prefix = context.with_prefix[:end]
+
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
             
         return
 
@@ -2118,15 +2175,6 @@ with_statement = CaselessKeyword('With').suppress() + (member_access_expression(
 with_statement.setParseAction(With_Statement)
 
 # --- GOTO statement ----------------------------------------------------------
-
-# TODO: Emulation of Goto statements needs to be added. This can be
-# done by changing the parsing of a Label statement to include the
-# label and then the statement list following the label. When parsed
-# the Label statement VBA_Object will track the statement list
-# associated with the label. Add a mapping from labels to statement
-# lists in the context. Then evaluating a Goto statement will involve
-# looking up the statement list for the label, evaluating those
-# statements, and then exiting the current function.
 
 class Goto_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
@@ -2185,13 +2233,30 @@ class On_Error_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(On_Error_Statement, self).__init__(original_str, location, tokens)
         self.tokens = tokens
+        self.label = None
+        if ((len(tokens) == 4) and (tokens[2].lower() == "goto")):
+            self.label = str(tokens[3])
         log.debug('parsed %r as On_Error_Statement' % self)
 
     def __repr__(self):
         return str(self.tokens)
 
     def eval(self, context, params=None):
-        # Currently stubbed out.
+
+        # Do we have a goto error handler?
+        if (self.label is not None):
+
+            # Do we have a labeled block that matches the error handler block?
+            if (self.label in context.tagged_blocks):
+
+                 # Set the error handler in the context.
+                context.error_handler = context.tagged_blocks[self.label]
+                log.debug("Setting On Error handler block to '" + self.label + "'.")
+
+            # Can't find error handler block.
+            else:
+                log.warning("Cannot find error handler block '" + self.label + "'.")
+
         return
 
 on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \

@@ -101,6 +101,10 @@ class SimpleNameExpression(VBA_Object):
 simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + TODO_identifier_or_object_attrib('name')
 simple_name_expression.setParseAction(SimpleNameExpression)
 
+# A placeholder representing a missing default value function call parameter.
+placeholder = Keyword("***PLACEHOLDER***")
+placeholder.setParseAction(lambda t: str(t[0]))
+
 # --- INSTANCE EXPRESSIONS ------------------------------------------------------------
 
 class InstanceExpression(VBA_Object):
@@ -505,6 +509,7 @@ class Function_Call(VBA_Object):
                         return r
                     except:
                         log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
+                        context.got_error = True
                         return 0
 
                 # Looks like we want the whole array (ex. foo()).
@@ -523,10 +528,6 @@ class Function_Call(VBA_Object):
                         
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
-                            print "******************"
-                            print self
-                            print f.byref_params.keys
-                            print self.params
                             for byref_param_info in f.byref_params.keys():
                                 arg_var_name = str(self.params[byref_param_info[1]])
                                 context.set(arg_var_name, f.byref_params[byref_param_info])
@@ -659,7 +660,7 @@ func_call_array_access.setParseAction(Function_Call_Array_Access)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
             ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
-              simple_name_expression | asc | strReverse | literal | file_pointer)
+              simple_name_expression | asc | strReverse | literal | file_pointer | placeholder)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -874,7 +875,12 @@ class BoolExpr(VBA_Object):
             self.op = tokens[0]
             self.rhs = tokens[1]
             self.lhs = None
-            
+
+        if (isinstance(self.lhs, pyparsing.ParseResults)):
+            self.lhs = BoolExpr(None, None, [self.lhs])
+        if (isinstance(self.rhs, pyparsing.ParseResults)):
+            self.rhs = BoolExpr(None, None, [self.rhs])
+
         log.debug('parsed %r as BoolExpr' % self)
 
     def __repr__(self):
@@ -891,7 +897,6 @@ class BoolExpr(VBA_Object):
 
     def eval(self, context, params=None):
 
-        #print "EVAL: " + str(self)                
         # Unary operator?
         if (self.lhs is None):
 
@@ -903,27 +908,30 @@ class BoolExpr(VBA_Object):
                 log.error("Boolxpr: Cannot eval " + self.__repr__() + ".")
                 return ''
 
+            # Bitwise operation?
+            if (isinstance(rhs, int)):
+                log.debug("Bitwise boolean operation: " + str(self))
+                if (self.op.lower() == "not"):
+                    return (~ rhs)
+                else:
+                    log.error("BoolExpr: Unknown bitwise unary op " + str(self.op))
+                    return 0
+                
             # Evalue the unary expression.
-            #print "RHS (1): " + str(rhs)
-            #print self.op.lower()
             if (self.op.lower() == "not"):
                 return (not rhs)
             else:
-                log.error("BoolExpr: Unknown unary op " + str(self.op))
+                log.error("BoolExpr: Unknown boolean unary op " + str(self.op))
                 return ''
                 
         # If we get here we always have a LHS. Evaluate that in the current context.
-        #print "HERE: 1"
         lhs = self.lhs
         try:
             lhs = eval_arg(self.lhs, context)
-            #print "HERE: 2"
         except AttributeError:
             pass
 
         # Do we have an operator or just a variable reference?
-        #print "LHS: " + str(lhs)
-        #print self.op
         if (self.op is None):
 
             # Variable reference. Return its value.
@@ -933,12 +941,23 @@ class BoolExpr(VBA_Object):
         rhs = self.rhs
         try:
             rhs = eval_arg(self.rhs, context)
-            #print "HERE: 3"
         except AttributeError as e:
-            #print e
             pass
 
-        #print "RHS (2): " + str(rhs)
+        # Bitwise operation?
+        if (isinstance(lhs, int) and isinstance(rhs, int)):
+
+            log.debug("Bitwise boolean operation: " + str(self))
+            if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
+                return lhs & rhs
+            elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
+                return lhs | rhs
+            elif (self.op.lower() == "xor"):
+                return lhs ^ rhs
+            else:
+                log.error("BoolExpr: Unknown bitwise operator %r" % self.op)
+                return 0
+            
         # Evaluate the expression.
         if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
             return lhs and rhs
@@ -947,7 +966,7 @@ class BoolExpr(VBA_Object):
         elif (self.op.lower() == "eqv"):
             return (lhs == rhs)
         else:
-            log.error("BoolExpr: Unknown operator %r" % self.op)
+            log.error("BoolExpr: Unknown operator boolean %r" % self.op)
             return False
     
 boolean_expression <<= infixNotation(bool_expr_item,

@@ -90,6 +90,12 @@ class Context(object):
                  doc_vars=None,
                  loaded_excel=None):
 
+        # Track whether an error was raised in an emulated statement.
+        got_error = False
+
+        # Track the error handler to execute when an error is raised.
+        error_handler = None
+        
         # Track mapping from bogus alias name of DLL imported functions to
         # real names.
         self.dll_func_true_names = {}
@@ -747,7 +753,24 @@ class Context(object):
         self.globals["xlPrintErrorsDash".lower()] = 2	
         self.globals["xlPrintErrorsDisplayed".lower()] = 0	
         self.globals["xlPrintErrorsNA".lower()] = 3	
-        
+
+    def must_handle_error(self):
+        """
+        Check to see if there was are error raised during emulation and we have
+        an error handler.
+        """
+        return (self.got_error and
+                hasattr(self, "error_handler") and
+                (self.error_handler is not None))
+
+    def handle_error(self, params):
+        """
+        Run the current error handler (if there is one) if there is an error.
+        """
+        if (self.must_handle_error()):
+            log.warning("Running On Error error handler...")
+            self.error_handler.eval(context=self, params=params)
+    
     def get_true_name(self, name):
         """
         Get the true name of an aliased function imported from a DLL.
