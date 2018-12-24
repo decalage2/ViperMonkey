@@ -315,7 +315,13 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
         # Handle cases where wscriptshell.run() is being called and there is a local run() function.
         if ((".run(" in str(arg).lower()) and (context.contains("run"))):
-            print "TODO: HANDLE LOGGING RUN!!!!"
+
+            # Resolve the run() call.
+            if ("MemberAccessExpression" in str(type(arg))):
+                arg_evaled = arg.eval(context)
+                return arg_evaled
+
+            # Punt.
             return 0
 
         # Handle as a regular VBA object.
