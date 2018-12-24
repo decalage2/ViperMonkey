@@ -617,7 +617,8 @@ def is_interesting_call(line, external_funcs, local_funcs):
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print"]
+                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
+                 "Split"]
     log_funcs.extend(local_funcs)
     for func in log_funcs:
         if (func in line):
