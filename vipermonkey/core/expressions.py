@@ -828,7 +828,9 @@ class BoolExprItem(VBA_Object):
             try:
                 rhs = str(rhs)
                 lhs = str(lhs)
-                return (re.match(rhs, lhs) is not None)
+                r = (re.match(rhs, lhs) is not None)
+                log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
+                return r
             except Exception as e:
 
                 # Not a valid Pyhton regex. Just check string equality.
@@ -909,7 +911,7 @@ class BoolExpr(VBA_Object):
                 return ''
 
             # Bitwise operation?
-            if (isinstance(rhs, int)):
+            if ((isinstance(rhs, int)) and (not isinstance(rhs, bool))):
                 log.debug("Bitwise boolean operation: " + str(self))
                 if (self.op.lower() == "not"):
                     return (~ rhs)
@@ -945,7 +947,8 @@ class BoolExpr(VBA_Object):
             pass
 
         # Bitwise operation?
-        if (isinstance(lhs, int) and isinstance(rhs, int)):
+        if ((isinstance(lhs, int) and isinstance(rhs, int)) and
+            (not isinstance(lhs, bool) and not isinstance(rhs, bool))):
 
             log.debug("Bitwise boolean operation: " + str(self))
             if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
