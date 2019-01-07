@@ -752,7 +752,7 @@ class InStr(VbaLibraryFunc):
         elif (start > len(s1)):
             r = 0
         else:
-            if (s2 in s1):
+            if (s2 in s1[start:]):
                 r = s1[start:].index(s2) + start + 1
             else:
                 r = 0
