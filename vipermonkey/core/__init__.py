@@ -410,6 +410,7 @@ class ViperMonkey(object):
         self.external_funcs = self._get_external_funcs()
         
         # Look for hardcoded entry functions.
+        done_emulation = False
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
             log.debug("Trying entry point " + entry_point)
@@ -417,6 +418,7 @@ class ViperMonkey(object):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
                 context.dump_all_files()
+                done_emulation = True
 
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
@@ -435,7 +437,28 @@ class ViperMonkey(object):
                         context.report_action('Found Entry Point', str(name), '')
                         item.eval(context=context)
                         context.dump_all_files()
-                    
+                        done_emulation = True
+
+        # Did we find an entry point?
+        if (not done_emulation):
+
+            # Count the # of subroutines in the document.
+            only_sub = None
+            sub_name = None
+            sub_count = 0
+            for name in self.globals.keys():
+                item = self.globals[name]
+                if (isinstance(item, Sub)):
+                    only_sub = item
+                    sub_name = name
+                    sub_count += 1
+
+            # If there is only 1 subroutine, emulate that.
+            if (sub_count == 1):
+                context.report_action('Found Entry Point', str(sub_name), '')
+                only_sub.eval(context=context)
+                context.dump_all_files()
+                
     def eval(self, expr):
         """
         Parse and evaluate a single VBA expression
