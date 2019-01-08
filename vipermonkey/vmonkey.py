@@ -125,7 +125,7 @@ if (item is not None):
     
 # relative import of core ViperMonkey modules:
 from core import *
-    
+
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text(fname, data=None):
@@ -1160,11 +1160,11 @@ def _process_file (filename, data,
             # Read in document metadata.
             try:
                 ole = olefile.OleFileIO(data)
-                vba_library.meta = ole.get_metadata()
-                vba_object.meta = vba_library.meta
+                meta.metadata = ole.get_metadata()
+                vba_object.meta = meta.metadata
             except Exception as e:
                 log.error("Reading in metadata failed. " + str(e))
-                vba_library.meta = {}
+                meta.metadata = {}
 
             # If this is an Excel spreadsheet, read it in with xlrd.
             try:
@@ -1362,7 +1362,7 @@ def process_file_scanexpr (container, filename, data):
 
             # Read in document metadata.
             ole = olefile.OleFileIO(filename)
-            vba_library.meta = ole.get_metadata()
+            meta.metadata = ole.get_metadata()
             
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():

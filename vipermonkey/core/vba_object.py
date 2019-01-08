@@ -60,6 +60,7 @@ import sys
 from datetime import datetime
 import pyparsing
 
+from meta import read_metadata_item
 import expressions
 
 max_emulation_time = None
@@ -470,14 +471,22 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     return r
 
                 # Are we trying to load some document data?
-                if (tmp.startswith("thisdocument.builtindocumentproperties(")):
+                if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
+                    (tmp.startswith("activeworkbook.builtindocumentproperties("))):
 
                     # Try to pull the result from the document data.
                     var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
+                    var = var.replace("activeworkbook.builtindocumentproperties(", "")
+                    print var
                     val = context.get_doc_var(var)
                     if (val is not None):
                         return val
 
+                    # Try getting from meta data.
+                    val = read_metadata_item(var)
+                    if (val is not None):
+                        return val
+                    
                 # Are we loading a document variable?
                 if (tmp.startswith("activedocument.variables(")):
 

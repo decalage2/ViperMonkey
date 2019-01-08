@@ -52,15 +52,16 @@ import sys
 import os
 import random
 from from_unicode_str import *
-from vba_object import int_convert
-from vba_object import str_convert
 import decimal
 
 from vba_context import VBA_LIBRARY
+from vba_object import str_convert
+from vba_object import int_convert
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import excel_col_letter_to_index
 import expressions
+import meta
 
 from logger import log
 
@@ -291,8 +292,6 @@ class Right(VbaLibraryFunc):
         log.debug('Right: return s[%d:]=%r' % (start, r))
         return r
 
-meta = None
-    
 class BuiltInDocumentProperties(VbaLibraryFunc):
     """
     Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
@@ -302,23 +301,9 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
         assert len(params) == 1
 
-        # Get the poperty we are looking for.
+        # Get the property we are looking for.
         prop = params[0]
-
-        # Make sure we read in the metadata.
-        if (meta is None):
-            log.error("BuiltInDocumentProperties: Metadata not read.")
-            return ""
-                
-        # See if we can find the metadata attribute.
-        if (not hasattr(meta, prop.lower())):
-            log.error("BuiltInDocumentProperties: Metadata field '" + prop + "' not found.")
-            return ""
-
-        # We have the attribute. Return it.
-        r = getattr(meta, prop.lower())
-        log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
-        return r
+        return meta.read_metadata_item(prop)
 
 class Item(BuiltInDocumentProperties):
     """
