@@ -2314,11 +2314,10 @@ class File_Open(VBA_Object):
 
 file_type = Suppress(CaselessKeyword("For")) + \
             (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
-            Optional(Suppress(CaselessKeyword("Access")) + \
+            Suppress(Optional(CaselessKeyword("Lock"))) + \
+            Optional(Optional(Suppress(CaselessKeyword("Access"))) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-#file_open_statement = Suppress(CaselessKeyword("Open")) + lex_identifier("file_name") + file_type("type") + \
-#                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + file_type("type") + \
                       Suppress(CaselessKeyword("As")) + file_pointer("file_id")
 file_open_statement.setParseAction(File_Open)
