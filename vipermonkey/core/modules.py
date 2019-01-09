@@ -47,6 +47,7 @@ __version__ = '0.02'
 from comments_eol import *
 from procedures import *
 from statements import *
+import vba_context
 
 from logger import log
 
@@ -83,8 +84,21 @@ class Module(VBA_Object):
                 log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
             elif isinstance(token, Global_Var_Statement):
-                log.debug("saving global var decl (0): %r = %r" % (token.name, token.value))
-                self.global_vars[token.name] = token.value
+
+                # Get the initial value(s) for the global variable(s).
+                context = vba_context.Context()
+                token.eval(context)
+
+                # Set up the global variables.
+                for var in token.variables:
+                    init_val = "NULL"
+                    try:
+                        init_val = context.get(var[0])
+                    except KeyError:
+                        pass
+                    log.debug("saving global var decl (0): %r = %r" % (var[0], init_val))
+                    self.global_vars[var[0]] = init_val
+
             elif isinstance(token, Dim_Statement):
 
                 # Add the declared variables to the global variables.

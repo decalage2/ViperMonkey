@@ -363,6 +363,7 @@ class Dim_Statement(VBA_Object):
             
         # Track each variable being declared.
         self.variables = []
+        print tokens
         for var in tokens:
 
             # Is this an array?
@@ -404,7 +405,10 @@ class Dim_Statement(VBA_Object):
             first = False
             r += str(var[0])
             if (var[1]):
-                r += "()"
+                r += "("
+                if (var[3] is not None):
+                    r += str(var[3])
+                r += ")"
             if (var[2]):
                 r += " As " + str(var[2])
         if (self.init_val is not None):
@@ -442,6 +446,8 @@ class Dim_Statement(VBA_Object):
                     curr_init_val = []
                     if ((var[3] is not None) and (curr_type == "Byte Array")):
                         curr_init_val = [0] * var[3]
+                    if ((var[3] is not None) and (curr_type == "String Array")):
+                        curr_init_val = [''] * var[3]
 
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type)
@@ -533,21 +539,24 @@ dim_statement.setParseAction(Dim_Statement)
 
 # --- Global_Var_Statement statement ----------------------------------------------------------
 
-class Global_Var_Statement(VBA_Object):
-    """
-    Dim statement, global variable.
-    """
+class Global_Var_Statement(Dim_Statement):
+    pass
 
-    def __init__(self, original_str, location, tokens):
-        super(Global_Var_Statement, self).__init__(original_str, location, tokens)
-        self.name = tokens[0][0]
-        self.value = ''
-        if (len(tokens[0]) >= 3):
-            self.value = tokens[0][len(tokens[0]) - 1]
-        log.debug('parsed %r' % self)
-
-    def __repr__(self):
-        return 'Global %r' % repr(self.tokens)
+#class Global_Var_Statement(VBA_Object):
+#    """
+#    Dim statement, global variable.
+#    """
+#
+#    def __init__(self, original_str, location, tokens):
+#        super(Global_Var_Statement, self).__init__(original_str, location, tokens)
+#        self.name = tokens[0][0]
+#        self.value = ''
+#        if (len(tokens[0]) >= 3):
+#            self.value = tokens[0][len(tokens[0]) - 1]
+#        log.debug('parsed %r' % self)
+#
+#    def __repr__(self):
+#        return 'Global %r' % repr(self.tokens)
 
 public_private = Forward()
 global_variable_declaration = Suppress(Optional(public_private)) + \
