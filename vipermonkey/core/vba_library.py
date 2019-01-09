@@ -2208,6 +2208,16 @@ class Open(CreateTextFile):
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
             context.report_action("GET", str(params[1]), 'Interesting Function Call', strip_null_bytes=True)
 
+        # It is a regular file open.
+        else:
+            super(Open, self).eval(context, params)
+
+class OpenTextFile(CreateTextFile):
+    """
+    OpenTextFile() file function.
+    """
+    pass
+            
 class Timer(VbaLibraryFunc):
     """
     Timer() method (stubbed).
@@ -2277,7 +2287,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch, WeekDay, ShellExecute):
+               Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

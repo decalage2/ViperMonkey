@@ -322,9 +322,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 arg_evaled = arg.eval(context)
                 return arg_evaled
 
-            # Punt.
-            return 0
-
         # Handle as a regular VBA object.
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
         r = arg.eval(context=context)

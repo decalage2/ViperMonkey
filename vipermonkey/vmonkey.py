@@ -600,16 +600,27 @@ def is_useless_dim(line):
     We only use Byte type information when emulating.
     """
 
-    # Is this dimming a Byte variable?
+    # Is this dimming a variable with a type we want to save? Also
+    # keep Dim statements that set an initial value.
     line = line.strip()
     if (not line.startswith("Dim ")):
         return False
-    return (("Byte" not in line) and
-            ("Long" not in line) and
-            ("Integer" not in line) and
-            (":" not in line) and
-            ("=" not in line) and
-            (not line.strip().endswith("_")))
+    r = (("Byte" not in line) and
+         ("Long" not in line) and
+         ("Integer" not in line) and
+         (":" not in line) and
+         ("=" not in line) and
+         (not line.strip().endswith("_")))
+
+    # Does the variable name collide with a builtin VBA function name? If so,
+    # keep the Dim statement.
+    line = line.lower()
+    for builtin in vba_context.VBA_LIBRARY.keys():
+        if (builtin in line):
+            r = False
+
+    # Done.
+    return r
 
 def is_interesting_call(line, external_funcs, local_funcs):
 
