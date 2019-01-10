@@ -105,7 +105,6 @@ class Module(VBA_Object):
                 for var in token.variables:
 
                     # Get the initial value.
-                    print(var)
                     curr_init_val = token.init_val
                     
                     # Get initial var value based on type.

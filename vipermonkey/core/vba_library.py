@@ -655,10 +655,20 @@ class StrReverse(VbaLibraryFunc):
 class Replace(VbaLibraryFunc):
     """
     Replace() string function.
+
+    The Replace function syntax has these named arguments:
+
+    expression	Required. String expression containing substring to replace.
+    find	Required. Substring being searched for.
+    replace	Required. Replacement substring.
+    start	Optional. Start position for the substring of expression to be searched and returned. If omitted, 1 is assumed.
+    count	Optional. Number of substring substitutions to perform. If omitted, the default value is -1, which means, make all possible substitutions.
+    compare	Optional. Numeric value indicating the kind of comparison to use when evaluating substrings. See Settings section for values.
     """
 
     def eval(self, context, params=None):
-        assert len(params) == 3
+        assert len(params) >= 3
+        # TODO: Handle start, count, and compare parameters.
         string = params[0]
         if (string is None):
             string = ''

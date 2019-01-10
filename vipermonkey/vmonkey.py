@@ -1134,10 +1134,10 @@ def process_file (container,
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename, data,
-                  altparser=False,
-                  strip_useless=False,
-                  entry_points=None,
-                  time_limit=None):
+                   altparser=False,
+                   strip_useless=False,
+                   entry_points=None,
+                   time_limit=None):
     """
     Process a single file
 
@@ -1482,8 +1482,10 @@ def main():
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
 
-    for container, filename, data in xglob.iter_files(args, recursive=options.recursive,
-        zip_password=options.zip_password, zip_fname=options.zip_fname):
+    for container, filename, data in xglob.iter_files(args,
+                                                      recursive=options.recursive,
+                                                      zip_password=options.zip_password,
+                                                      zip_fname=options.zip_fname):
         # ignore directory names stored in zip files:
         if container and filename.endswith('/'):
             continue
