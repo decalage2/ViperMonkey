@@ -2009,7 +2009,9 @@ class Cells(VbaLibraryFunc):
 
         # Return the cell contents.
         try:
-            r = sheet.cell(col, row)
+            r = str(sheet.cell(col, row)).replace("text:", "").replace("'", "")
+            if (r.startswith('u')):
+                r = r[1:]
             log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
             return r
 

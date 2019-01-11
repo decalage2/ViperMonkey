@@ -139,7 +139,11 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        r = ord(eval_arg(self.arg, context)[0])
+        r = 0
+        try:
+            r = ord(eval_arg(self.arg, context)[0])
+        except:
+            pass
         log.debug("Asc(%r): return %r" % (self.arg, r))
         return r
 

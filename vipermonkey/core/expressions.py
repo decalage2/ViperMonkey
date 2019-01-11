@@ -293,6 +293,12 @@ class MemberAccessExpression(VBA_Object):
         # Did the lhs resolve to something new?
         elif (str(self.lhs) != str(tmp_lhs)):
 
+            # Is this a read from an Excel cell?
+            if (isinstance(tmp_lhs, str)):
+
+                # Just work with the returned string value.
+                return tmp_lhs
+            
             # Construct a new partially resolved member access object.
             r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
             

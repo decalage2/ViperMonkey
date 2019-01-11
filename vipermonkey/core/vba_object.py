@@ -562,7 +562,10 @@ def coerce_to_str(obj):
     if ((obj is None) or (obj == "NULL")):
         return ''
     else:
-        return str(obj)
+        try:
+            return str(obj)
+        except:
+            return ''
 
 def coerce_args_to_str(args):
     """
