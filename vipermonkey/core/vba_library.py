@@ -1971,6 +1971,17 @@ class Specialfolders(VbaLibraryFunc):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
 
+ticks = 0
+class GetTickCount(VbaLibraryFunc):
+    """
+    GetTickCount() function. Randomly increments the tick count.
+    """
+
+    def eval(self, context, params=None):
+        global ticks
+        ticks += random.randint(100, 10000)
+        return ticks
+
 class Cells(VbaLibraryFunc):
     """
     Excel Cells() function.
@@ -2301,7 +2312,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile):
+               Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
