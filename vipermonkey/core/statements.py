@@ -2097,7 +2097,8 @@ class Exit_Function_Statement(VBA_Object):
 # Return from a function.
 exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()) | \
                       (CaselessKeyword('Exit').suppress() + CaselessKeyword('Sub').suppress()) | \
-                      (CaselessKeyword('Return').suppress()) | (CaselessKeyword('End').suppress())
+                      (CaselessKeyword('Return').suppress()) | \
+                      ((CaselessKeyword('End').suppress()) + ~CaselessKeyword("Function"))
 exit_func_statement.setParseAction(Exit_Function_Statement)
 
 # --- REDIM statement ----------------------------------------------------------

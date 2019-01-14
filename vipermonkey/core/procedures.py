@@ -366,17 +366,23 @@ class Function(VBA_Object):
 
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
-                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
-                 + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
+                 Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+                        CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
+                        Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
+function_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
-function = (function_start + \
-            Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
-            Optional(bad_if_statement('bogus_if')) + \
-            Suppress(Optional(bad_next_statement)) + \
-            function_end)
-            
+multiline_function = (function_start + \
+                      Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                      Optional(bad_if_statement('bogus_if')) + \
+                      Suppress(Optional(bad_next_statement)) + \
+                      function_end)
+
+singleline_function = function_start_single + simple_statements_line('statements') + function_end_single
+function = singleline_function | multiline_function            
 function.setParseAction(Function)
 
 # for line parser:
