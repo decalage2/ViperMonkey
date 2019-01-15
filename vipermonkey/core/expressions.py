@@ -274,7 +274,9 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs1
         else:
             rhs = self.rhs[len(self.rhs) - 1]
-            
+            if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
+                rhs = self.rhs[len(self.rhs) - 2]
+
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.

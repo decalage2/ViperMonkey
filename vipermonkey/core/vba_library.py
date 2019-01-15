@@ -2000,14 +2000,6 @@ class Cells(VbaLibraryFunc):
             log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
             return "NULL"
 
-        # Guess that we want the 1st sheet.
-        sheet = None
-        try:
-            sheet = context.loaded_excel.sheet_by_index(0)
-        except:
-            log.warning("Cannot process Cells() call. No sheets in file.")
-            return "NULL"
-
         # Get the indices of the cell.
         col = None
         row = None
@@ -2017,20 +2009,35 @@ class Cells(VbaLibraryFunc):
         except:
             log.warning("Cannot process Cells() call. Row or column invalid.")
             return "NULL"
-
-        # Return the cell contents.
-        try:
-            r = str(sheet.cell(col, row)).replace("text:", "").replace("'", "")
-            if (r.startswith('u')):
-                r = r[1:]
-            log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
-            return r
-
-        except:
         
-            # Failed to read cell.
-            log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ")")
-            return "NULL"
+        # Try each sheet until we read a cell.
+        # TODO: Figure out the actual sheet to load.
+        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
+            
+            # Load the current sheet.
+            sheet = None
+            try:
+                sheet = context.loaded_excel.sheet_by_index(sheet_index)
+            except:
+                log.warning("Cannot process Cells() call. No sheets in file.")
+                return "NULL"
+
+            # Return the cell contents.
+            try:
+                r = str(sheet.cell(col, row)).replace("text:", "").replace("'", "")
+                if (r.startswith('u')):
+                    r = r[1:]
+                log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
+                return r
+
+            except Exception as e:
+        
+                # Failed to read cell.
+                continue
+
+        # Can't read the cell.
+        log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ").")
+        return "NULL"
 
 class Range(VbaLibraryFunc):
     """
