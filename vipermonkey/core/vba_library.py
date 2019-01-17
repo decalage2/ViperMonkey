@@ -1871,7 +1871,11 @@ class Run(VbaLibraryFunc):
 
         # Get the name of the function to call.
         func_name = params[0]
-            
+
+        # Strip the name of the function down if needed.
+        if ("." in func_name):
+            func_name = func_name[func_name.rindex(".") + 1:]
+        
         # Get any parameters to pass to the function to call.
         call_params = None
         if (len(params) > 1):
