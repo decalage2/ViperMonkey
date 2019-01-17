@@ -68,7 +68,7 @@ statement_keyword = caselessKeywordsList(
     ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
-     "Enum", "Erase", "Event", "Exit", "For", "Friend", "Function", "Get", "Global",
+     "Enum", "Erase", "Event", "Exit", "For", "Friend", "Function", "Global",
      "GoSub", "GoTo", "If", "Implements", "Input", "Let", "Lock", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub", "Type",

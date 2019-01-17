@@ -1971,6 +1971,34 @@ class Specialfolders(VbaLibraryFunc):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
 
+class Month(VbaLibraryFunc):
+    """
+    Excel Month() function. Currently stubbed.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) == 1)
+        try:
+            arg = int(params[0])
+            if (arg == 1):
+                return 12
+            if (arg < 33):
+                return 1
+            if (arg < 61):
+                return 2
+            if (arg < 92):
+                return 3
+            if (arg < 101):
+                return 4
+
+            # TODO: Handle other values.
+            return 1
+
+        except:
+            pass
+
+        return 1
+
 ticks = 0
 class GetTickCount(VbaLibraryFunc):
     """
@@ -2319,7 +2347,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount):
+               Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
+               Month):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
