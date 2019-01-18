@@ -942,8 +942,15 @@ class Context(object):
     def get_doc_var(self, var):
         if (not isinstance(var, basestring)):
             return None
+
+        # Normalize the variable name to lower case.
         var = var.lower()
         log.info("Looking up doc var " + var)
+
+        # Are we pulling out all the doc vars?
+        if (var == "activedocument.variables"):
+            return self.doc_vars.items()
+        
         if (var not in self.doc_vars):
 
             # Can't find a doc var with this name. See if we have an internal variable

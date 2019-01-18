@@ -1205,8 +1205,10 @@ def _process_file (filename, data,
 
             # Pull out document variables.
             for (var_name, var_val) in _read_doc_vars(data):
-                vm.doc_vars[var_name.lower()] = var_val
+                vm.doc_vars[var_name] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+                vm.doc_vars[var_name.lower()] = var_val
+                log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
 
             # Pull text associated with Shapes() objects.
             got_it = False

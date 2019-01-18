@@ -1096,6 +1096,7 @@ for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppre
 # --- FOR EACH statement -----------------------------------------------------------
 
 class For_Each_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(For_Each_Statement, self).__init__(original_str, location, tokens)
         self.statements = tokens.statements

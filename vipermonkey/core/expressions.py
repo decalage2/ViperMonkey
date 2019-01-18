@@ -247,6 +247,32 @@ class MemberAccessExpression(VBA_Object):
         # Now widen this up to more general data that can be read from the
         # doc.        
         return context.get_doc_var(tmp)
+
+    def _handle_docvar_value(self, lhs, rhs):
+        """
+        Handle reading .Name and .Value fields from doc vars.
+        """
+
+        # Pull out proper RHS.
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        
+        # Do we have a tuple representing a doc var?
+        if (not isinstance(lhs, tuple)):
+            return None
+        if (len(lhs) < 2):
+            return None
+        
+        # Getting .Name?
+        if (rhs == "Name"):
+            return lhs[0]
+
+        # Getting .Value?
+        if (rhs == "Value"):
+            return lhs[1]
+
+        # Don't know what we are getting.
+        return None
         
     def eval(self, context, params=None):
 
@@ -300,6 +326,11 @@ class MemberAccessExpression(VBA_Object):
 
                 # Just work with the returned string value.
                 return tmp_lhs
+
+            # See if this is reading a doc var name or item.
+            call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
             
             # Construct a new partially resolved member access object.
             r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
