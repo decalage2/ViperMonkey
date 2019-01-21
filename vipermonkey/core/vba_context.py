@@ -754,6 +754,9 @@ class Context(object):
         self.globals["xlPrintErrorsDisplayed".lower()] = 0	
         self.globals["xlPrintErrorsNA".lower()] = 3	
 
+        # Misc.
+        self.globals["ActiveDocument.Scripts.Count".lower()] = 0
+        
     def must_handle_error(self):
         """
         Check to see if there was are error raised during emulation and we have
