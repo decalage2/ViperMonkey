@@ -762,6 +762,7 @@ class Context(object):
         
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
+        self.globals["TotalPhysicalMemory".lower()] = 2097741824
         
     def must_handle_error(self):
         """

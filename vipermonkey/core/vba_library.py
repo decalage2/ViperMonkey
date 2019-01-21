@@ -1903,6 +1903,21 @@ class Exec(VbaLibraryFunc):
 
         # Say it was successful.
         return 0
+
+class ExecQuery(VbaLibraryFunc):
+    """
+    Application.ExecQuery() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the query to run.
+        cmd = str(params[0])
+        context.report_action("Execute Query", cmd, 'Query', strip_null_bytes=True)
+
+        # Say it was successful.
+        return ["", ""]
         
 class WinExec(VbaLibraryFunc):
     """
@@ -2361,7 +2376,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month):
+               Month, ExecQuery):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
