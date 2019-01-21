@@ -1871,7 +1871,7 @@ class Run(VbaLibraryFunc):
 
         # Get the name of the function to call.
         func_name = params[0]
-
+        
         # Strip the name of the function down if needed.
         if ("." in func_name):
             func_name = func_name[func_name.rindex(".") + 1:]
@@ -1889,12 +1889,21 @@ class Run(VbaLibraryFunc):
         except KeyError:
             log.error("Application.Run() failed. Cannot find function " + str(func_name) + ".")
 
-class Exec(Run):
+class Exec(VbaLibraryFunc):
     """
-    Treat Exec() like the Run() function.
+    Application.Exec() function.
     """
-    pass
 
+    def eval(self, context, params=None):
+        assert (len(params) >= 1)
+
+        # Get the command to run.
+        cmd = str(params[0])
+        context.report_action("Execute Command", cmd, 'Shell function', strip_null_bytes=True)
+
+        # Say it was successful.
+        return 0
+        
 class WinExec(VbaLibraryFunc):
     """
     WinExec() function.
