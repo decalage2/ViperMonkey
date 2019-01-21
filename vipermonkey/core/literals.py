@@ -118,13 +118,22 @@ class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]
+        # Replace Python control characters.
+        self.value = self.value.\
+                     replace("\n", "\\n").\
+                     replace("\t", "\\t").\
+                     replace("\f", "\\f").\
+                     replace("\a", "\\a").\
+                     replace("\b", "\\b").\
+                     replace("\r", "\\r").\
+                     replace("\v", "\\v")
         log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
         return str(self.value)
 
     def eval(self, context, params=None):
-        r = self.value.replace("\n", "\\n").replace("\t", "\\t")
+        r = self.value
         log.debug("String.eval: return " + r)
         return r
 
