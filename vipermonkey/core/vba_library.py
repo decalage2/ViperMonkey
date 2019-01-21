@@ -2058,12 +2058,19 @@ class Cells(VbaLibraryFunc):
 
         # Get the indices of the cell.
         col = None
+        try:
+            col = int(params[1]) - 1
+        except:
+            try:
+                col = excel_col_letter_to_index(params[1])
+            except:
+                log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
+                return "NULL"
         row = None
         try:
-            col = int(params[0]) - 1
-            row = int(params[1]) - 1
+            row = int(params[0]) - 1
         except:
-            log.warning("Cannot process Cells() call. Row or column invalid.")
+            log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
         
         # Try each sheet until we read a cell.
