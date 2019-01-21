@@ -754,6 +754,12 @@ class Context(object):
         self.globals["xlPrintErrorsDisplayed".lower()] = 0	
         self.globals["xlPrintErrorsNA".lower()] = 3	
 
+        # msoTextCaps Enum
+        self.globals["msoAllCaps".lower()] = 2
+        self.globals["msoCapsMixed".lower()] = -2
+        self.globals["msoNoCaps".lower()] = 0
+        self.globals["msoSmallCaps".lower()] = 1
+        
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         
