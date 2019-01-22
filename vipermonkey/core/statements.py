@@ -628,6 +628,7 @@ class Let_Statement(VBA_Object):
         
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)
+        rhs_type = context.get_type(str(self.expression))
         value = eval_arg(self.expression, context=context)
         log.debug('eval expression: %s = %s' % (self.expression, value))
 
@@ -683,9 +684,12 @@ class Let_Statement(VBA_Object):
                         tmp = ""
                         pos = 0
                         # TODO: Only handles ASCII strings.
+                        step = 2
+                        if (rhs_type == "Byte Array"):
+                            step = 1
                         while (pos < len(value)):
                             tmp += chr(value[pos])
-                            pos += 2
+                            pos += step
                         value = tmp
                     except:
                         pass
