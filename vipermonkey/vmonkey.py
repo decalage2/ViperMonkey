@@ -1225,12 +1225,12 @@ def _process_file (filename, data,
             for (var_name, var_val) in _get_ole_textbox_values(data, 'worddocument'):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
-                var_name = "ActiveDocument." + var_name
-                vm.doc_vars[var_name.lower()] = var_val
-                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
-                var_name = var_name + ".Text"
-                vm.doc_vars[var_name.lower()] = var_val
-                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
+                tmp_var_name = "ActiveDocument." + var_name
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                tmp_var_name = var_name + ".Text"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
                     
             # Pull out custom document properties.
             for (var_name, var_val) in _read_custom_doc_props(data):
