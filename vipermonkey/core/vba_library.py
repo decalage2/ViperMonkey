@@ -2197,6 +2197,11 @@ class Second(VbaLibraryFunc):
         r = 0
         if (isinstance(t, datetime)):
             r = int(t.second)
+        try:
+            d = datetime.strptime(t, '%H:%M:%S')
+            r = int(d.second)
+        except:
+            pass
         return r
 
 class Variable(VbaLibraryFunc):
