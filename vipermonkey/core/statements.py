@@ -2520,6 +2520,17 @@ class External_Function(VBA_Object):
 
         if (function_name.startswith('closehandle')):
             return self._closehandle(params, context)
+
+        # Emulate certain calls.
+        try:
+            s = context.get_lib_func(function_name)
+            if (s is None):
+                raise KeyError("func not found")
+            r = s.eval(context=context, params=params)
+            log.debug("External function " + str(function_name) + " returns " + str(r))
+            return r
+        except KeyError:
+            pass
         
         # TODO: return result according to the known DLLs and functions
         log.warning('Unknown external function %s from DLL %s' % (function_name, self.lib_name))

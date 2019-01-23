@@ -2027,7 +2027,7 @@ class Month(VbaLibraryFunc):
 
         return 1
 
-ticks = 0
+ticks = 100000
 class GetTickCount(VbaLibraryFunc):
     """
     GetTickCount() function. Randomly increments the tick count.

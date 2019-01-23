@@ -876,7 +876,22 @@ class Context(object):
 
         else:
             log.warning("File not dumped. Output dir is None.")
+
+    def get_lib_func(self, name):
+
+        if (not isinstance(name, basestring)):
+            raise KeyError('Object %r not found' % name)
         
+        # Search in the global VBA library:
+        log.debug("Looking for library function '" + name + "'...")
+        if name in VBA_LIBRARY:
+            log.debug('Found %r in VBA Library' % name)
+            return VBA_LIBRARY[name]
+
+        # Unknown symbol.
+        else:            
+            raise KeyError('Library function %r not found' % name)
+            
     def _get(self, name):
 
         if (not isinstance(name, basestring)):
