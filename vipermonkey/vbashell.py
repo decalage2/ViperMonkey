@@ -37,7 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import print_function
+
 
 # ------------------------------------------------------------------------------
 # CHANGELOG:
@@ -64,7 +64,7 @@ if not _thismodule_dir in sys.path:
     sys.path.insert(0, _thismodule_dir)
 
 # relative import of the vmonkey module:
-import vmonkey
+from . import vmonkey
 
 vm = vmonkey.ViperMonkey()
 
@@ -75,7 +75,7 @@ def parse(filename=None):
         code = ''
         line = None
         while True:
-            line = raw_input()
+            line = input()
             if line == '.':
                 break
             code += line + '\n'
@@ -143,7 +143,7 @@ def main():
     while True:
         try:
             print("VBA> ", end='')
-            cmd = raw_input()
+            cmd = input()
 
             if cmd.startswith('exit'):
                 break
