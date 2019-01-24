@@ -38,7 +38,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # For Python 2+3 support:
-from __future__ import print_function
+
 
 # ------------------------------------------------------------------------------
 # CHANGELOG:
@@ -95,13 +95,13 @@ import prettytable
 import unidecode
 import string
 
-from logger import log
-from procedures import Function
-from procedures import Sub
-from function_call_visitor import *
-from function_defn_visitor import *
-from function_import_visitor import *
-from var_defn_visitor import *
+from .logger import log
+from .procedures import Function
+from .procedures import Sub
+from .function_call_visitor import *
+from .function_defn_visitor import *
+from .function_import_visitor import *
+from .var_defn_visitor import *
 
 # === FUNCTIONS ==============================================================
 
@@ -128,11 +128,11 @@ def list_startswith(_list, lstart):
 
 # === VBA GRAMMAR ============================================================
 
-from vba_lines import *
-from modules import *
+from .vba_lines import *
+from .modules import *
 
 # Make sure we populate the VBA Library:
-from vba_library import *
+from .vba_library import *
 
 # === ViperMonkey class ======================================================
 
@@ -197,16 +197,16 @@ class ViperMonkey(object):
         if (m is None):
             return
         self.modules.append(m)
-        for name, _sub in m.subs.items():
+        for name, _sub in list(m.subs.items()):
             log.debug('storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
-        for name, _function in m.functions.items():
+        for name, _function in list(m.functions.items()):
             log.debug('storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-        for name, _function in m.external_functions.items():
+        for name, _function in list(m.external_functions.items()):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-        for name, _var in m.global_vars.items():
+        for name, _var in list(m.global_vars.items()):
             log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 self.globals[name.lower()] = _var
@@ -297,16 +297,16 @@ class ViperMonkey(object):
         m = Module(original_str=vba_code, location=0, tokens=tokens)
         self.modules.append(m)
         # # TODO: add all subs/functions and global variables to self.globals
-        for name, _sub in m.subs.items():
+        for name, _sub in list(m.subs.items()):
             log.debug('storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
-        for name, _function in m.functions.items():
+        for name, _function in list(m.functions.items()):
             log.debug('storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-        for name, _function in m.external_functions.items():
+        for name, _function in list(m.external_functions.items()):
             log.debug('storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
-        for name, _var in m.global_vars.items():
+        for name, _var in list(m.global_vars.items()):
                 log.debug('storing global var "%s" in globals (2)' % name)
             
     def parse_next_line(self):
@@ -417,7 +417,7 @@ class ViperMonkey(object):
                 context.dump_all_files()
 
         # Look for callback functions that can act as entry points.
-        for name in self.globals.keys():
+        for name in list(self.globals.keys()):
 
             # Look for functions whose name ends with a callback suffix.
             for suffix in self.callback_suffixes:
@@ -459,22 +459,22 @@ class ViperMonkey(object):
         # store the action for later use:
         try:
             if (isinstance(action, str)):
-                action = unidecode.unidecode(action.decode('unicode-escape'))
+                action = unidecode.unidecode(action.encode('unicode-escape').decode('ascii'))
         except UnicodeDecodeError:
-            action = ''.join(filter(lambda x:x in string.printable, action))
+            action = ''.join([x for x in action if x in string.printable])
         if (isinstance(params, str)):
             try:
-                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
+                decoded = params.replace("\\", "#ESCAPED_SLASH#").encode('unicode-escape').decode('ascii').replace("#ESCAPED_SLASH#", "\\")
                 params = unidecode.unidecode(decoded)
             except Exception as e:
                 log.warn("Unicode decode of action params failed. " + str(e))
-                params = ''.join(filter(lambda x:x in string.printable, params))
+                params = ''.join([x for x in params if x in string.printable])
         try:
             if (isinstance(description, str)):
-                description = unidecode.unidecode(description.decode('unicode-escape'))
+                description = unidecode.unidecode(description.encode('unicode-escape').decode('ascii'))
         except UnicodeDecodeError as e:
             log.warn("Unicode decode of action description failed. " + str(e))
-            description = ''.join(filter(lambda x:x in string.printable, description))
+            description = ''.join([x for x in description if x in string.printable])
         self.actions.append((action, params, description))
         log.info("ACTION: %s - params %r - %s" % (action, params, description))
 

@@ -43,7 +43,7 @@ __version__ = '0.02'
 
 from pyparsing import *
 
-from logger import log
+from .logger import log
 
 # --- BOOLEAN ------------------------------------------------------------
 

@@ -38,17 +38,17 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # For Python 2+3 support:
-from __future__ import print_function
+
 
 __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from comments_eol import *
-from procedures import *
-from statements import *
+from .comments_eol import *
+from .procedures import *
+from .statements import *
 
-from logger import log
+from .logger import log
 
 # === VBA MODULE AND STATEMENTS ==============================================
 
@@ -114,11 +114,11 @@ class Module(VBA_Object):
 
     def __repr__(self):
         r = 'Module %r\n' % self.name
-        for sub in self.subs.values():
+        for sub in list(self.subs.values()):
             r += '  %r\n' % sub
-        for func in self.functions.values():
+        for func in list(self.functions.values()):
             r += '  %r\n' % func
-        for extfunc in self.external_functions.values():
+        for extfunc in list(self.external_functions.values()):
             r += '  %r\n' % extfunc
         return r
 

@@ -36,10 +36,10 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from statements import *
-from expressions import *
-from lib_functions import *
+from .visitor import *
+from .statements import *
+from .expressions import *
+from .lib_functions import *
 
 class function_call_visitor(visitor):
     """

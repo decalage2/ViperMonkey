@@ -43,16 +43,16 @@ __version__ = '0.03'
 
 import re
 
-from identifiers import *
-from lib_functions import *
-from literals import *
-from operators import *
-import procedures
-from vba_object import eval_arg
-from vba_object import int_convert
-from vba_object import VbaLibraryFunc
+from .identifiers import *
+from .lib_functions import *
+from .literals import *
+from .operators import *
+from . import procedures
+from .vba_object import eval_arg
+from .vba_object import int_convert
+from .vba_object import VbaLibraryFunc
 
-from logger import log
+from .logger import log
 
 # --- FILE POINTER -------------------------------------------------
 
@@ -374,7 +374,7 @@ class Function_Call(VBA_Object):
         super(Function_Call, self).__init__(original_str, location, tokens)
         self.name = str(tokens.name)
         log.debug('Function_Call.name = %r' % self.name)
-        assert isinstance(self.name, basestring)
+        assert isinstance(self.name, str)
         self.params = tokens.params
         log.debug('Function_Call.params = %r' % self.params)
         log.debug('parsed %r as Function_Call' % self)
@@ -433,7 +433,7 @@ class Function_Call(VBA_Object):
             if (f is not None):
                 if (not(isinstance(f, str)) and
                     not(isinstance(f, list)) and
-                    not(isinstance(f, unicode))):
+                    not(isinstance(f, str))):
                     try:
 
                         # Call function.
@@ -441,7 +441,7 @@ class Function_Call(VBA_Object):
                         
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
-                            for byref_param_info in f.byref_params.keys():
+                            for byref_param_info in list(f.byref_params.keys()):
                                 arg_var_name = str(self.params[byref_param_info[1]])
                                 context.set(arg_var_name, f.byref_params[byref_param_info])
 

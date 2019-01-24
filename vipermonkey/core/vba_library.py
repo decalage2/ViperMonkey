@@ -51,18 +51,18 @@ from hashlib import sha256
 import sys
 import os
 import random
-from from_unicode_str import *
-from vba_object import int_convert
-from vba_object import str_convert
+from .from_unicode_str import *
+from .vba_object import int_convert
+from .vba_object import str_convert
 import decimal
 
-from vba_context import VBA_LIBRARY
-from vba_object import eval_arg
-from vba_object import VbaLibraryFunc
-from vba_object import excel_col_letter_to_index
-import expressions
+from .vba_context import VBA_LIBRARY
+from .vba_object import eval_arg
+from .vba_object import VbaLibraryFunc
+from .vba_object import excel_col_letter_to_index
+from . import expressions
 
-from logger import log
+from .logger import log
 
 # === VBA LIBRARY ============================================================
 
@@ -156,7 +156,7 @@ class Mid(VbaLibraryFunc):
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:
@@ -207,7 +207,7 @@ class Left(VbaLibraryFunc):
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:
@@ -240,7 +240,7 @@ class Right(VbaLibraryFunc):
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:
@@ -1533,7 +1533,7 @@ class Close(VbaLibraryFunc):
                 return
 
             # Get the ID of the file.
-            file_id = context.open_files.keys()[0]
+            file_id = list(context.open_files.keys())[0]
 
         # We are actually closing a file.
         context.dump_file(file_id)
@@ -1603,7 +1603,7 @@ class WriteLine(VbaLibraryFunc):
             return
         
         # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+        file_id = list(context.open_files.keys())[0]
         
         # TODO: Handle writing at a given file position.
 
@@ -1878,7 +1878,7 @@ class ReadText(VbaLibraryFunc):
         # Simulate the read.
 
         # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+        file_id = list(context.open_files.keys())[0]
 
         # Get the data to read.
         data = context.open_files[file_id]["contents"]
@@ -2195,7 +2195,7 @@ class Write(VbaLibraryFunc):
         # Simulate the write.
 
         # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+        file_id = list(context.open_files.keys())[0]
 
         # Get the data.
         data = params[0]
@@ -2231,7 +2231,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
-log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
+log.debug('VBA Library contains: %s' % ', '.join(list(VBA_LIBRARY.keys())))
 
 # --- VBA CONSTANTS ----------------------------------------------------------
 

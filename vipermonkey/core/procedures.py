@@ -41,12 +41,12 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from vba_context import *
-from statements import *
-from identifiers import *
+from .vba_context import *
+from .statements import *
+from .identifiers import *
 
-from logger import log
-from tagged_block_finder_visitor import *
+from .logger import log
+from .tagged_block_finder_visitor import *
 
 # --- SUB --------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ class Sub(VBA_Object):
             self.bogus_if.eval(context=context)
 
         # Save the values of the ByRef parameters.
-        for byref_param in self.byref_params.keys():
+        for byref_param in list(self.byref_params.keys()):
             self.byref_params[byref_param] = context.get(byref_param[0].lower())
             
         # Handle subs with no return values.
@@ -307,7 +307,7 @@ class Function(VBA_Object):
         try:
 
             # Save the values of the ByRef parameters.
-            for byref_param in self.byref_params.keys():
+            for byref_param in list(self.byref_params.keys()):
                 self.byref_params[byref_param] = context.get(byref_param[0].lower())
             
             # Get the return value.

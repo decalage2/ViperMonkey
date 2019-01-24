@@ -48,15 +48,15 @@ __version__ = '0.06'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from comments_eol import *
-from expressions import *
-from vba_context import *
-from reserved import *
-from from_unicode_str import *
-from vba_object import int_convert
-import procedures
+from .comments_eol import *
+from .expressions import *
+from .vba_context import *
+from .reserved import *
+from .from_unicode_str import *
+from .vba_object import int_convert
+from . import procedures
 
-from logger import log
+from .logger import log
 import sys
 import re
 
@@ -741,7 +741,7 @@ class Let_Statement(VBA_Object):
                 arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
 
             # Handle strings.
-            if ((isinstance(arr_var, str)) or (isinstance(arr_var, unicode))):
+            if ((isinstance(arr_var, str)) or (isinstance(arr_var, str))):
 
                 # Do we need to extend the length of the string to include the index?
                 if (index >= len(arr_var)):
@@ -749,7 +749,7 @@ class Let_Statement(VBA_Object):
                 
                 # We now have a string with the proper # of elements. Set the
                 # array element to the proper value.
-                if ((isinstance(value, str)) or (isinstance(value, unicode))):
+                if ((isinstance(value, str)) or (isinstance(value, str))):
                     arr_var = arr_var[:index] + value + arr_var[(index + 1):]
                 elif (isinstance(value, int)):
                     try:
@@ -886,7 +886,7 @@ class For_Statement(VBA_Object):
 
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
-        if (isinstance(start, basestring)):
+        if (isinstance(start, str)):
             try:
                 start = int(start)
             except:
@@ -901,7 +901,7 @@ class For_Statement(VBA_Object):
 
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
-        if (isinstance(end, basestring)):
+        if (isinstance(end, str)):
             try:
                 end = int(end)
             except:
@@ -1661,7 +1661,7 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
             if (isinstance(piece["body"], dict)):
-                for i in piece["body"].values():
+                for i in list(piece["body"].values()):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
         return self._children
@@ -1883,7 +1883,7 @@ class Call_Statement(VBA_Object):
 
             # Set the values of the arguments passed as ByRef parameters.
             if (hasattr(s, "byref_params")):
-                for byref_param_info in s.byref_params.keys():
+                for byref_param_info in list(s.byref_params.keys()):
                     arg_var_name = str(self.params[byref_param_info[1]])
                     context.set(arg_var_name, s.byref_params[byref_param_info])
             
@@ -2324,12 +2324,12 @@ class External_Function(VBA_Object):
         self.params = tokens.params
         self.lib_name = tokens.lib_name
         # normalize lib name: remove quotes, lowercase, add .dll if no extension
-        if isinstance(self.lib_name, basestring):
+        if isinstance(self.lib_name, str):
             self.lib_name = tokens.lib_name.strip('"').lower()
             if '.' not in self.lib_name:
                 self.lib_name += '.dll'
         self.alias_name = tokens.alias_name
-        if isinstance(self.alias_name, basestring):
+        if isinstance(self.alias_name, str):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
         self.return_type = tokens.return_type

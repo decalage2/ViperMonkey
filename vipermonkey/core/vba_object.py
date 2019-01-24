@@ -52,7 +52,7 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 import base64
-from logger import log
+from .logger import log
 import re
 
 from inspect import getouterframes, currentframe
@@ -60,7 +60,8 @@ import sys
 from datetime import datetime
 import pyparsing
 
-import expressions
+from . import expressions
+from functools import reduce
 
 max_emulation_time = None
 
@@ -80,7 +81,7 @@ def limits_exceeded(throw_error=False):
     """
 
     # Check to see if we are approaching the recursion limit.
-    level = len(getouterframes(currentframe(1)))
+    level = len(getouterframes(currentframe()))
     recursion_exceeded = (level > (sys.getrecursionlimit() * .75))
     time_exceeded = False
 
@@ -144,7 +145,7 @@ class VBA_Object(object):
         if (self._children is not None):
             return self._children
         r = []
-        for _, value in self.__dict__.iteritems():
+        for _, value in self.__dict__.items():
             if (isinstance(value, VBA_Object)):
                 r.append(value)
             if ((isinstance(value, list)) or
@@ -153,7 +154,7 @@ class VBA_Object(object):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
             if (isinstance(value, dict)):
-                for i in value.values():
+                for i in list(value.values()):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
         self._children = r
@@ -508,7 +509,7 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    return map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    return [eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name) for arg in args]
 
 def coerce_to_str(obj):
     """

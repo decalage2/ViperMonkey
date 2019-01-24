@@ -47,7 +47,7 @@ import array
 import os
 from hashlib import sha256
 from datetime import datetime
-from logger import log
+from .logger import log
 import base64
 
 def is_procedure(vba_object):
@@ -759,7 +759,7 @@ class Context(object):
         self.open_files[fname]["contents"] = []
 
     def dump_all_files(self):
-        for fname in self.open_files.keys():
+        for fname in list(self.open_files.keys()):
             self.dump_file(fname)
         
     def dump_file(self, file_id):
@@ -836,7 +836,7 @@ class Context(object):
         
     def _get(self, name):
 
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
 
         # convert to lowercase
@@ -893,7 +893,7 @@ class Context(object):
         return ((name in self.locals) or (name in self.globals))
         
     def get_type(self, var):
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
         var = var.lower()
         if (var not in self.types):
@@ -901,7 +901,7 @@ class Context(object):
         return self.types[var]
 
     def get_doc_var(self, var):
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
         var = var.lower()
         log.info("Looking up doc var " + var)
@@ -933,7 +933,7 @@ class Context(object):
     # TODO: set_global?
 
     def set(self, name, value, var_type=None, do_with_prefix=True):
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             return
         # convert to lowercase
         name = name.lower()
