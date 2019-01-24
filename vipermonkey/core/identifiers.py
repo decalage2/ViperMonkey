@@ -119,7 +119,7 @@ unrestricted_name = entity_name | reserved_identifier
 
 # TODO: reduce this list when corresponding statements are implemented
 reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
-                     | CaselessKeyword('Asc')
+                     | CaselessKeyword('Asc') | CaselessKeyword('Case')
                      | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
                      | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
                      | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
