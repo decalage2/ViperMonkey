@@ -64,6 +64,8 @@ from . import expressions
 
 from .logger import log
 
+from .setting import COUNTRY
+
 # === VBA LIBRARY ============================================================
 
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
@@ -2214,6 +2216,17 @@ class Write(VbaLibraryFunc):
         else:
             log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
+class International(VbaLibraryFunc):
+    """
+    Application.International() function.
+    """
+
+    def eval(self, context, params=None):
+        if params is not None:
+            if str(params[0]) == 'NULL':
+                return COUNTRY
+
+# add your own implemented code here
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -2227,7 +2240,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
-               Format, Range, Switch):
+               Format, Range, Switch, International):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
