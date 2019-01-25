@@ -179,13 +179,12 @@ def _get_shapes_text_values_xml(fname):
     else:
         # it's probably a filename, not a blob of data..
         # Read in the file contents.
-        f = open(fname, "r")
-        contents = f.read().strip()
-        f.close()
+        with open(fname, 'rb') as f:
+            contents = f.read()
 
     # Is this an XML file?
-    if ((not contents.startswith("<?xml")) or
-        ("<w:txbxContent>" not in contents)):
+    if ((not contents.startswith(b"<?xml")) or
+        (b"<w:txbxContent>" not in contents)):
         return []
 
     # It is an XML file.
@@ -194,13 +193,13 @@ def _get_shapes_text_values_xml(fname):
     # Pull out the text surrounded by <w:txbxContent> ... </w:txbxContent>.
     # These big blocks hold the XML for each piece of Shapes() text.
     blocks = []
-    start = contents.index("<w:txbxContent>") + len("<w:txbxContent>")
-    end = contents.index("</w:txbxContent>")
+    start = contents.index(b"<w:txbxContent>") + len(b"<w:txbxContent>")
+    end = contents.index(b"</w:txbxContent>")
     while (start is not None):
         blocks.append(contents[start:end])
-        if ("<w:txbxContent>" in contents[end:]):
-            start = end + contents[end:].index("<w:txbxContent>") + len("<w:txbxContent>")
-            end = end + len("</w:txbxContent>") + contents[end + len("</w:txbxContent>"):].index("</w:txbxContent>")
+        if (b"<w:txbxContent>" in contents[end:]):
+            start = end + contents[end:].index(b"<w:txbxContent>") + len(b"<w:txbxContent>")
+            end = end + len(b"</w:txbxContent>") + contents[end + len(b"</w:txbxContent>"):].index(b"</w:txbxContent>")
         else:
             start = None
             end = None
@@ -210,14 +209,14 @@ def _get_shapes_text_values_xml(fname):
 
         # Get all strings surrounded by <w:t> ... </w:t> tags in the block.
         pat = r"\<w\:t[^\>]*\>([^\<]+)\</w\:t\>"
-        strs = re.findall(pat, block)
+        strs = re.findall(bytes(pat), block)
 
         # These could be broken up with many <w:t> ... </w:t> tags. See if we need to
         # reassemble strings.
         if (len(strs) > 1):
 
             # Reassemble command string.
-            curr_str = ""
+            curr_str = b""
             for s in strs:
 
                 # Save current part of command string.
@@ -227,7 +226,7 @@ def _get_shapes_text_values_xml(fname):
             strs = [curr_str]
 
         # Save the string from this block.
-        cmd_strs.append(strs[0])
+        cmd_strs.append(strs[0].decode('utf-8'))
             
     # Hope that the Shape() object indexing follows the same order as the strings
     # we found.
