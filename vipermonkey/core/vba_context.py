@@ -114,6 +114,9 @@ class Context(object):
         # Track the final contents of written files.
         self.closed_files = {}
 
+        # Track whether variables by default should go in the global scope.
+        self.global_scope = False
+        
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -769,7 +772,8 @@ class Context(object):
         Check to see if there was are error raised during emulation and we have
         an error handler.
         """
-        return (self.got_error and
+        return (hasattr(self, "got_error") and
+                self.got_error and
                 hasattr(self, "error_handler") and
                 (self.error_handler is not None))
 
@@ -1038,9 +1042,13 @@ class Context(object):
             self.globals[name] = value
             log.debug("Set global var " + name + " = " + str(value))
         else:
-            # new name, always stored in locals:
-            self.locals[name] = value
-
+            # new name, typically store in local scope.
+            if (not self.global_scope):
+                self.locals[name] = value
+            else:
+                self.globals[name] = value
+                log.debug("Set global var " + name + " = " + str(value))
+                
         # If we know the type of the variable, save it.
         if (var_type is not None):
             self.types[name] = var_type

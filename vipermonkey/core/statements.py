@@ -1232,6 +1232,10 @@ class While_Statement(VBA_Object):
         if (len(self.body) != 1):
             return False
 
+        # Are we just sleeping in the loop?
+        if ("sleep(" in str(self.body[0]).lower()):
+            return True
+        
         # Do we have a simple loop guard?
         loop_counter = str(self.guard).strip()
         m = re.match(r"(\w+)\s*([<>=]{1,2})\s*(\w+)", loop_counter)

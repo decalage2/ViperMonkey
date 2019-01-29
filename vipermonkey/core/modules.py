@@ -56,8 +56,11 @@ from logger import log
 # --- MODULE -----------------------------------------------------------------
 
 class Module(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
+
         super(Module, self).__init__(original_str, location, tokens)
+
         self.name = None
         self.code = None  # set by ViperMonkey after parsing
         self.attributes = {}
@@ -66,6 +69,8 @@ class Module(VBA_Object):
         self.external_functions = {}
         self.subs = {}
         self.global_vars = {}
+        self.loose_lines = []
+
         for token in tokens:
             if isinstance(token, If_Statement_Macro):
                 for n in token.external_functions.keys():
@@ -132,6 +137,9 @@ class Module(VBA_Object):
                     self.global_vars[var[0]] = curr_init_val
                     log.debug("saving global var decl (1): %r = %r" % (var[0], curr_init_val))
 
+            elif isinstance(token, LooseLines):
+                self.loose_lines.append(token)
+                    
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)
@@ -145,6 +153,13 @@ class Module(VBA_Object):
         for extfunc in self.external_functions.values():
             r += '  %r\n' % extfunc
         return r
+
+    def eval(self, context, params=None):
+
+        # Emulate the loose line blocks (statements that appear outside sub/func
+        # defs) in order.
+        for block in self.loose_lines:
+            block.eval(context, params)
 
 # see MS-VBAL 4.2 Modules
 #
@@ -184,8 +199,52 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 # TODO: add rem statememt and others?
 empty_line = EOL.suppress()
 
+class LooseLines(VBA_Object):
+    """
+    A list of Visual Basic statements that don't appear in a Sub or Function.
+    This is mainly appicable to VBScript files.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(LooseLines, self).__init__(original_str, location, tokens)
+        self.block = tokens.block
+        log.info('parsed %r' % self)
+
+    def __repr__(self):
+        s = repr(self.block)
+        if (len(s) > 35):
+            s = s[:35] + " ...)"
+        return 'Loose Lines Block: %s: %s statement(s)' % (s, len(self.block))
+
+    def eval(self, context, params=None):
+
+        # Exit if an exit function statement was previously called.
+        #if (context.exit_func):
+        #    return
+
+        # Emulate the statements in the block.
+        log.info("Emulating " + str(self) + " ...")
+        context.global_scope = True
+        for curr_statement in self.block:
+
+            # Is this something we can emulate?
+            if (not isinstance(curr_statement, VBA_Object)):
+                continue
+            curr_statement.eval(context, params=params)
+
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
+loose_lines = OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('block')
+loose_lines.setParseAction(LooseLines)
+
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line) | simple_if_statement_macro)
+module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line) | simple_if_statement_macro | loose_lines)
 
 module_body = module_declaration + module_code
 

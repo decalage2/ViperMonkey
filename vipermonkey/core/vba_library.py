@@ -1463,9 +1463,13 @@ class Environ(VbaLibraryFunc):
     def eval(self, context, params=None):
         # TODO: Actually simulate getting common environment variable values.
         r = "%" + str(params[0]).upper() + "%"
+        r = r.replace("%%", "%")
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
+class ExpandEnvironmentStrings(Environ):
+    pass
+    
 class DriveExists(VbaLibraryFunc):
     """
     DriveExists() function for checking to see if a drive exists.
@@ -2388,7 +2392,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month, ExecQuery):
+               Month, ExecQuery, ExpandEnvironmentStrings):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
