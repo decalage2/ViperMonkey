@@ -926,12 +926,12 @@ def strip_useless_code(vba_code, local_funcs):
 
         # Do we have an unmatched 'end if'? If so, replace it with an
         # 'end function' to handle some Carbanak maldocs.
-        if (line.strip().startswith("End If")):
-            if_count -= 1
-            if (if_count < 0):
-                r += "End Function\n"
-                if_count = 0
-                continue
+        #if (line.strip().startswith("End If")):
+        #    if_count -= 1
+        #    if (if_count < 0):
+        #        r += "End Function\n"
+        #        if_count = 0
+        #        continue
         
         # Does this line get stripped based on variable usage?
         if ((line_num in comment_lines) and
