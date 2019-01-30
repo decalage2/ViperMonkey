@@ -120,6 +120,14 @@ class String(VBA_Object):
         self.value = tokens[0]
         # Replace Python control characters.
         self.value = self.value.\
+                     replace("\0","\\0").\
+                     replace("\1","\\1").\
+                     replace("\2","\\2").\
+                     replace("\3","\\3").\
+                     replace("\4","\\4").\
+                     replace("\5","\\5").\
+                     replace("\6","\\6").\
+                     replace("\7","\\7").\
                      replace("\n", "\\n").\
                      replace("\t", "\\t").\
                      replace("\f", "\\f").\
