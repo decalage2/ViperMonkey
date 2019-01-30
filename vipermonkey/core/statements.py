@@ -1006,7 +1006,8 @@ class For_Statement(VBA_Object):
         context.loop_stack.append(True)
 
         # Loop until the loop is broken out of or we hit the last index.
-        while (context.get(self.name) <= end):
+        while (((step > 0) and (context.get(self.name) <= end)) or
+               ((step < 0) and (context.get(self.name) >= end))):
 
             # Execute the loop body.
             log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))

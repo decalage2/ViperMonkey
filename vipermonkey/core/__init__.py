@@ -139,7 +139,8 @@ from vba_library import *
 class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self):
+    def __init__(self, filename):
+        self.filename = filename
         self.modules = []
         self.modules_code = []
         self.globals = {}
@@ -398,7 +399,8 @@ class ViperMonkey(object):
         context = Context(_globals=self.globals,
                           engine=self,
                           doc_vars=self.doc_vars,
-                          loaded_excel=self.loaded_excel)
+                          loaded_excel=self.loaded_excel,
+                          filename=self.filename)
 
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text

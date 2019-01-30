@@ -1157,7 +1157,7 @@ def _process_file (filename, data,
     if (time_limit is not None):
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
-    vm = ViperMonkey()
+    vm = ViperMonkey(filename)
     if (entry_points is not None):
         for entry_point in entry_points:
             vm.entry_points.append(entry_point)

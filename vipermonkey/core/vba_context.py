@@ -88,8 +88,12 @@ class Context(object):
                  context=None,
                  engine=None,
                  doc_vars=None,
-                 loaded_excel=None):
+                 loaded_excel=None,
+                 filename=None):
 
+        # Track the file being analyze.
+        self.filename = filename
+        
         # Track whether an error was raised in an emulated statement.
         got_error = False
 
@@ -128,6 +132,7 @@ class Context(object):
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
             self.dll_func_true_names = context.dll_func_true_names
+            self.filename = context.filename
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -482,7 +487,8 @@ class Context(object):
         self.globals["vbNullChar".lower()] = '\0'
         self.globals["VBA.vbNullChar".lower()] = '\0'
         self.globals["VBA.KeyCodeConstants.vbNullChar".lower()] = '\0'
-
+        self.globals["VBCRLF".lower()] = '\n'
+        
         self.globals["vbUpperCase".lower()] = 1
         self.globals["VBA.vbUpperCase".lower()] = 1
         self.globals["VBA.KeyCodeConstants.vbUpperCase".lower()] = 1
@@ -766,7 +772,8 @@ class Context(object):
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
-
+        self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
+        
     def have_error(self):
         """
         See if Visual Basic threw an error.
