@@ -553,6 +553,7 @@ class Function_Call(VBA_Object):
         if (dll_func_name is not None):
             self.name = dll_func_name
 
+        # Evaluate the function arguments.
         params = None
         if (self.name == "CallByName"):
             params = eval_args(self.params[1:], context=context)
@@ -562,6 +563,13 @@ class Function_Call(VBA_Object):
         str_params = repr(params)[1:-1]
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."
+            
+        # Would Visual Basic have thrown an error when evaluating the arguments?
+        if (context.have_error()):
+            log.warn('Short circuiting function call %s(%s) due to thrown VB error.' % (self.name, str_params))
+            return None
+            
+        # Actually emulate the function call.
         log.info('calling Function: %s(%s)' % (self.name, str_params))
         save = False
         for func in Function_Call.log_funcs:

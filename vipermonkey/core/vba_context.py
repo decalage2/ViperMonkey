@@ -766,14 +766,20 @@ class Context(object):
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
+
+    def have_error(self):
+        """
+        See if Visual Basic threw an error.
+        """
+        return (hasattr(self, "got_error") and
+                self.got_error)
         
     def must_handle_error(self):
         """
         Check to see if there was are error raised during emulation and we have
         an error handler.
         """
-        return (hasattr(self, "got_error") and
-                self.got_error and
+        return (self.have_error() and
                 hasattr(self, "error_handler") and
                 (self.error_handler is not None))
 
