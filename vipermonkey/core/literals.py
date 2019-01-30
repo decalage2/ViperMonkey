@@ -128,8 +128,6 @@ class String(VBA_Object):
                      replace("\5","\\5").\
                      replace("\6","\\6").\
                      replace("\7","\\7").\
-                     replace("\8","\\8").\
-                     replace("\9","\\9").\
                      replace("\n", "\\n").\
                      replace("\t", "\\t").\
                      replace("\f", "\\f").\
