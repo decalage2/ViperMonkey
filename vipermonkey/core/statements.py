@@ -873,8 +873,21 @@ class For_Statement(VBA_Object):
         if (len(self.statements) != 1):
             return (None, None)
 
-        # Are we just modifying a single variable each loop iteration by a single literal value?
+        # Are we just declaring a variable in the loop body?
         body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (body.startswith("Dim ")):
+
+            # Just run the loop body once.
+            self.statements[0].eval(context)
+
+            # Set the final value of the loop index variable.
+            context.set(self.name, end + step)
+
+            # Indicate that the loop was short circuited.
+            log.info("Short circuited Dim only loop " + str(self))
+            return ("DID IT", "DID IT")
+        
+        # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
         fields = body.split(" ")
         if (len(fields) != 5):
@@ -987,6 +1000,10 @@ class For_Statement(VBA_Object):
         else:
             step = 1
 
+        # Handle backwards loops.
+        if ((start > end) and (step > 0)):
+            step = step * -1
+            
         # Set the loop index variable to the start value.
         context.set(self.name, start)
             
@@ -1320,7 +1337,7 @@ class While_Statement(VBA_Object):
 
         # Do not bother running loops with empty bodies.
         if (len(self.body) == 0):
-            log.debug("WHILE loop: empty body. Skipping.")
+            log.info("WHILE loop: empty body. Skipping.")
             return
 
         # See if we can short circuit the loop.

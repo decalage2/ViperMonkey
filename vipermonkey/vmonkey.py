@@ -788,6 +788,11 @@ def strip_useless_code(vba_code, local_funcs):
 
             log.debug("SKIP: Assign line: " + line)
 
+            # Skip starts of while loops.
+            if (line.strip().startswith("While ")):
+                log.debug("SKIP: While loop. Keep it.")
+                continue
+            
             # Skip function definitions.
             if (line.strip().startswith("Function ")):
                 log.debug("SKIP: Function decl. Keep it.")
