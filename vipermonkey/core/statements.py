@@ -1967,9 +1967,14 @@ class Call_Statement(VBA_Object):
         str_params = repr(call_params)
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."
-        log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+
+        # Would Visual Basic have thrown an error when evaluating the arguments?
+        if (context.have_error()):
+            log.warn('Short circuiting function call %s(%s) due to thrown VB error.' % (self.name, str_params))
+            return None
 
         # Log functions of interest.
+        log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
         save = False
         for func in Function_Call.log_funcs:
             if (str(self.name).lower().endswith(func.lower())):

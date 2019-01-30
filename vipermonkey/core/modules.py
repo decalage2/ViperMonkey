@@ -90,6 +90,10 @@ class Module(VBA_Object):
                 self.attributes[token.name] = token.value
             elif isinstance(token, Global_Var_Statement):
 
+                # Global variable initialization is now handled by emulating the
+                # LooseLines blocks of code in the module.
+                pass
+                """
                 # Get the initial value(s) for the global variable(s).
                 context = vba_context.Context()
                 token.eval(context)
@@ -103,6 +107,7 @@ class Module(VBA_Object):
                         pass
                     log.debug("saving global var decl (0): %r = %r" % (var[0], init_val))
                     self.global_vars[var[0]] = init_val
+                """
 
             elif isinstance(token, Dim_Statement):
 

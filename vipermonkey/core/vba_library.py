@@ -333,7 +333,19 @@ class Shell(VbaLibraryFunc):
             params.remove('BuiltInDocumentProperties')
         except:
             pass
+
+        # Get the command to run.
         command = params[0]
+
+        # Is the command invalid?
+        if (not isinstance(command, str)):
+
+            # No, Shell() will throw an error.
+            context.got_error = True
+            log.warning("Shell(" + str(command) + ") throws an error.")
+            return 0
+
+        # We have a valid shell command. Track it.
         log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
