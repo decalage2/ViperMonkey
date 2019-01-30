@@ -273,7 +273,36 @@ class MemberAccessExpression(VBA_Object):
 
         # Don't know what we are getting.
         return None
+
+    def _handle_replace(self, context, lhs, rhs):
+        """
+        Handle string replaces of the form foo.Replace(bar, baz).
+        """
+
+        print "FIX THIS!!!"
+        return None
         
+        # Sanity check.
+        print lhs
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        print rhs
+        if (not isinstance(rhs, Function_Call)):
+            print "SKIP: 2"
+            return None
+        if (rhs.name != "Replace"):
+            print "SKIP: 3"
+            return None
+
+        # Run the string replace.
+        new_replace = Function_Call(None, None, None, old_call=rhs)
+        new_replace.params = [lhs] + new_replace.params
+
+        # Evaluate the string replace.
+        r = new_replace.eval(context)
+        print r
+        return r
+    
     def eval(self, context, params=None):
 
         # See if this is a function call like Application.Run("foo", 12, 13).
@@ -314,6 +343,11 @@ class MemberAccessExpression(VBA_Object):
                     if (rhs.name.lower() == func.lower()):
                         return str(self)
 
+            # Handle things like foo.Replace(bar, baz).
+            call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
+                    
             # This is not a builtin. Evaluate it
             tmp_rhs = eval_arg(rhs, context)
             return tmp_rhs
@@ -482,8 +516,16 @@ class Function_Call(VBA_Object):
                  "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
                  "FileCopy", "Load", "ShellExecute"]
     
-    def __init__(self, original_str, location, tokens):
+    def __init__(self, original_str, location, tokens, old_call=None):
         super(Function_Call, self).__init__(original_str, location, tokens)
+
+        # Copy constructor?
+        if (old_call is not None):
+            self.name = old_call.name
+            self.params = old_call.params
+            return
+
+        # Making a new one.
         self.name = str(tokens.name)
         log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)

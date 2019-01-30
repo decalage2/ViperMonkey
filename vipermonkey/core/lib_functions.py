@@ -104,7 +104,9 @@ class Chr(VBA_Object):
         converter = chr
         if (param > 255):
             converter = unichr
-
+        if (param < 0):
+            param = param * -1
+            
         # Do the conversion.
         try:
             r = converter(param)
