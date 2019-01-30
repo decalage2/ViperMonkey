@@ -585,8 +585,15 @@ def coerce_to_int(obj):
     # in VBA, Null/None is equivalent to 0
     if ((obj is None) or (obj == "NULL")):
         return 0
-    else:
-        return int(obj)
+
+    # Do we have a float string?
+    if (isinstance(obj, str) and ("." in obj)):
+        try:
+            obj = float(obj)
+        except:
+            pass
+            
+    return int(obj)
 
 def coerce_args_to_int(args):
     """

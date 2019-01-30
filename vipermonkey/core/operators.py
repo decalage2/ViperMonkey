@@ -236,7 +236,7 @@ class Subtraction(VBA_Object):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
-                return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
+                return reduce(lambda x, y: coerce_to_int(x) - coerce_to_int(y), eval_args(self.arg, context))
             except Exception as e:
 
                 # Are we doing math on character ordinals?
