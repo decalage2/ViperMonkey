@@ -930,6 +930,10 @@ class Context(object):
         elif name in self.globals and not is_procedure(self.globals[name]):
             self.globals[name] = value
             log.debug("Set global var " + name + " = " + str(value))
+            if ("." in name):
+                text_name = name + ".text"
+                self.globals[text_name] = value
+                log.debug("Set global var " + text_name + " = " + str(value))
         else:
             # new name, typically store in local scope.
             if (not self.global_scope):
@@ -937,6 +941,10 @@ class Context(object):
             else:
                 self.globals[name] = value
                 log.debug("Set global var " + name + " = " + str(value))
+                if ("." in name):
+                    text_name = name + ".text"
+                    self.globals[text_name] = value
+                    log.debug("Set global var " + text_name + " = " + str(value))
                 
         # If we know the type of the variable, save it.
         if (var_type is not None):
