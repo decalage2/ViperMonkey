@@ -624,7 +624,7 @@ class Context(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
 
     def add_key_macro(self,key,value):
-        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv', 'vbStrConv']
+        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
         for n in namespaces:
             self.globals[ (n+key).lower() ] = value
 
