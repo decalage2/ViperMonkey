@@ -88,8 +88,17 @@ class Context(object):
                  context=None,
                  engine=None,
                  doc_vars=None,
-                 loaded_excel=None):
+                 loaded_excel=None,
+                 filename=None):
 
+        # Track callback functions that should not be called. This is to handle
+        # recusive change handler calls caused by modifying the element handled
+        # by the change handler inside the handler.
+        self.skip_handlers = set()
+        
+        # Track the file being analyze.
+        self.filename = filename
+        
         # Track whether an error was raised in an emulated statement.
         got_error = False
 
@@ -128,6 +137,8 @@ class Context(object):
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
             self.dll_func_true_names = context.dll_func_true_names
+            self.fileename = context.filename
+            self.skip_handlers = context.skip_handlers
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -176,7 +187,8 @@ class Context(object):
         self.globals["Application.UserName".lower()] = rand_name
         
         # Add some attributes we are handling as global variables.
-        # keyboard keys and things in the key namespaces
+
+        # Keyboard keys and things in the key namespaces
         self.add_key_macro("vbDirectory","vbDirectory")
         self.add_key_macro("vbKeyLButton",1)
         self.add_key_macro("vbKeyRButton",2)
@@ -622,6 +634,21 @@ class Context(object):
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
+        self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
+
+    def add_key_macro(self,key,value):
+        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
+        for n in namespaces:
+            self.globals[ (n+key).lower() ] = value
+
+    def add_color_constant_macro(self,color,value):
+        namespaces = ['', 'VBA.ColorConstants', 'VBA.SystemColorConstants']
+        for n in namespaces:
+            self.globals[ (n+color).lower() ] = value
+
+    def add_multiple_macro(self,namespaces,key,value):
+        for n in namespaces:
+            self.globals[ (n+key).lower() ] = value
 
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']

@@ -365,6 +365,12 @@ class ShellExecute(Shell):
         log.info('ShellExecute(%r %r)' % (command, args))
         context.report_action('Execute Command', command + " " + args, 'Shell function', strip_null_bytes=True)
         return 0
+
+class Execute(Shell):
+    """
+    WScript Execute() function.
+    """
+    pass
     
 class Array(VbaLibraryFunc):
     """
@@ -2404,7 +2410,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month, ExecQuery, ExpandEnvironmentStrings):
+               Month, ExecQuery, ExpandEnvironmentStrings, Execute):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -92,7 +92,7 @@ class Module(VBA_Object):
 
                 # Global variable initialization is now handled by emulating the
                 # LooseLines blocks of code in the module.
-                pass
+                self.loose_lines.append(token)
                 """
                 # Get the initial value(s) for the global variable(s).
                 context = vba_context.Context()

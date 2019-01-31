@@ -788,6 +788,11 @@ def strip_useless_code(vba_code, local_funcs):
 
             log.debug("SKIP: Assign line: " + line)
 
+            # Skip starts of while loops.
+            if (line.strip().startswith("While ")):
+                log.debug("SKIP: While loop. Keep it.")
+                continue
+            
             # Skip function definitions.
             if (line.strip().startswith("Function ")):
                 log.debug("SKIP: Function decl. Keep it.")
@@ -1157,7 +1162,7 @@ def _process_file (filename, data,
     if (time_limit is not None):
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
-    vm = ViperMonkey()
+    vm = ViperMonkey(filename)
     if (entry_points is not None):
         for entry_point in entry_points:
             vm.entry_points.append(entry_point)

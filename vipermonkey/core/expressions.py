@@ -248,6 +248,34 @@ class MemberAccessExpression(VBA_Object):
         # doc.        
         return context.get_doc_var(tmp)
 
+    def _handle_text_file_read(self, context):
+        """
+        Handle OpenTextFile(...).ReadAll() calls.
+        """
+
+        # Do we have a text file read?
+        tmp = self.__repr__().lower()
+        if (("opentextfile(" not in tmp) or ("readall" not in tmp)):
+            return None
+
+        # Get the name of the file being read.
+        if (len(self.rhs) < 2):
+            return None
+        read_call = self.rhs[-2]
+        if (not isinstance(read_call, Function_Call)):
+            return None
+        read_file = str(eval_arg(read_call.params[0], context))
+
+        # Read the file contents.
+        try:
+            f = open(read_file, 'r')
+            r = f.read()
+            f.close()
+            return r
+        except Exception as e:
+            log.error("ReadAll('" + read_file + "') failed. " + str(e))
+            return None
+
     def _handle_docvar_value(self, lhs, rhs):
         """
         Handle reading .Name and .Value fields from doc vars.
@@ -279,7 +307,7 @@ class MemberAccessExpression(VBA_Object):
         Handle string replaces of the form foo.Replace(bar, baz).
         """
 
-        print "FIX THIS!!!"
+        #print "FIX THIS!!!"
         return None
         
         # Sanity check.
@@ -319,10 +347,18 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_docvars_read(context)
         if (call_retval is not None):
             return call_retval
-            
+
+        # Pull out the left hand side of the member access.
+        tmp_lhs = None
+        if (self.lhs is not None):
+            tmp_lhs = eval_arg(self.lhs, context)
+        else:
+            # This is something like ".foo.bar" in a With statement. The LHS
+            # is the With context item.
+            tmp_lhs = eval_arg(context.with_prefix, context)
+        
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
-        tmp_lhs = eval_arg(self.lhs, context)
         tmp_rhs = None
         rhs = None
         if (len(self.rhs1) > 0):
@@ -332,6 +368,11 @@ class MemberAccessExpression(VBA_Object):
             if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
 
+        # Handle reading the contents of a text file.
+        call_retval = self._handle_text_file_read(context)
+        if (call_retval is not None):
+            return call_retval
+                
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
@@ -478,7 +519,7 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-member-access-expression = "." unrestricted-name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
-with_member_access_expression = Suppress(".") + (unrestricted_name ^ function_call_limited)
+with_member_access_expression = OneOrMore( Suppress(".") + (unrestricted_name ^ function_call_limited) )
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
 

@@ -600,11 +600,18 @@ class Let_Statement(VBA_Object):
             log.debug("Found change callback " + callback_name)
 
             # Is it a function?
-            if (is_procedure(callback)):
+            if ((is_procedure(callback)) and
+                (callback_name not in context.skip_handlers)):
 
+                # Block recursive calls of the handler.
+                context.skip_handlers.add(callback_name)
+                
                 # Yes it is. Run it.
                 log.info("Running change callback " + callback_name)
                 callback.eval(context)
+                
+                # Open back up recursive calls of the handler.
+                context.skip_handlers.remove(callback_name)
 
         except KeyError:
 
@@ -873,8 +880,30 @@ class For_Statement(VBA_Object):
         if (len(self.statements) != 1):
             return (None, None)
 
-        # Are we just modifying a single variable each loop iteration by a single literal value?
+        # Are we just declaring a variable in the loop body?
         body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if (body.startswith("Dim ")):
+
+            # Just run the loop body once.
+            self.statements[0].eval(context)
+
+            # Set the final value of the loop index variable.
+            context.set(self.name, end + step)
+
+            # Indicate that the loop was short circuited.
+            log.info("Short circuited Dim only loop " + str(self))
+            return ("N/A", "N/A")
+
+        # Are we just assigning a variable to the loop counter?
+        if (body.endswith(" = " + str(self.name))):
+
+            # Just assign the variable to the final loop counter value.
+            fields = body.split(" ")
+            var = fields[0].strip()
+            context.set(self.name, end + step)
+            return (var, end + step)
+            
+        # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
         fields = body.split(" ")
         if (len(fields) != 5):
@@ -987,6 +1016,10 @@ class For_Statement(VBA_Object):
         else:
             step = 1
 
+        # Handle backwards loops.
+        if ((start > end) and (step > 0)):
+            step = step * -1
+            
         # Set the loop index variable to the start value.
         context.set(self.name, start)
             
@@ -1006,7 +1039,8 @@ class For_Statement(VBA_Object):
         context.loop_stack.append(True)
 
         # Loop until the loop is broken out of or we hit the last index.
-        while (context.get(self.name) <= end):
+        while (((step > 0) and (context.get(self.name) <= end)) or
+               ((step < 0) and (context.get(self.name) >= end))):
 
             # Execute the loop body.
             log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
@@ -1319,7 +1353,7 @@ class While_Statement(VBA_Object):
 
         # Do not bother running loops with empty bodies.
         if (len(self.body) == 0):
-            log.debug("WHILE loop: empty body. Skipping.")
+            log.info("WHILE loop: empty body. Skipping.")
             return
 
         # See if we can short circuit the loop.
