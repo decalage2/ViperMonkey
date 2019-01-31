@@ -91,6 +91,11 @@ class Context(object):
                  loaded_excel=None,
                  filename=None):
 
+        # Track callback functions that should not be called. This is to handle
+        # recusive change handler calls caused by modifying the element handled
+        # by the change handler inside the handler.
+        self.skip_handlers = set()
+        
         # Track the file being analyze.
         self.filename = filename
         
@@ -132,7 +137,8 @@ class Context(object):
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
             self.dll_func_true_names = context.dll_func_true_names
-            self.filename = context.filename
+            self.fileename = context.filename
+            self.skip_handlers = context.skip_handlers
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals

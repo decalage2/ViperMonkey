@@ -600,11 +600,18 @@ class Let_Statement(VBA_Object):
             log.debug("Found change callback " + callback_name)
 
             # Is it a function?
-            if (is_procedure(callback)):
+            if ((is_procedure(callback)) and
+                (callback_name not in context.skip_handlers)):
 
+                # Block recursive calls of the handler.
+                context.skip_handlers.add(callback_name)
+                
                 # Yes it is. Run it.
                 log.info("Running change callback " + callback_name)
                 callback.eval(context)
+                
+                # Open back up recursive calls of the handler.
+                context.skip_handlers.remove(callback_name)
 
         except KeyError:
 
@@ -885,8 +892,17 @@ class For_Statement(VBA_Object):
 
             # Indicate that the loop was short circuited.
             log.info("Short circuited Dim only loop " + str(self))
-            return ("DID IT", "DID IT")
-        
+            return ("N/A", "N/A")
+
+        # Are we just assigning a variable to the loop counter?
+        if (body.endswith(" = " + str(self.name))):
+
+            # Just assign the variable to the final loop counter value.
+            fields = body.split(" ")
+            var = fields[0].strip()
+            context.set(self.name, end + step)
+            return (var, end + step)
+            
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
         fields = body.split(" ")
