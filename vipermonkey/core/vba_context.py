@@ -633,6 +633,10 @@ class Context(object):
         for n in namespaces:
             self.globals[ (n+color).lower() ] = value
 
+    def add_multiple_macro(self,namespaces,key,value):
+        for n in namespaces:
+            self.globals[ (n+key).lower() ] = value
+
     def have_error(self):
         """
         See if Visual Basic threw an error.
