@@ -55,6 +55,7 @@ from reserved import *
 from from_unicode_str import *
 from vba_object import int_convert
 import procedures
+from var_in_expr_visitor import *
 
 from logger import log
 import sys
@@ -1344,6 +1345,25 @@ class While_Statement(VBA_Object):
         # We short circuited the loop evaluation.
         return True
     
+    def _get_guard_variables(self, context):
+        """
+        Pull out the variables that appear in the guard expression and their
+        values in the context. Return as a dict.
+        """
+
+        # Get the names of the variables in the loop guard.
+        var_visitor = var_in_expr_visitor()
+        self.guard.accept(var_visitor)
+        guard_var_names = var_visitor.variables
+
+        # Get their current values.
+        r = {}
+        for var in guard_var_names:
+            r[var] = context.get(var)
+
+        # Return the values of the vars in the loop guard.
+        return r
+        
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -1371,7 +1391,10 @@ class While_Statement(VBA_Object):
         if (".readyState" in str(self.guard)):
             log.info("Limiting # of iterations of a .readyState loop.")
             max_loop_iters = 5
-        
+
+        # Get the initial values of all the variables that appear in the loop guard.
+        old_guard_vals = self._get_guard_variables(context)
+            
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
         while (True):
@@ -1412,6 +1435,14 @@ class While_Statement(VBA_Object):
 
             # Finished with the loop due to 'Exit For' or error?
             if (done):
+                break
+
+            # Does it look like this might be an infinite loop? Check this by
+            # seeing if any changes have been made to the variables in the loop
+            # guard.
+            curr_guard_vals = self._get_guard_variables(context)
+            if (curr_guard_vals == old_guard_vals):
+                log.warn("Possible infinite While loop detected. Exiting loop.")
                 break
         
         # Remove tracking of this loop.
