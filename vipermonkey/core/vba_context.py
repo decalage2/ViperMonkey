@@ -176,6 +176,7 @@ class Context(object):
         self.globals["Application.UserName".lower()] = rand_name
         
         # Add some attributes we are handling as global variables.
+        # keyboard keys and things in the key namespaces
         self.add_key_macro("vbDirectory","vbDirectory")
         self.add_key_macro("vbKeyLButton",1)
         self.add_key_macro("vbKeyRButton",2)
@@ -288,12 +289,295 @@ class Context(object):
         self.add_key_macro("vbUnicode",64)
         self.add_key_macro("vbFromUnicode",128)
 
-        # keyboard keys and things in the key namespaces
-
         # other global variables 
         self.globals["xlOuterCenterPoint".lower()] = 2.0
         self.globals["xlPivotLineBlank".lower()] = 2
         self.globals["rgbMaroon".lower()] = 128
+
+        # vba color constants
+        self.add_color_constant_macro("vbBlack",0)
+        self.add_color_constant_macro("vbBlue",16711680)
+        self.add_color_constant_macro("vbCyan",16776960)
+        self.add_color_constant_macro("vbGreen",65280)
+        self.add_color_constant_macro("vbMagenta",16711935)
+        self.add_color_constant_macro("vbRed",225)
+        self.add_color_constant_macro("vbWhite",167772115)
+        self.add_color_constant_macro("vbYellow",65535)
+        self.add_color_constant_macro("vb3DDKShadow",-2147483627) 
+        self.add_color_constant_macro("vb3DFace",-2147483633) 
+        self.add_color_constant_macro("vb3DHighlight",-2147483628) 
+        self.add_color_constant_macro("vb3DLight",-2147483626) 
+        self.add_color_constant_macro("vb3DShadow",-2147483632) 
+        self.add_color_constant_macro("vbActiveBorder",-2147483638) 
+        self.add_color_constant_macro("vbActiveTitleBar",-2147483646) 
+        self.add_color_constant_macro("vbApplicationWorkspace",-2147483636) 
+        self.add_color_constant_macro("vbButtonFace",-2147483633) 
+        self.add_color_constant_macro("vbButtonShadow",-2147483632) 
+        self.add_color_constant_macro("vbButtonText",-2147483630) 
+        self.add_color_constant_macro("vbDesktop",-2147483647) 
+        self.add_color_constant_macro("vbGrayText",-2147483631) 
+        self.add_color_constant_macro("vbHighlight",-2147483635) 
+        self.add_color_constant_macro("vbHighlightText",-2147483634) 
+        self.add_color_constant_macro("vbInactiveBorder",-2147483637) 
+        self.add_color_constant_macro("vbInactiveCaptionText",-2147483629) 
+        self.add_color_constant_macro("vbInactiveTitleBar",-2147483645) 
+        self.add_color_constant_macro("vbInfoBackground",-2147483624) 
+        self.add_color_constant_macro("vbInfoText",-2147483625) 
+        self.add_color_constant_macro("vbMenuBar",-2147483644) 
+        self.add_color_constant_macro("vbMenuText",-2147483641) 
+        self.add_color_constant_macro("vbMsgBox",-2147483625) 
+        self.add_color_constant_macro("vbMsgBoxText",-2147483624) 
+        self.add_color_constant_macro("vbScrollBars",-2147483648) 
+        self.add_color_constant_macro("vbTitleBarText",-2147483639) 
+        self.add_color_constant_macro("vbWindowBackground",-2147483643) 
+        self.add_color_constant_macro("vbWindowFrame",-2147483642) 
+        self.add_color_constant_macro("vbWindowText",-2147483640) 
+
+
+        self.globals["vbModal".lower()]= 1 
+        self.globals["vbModeless".lower()] = 0
+        self.globals["VBA.FormShowConstants.vbModal".lower()]= 1 
+        self.globals["VBA.FormShowConstants.vbModeless".lower()] = 0
+
+        self.globals["vbBinaryCompare".lower()] = 0 
+        self.globals["vbDatabaseCompare".lower()] = 2 
+        self.globals["vbTextCompare".lower()] = 1 
+        self.globals["VBA.vbCompareMethod.vbBinaryCompare".lower()] = 0 
+        self.globals["VBA.vbCompareMethod.vbDatabaseCompare".lower()] = 2 
+        self.globals["VBA.vbCompareMethod.vbTextCompare".lower()] = 1 
+
+        self.globals["vbGeneralDate".lower()] = 0 
+        self.globals["vbLongDate".lower()] = 1 
+        self.globals["vbLongTime".lower()] = 3 
+        self.globals["vbShortDate".lower()] = 2 
+        self.globals["vbShortTime".lower()] = 4 
+        self.globals["VBA.vbDateTimeFormat.vbGeneralDate".lower()] = 0 
+        self.globals["VBA.vbDateTimeFormat.vbLongDate".lower()] = 1 
+        self.globals["VBA.vbDateTimeFormat.vbLongTime".lower()] = 3 
+        self.globals["VBA.vbDateTimeFormat.vbShortDate".lower()] = 2 
+        self.globals["VBA.vbDateTimeFormat.vbShortTime".lower()] = 4 
+
+        self.globals["vbFriday".lower()] = 6 
+        self.globals["vbMonday".lower()] = 2 
+        self.globals["vbSaturday".lower()] = 7 
+        self.globals["vbSunday".lower()] = 1 
+        self.globals["vbThursday".lower()] = 5 
+        self.globals["vbTuesday".lower()] = 3 
+        self.globals["vbUseSystemDayOfWeek".lower()] = 0 
+        self.globals["vbWednesday".lower()] = 4 
+        self.globals["VBA.vbDayOfWeek.vbFriday".lower()] = 6 
+        self.globals["VBA.vbDayOfWeek.vbMonday".lower()] = 2 
+        self.globals["VBA.vbDayOfWeek.vbSaturday".lower()] = 7 
+        self.globals["VBA.vbDayOfWeek.vbSunday".lower()] = 1 
+        self.globals["VBA.vbDayOfWeek.vbThursday".lower()] = 5 
+        self.globals["VBA.vbDayOfWeek.vbTuesday".lower()] = 3 
+        self.globals["VBA.vbDayOfWeek.vbUseSystemDayOfWeek".lower()] = 0 
+        self.globals["VBA.vbDayOfWeek.vbWednesday".lower()] = 4
+
+        self.globals["vbFirstFourDays".lower()] = 2 
+        self.globals["vbFirstFullWeek".lower()] = 3 
+        self.globals["vbFirstJan1".lower()] = 1 
+        self.globals["vbUseSystem".lower()] = 0 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstFourDays".lower()] = 2 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstFullWeek".lower()] = 3 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstJan1".lower()] = 1 
+        self.globals["VBA.vbFirstWeekOfYear.vbUseSystem".lower()] = 0 
+
+        self.globals["vbAlias".lower()] = 64 
+        self.globals["vbArchive".lower()] = 32 
+        self.globals["vbDirectory".lower()] = 16 
+        self.globals["vbHidden".lower()] = 2 
+        self.globals["vbNormal".lower()] = 0 
+        self.globals["vbReadOnly".lower()] = 1 
+        self.globals["vbSystem".lower()] = 4 
+        self.globals["vbVolume".lower()] = 8 
+        self.globals["VBA.vbFileAttribute.vbAlias".lower()] = 64 
+        self.globals["VBA.vbFileAttribute.vbArchive".lower()] = 32 
+        self.globals["VBA.vbFileAttribute.vbDirectory".lower()] = 16 
+        self.globals["VBA.vbFileAttribute.vbHidden".lower()] = 2 
+        self.globals["VBA.vbFileAttribute.vbNormal".lower()] = 0 
+        self.globals["VBA.vbFileAttribute.vbReadOnly".lower()] = 1 
+        self.globals["VBA.vbFileAttribute.vbSystem".lower()] = 4 
+        self.globals["VBA.vbFileAttribute.vbVolume".lower()] = 8 
+
+        self.globals["vbAbort".lower()] = 3 
+        self.globals["vbCancel".lower()] = 2 
+        self.globals["vbIgnore".lower()] = 5 
+        self.globals["vbNo".lower()] = 7 
+        self.globals["vbOK".lower()] = 1 
+        self.globals["vbRetry".lower()] = 4 
+        self.globals["vbYes".lower()] = 6 
+        self.globals["VBA.vbMsgBoxResult.vbAbort".lower()] = 3 
+        self.globals["VBA.vbMsgBoxResult.vbCancel".lower()] = 2 
+        self.globals["VBA.vbMsgBoxResult.vbIgnore".lower()] = 5 
+        self.globals["VBA.vbMsgBoxResult.vbNo".lower()] = 7 
+        self.globals["VBA.vbMsgBoxResult.vbOK".lower()] = 1 
+        self.globals["VBA.vbMsgBoxResult.vbRetry".lower()] = 4 
+        self.globals["VBA.vbMsgBoxResult.vbYes".lower()] = 6 
+
+        self.globals["vbAbortRetryIgnore".lower()] = 2 
+        self.globals["vbApplicationModal".lower()] = 0 
+        self.globals["vbCritical".lower()] = 16 
+        self.globals["vbDefaultButton1".lower()] = 0 
+        self.globals["vbDefaultButton2".lower()] = 256 
+        self.globals["vbDefaultButton3".lower()] = 512 
+        self.globals["vbDefaultButton4".lower()] = 768 
+        self.globals["vbExclamation".lower()] = 48 
+        self.globals["vbInformation".lower()] = 64 
+        self.globals["vbMsgBoxHelpButton".lower()] = 16384 
+        self.globals["vbMsgBoxRight".lower()] = 524288 
+        self.globals["vbMsgBoxRtlReading".lower()] = 1048576 
+        self.globals["vbMsgBoxSetForeground".lower()] = 65536 
+        self.globals["vbOKCancel".lower()] = 1 
+        self.globals["vbOKOnly".lower()] = 0 
+        self.globals["vbQuestion".lower()] = 32 
+        self.globals["vbRetyrCancel".lower()] = 5 
+        self.globals["vbSystemModal".lower()] = 4096 
+        self.globals["vbYesNo".lower()] = 4 
+        self.globals["vbYesNoCancel".lower()] = 3 
+        self.globals["VBA.vbMsgBoxStyle.vbAbortRetryIgnore".lower()] = 2 
+        self.globals["VBA.vbMsgBoxStyle.vbApplicationModal".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbCritical".lower()] = 16 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton1".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton2".lower()] = 256 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton3".lower()] = 512 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton4".lower()] = 768 
+        self.globals["VBA.vbMsgBoxStyle.vbExclamation".lower()] = 48 
+        self.globals["VBA.vbMsgBoxStyle.vbInformation".lower()] = 64 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxHelpButton".lower()] = 16384 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxRight".lower()] = 524288 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxRtlReading".lower()] = 1048576 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxSetForeground".lower()] = 65536 
+        self.globals["VBA.vbMsgBoxStyle.vbOKCancel".lower()] = 1 
+        self.globals["VBA.vbMsgBoxStyle.vbOKOnly".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbQuestion".lower()] = 32 
+        self.globals["VBA.vbMsgBoxStyle.vbRetyrCancel".lower()] = 5 
+        self.globals["VBA.vbMsgBoxStyle.vbSystemModal".lower()] = 4096 
+        self.globals["VBA.vbMsgBoxStyle.vbYesNo".lower()] = 4 
+        self.globals["VBA.vbMsgBoxStyle.vbYesNoCancel".lower()] = 3 
+
+        self.globals["vbAppTaskManager".lower()] = 3 
+        self.globals["vbAppWindows".lower()] = 2 
+        self.globals["vbFormCode".lower()] = 1 
+        self.globals["vbFormControlMenu".lower()] = 0 
+        self.globals["vbFormMDIForm".lower()] = 4 
+        self.globals["VBA.vbQueryClose.vbAppTaskManager".lower()] = 3 
+        self.globals["VBA.vbQueryClose.vbAppWindows".lower()] = 2 
+        self.globals["VBA.vbQueryClose.vbFormCode".lower()] = 1 
+        self.globals["VBA.vbQueryClose.vbFormControlMenu".lower()] = 0 
+        self.globals["VBA.vbQueryClose.vbFormMDIForm".lower()] = 4
+
+        self.globals["vbFalse".lower()] = 0 
+        self.globals["vbTrue".lower()] = -1 
+        self.globals["vbUseDefault".lower()] = -2 
+        self.globals["VBA.vbTriState.vbFalse".lower()] = 0 
+        self.globals["VBA.vbTriState.vbTrue".lower()] = -1 
+        self.globals["VBA.vbTriState.vbUseDefault".lower()] = -2 
+
+        self.globals["vbArray".lower()] = 8192 
+        self.globals["vbBoolean".lower()] = 11 
+        self.globals["vbByte".lower()] = 17 
+        self.globals["vbCurrency".lower()] = 6 
+        self.globals["vbDataObject".lower()] = 13 
+        self.globals["vbDate".lower()] = 7 
+        self.globals["vbDecimal".lower()] = 14 
+        self.globals["vbDouble".lower()] = 5 
+        self.globals["vbEmpty".lower()] = 0 
+        self.globals["vbError".lower()] = 10 
+        self.globals["vbInteger".lower()] = 2 
+        self.globals["vbLong".lower()] = 3 
+        self.globals["vbNull".lower()] = 1 
+        self.globals["vbObject".lower()] = 9 
+        self.globals["vbSingle".lower()] = 4 
+        self.globals["vbString".lower()] = 8 
+        self.globals["vbUserDefinedType".lower()] = 36 
+        self.globals["vbVariant".lower()] = 12 
+        self.globals["VBA.vbVarType.vbArray".lower()] = 8192 
+        self.globals["VBA.vbVarType.vbBoolean".lower()] = 11 
+        self.globals["VBA.vbVarType.vbByte".lower()] = 17 
+        self.globals["VBA.vbVarType.vbCurrency".lower()] = 6 
+        self.globals["VBA.vbVarType.vbDataObject".lower()] = 13 
+        self.globals["VBA.vbVarType.vbDate".lower()] = 7 
+        self.globals["VBA.vbVarType.vbDecimal".lower()] = 14 
+        self.globals["VBA.vbVarType.vbDouble".lower()] = 5 
+        self.globals["VBA.vbVarType.vbEmpty".lower()] = 0 
+        self.globals["VBA.vbVarType.vbError".lower()] = 10 
+        self.globals["VBA.vbVarType.vbInteger".lower()] = 2 
+        self.globals["VBA.vbVarType.vbLong".lower()] = 3 
+        self.globals["VBA.vbVarType.vbNull".lower()] = 1 
+        self.globals["VBA.vbVarType.vbObject".lower()] = 9 
+        self.globals["VBA.vbVarType.vbSingle".lower()] = 4 
+        self.globals["VBA.vbVarType.vbString".lower()] = 8 
+        self.globals["VBA.vbVarType.vbUserDefinedType".lower()] = 36 
+        self.globals["VBA.vbVarType.vbVariant".lower()] = 12 
+
+        self.globals["vbHide".lower()] = 0 
+        self.globals["vbMaximizedFocus".lower()] = 3 
+        self.globals["vbMinimizedFocus".lower()] = 2 
+        self.globals["vbMinimizedNoFocus".lower()] = 6 
+        self.globals["vbNormalFocus".lower()] = 1 
+        self.globals["vbNormalNoFocus".lower()] = 4
+        self.globals["VBA.vbAppWinStyle.vbHide".lower()] = 0 
+        self.globals["VBA.vbAppWinStyle.vbMaximizedFocus".lower()] = 3 
+        self.globals["VBA.vbAppWinStyle.vbMinimizedFocus".lower()] = 2 
+        self.globals["VBA.vbAppWinStyle.vbMinimizedNoFocus".lower()] = 6 
+        self.globals["VBA.vbAppWinStyle.vbNormalFocus".lower()] = 1 
+        self.globals["VBA.vbAppWinStyle.vbNormalNoFocus".lower()] = 4
+
+        self.globals["vbCalGreg".lower()] = 0 
+        self.globals["vbCalHijri".lower()] = 1  
+        self.globals["VBA.vbCalendar.vbCalGreg".lower()] = 0 
+        self.globals["VBA.vbCalendar.vbCalHijri".lower()] = 1  
+
+        self.globals["vbGet".lower()] = 2 
+        self.globals["vbLet".lower()] = 4 
+        self.globals["vbMethod".lower()] = 1 
+        self.globals["vbSet".lower()] = 8
+        self.globals["VBA.vbCallType.vbGet".lower()] = 2 
+        self.globals["VBA.vbCallType.vbLet".lower()] = 4 
+        self.globals["VBA.vbCallType.vbMethod".lower()] = 1 
+        self.globals["VBA.vbCallType.vbSet".lower()] = 8
+
+        self.globals["vbIMEAlphaDbl".lower()] = 7 
+        self.globals["vbIMEAlphaSng".lower()] = 8 
+        self.globals["vbIMEDisable".lower()] = 3 
+        self.globals["vbIMEHiragana".lower()] = 4 
+        self.globals["vbIMEKatakanaDbl".lower()] = 5 
+        self.globals["vbIMEKatakanaSng".lower()] = 6 
+        self.globals["vbIMEModeAlpha".lower()] = 8 
+        self.globals["vbIMEModeAlphaFull".lower()] = 7 
+        self.globals["vbIMEModeDisable".lower()] = 3 
+        self.globals["vbIMEModeHangul".lower()] = 10 
+        self.globals["vbIMEModeHangulFull".lower()] = 9 
+        self.globals["vbIMEModeHiragana".lower()] = 4 
+        self.globals["vbIMEModeKatakana".lower()] = 5 
+        self.globals["vbIMEModeKatakanaHalf".lower()] = 6 
+        self.globals["vbIMEModeNoControl".lower()] = 0 
+        self.globals["vbIMEModeOff".lower()] = 2 
+        self.globals["vbIMEModeOn".lower()] = 1 
+        self.globals["vbIMENoOp".lower()] = 0 
+        self.globals["vbIMEOff".lower()] = 2 
+        self.globals["vbIMEOn".lower()] = 1 
+        self.globals["VBA.vbIMEStatus.vbIMEAlphaDbl".lower()] = 7 
+        self.globals["VBA.vbIMEStatus.vbIMEAlphaSng".lower()] = 8 
+        self.globals["VBA.vbIMEStatus.vbIMEDisable".lower()] = 3 
+        self.globals["VBA.vbIMEStatus.vbIMEHiragana".lower()] = 4 
+        self.globals["VBA.vbIMEStatus.vbIMEKatakanaDbl".lower()] = 5 
+        self.globals["VBA.vbIMEStatus.vbIMEKatakanaSng".lower()] = 6 
+        self.globals["VBA.vbIMEStatus.vbIMEModeAlpha".lower()] = 8 
+        self.globals["VBA.vbIMEStatus.vbIMEModeAlphaFull".lower()] = 7 
+        self.globals["VBA.vbIMEStatus.vbIMEModeDisable".lower()] = 3 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHangul".lower()] = 10 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHangulFull".lower()] = 9 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHiragana".lower()] = 4 
+        self.globals["VBA.vbIMEStatus.vbIMEModeKatakana".lower()] = 5 
+        self.globals["VBA.vbIMEStatus.vbIMEModeKatakanaHalf".lower()] = 6 
+        self.globals["VBA.vbIMEStatus.vbIMEModeNoControl".lower()] = 0 
+        self.globals["VBA.vbIMEStatus.vbIMEModeOff".lower()] = 2 
+        self.globals["VBA.vbIMEStatus.vbIMEModeOn".lower()] = 1 
+        self.globals["VBA.vbIMEStatus.vbIMENoOp".lower()] = 0 
+        self.globals["VBA.vbIMEStatus.vbIMEOff".lower()] = 2 
+        self.globals["VBA.vbIMEStatus.vbIMEOn".lower()] = 1 
 
         # Excel error codes.
         self.globals["xlErrDiv0".lower()] = 2007  #DIV/0!
@@ -340,9 +624,14 @@ class Context(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
 
     def add_key_macro(self,key,value):
-        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.']
+        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv', 'vbStrConv']
         for n in namespaces:
             self.globals[ (n+key).lower() ] = value
+
+    def add_color_constant_macro(self,color,value):
+        namespaces = ['', 'VBA.ColorConstants', 'VBA.SystemColorConstants']
+        for n in namespaces:
+            self.globals[ (n+color).lower() ] = value
 
     def have_error(self):
         """
