@@ -1892,7 +1892,7 @@ class Run(VbaLibraryFunc):
         assert (len(params) >= 1)
 
         # Get the name of the function to call.
-        func_name = params[0]
+        func_name = str(params[0])
         
         # Strip the name of the function down if needed.
         if ("." in func_name):
