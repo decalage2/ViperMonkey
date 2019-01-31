@@ -347,10 +347,18 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_docvars_read(context)
         if (call_retval is not None):
             return call_retval
+
+        # Pull out the left hand side of the member access.
+        tmp_lhs = None
+        if (self.lhs is not None):
+            tmp_lhs = eval_arg(self.lhs, context)
+        else:
+            # This is something like ".foo.bar" in a With statement. The LHS
+            # is the With context item.
+            tmp_lhs = eval_arg(context.with_prefix, context)
         
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
-        tmp_lhs = eval_arg(self.lhs, context)
         tmp_rhs = None
         rhs = None
         if (len(self.rhs1) > 0):
@@ -511,7 +519,7 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-member-access-expression = "." unrestricted-name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
-with_member_access_expression = Suppress(".") + (unrestricted_name ^ function_call_limited)
+with_member_access_expression = OneOrMore( Suppress(".") + (unrestricted_name ^ function_call_limited) )
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
 
