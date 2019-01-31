@@ -187,553 +187,409 @@ class Context(object):
         self.globals["Application.UserName".lower()] = rand_name
         
         # Add some attributes we are handling as global variables.
-        self.globals["vbDirectory".lower()] = "vbDirectory"
-        self.globals["VBA.vbDirectory".lower()] = "vbDirectory"
-        self.globals["VBA.KeyCodeConstants.vbDirectory".lower()] = "vbDirectory"
-        self.globals["vbKeyLButton".lower()] = 1
-        self.globals["VBA.vbKeyLButton".lower()] = 1
-        self.globals["VBA.KeyCodeConstants.vbKeyLButton".lower()] = 1
-        self.globals["vbKeyRButton".lower()] = 2
-        self.globals["VBA.vbKeyRButton".lower()] = 2
-        self.globals["VBA.KeyCodeConstants.vbKeyRButton".lower()] = 2
-        self.globals["vbKeyCancel".lower()] = 3
-        self.globals["VBA.vbKeyCancel".lower()] = 3
-        self.globals["VBA.KeyCodeConstants.vbKeyCancel".lower()] = 3
-        self.globals["vbKeyMButton".lower()] = 4
-        self.globals["VBA.vbKeyMButton".lower()] = 4
-        self.globals["VBA.KeyCodeConstants.vbKeyMButton".lower()] = 4
-        self.globals["vbKeyBack".lower()] = 8
-        self.globals["VBA.vbKeyBack".lower()] = 8
-        self.globals["VBA.KeyCodeConstants.vbKeyBack".lower()] = 8
-        self.globals["vbKeyTab".lower()] = 9
-        self.globals["VBA.vbKeyTab".lower()] = 9
-        self.globals["VBA.KeyCodeConstants.vbKeyTab".lower()] = 9
-        self.globals["vbKeyClear".lower()] = 12
-        self.globals["VBA.vbKeyClear".lower()] = 12
-        self.globals["VBA.KeyCodeConstants.vbKeyClear".lower()] = 12
-        self.globals["vbKeyReturn".lower()] = 13
-        self.globals["VBA.vbKeyReturn".lower()] = 13
-        self.globals["VBA.KeyCodeConstants.vbKeyReturn".lower()] = 13
-        self.globals["vbKeyShift".lower()] = 16
-        self.globals["VBA.vbKeyShift".lower()] = 16
-        self.globals["VBA.KeyCodeConstants.vbKeyShift".lower()] = 16
-        self.globals["vbKeyControl".lower()] = 17
-        self.globals["VBA.vbKeyControl".lower()] = 17
-        self.globals["VBA.KeyCodeConstants.vbKeyControl".lower()] = 17
-        self.globals["vbKeyMenu".lower()] = 18
-        self.globals["VBA.vbKeyMenu".lower()] = 18
-        self.globals["VBA.KeyCodeConstants.vbKeyMenu".lower()] = 18
-        self.globals["vbKeyPause".lower()] = 19
-        self.globals["VBA.vbKeyPause".lower()] = 19
-        self.globals["VBA.KeyCodeConstants.vbKeyPause".lower()] = 19
-        self.globals["vbKeyCapital".lower()] = 20
-        self.globals["VBA.vbKeyCapital".lower()] = 20
-        self.globals["VBA.KeyCodeConstants.vbKeyCapital".lower()] = 20
-        self.globals["vbKeyEscape".lower()] = 27
-        self.globals["VBA.vbKeyEscape".lower()] = 27
-        self.globals["VBA.KeyCodeConstants.vbKeyEscape".lower()] = 27
-        self.globals["vbKeySpace".lower()] = 32
-        self.globals["VBA.vbKeySpace".lower()] = 32
-        self.globals["VBA.KeyCodeConstants.vbKeySpace".lower()] = 32
-        self.globals["vbKeyPageUp".lower()] = 33
-        self.globals["VBA.vbKeyPageUp".lower()] = 33
-        self.globals["VBA.KeyCodeConstants.vbKeyPageUp".lower()] = 33
-        self.globals["vbKeyPageDown".lower()] = 34
-        self.globals["VBA.vbKeyPageDown".lower()] = 34
-        self.globals["VBA.KeyCodeConstants.vbKeyPageDown".lower()] = 34
-        self.globals["vbKeyEnd".lower()] = 35
-        self.globals["VBA.vbKeyEnd".lower()] = 35
-        self.globals["VBA.KeyCodeConstants.vbKeyEnd".lower()] = 35
-        self.globals["vbKeyHome".lower()] = 36
-        self.globals["VBA.vbKeyHome".lower()] = 36
-        self.globals["VBA.KeyCodeConstants.vbKeyHome".lower()] = 36
-        self.globals["vbKeyLeft".lower()] = 37
-        self.globals["VBA.vbKeyLeft".lower()] = 37
-        self.globals["VBA.KeyCodeConstants.vbKeyLeft".lower()] = 37
-        self.globals["vbKeyUp".lower()] = 38
-        self.globals["VBA.vbKeyUp".lower()] = 38
-        self.globals["VBA.KeyCodeConstants.vbKeyUp".lower()] = 38
-        self.globals["vbKeyRight".lower()] = 39
-        self.globals["VBA.vbKeyRight".lower()] = 39
-        self.globals["VBA.KeyCodeConstants.vbKeyRight".lower()] = 39
-        self.globals["vbKeyDown".lower()] = 40
-        self.globals["VBA.vbKeyDown".lower()] = 40
-        self.globals["VBA.KeyCodeConstants.vbKeyDown".lower()] = 40
-        self.globals["vbKeySelect".lower()] = 41
-        self.globals["VBA.vbKeySelect".lower()] = 41
-        self.globals["VBA.KeyCodeConstants.vbKeySelect".lower()] = 41
-        self.globals["vbKeyPrint".lower()] = 42
-        self.globals["VBA.vbKeyPrint".lower()] = 42
-        self.globals["VBA.KeyCodeConstants.vbKeyPrint".lower()] = 42
-        self.globals["vbKeyExecute".lower()] = 43
-        self.globals["VBA.vbKeyExecute".lower()] = 43
-        self.globals["VBA.KeyCodeConstants.vbKeyExecute".lower()] = 43
-        self.globals["vbKeySnapshot".lower()] = 44
-        self.globals["VBA.vbKeySnapshot".lower()] = 44
-        self.globals["VBA.KeyCodeConstants.vbKeySnapshot".lower()] = 44
-        self.globals["vbKeyInsert".lower()] = 45
-        self.globals["VBA.vbKeyInsert".lower()] = 45
-        self.globals["VBA.KeyCodeConstants.vbKeyInsert".lower()] = 45
-        self.globals["vbKeyDelete".lower()] = 46
-        self.globals["VBA.vbKeyDelete".lower()] = 46
-        self.globals["VBA.KeyCodeConstants.vbKeyDelete".lower()] = 46
-        self.globals["vbKeyHelp".lower()] = 47
-        self.globals["VBA.vbKeyHelp".lower()] = 47
-        self.globals["VBA.KeyCodeConstants.vbKeyHelp".lower()] = 47
-        self.globals["vbKeyNumlock".lower()] = 144
-        self.globals["VBA.vbKeyNumlock".lower()] = 144
-        self.globals["VBA.KeyCodeConstants.vbKeyNumlock".lower()] = 144        
-        self.globals["vbKeyA".lower()] = 65
-        self.globals["VBA.vbKeyA".lower()] = 65
-        self.globals["VBA.KeyCodeConstants.vbKeyA".lower()] = 65
-        self.globals["vbKeyB".lower()] = 66
-        self.globals["VBA.vbKeyB".lower()] = 66
-        self.globals["VBA.KeyCodeConstants.vbKeyB".lower()] = 66
-        self.globals["vbKeyC".lower()] = 67
-        self.globals["VBA.vbKeyC".lower()] = 67
-        self.globals["VBA.KeyCodeConstants.vbKeyC".lower()] = 67
-        self.globals["vbKeyD".lower()] = 68
-        self.globals["VBA.vbKeyD".lower()] = 68
-        self.globals["VBA.KeyCodeConstants.vbKeyD".lower()] = 68
-        self.globals["vbKeyE".lower()] = 69
-        self.globals["VBA.vbKeyE".lower()] = 69
-        self.globals["VBA.KeyCodeConstants.vbKeyE".lower()] = 69
-        self.globals["vbKeyF".lower()] = 70
-        self.globals["VBA.vbKeyF".lower()] = 70
-        self.globals["VBA.KeyCodeConstants.vbKeyF".lower()] = 70
-        self.globals["vbKeyG".lower()] = 71
-        self.globals["VBA.vbKeyG".lower()] = 71
-        self.globals["VBA.KeyCodeConstants.vbKeyG".lower()] = 71
-        self.globals["vbKeyH".lower()] = 72
-        self.globals["VBA.vbKeyH".lower()] = 72
-        self.globals["VBA.KeyCodeConstants.vbKeyH".lower()] = 72
-        self.globals["vbKeyI".lower()] = 73
-        self.globals["VBA.vbKeyI".lower()] = 73
-        self.globals["VBA.KeyCodeConstants.vbKeyI".lower()] = 73
-        self.globals["vbKeyJ".lower()] = 74
-        self.globals["VBA.vbKeyJ".lower()] = 74
-        self.globals["VBA.KeyCodeConstants.vbKeyJ".lower()] = 74
-        self.globals["vbKeyK".lower()] = 75
-        self.globals["VBA.vbKeyK".lower()] = 75
-        self.globals["VBA.KeyCodeConstants.vbKeyK".lower()] = 75
-        self.globals["vbKeyL".lower()] = 76
-        self.globals["VBA.vbKeyL".lower()] = 76
-        self.globals["VBA.KeyCodeConstants.vbKeyL".lower()] = 76
-        self.globals["vbKeyM".lower()] = 77
-        self.globals["VBA.vbKeyM".lower()] = 77
-        self.globals["VBA.KeyCodeConstants.vbKeyM".lower()] = 77
-        self.globals["vbKeyN".lower()] = 78
-        self.globals["VBA.vbKeyN".lower()] = 78
-        self.globals["VBA.KeyCodeConstants.vbKeyN".lower()] = 78
-        self.globals["vbKeyO".lower()] = 79
-        self.globals["VBA.vbKeyO".lower()] = 79
-        self.globals["VBA.KeyCodeConstants.vbKeyO".lower()] = 79
-        self.globals["vbKeyP".lower()] = 80
-        self.globals["VBA.vbKeyP".lower()] = 80
-        self.globals["VBA.KeyCodeConstants.vbKeyP".lower()] = 80
-        self.globals["vbKeyQ".lower()] = 81
-        self.globals["VBA.vbKeyQ".lower()] = 81
-        self.globals["VBA.KeyCodeConstants.vbKeyQ".lower()] = 81
-        self.globals["vbKeyR".lower()] = 82
-        self.globals["VBA.vbKeyR".lower()] = 82
-        self.globals["VBA.KeyCodeConstants.vbKeyR".lower()] = 82
-        self.globals["vbKeyS".lower()] = 83
-        self.globals["VBA.vbKeyS".lower()] = 83
-        self.globals["VBA.KeyCodeConstants.vbKeyS".lower()] = 83
-        self.globals["vbKeyT".lower()] = 84
-        self.globals["VBA.vbKeyT".lower()] = 84
-        self.globals["VBA.KeyCodeConstants.vbKeyT".lower()] = 84
-        self.globals["vbKeyU".lower()] = 85
-        self.globals["VBA.vbKeyU".lower()] = 85
-        self.globals["VBA.KeyCodeConstants.vbKeyU".lower()] = 85
-        self.globals["vbKeyV".lower()] = 86
-        self.globals["VBA.vbKeyV".lower()] = 86
-        self.globals["VBA.KeyCodeConstants.vbKeyV".lower()] = 86
-        self.globals["vbKeyW".lower()] = 87
-        self.globals["VBA.vbKeyW".lower()] = 87
-        self.globals["VBA.KeyCodeConstants.vbKeyW".lower()] = 87
-        self.globals["vbKeyX".lower()] = 88
-        self.globals["VBA.vbKeyX".lower()] = 88
-        self.globals["VBA.KeyCodeConstants.vbKeyX".lower()] = 88
-        self.globals["vbKeyY".lower()] = 89
-        self.globals["VBA.vbKeyY".lower()] = 89
-        self.globals["VBA.KeyCodeConstants.vbKeyY".lower()] = 89
-        self.globals["vbKeyZ".lower()] = 90
-        self.globals["VBA.vbKeyZ".lower()] = 90
-        self.globals["VBA.KeyCodeConstants.vbKeyZ".lower()] = 90
-        self.globals["vbKey0".lower()] = 48
-        self.globals["VBA.vbKey0".lower()] = 48
-        self.globals["VBA.KeyCodeConstants.vbKey0".lower()] = 48
-        self.globals["vbKey1".lower()] = 49
-        self.globals["VBA.vbKey1".lower()] = 49
-        self.globals["VBA.KeyCodeConstants.vbKey1".lower()] = 49
-        self.globals["vbKey2".lower()] = 50
-        self.globals["VBA.vbKey2".lower()] = 50
-        self.globals["VBA.KeyCodeConstants.vbKey2".lower()] = 50
-        self.globals["vbKey3".lower()] = 51
-        self.globals["VBA.vbKey3".lower()] = 51
-        self.globals["VBA.KeyCodeConstants.vbKey3".lower()] = 51
-        self.globals["vbKey4".lower()] = 52
-        self.globals["VBA.vbKey4".lower()] = 52
-        self.globals["VBA.KeyCodeConstants.vbKey4".lower()] = 52
-        self.globals["vbKey5".lower()] = 53
-        self.globals["VBA.vbKey5".lower()] = 53
-        self.globals["VBA.KeyCodeConstants.vbKey5".lower()] = 53
-        self.globals["vbKey6".lower()] = 54
-        self.globals["VBA.vbKey6".lower()] = 54
-        self.globals["VBA.KeyCodeConstants.vbKey6".lower()] = 54
-        self.globals["vbKey7".lower()] = 55
-        self.globals["VBA.vbKey7".lower()] = 55
-        self.globals["VBA.KeyCodeConstants.vbKey7".lower()] = 55
-        self.globals["vbKey8".lower()] = 56
-        self.globals["VBA.vbKey8".lower()] = 56
-        self.globals["VBA.KeyCodeConstants.vbKey8".lower()] = 56
-        self.globals["vbKey9".lower()] = 57
-        self.globals["VBA.vbKey9".lower()] = 57
-        self.globals["VBA.KeyCodeConstants.vbKey9".lower()] = 57
-        self.globals["vbKeyNumpad0".lower()] = 96
-        self.globals["VBA.vbKeyNumpad0".lower()] = 96
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad0".lower()] = 96
-        self.globals["vbKeyNumpad1".lower()] = 97
-        self.globals["VBA.vbKeyNumpad1".lower()] = 97
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad1".lower()] = 97
-        self.globals["vbKeyNumpad2".lower()] = 98
-        self.globals["VBA.vbKeyNumpad2".lower()] = 98
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad2".lower()] = 98
-        self.globals["vbKeyNumpad3".lower()] = 99
-        self.globals["VBA.vbKeyNumpad3".lower()] = 99
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad3".lower()] = 99
-        self.globals["vbKeyNumpad4".lower()] = 100
-        self.globals["VBA.vbKeyNumpad4".lower()] = 100
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad4".lower()] = 100
-        self.globals["vbKeyNumpad5".lower()] = 101
-        self.globals["VBA.vbKeyNumpad5".lower()] = 101
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad5".lower()] = 101
-        self.globals["vbKeyNumpad6".lower()] = 102
-        self.globals["VBA.vbKeyNumpad6".lower()] = 102
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad6".lower()] = 102
-        self.globals["vbKeyNumpad7".lower()] = 103
-        self.globals["VBA.vbKeyNumpad7".lower()] = 103
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad7".lower()] = 103
-        self.globals["vbKeyNumpad8".lower()] = 104
-        self.globals["VBA.vbKeyNumpad8".lower()] = 104
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad8".lower()] = 104
-        self.globals["vbKeyNumpad9".lower()] = 105
-        self.globals["VBA.vbKeyNumpad9".lower()] = 105
-        self.globals["VBA.KeyCodeConstants.vbKeyNumpad9".lower()] = 105
-        self.globals["vbKeyMultiply".lower()] = 106
-        self.globals["VBA.vbKeyMultiply".lower()] = 106
-        self.globals["VBA.KeyCodeConstants.vbKeyMultiply".lower()] = 106
-        self.globals["vbKeyAdd".lower()] = 107
-        self.globals["VBA.vbKeyAdd".lower()] = 107
-        self.globals["VBA.KeyCodeConstants.vbKeyAdd".lower()] = 107
-        self.globals["vbKeySeparator".lower()] = 108
-        self.globals["VBA.vbKeySeparator".lower()] = 108
-        self.globals["VBA.KeyCodeConstants.vbKeySeparator".lower()] = 108
-        self.globals["vbKeySubtract".lower()] = 109
-        self.globals["VBA.vbKeySubtract".lower()] = 109
-        self.globals["VBA.KeyCodeConstants.vbKeySubtract".lower()] = 109
-        self.globals["vbKeyDecimal".lower()] = 110
-        self.globals["VBA.vbKeyDecimal".lower()] = 110
-        self.globals["VBA.KeyCodeConstants.vbKeyDecimal".lower()] = 110
-        self.globals["vbKeyDivide".lower()] = 111
-        self.globals["VBA.vbKeyDivide".lower()] = 111
-        self.globals["VBA.KeyCodeConstants.vbKeyDivide".lower()] = 111
-        self.globals["vbKeyF1".lower()] = 112
-        self.globals["VBA.vbKeyF1".lower()] = 112
-        self.globals["VBA.KeyCodeConstants.vbKeyF1".lower()] = 112
-        self.globals["vbKeyF2".lower()] = 113
-        self.globals["VBA.vbKeyF2".lower()] = 113
-        self.globals["VBA.KeyCodeConstants.vbKeyF2".lower()] = 113
-        self.globals["vbKeyF3".lower()] = 114
-        self.globals["VBA.vbKeyF3".lower()] = 114
-        self.globals["VBA.KeyCodeConstants.vbKeyF3".lower()] = 114
-        self.globals["vbKeyF4".lower()] = 115
-        self.globals["VBA.vbKeyF4".lower()] = 115
-        self.globals["VBA.KeyCodeConstants.vbKeyF4".lower()] = 115
-        self.globals["vbKeyF5".lower()] = 116
-        self.globals["VBA.vbKeyF5".lower()] = 116
-        self.globals["VBA.KeyCodeConstants.vbKeyF5".lower()] = 116
-        self.globals["vbKeyF6".lower()] = 117
-        self.globals["VBA.vbKeyF6".lower()] = 117
-        self.globals["VBA.KeyCodeConstants.vbKeyF6".lower()] = 117
-        self.globals["vbKeyF7".lower()] = 118
-        self.globals["VBA.vbKeyF7".lower()] = 118
-        self.globals["VBA.KeyCodeConstants.vbKeyF7".lower()] = 118
-        self.globals["vbKeyF8".lower()] = 119
-        self.globals["VBA.vbKeyF8".lower()] = 119
-        self.globals["VBA.KeyCodeConstants.vbKeyF8".lower()] = 119
-        self.globals["vbKeyF9".lower()] = 120
-        self.globals["VBA.vbKeyF9".lower()] = 120
-        self.globals["VBA.KeyCodeConstants.vbKeyF9".lower()] = 120
-        self.globals["vbKeyF10".lower()] = 121
-        self.globals["VBA.vbKeyF10".lower()] = 121
-        self.globals["VBA.KeyCodeConstants.vbKeyF10".lower()] = 121
-        self.globals["vbKeyF11".lower()] = 122
-        self.globals["VBA.vbKeyF11".lower()] = 122
-        self.globals["VBA.KeyCodeConstants.vbKeyF11".lower()] = 122
-        self.globals["vbKeyF12".lower()] = 123
-        self.globals["VBA.vbKeyF12".lower()] = 123
-        self.globals["VBA.KeyCodeConstants.vbKeyF12".lower()] = 123
-        self.globals["vbKeyF13".lower()] = 124
-        self.globals["VBA.vbKeyF13".lower()] = 124
-        self.globals["VBA.KeyCodeConstants.vbKeyF13".lower()] = 124
-        self.globals["vbKeyF14".lower()] = 125
-        self.globals["VBA.vbKeyF14".lower()] = 125
-        self.globals["VBA.KeyCodeConstants.vbKeyF14".lower()] = 125
-        self.globals["vbKeyF15".lower()] = 126
-        self.globals["VBA.vbKeyF15".lower()] = 126
-        self.globals["VBA.KeyCodeConstants.vbKeyF15".lower()] = 126
-        self.globals["vbKeyF16".lower()] = 127
-        self.globals["VBA.vbKeyF16".lower()] = 127
-        self.globals["VBA.KeyCodeConstants.vbKeyF16".lower()] = 127
-        self.globals["vbNullString".lower()] = ''
-        self.globals["VBA.vbNullString".lower()] = ''
-        self.globals["VBA.KeyCodeConstants.vbNullString".lower()] = ''
-        self.globals["vbNullChar".lower()] = '\0'
-        self.globals["VBA.vbNullChar".lower()] = '\0'
-        self.globals["VBA.KeyCodeConstants.vbNullChar".lower()] = '\0'
-        self.globals["VBCRLF".lower()] = '\n'
-        
-        self.globals["vbUpperCase".lower()] = 1
-        self.globals["VBA.vbUpperCase".lower()] = 1
-        self.globals["VBA.KeyCodeConstants.vbUpperCase".lower()] = 1
-        self.globals["vbLowerCase".lower()] = 2
-        self.globals["VBA.vbLowerCase".lower()] = 2
-        self.globals["VBA.KeyCodeConstants.vbLowerCase".lower()] = 2
-        self.globals["vbProperCase".lower()] = 3
-        self.globals["VBA.vbProperCase".lower()] = 3
-        self.globals["VBA.KeyCodeConstants.vbProperCase".lower()] = 3
-        self.globals["vbWide".lower()] = 4
-        self.globals["VBA.vbWide".lower()] = 4
-        self.globals["VBA.KeyCodeConstants.vbWide".lower()] = 4
-        self.globals["vbNarrow".lower()] = 8
-        self.globals["VBA.vbNarrow".lower()] = 8
-        self.globals["VBA.KeyCodeConstants.vbNarrow".lower()] = 8
-        self.globals["vbKatakana".lower()] = 16
-        self.globals["VBA.vbKatakana".lower()] = 16
-        self.globals["VBA.KeyCodeConstants.vbKatakana".lower()] = 16
-        self.globals["vbHiragana".lower()] = 32
-        self.globals["VBA.vbHiragana".lower()] = 32
-        self.globals["VBA.KeyCodeConstants.vbHiragana".lower()] = 32
-        self.globals["vbUnicode".lower()] = 64
-        self.globals["VBA.vbUnicode".lower()] = 64
-        self.globals["VBA.KeyCodeConstants.vbUnicode".lower()] = 64
-        self.globals["vbFromUnicode".lower()] = 128
-        self.globals["VBA.vbFromUnicode".lower()] = 128
-        self.globals["VBA.KeyCodeConstants.vbFromUnicode".lower()] = 128
 
+        # Keyboard keys and things in the key namespaces
+        self.add_key_macro("vbDirectory","vbDirectory")
+        self.add_key_macro("vbKeyLButton",1)
+        self.add_key_macro("vbKeyRButton",2)
+        self.add_key_macro("vbKeyCancel",3)
+        self.add_key_macro("vbKeyMButton",4)
+        self.add_key_macro("vbKeyBack",8)
+        self.add_key_macro("vbKeyTab",9)
+        self.add_key_macro("vbKeyClear",12)
+        self.add_key_macro("vbKeyReturn",13)
+        self.add_key_macro("vbKeyShift",16)
+        self.add_key_macro("vbKeyControl",17)
+        self.add_key_macro("vbKeyMenu",18)
+        self.add_key_macro("vbKeyPause",19)
+        self.add_key_macro("vbKeyCapital",20)
+        self.add_key_macro("vbKeyEscape",27)
+        self.add_key_macro("vbKeySpace",32)
+        self.add_key_macro("vbKeyPageUp",33)
+        self.add_key_macro("vbKeyPageDown",34)
+        self.add_key_macro("vbKeyEnd",35)
+        self.add_key_macro("vbKeyHome",36)
+        self.add_key_macro("vbKeyLeft",37)
+        self.add_key_macro("vbKeyUp",38)
+        self.add_key_macro("vbKeyRight",39)
+        self.add_key_macro("vbKeyDown",40)
+        self.add_key_macro("vbKeySelect",41)
+        self.add_key_macro("vbKeyPrint",42)
+        self.add_key_macro("vbKeyExecute",43)
+        self.add_key_macro("vbKeySnapshot",44)
+        self.add_key_macro("vbKeyInsert",45)
+        self.add_key_macro("vbKeyDelete",46)
+        self.add_key_macro("vbKeyHelp",47)
+        self.add_key_macro("vbKeyNumlock",144)
+        self.add_key_macro("vbKeyA",65)
+        self.add_key_macro("vbKeyB",66)
+        self.add_key_macro("vbKeyC",67)
+        self.add_key_macro("vbKeyD",68)
+        self.add_key_macro("vbKeyE",69)
+        self.add_key_macro("vbKeyF",70)
+        self.add_key_macro("vbKeyG",71)
+        self.add_key_macro("vbKeyH",72)
+        self.add_key_macro("vbKeyI",73)
+        self.add_key_macro("vbKeyJ",74)
+        self.add_key_macro("vbKeyK",75)
+        self.add_key_macro("vbKeyL",76)
+        self.add_key_macro("vbKeyM",77)
+        self.add_key_macro("vbKeyN",78)
+        self.add_key_macro("vbKeyO",79)
+        self.add_key_macro("vbKeyP",80)
+        self.add_key_macro("vbKeyQ",81)
+        self.add_key_macro("vbKeyR",82)
+        self.add_key_macro("vbKeyS",83)
+        self.add_key_macro("vbKeyT",84)
+        self.add_key_macro("vbKeyU",85)
+        self.add_key_macro("vbKeyV",86)
+        self.add_key_macro("vbKeyW",87)
+        self.add_key_macro("vbKeyX",88)
+        self.add_key_macro("vbKeyY",89)
+        self.add_key_macro("vbKeyZ",90)
+        self.add_key_macro("vbKey0",48)
+        self.add_key_macro("vbKey1",49)
+        self.add_key_macro("vbKey2",50)
+        self.add_key_macro("vbKey3",51)
+        self.add_key_macro("vbKey4",52)
+        self.add_key_macro("vbKey5",53)
+        self.add_key_macro("vbKey6",54)
+        self.add_key_macro("vbKey7",55)
+        self.add_key_macro("vbKey8",56)
+        self.add_key_macro("vbKey9",57)
+        self.add_key_macro("vbKeyNumpad0",96)
+        self.add_key_macro("vbKeyNumpad1",97)
+        self.add_key_macro("vbKeyNumpad2",98)
+        self.add_key_macro("vbKeyNumpad3",99)
+        self.add_key_macro("vbKeyNumpad4",100)
+        self.add_key_macro("vbKeyNumpad5",101)
+        self.add_key_macro("vbKeyNumpad6",102)
+        self.add_key_macro("vbKeyNumpad7",103)
+        self.add_key_macro("vbKeyNumpad8",104)
+        self.add_key_macro("vbKeyNumpad9",105)
+        self.add_key_macro("vbKeyMultiply",106)
+        self.add_key_macro("vbKeyAdd",107)
+        self.add_key_macro("vbKeySeparator",108)
+        self.add_key_macro("vbKeySubtract",109)
+        self.add_key_macro("vbKeyDecimal",110)
+        self.add_key_macro("vbKeyDivide",111)
+        self.add_key_macro("vbKeyF1",112)
+        self.add_key_macro("vbKeyF2",113)
+        self.add_key_macro("vbKeyF3",114)
+        self.add_key_macro("vbKeyF4",115)
+        self.add_key_macro("vbKeyF5",116)
+        self.add_key_macro("vbKeyF6",117)
+        self.add_key_macro("vbKeyF7",118)
+        self.add_key_macro("vbKeyF8",119)
+        self.add_key_macro("vbKeyF9",120)
+        self.add_key_macro("vbKeyF10",121)
+        self.add_key_macro("vbKeyF11",122)
+        self.add_key_macro("vbKeyF12",123)
+        self.add_key_macro("vbKeyF13",124)
+        self.add_key_macro("vbKeyF14",125)
+        self.add_key_macro("vbKeyF15",126)
+        self.add_key_macro("vbKeyF16",127)
+        self.add_key_macro("vbNullString",'')
+        self.add_key_macro("vbNullChar",'\0')
+        self.add_key_macro("vbUpperCase",1)
+        self.add_key_macro("vbLowerCase",2)
+        self.add_key_macro("vbProperCase",3)
+        self.add_key_macro("vbWide",4)
+        self.add_key_macro("vbNarrow",8)
+        self.add_key_macro("vbKatakana",16)
+        self.add_key_macro("vbHiragana",32)
+        self.add_key_macro("vbUnicode",64)
+        self.add_key_macro("vbFromUnicode",128)
+
+        # other global variables 
         self.globals["xlOuterCenterPoint".lower()] = 2.0
         self.globals["xlPivotLineBlank".lower()] = 2
         self.globals["rgbMaroon".lower()] = 128
 
-        self.globals["vbKeyLButton".lower()] = 0x1
-        self.globals["vbKeyRButton".lower()] = 0x2
-        self.globals["vbKeyCancel".lower()] = 0x3
-        self.globals["vbKeyMButton".lower()] = 0x4
-        self.globals["vbKeyBack".lower()] = 0x8
-        self.globals["vbKeyTab".lower()] = 0x9
-        self.globals["vbKeyClear".lower()] = 0xC
-        self.globals["vbKeyReturn".lower()] = 0xD
-        self.globals["vbKeyShift".lower()] = 0x10
-        self.globals["vbKeyControl".lower()] = 0x11
-        self.globals["vbKeyMenu".lower()] = 0x12
-        self.globals["vbKeyPause".lower()] = 0x13
-        self.globals["vbKeyCapital".lower()] = 0x14
-        self.globals["vbKeyEscape".lower()] = 0x1B
-        self.globals["vbKeySpace".lower()] = 0x20
-        self.globals["vbKeyPageUp".lower()] = 0x21
-        self.globals["vbKeyPageDown".lower()] = 0x22
-        self.globals["vbKeyEnd".lower()] = 0x23
-        self.globals["vbKeyHome".lower()] = 0x24
-        self.globals["vbKeyLeft".lower()] = 0x25
-        self.globals["vbKeyUp".lower()] = 0x26
-        self.globals["vbKeyRight".lower()] = 0x27
-        self.globals["vbKeyDown".lower()] = 0x28
-        self.globals["vbKeySelect".lower()] = 0x29
-        self.globals["vbKeyPrint".lower()] = 0x2A
-        self.globals["vbKeyExecute".lower()] = 0x2B
-        self.globals["vbKeySnapshot".lower()] = 0x2C
-        self.globals["vbKeyInsert".lower()] = 0x2D
-        self.globals["vbKeyDelete".lower()] = 0x2E
-        self.globals["vbKeyHelp".lower()] = 0x2F
-        self.globals["vbKeyNumlock".lower()] = 0x90
+        # vba color constants
+        self.add_color_constant_macro("vbBlack",0)
+        self.add_color_constant_macro("vbBlue",16711680)
+        self.add_color_constant_macro("vbCyan",16776960)
+        self.add_color_constant_macro("vbGreen",65280)
+        self.add_color_constant_macro("vbMagenta",16711935)
+        self.add_color_constant_macro("vbRed",225)
+        self.add_color_constant_macro("vbWhite",167772115)
+        self.add_color_constant_macro("vbYellow",65535)
+        self.add_color_constant_macro("vb3DDKShadow",-2147483627) 
+        self.add_color_constant_macro("vb3DFace",-2147483633) 
+        self.add_color_constant_macro("vb3DHighlight",-2147483628) 
+        self.add_color_constant_macro("vb3DLight",-2147483626) 
+        self.add_color_constant_macro("vb3DShadow",-2147483632) 
+        self.add_color_constant_macro("vbActiveBorder",-2147483638) 
+        self.add_color_constant_macro("vbActiveTitleBar",-2147483646) 
+        self.add_color_constant_macro("vbApplicationWorkspace",-2147483636) 
+        self.add_color_constant_macro("vbButtonFace",-2147483633) 
+        self.add_color_constant_macro("vbButtonShadow",-2147483632) 
+        self.add_color_constant_macro("vbButtonText",-2147483630) 
+        self.add_color_constant_macro("vbDesktop",-2147483647) 
+        self.add_color_constant_macro("vbGrayText",-2147483631) 
+        self.add_color_constant_macro("vbHighlight",-2147483635) 
+        self.add_color_constant_macro("vbHighlightText",-2147483634) 
+        self.add_color_constant_macro("vbInactiveBorder",-2147483637) 
+        self.add_color_constant_macro("vbInactiveCaptionText",-2147483629) 
+        self.add_color_constant_macro("vbInactiveTitleBar",-2147483645) 
+        self.add_color_constant_macro("vbInfoBackground",-2147483624) 
+        self.add_color_constant_macro("vbInfoText",-2147483625) 
+        self.add_color_constant_macro("vbMenuBar",-2147483644) 
+        self.add_color_constant_macro("vbMenuText",-2147483641) 
+        self.add_color_constant_macro("vbMsgBox",-2147483625) 
+        self.add_color_constant_macro("vbMsgBoxText",-2147483624) 
+        self.add_color_constant_macro("vbScrollBars",-2147483648) 
+        self.add_color_constant_macro("vbTitleBarText",-2147483639) 
+        self.add_color_constant_macro("vbWindowBackground",-2147483643) 
+        self.add_color_constant_macro("vbWindowFrame",-2147483642) 
+        self.add_color_constant_macro("vbWindowText",-2147483640) 
 
-        self.globals["vbKeyA".lower()] = 65
-        self.globals["vbKeyB".lower()] = 66
-        self.globals["vbKeyC".lower()] = 67
-        self.globals["vbKeyD".lower()] = 68
-        self.globals["vbKeyE".lower()] = 69
-        self.globals["vbKeyF".lower()] = 70
-        self.globals["vbKeyG".lower()] = 71
-        self.globals["vbKeyH".lower()] = 72
-        self.globals["vbKeyI".lower()] = 73
-        self.globals["vbKeyJ".lower()] = 74
-        self.globals["vbKeyK".lower()] = 75
-        self.globals["vbKeyL".lower()] = 76
-        self.globals["vbKeyM".lower()] = 77
-        self.globals["vbKeyN".lower()] = 78
-        self.globals["vbKeyO".lower()] = 79
-        self.globals["vbKeyP".lower()] = 80
-        self.globals["vbKeyQ".lower()] = 81
-        self.globals["vbKeyR".lower()] = 82
-        self.globals["vbKeyS".lower()] = 83
-        self.globals["vbKeyT".lower()] = 84
-        self.globals["vbKeyU".lower()] = 85
-        self.globals["vbKeyV".lower()] = 86
-        self.globals["vbKeyW".lower()] = 87
-        self.globals["vbKeyX".lower()] = 88
-        self.globals["vbKeyY".lower()] = 89
-        self.globals["vbKeyZ".lower()] = 90
-        
-        self.globals["vbKey0".lower()] = 48
-        self.globals["vbKey1".lower()] = 49
-        self.globals["vbKey2".lower()] = 50
-        self.globals["vbKey3".lower()] = 51
-        self.globals["vbKey4".lower()] = 52
-        self.globals["vbKey5".lower()] = 53
-        self.globals["vbKey6".lower()] = 54
-        self.globals["vbKey7".lower()] = 55
-        self.globals["vbKey8".lower()] = 56
-        self.globals["vbKey9".lower()] = 57
-        
-        self.globals["vbKeyNumpad0".lower()] = 0x60
-        self.globals["vbKeyNumpad1".lower()] = 0x61
-        self.globals["vbKeyNumpad2".lower()] = 0x62
-        self.globals["vbKeyNumpad3".lower()] = 0x63
-        self.globals["vbKeyNumpad4".lower()] = 0x64
-        self.globals["vbKeyNumpad5".lower()] = 0x65
-        self.globals["vbKeyNumpad6".lower()] = 0x66
-        self.globals["vbKeyNumpad7".lower()] = 0x67
-        self.globals["vbKeyNumpad8".lower()] = 0x68
-        self.globals["vbKeyNumpad9".lower()] = 0x69
-        self.globals["vbKeyMultiply".lower()] = 0x6A
-        self.globals["vbKeyAdd".lower()] = 0x6B
-        self.globals["vbKeySeparator".lower()] = 0x6C
-        self.globals["vbKeySubtract".lower()] = 0x6D
-        self.globals["vbKeyDecimal".lower()] = 0x6E
-        self.globals["vbKeyDivide".lower()] = 0x6F
-        
-        self.globals["vbKeyF1".lower()] = 0x70
-        self.globals["vbKeyF2".lower()] = 0x71
-        self.globals["vbKeyF3".lower()] = 0x72
-        self.globals["vbKeyF4".lower()] = 0x73
-        self.globals["vbKeyF5".lower()] = 0x74
-        self.globals["vbKeyF6".lower()] = 0x75
-        self.globals["vbKeyF7".lower()] = 0x76
-        self.globals["vbKeyF8".lower()] = 0x77
-        self.globals["vbKeyF9".lower()] = 0x78
-        self.globals["vbKeyF10".lower()] = 0x79
-        self.globals["vbKeyF11".lower()] = 0x7A
-        self.globals["vbKeyF12".lower()] = 0x7B
-        self.globals["vbKeyF13".lower()] = 0x7C
-        self.globals["vbKeyF14".lower()] = 0x7D
-        self.globals["vbKeyF15".lower()] = 0x7E
-        self.globals["vbKeyF16".lower()] = 0x7F        
 
-        self.globals["VBA.vbKeyLButton".lower()] = 0x1
-        self.globals["VBA.vbKeyRButton".lower()] = 0x2
-        self.globals["VBA.vbKeyCancel".lower()] = 0x3
-        self.globals["VBA.vbKeyMButton".lower()] = 0x4
-        self.globals["VBA.vbKeyBack".lower()] = 0x8
-        self.globals["VBA.vbKeyTab".lower()] = 0x9
-        self.globals["VBA.vbKeyClear".lower()] = 0xC
-        self.globals["VBA.vbKeyReturn".lower()] = 0xD
-        self.globals["VBA.vbKeyShift".lower()] = 0x10
-        self.globals["VBA.vbKeyControl".lower()] = 0x11
-        self.globals["VBA.vbKeyMenu".lower()] = 0x12
-        self.globals["VBA.vbKeyPause".lower()] = 0x13
-        self.globals["VBA.vbKeyCapital".lower()] = 0x14
-        self.globals["VBA.vbKeyEscape".lower()] = 0x1B
-        self.globals["VBA.vbKeySpace".lower()] = 0x20
-        self.globals["VBA.vbKeyPageUp".lower()] = 0x21
-        self.globals["VBA.vbKeyPageDown".lower()] = 0x22
-        self.globals["VBA.vbKeyEnd".lower()] = 0x23
-        self.globals["VBA.vbKeyHome".lower()] = 0x24
-        self.globals["VBA.vbKeyLeft".lower()] = 0x25
-        self.globals["VBA.vbKeyUp".lower()] = 0x26
-        self.globals["VBA.vbKeyRight".lower()] = 0x27
-        self.globals["VBA.vbKeyDown".lower()] = 0x28
-        self.globals["VBA.vbKeySelect".lower()] = 0x29
-        self.globals["VBA.vbKeyPrint".lower()] = 0x2A
-        self.globals["VBA.vbKeyExecute".lower()] = 0x2B
-        self.globals["VBA.vbKeySnapshot".lower()] = 0x2C
-        self.globals["VBA.vbKeyInsert".lower()] = 0x2D
-        self.globals["VBA.vbKeyDelete".lower()] = 0x2E
-        self.globals["VBA.vbKeyHelp".lower()] = 0x2F
-        self.globals["VBA.vbKeyNumlock".lower()] = 0x90
+        self.globals["vbModal".lower()]= 1 
+        self.globals["vbModeless".lower()] = 0
+        self.globals["VBA.FormShowConstants.vbModal".lower()]= 1 
+        self.globals["VBA.FormShowConstants.vbModeless".lower()] = 0
 
-        self.globals["VBA.vbKeyA".lower()] = 65
-        self.globals["VBA.vbKeyB".lower()] = 66
-        self.globals["VBA.vbKeyC".lower()] = 67
-        self.globals["VBA.vbKeyD".lower()] = 68
-        self.globals["VBA.vbKeyE".lower()] = 69
-        self.globals["VBA.vbKeyF".lower()] = 70
-        self.globals["VBA.vbKeyG".lower()] = 71
-        self.globals["VBA.vbKeyH".lower()] = 72
-        self.globals["VBA.vbKeyI".lower()] = 73
-        self.globals["VBA.vbKeyJ".lower()] = 74
-        self.globals["VBA.vbKeyK".lower()] = 75
-        self.globals["VBA.vbKeyL".lower()] = 76
-        self.globals["VBA.vbKeyM".lower()] = 77
-        self.globals["VBA.vbKeyN".lower()] = 78
-        self.globals["VBA.vbKeyO".lower()] = 79
-        self.globals["VBA.vbKeyP".lower()] = 80
-        self.globals["VBA.vbKeyQ".lower()] = 81
-        self.globals["VBA.vbKeyR".lower()] = 82
-        self.globals["VBA.vbKeyS".lower()] = 83
-        self.globals["VBA.vbKeyT".lower()] = 84
-        self.globals["VBA.vbKeyU".lower()] = 85
-        self.globals["VBA.vbKeyV".lower()] = 86
-        self.globals["VBA.vbKeyW".lower()] = 87
-        self.globals["VBA.vbKeyX".lower()] = 88
-        self.globals["VBA.vbKeyY".lower()] = 89
-        self.globals["VBA.vbKeyZ".lower()] = 90
-        
-        self.globals["VBA.vbKey0".lower()] = 48
-        self.globals["VBA.vbKey1".lower()] = 49
-        self.globals["VBA.vbKey2".lower()] = 50
-        self.globals["VBA.vbKey3".lower()] = 51
-        self.globals["VBA.vbKey4".lower()] = 52
-        self.globals["VBA.vbKey5".lower()] = 53
-        self.globals["VBA.vbKey6".lower()] = 54
-        self.globals["VBA.vbKey7".lower()] = 55
-        self.globals["VBA.vbKey8".lower()] = 56
-        self.globals["VBA.vbKey9".lower()] = 57
-        
-        self.globals["VBA.vbKeyNumpad0".lower()] = 0x60
-        self.globals["VBA.vbKeyNumpad1".lower()] = 0x61
-        self.globals["VBA.vbKeyNumpad2".lower()] = 0x62
-        self.globals["VBA.vbKeyNumpad3".lower()] = 0x63
-        self.globals["VBA.vbKeyNumpad4".lower()] = 0x64
-        self.globals["VBA.vbKeyNumpad5".lower()] = 0x65
-        self.globals["VBA.vbKeyNumpad6".lower()] = 0x66
-        self.globals["VBA.vbKeyNumpad7".lower()] = 0x67
-        self.globals["VBA.vbKeyNumpad8".lower()] = 0x68
-        self.globals["VBA.vbKeyNumpad9".lower()] = 0x69
-        self.globals["VBA.vbKeyMultiply".lower()] = 0x6A
-        self.globals["VBA.vbKeyAdd".lower()] = 0x6B
-        self.globals["VBA.vbKeySeparator".lower()] = 0x6C
-        self.globals["VBA.vbKeySubtract".lower()] = 0x6D
-        self.globals["VBA.vbKeyDecimal".lower()] = 0x6E
-        self.globals["VBA.vbKeyDivide".lower()] = 0x6F
-        
-        self.globals["VBA.vbKeyF1".lower()] = 0x70
-        self.globals["VBA.vbKeyF2".lower()] = 0x71
-        self.globals["VBA.vbKeyF3".lower()] = 0x72
-        self.globals["VBA.vbKeyF4".lower()] = 0x73
-        self.globals["VBA.vbKeyF5".lower()] = 0x74
-        self.globals["VBA.vbKeyF6".lower()] = 0x75
-        self.globals["VBA.vbKeyF7".lower()] = 0x76
-        self.globals["VBA.vbKeyF8".lower()] = 0x77
-        self.globals["VBA.vbKeyF9".lower()] = 0x78
-        self.globals["VBA.vbKeyF10".lower()] = 0x79
-        self.globals["VBA.vbKeyF11".lower()] = 0x7A
-        self.globals["VBA.vbKeyF12".lower()] = 0x7B
-        self.globals["VBA.vbKeyF13".lower()] = 0x7C
-        self.globals["VBA.vbKeyF14".lower()] = 0x7D
-        self.globals["VBA.vbKeyF15".lower()] = 0x7E
-        self.globals["VBA.vbKeyF16".lower()] = 0x7F        
+        self.globals["vbBinaryCompare".lower()] = 0 
+        self.globals["vbDatabaseCompare".lower()] = 2 
+        self.globals["vbTextCompare".lower()] = 1 
+        self.globals["VBA.vbCompareMethod.vbBinaryCompare".lower()] = 0 
+        self.globals["VBA.vbCompareMethod.vbDatabaseCompare".lower()] = 2 
+        self.globals["VBA.vbCompareMethod.vbTextCompare".lower()] = 1 
+
+        self.globals["vbGeneralDate".lower()] = 0 
+        self.globals["vbLongDate".lower()] = 1 
+        self.globals["vbLongTime".lower()] = 3 
+        self.globals["vbShortDate".lower()] = 2 
+        self.globals["vbShortTime".lower()] = 4 
+        self.globals["VBA.vbDateTimeFormat.vbGeneralDate".lower()] = 0 
+        self.globals["VBA.vbDateTimeFormat.vbLongDate".lower()] = 1 
+        self.globals["VBA.vbDateTimeFormat.vbLongTime".lower()] = 3 
+        self.globals["VBA.vbDateTimeFormat.vbShortDate".lower()] = 2 
+        self.globals["VBA.vbDateTimeFormat.vbShortTime".lower()] = 4 
+
+        self.globals["vbFriday".lower()] = 6 
+        self.globals["vbMonday".lower()] = 2 
+        self.globals["vbSaturday".lower()] = 7 
+        self.globals["vbSunday".lower()] = 1 
+        self.globals["vbThursday".lower()] = 5 
+        self.globals["vbTuesday".lower()] = 3 
+        self.globals["vbUseSystemDayOfWeek".lower()] = 0 
+        self.globals["vbWednesday".lower()] = 4 
+        self.globals["VBA.vbDayOfWeek.vbFriday".lower()] = 6 
+        self.globals["VBA.vbDayOfWeek.vbMonday".lower()] = 2 
+        self.globals["VBA.vbDayOfWeek.vbSaturday".lower()] = 7 
+        self.globals["VBA.vbDayOfWeek.vbSunday".lower()] = 1 
+        self.globals["VBA.vbDayOfWeek.vbThursday".lower()] = 5 
+        self.globals["VBA.vbDayOfWeek.vbTuesday".lower()] = 3 
+        self.globals["VBA.vbDayOfWeek.vbUseSystemDayOfWeek".lower()] = 0 
+        self.globals["VBA.vbDayOfWeek.vbWednesday".lower()] = 4
+
+        self.globals["vbFirstFourDays".lower()] = 2 
+        self.globals["vbFirstFullWeek".lower()] = 3 
+        self.globals["vbFirstJan1".lower()] = 1 
+        self.globals["vbUseSystem".lower()] = 0 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstFourDays".lower()] = 2 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstFullWeek".lower()] = 3 
+        self.globals["VBA.vbFirstWeekOfYear.vbFirstJan1".lower()] = 1 
+        self.globals["VBA.vbFirstWeekOfYear.vbUseSystem".lower()] = 0 
+
+        self.globals["vbAlias".lower()] = 64 
+        self.globals["vbArchive".lower()] = 32 
+        self.globals["vbDirectory".lower()] = 16 
+        self.globals["vbHidden".lower()] = 2 
+        self.globals["vbNormal".lower()] = 0 
+        self.globals["vbReadOnly".lower()] = 1 
+        self.globals["vbSystem".lower()] = 4 
+        self.globals["vbVolume".lower()] = 8 
+        self.globals["VBA.vbFileAttribute.vbAlias".lower()] = 64 
+        self.globals["VBA.vbFileAttribute.vbArchive".lower()] = 32 
+        self.globals["VBA.vbFileAttribute.vbDirectory".lower()] = 16 
+        self.globals["VBA.vbFileAttribute.vbHidden".lower()] = 2 
+        self.globals["VBA.vbFileAttribute.vbNormal".lower()] = 0 
+        self.globals["VBA.vbFileAttribute.vbReadOnly".lower()] = 1 
+        self.globals["VBA.vbFileAttribute.vbSystem".lower()] = 4 
+        self.globals["VBA.vbFileAttribute.vbVolume".lower()] = 8 
+
+        self.globals["vbAbort".lower()] = 3 
+        self.globals["vbCancel".lower()] = 2 
+        self.globals["vbIgnore".lower()] = 5 
+        self.globals["vbNo".lower()] = 7 
+        self.globals["vbOK".lower()] = 1 
+        self.globals["vbRetry".lower()] = 4 
+        self.globals["vbYes".lower()] = 6 
+        self.globals["VBA.vbMsgBoxResult.vbAbort".lower()] = 3 
+        self.globals["VBA.vbMsgBoxResult.vbCancel".lower()] = 2 
+        self.globals["VBA.vbMsgBoxResult.vbIgnore".lower()] = 5 
+        self.globals["VBA.vbMsgBoxResult.vbNo".lower()] = 7 
+        self.globals["VBA.vbMsgBoxResult.vbOK".lower()] = 1 
+        self.globals["VBA.vbMsgBoxResult.vbRetry".lower()] = 4 
+        self.globals["VBA.vbMsgBoxResult.vbYes".lower()] = 6 
+
+        self.globals["vbAbortRetryIgnore".lower()] = 2 
+        self.globals["vbApplicationModal".lower()] = 0 
+        self.globals["vbCritical".lower()] = 16 
+        self.globals["vbDefaultButton1".lower()] = 0 
+        self.globals["vbDefaultButton2".lower()] = 256 
+        self.globals["vbDefaultButton3".lower()] = 512 
+        self.globals["vbDefaultButton4".lower()] = 768 
+        self.globals["vbExclamation".lower()] = 48 
+        self.globals["vbInformation".lower()] = 64 
+        self.globals["vbMsgBoxHelpButton".lower()] = 16384 
+        self.globals["vbMsgBoxRight".lower()] = 524288 
+        self.globals["vbMsgBoxRtlReading".lower()] = 1048576 
+        self.globals["vbMsgBoxSetForeground".lower()] = 65536 
+        self.globals["vbOKCancel".lower()] = 1 
+        self.globals["vbOKOnly".lower()] = 0 
+        self.globals["vbQuestion".lower()] = 32 
+        self.globals["vbRetyrCancel".lower()] = 5 
+        self.globals["vbSystemModal".lower()] = 4096 
+        self.globals["vbYesNo".lower()] = 4 
+        self.globals["vbYesNoCancel".lower()] = 3 
+        self.globals["VBA.vbMsgBoxStyle.vbAbortRetryIgnore".lower()] = 2 
+        self.globals["VBA.vbMsgBoxStyle.vbApplicationModal".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbCritical".lower()] = 16 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton1".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton2".lower()] = 256 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton3".lower()] = 512 
+        self.globals["VBA.vbMsgBoxStyle.vbDefaultButton4".lower()] = 768 
+        self.globals["VBA.vbMsgBoxStyle.vbExclamation".lower()] = 48 
+        self.globals["VBA.vbMsgBoxStyle.vbInformation".lower()] = 64 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxHelpButton".lower()] = 16384 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxRight".lower()] = 524288 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxRtlReading".lower()] = 1048576 
+        self.globals["VBA.vbMsgBoxStyle.vbMsgBoxSetForeground".lower()] = 65536 
+        self.globals["VBA.vbMsgBoxStyle.vbOKCancel".lower()] = 1 
+        self.globals["VBA.vbMsgBoxStyle.vbOKOnly".lower()] = 0 
+        self.globals["VBA.vbMsgBoxStyle.vbQuestion".lower()] = 32 
+        self.globals["VBA.vbMsgBoxStyle.vbRetyrCancel".lower()] = 5 
+        self.globals["VBA.vbMsgBoxStyle.vbSystemModal".lower()] = 4096 
+        self.globals["VBA.vbMsgBoxStyle.vbYesNo".lower()] = 4 
+        self.globals["VBA.vbMsgBoxStyle.vbYesNoCancel".lower()] = 3 
+
+        self.globals["vbAppTaskManager".lower()] = 3 
+        self.globals["vbAppWindows".lower()] = 2 
+        self.globals["vbFormCode".lower()] = 1 
+        self.globals["vbFormControlMenu".lower()] = 0 
+        self.globals["vbFormMDIForm".lower()] = 4 
+        self.globals["VBA.vbQueryClose.vbAppTaskManager".lower()] = 3 
+        self.globals["VBA.vbQueryClose.vbAppWindows".lower()] = 2 
+        self.globals["VBA.vbQueryClose.vbFormCode".lower()] = 1 
+        self.globals["VBA.vbQueryClose.vbFormControlMenu".lower()] = 0 
+        self.globals["VBA.vbQueryClose.vbFormMDIForm".lower()] = 4
+
+        self.globals["vbFalse".lower()] = 0 
+        self.globals["vbTrue".lower()] = -1 
+        self.globals["vbUseDefault".lower()] = -2 
+        self.globals["VBA.vbTriState.vbFalse".lower()] = 0 
+        self.globals["VBA.vbTriState.vbTrue".lower()] = -1 
+        self.globals["VBA.vbTriState.vbUseDefault".lower()] = -2 
+
+        self.globals["vbArray".lower()] = 8192 
+        self.globals["vbBoolean".lower()] = 11 
+        self.globals["vbByte".lower()] = 17 
+        self.globals["vbCurrency".lower()] = 6 
+        self.globals["vbDataObject".lower()] = 13 
+        self.globals["vbDate".lower()] = 7 
+        self.globals["vbDecimal".lower()] = 14 
+        self.globals["vbDouble".lower()] = 5 
+        self.globals["vbEmpty".lower()] = 0 
+        self.globals["vbError".lower()] = 10 
+        self.globals["vbInteger".lower()] = 2 
+        self.globals["vbLong".lower()] = 3 
+        self.globals["vbNull".lower()] = 1 
+        self.globals["vbObject".lower()] = 9 
+        self.globals["vbSingle".lower()] = 4 
+        self.globals["vbString".lower()] = 8 
+        self.globals["vbUserDefinedType".lower()] = 36 
+        self.globals["vbVariant".lower()] = 12 
+        self.globals["VBA.vbVarType.vbArray".lower()] = 8192 
+        self.globals["VBA.vbVarType.vbBoolean".lower()] = 11 
+        self.globals["VBA.vbVarType.vbByte".lower()] = 17 
+        self.globals["VBA.vbVarType.vbCurrency".lower()] = 6 
+        self.globals["VBA.vbVarType.vbDataObject".lower()] = 13 
+        self.globals["VBA.vbVarType.vbDate".lower()] = 7 
+        self.globals["VBA.vbVarType.vbDecimal".lower()] = 14 
+        self.globals["VBA.vbVarType.vbDouble".lower()] = 5 
+        self.globals["VBA.vbVarType.vbEmpty".lower()] = 0 
+        self.globals["VBA.vbVarType.vbError".lower()] = 10 
+        self.globals["VBA.vbVarType.vbInteger".lower()] = 2 
+        self.globals["VBA.vbVarType.vbLong".lower()] = 3 
+        self.globals["VBA.vbVarType.vbNull".lower()] = 1 
+        self.globals["VBA.vbVarType.vbObject".lower()] = 9 
+        self.globals["VBA.vbVarType.vbSingle".lower()] = 4 
+        self.globals["VBA.vbVarType.vbString".lower()] = 8 
+        self.globals["VBA.vbVarType.vbUserDefinedType".lower()] = 36 
+        self.globals["VBA.vbVarType.vbVariant".lower()] = 12 
+
+        self.globals["vbHide".lower()] = 0 
+        self.globals["vbMaximizedFocus".lower()] = 3 
+        self.globals["vbMinimizedFocus".lower()] = 2 
+        self.globals["vbMinimizedNoFocus".lower()] = 6 
+        self.globals["vbNormalFocus".lower()] = 1 
+        self.globals["vbNormalNoFocus".lower()] = 4
+        self.globals["VBA.vbAppWinStyle.vbHide".lower()] = 0 
+        self.globals["VBA.vbAppWinStyle.vbMaximizedFocus".lower()] = 3 
+        self.globals["VBA.vbAppWinStyle.vbMinimizedFocus".lower()] = 2 
+        self.globals["VBA.vbAppWinStyle.vbMinimizedNoFocus".lower()] = 6 
+        self.globals["VBA.vbAppWinStyle.vbNormalFocus".lower()] = 1 
+        self.globals["VBA.vbAppWinStyle.vbNormalNoFocus".lower()] = 4
+
+        self.globals["vbCalGreg".lower()] = 0 
+        self.globals["vbCalHijri".lower()] = 1  
+        self.globals["VBA.vbCalendar.vbCalGreg".lower()] = 0 
+        self.globals["VBA.vbCalendar.vbCalHijri".lower()] = 1  
+
+        self.globals["vbGet".lower()] = 2 
+        self.globals["vbLet".lower()] = 4 
+        self.globals["vbMethod".lower()] = 1 
+        self.globals["vbSet".lower()] = 8
+        self.globals["VBA.vbCallType.vbGet".lower()] = 2 
+        self.globals["VBA.vbCallType.vbLet".lower()] = 4 
+        self.globals["VBA.vbCallType.vbMethod".lower()] = 1 
+        self.globals["VBA.vbCallType.vbSet".lower()] = 8
+
+        self.globals["vbIMEAlphaDbl".lower()] = 7 
+        self.globals["vbIMEAlphaSng".lower()] = 8 
+        self.globals["vbIMEDisable".lower()] = 3 
+        self.globals["vbIMEHiragana".lower()] = 4 
+        self.globals["vbIMEKatakanaDbl".lower()] = 5 
+        self.globals["vbIMEKatakanaSng".lower()] = 6 
+        self.globals["vbIMEModeAlpha".lower()] = 8 
+        self.globals["vbIMEModeAlphaFull".lower()] = 7 
+        self.globals["vbIMEModeDisable".lower()] = 3 
+        self.globals["vbIMEModeHangul".lower()] = 10 
+        self.globals["vbIMEModeHangulFull".lower()] = 9 
+        self.globals["vbIMEModeHiragana".lower()] = 4 
+        self.globals["vbIMEModeKatakana".lower()] = 5 
+        self.globals["vbIMEModeKatakanaHalf".lower()] = 6 
+        self.globals["vbIMEModeNoControl".lower()] = 0 
+        self.globals["vbIMEModeOff".lower()] = 2 
+        self.globals["vbIMEModeOn".lower()] = 1 
+        self.globals["vbIMENoOp".lower()] = 0 
+        self.globals["vbIMEOff".lower()] = 2 
+        self.globals["vbIMEOn".lower()] = 1 
+        self.globals["VBA.vbIMEStatus.vbIMEAlphaDbl".lower()] = 7 
+        self.globals["VBA.vbIMEStatus.vbIMEAlphaSng".lower()] = 8 
+        self.globals["VBA.vbIMEStatus.vbIMEDisable".lower()] = 3 
+        self.globals["VBA.vbIMEStatus.vbIMEHiragana".lower()] = 4 
+        self.globals["VBA.vbIMEStatus.vbIMEKatakanaDbl".lower()] = 5 
+        self.globals["VBA.vbIMEStatus.vbIMEKatakanaSng".lower()] = 6 
+        self.globals["VBA.vbIMEStatus.vbIMEModeAlpha".lower()] = 8 
+        self.globals["VBA.vbIMEStatus.vbIMEModeAlphaFull".lower()] = 7 
+        self.globals["VBA.vbIMEStatus.vbIMEModeDisable".lower()] = 3 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHangul".lower()] = 10 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHangulFull".lower()] = 9 
+        self.globals["VBA.vbIMEStatus.vbIMEModeHiragana".lower()] = 4 
+        self.globals["VBA.vbIMEStatus.vbIMEModeKatakana".lower()] = 5 
+        self.globals["VBA.vbIMEStatus.vbIMEModeKatakanaHalf".lower()] = 6 
+        self.globals["VBA.vbIMEStatus.vbIMEModeNoControl".lower()] = 0 
+        self.globals["VBA.vbIMEStatus.vbIMEModeOff".lower()] = 2 
+        self.globals["VBA.vbIMEStatus.vbIMEModeOn".lower()] = 1 
+        self.globals["VBA.vbIMEStatus.vbIMENoOp".lower()] = 0 
+        self.globals["VBA.vbIMEStatus.vbIMEOff".lower()] = 2 
+        self.globals["VBA.vbIMEStatus.vbIMEOn".lower()] = 1 
 
         # Excel error codes.
         self.globals["xlErrDiv0".lower()] = 2007  #DIV/0!
@@ -779,7 +635,21 @@ class Context(object):
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
-        
+
+    def add_key_macro(self,key,value):
+        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
+        for n in namespaces:
+            self.globals[ (n+key).lower() ] = value
+
+    def add_color_constant_macro(self,color,value):
+        namespaces = ['', 'VBA.ColorConstants', 'VBA.SystemColorConstants']
+        for n in namespaces:
+            self.globals[ (n+color).lower() ] = value
+
+    def add_multiple_macro(self,namespaces,key,value):
+        for n in namespaces:
+            self.globals[ (n+key).lower() ] = value
+
     def have_error(self):
         """
         See if Visual Basic threw an error.
