@@ -236,11 +236,14 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
-    # SHAPES: 'Shapes('FrXXBbPlWaco').TextFrame.TextRange'
-    if (((arg_str.endswith("TextRange.Text")) or
-         (arg_str.endswith("TextFrame.TextRange")) or
-         (arg_str.endswith(".AlternativeText")) or
-         (arg_str.endswith(".ContainingRange"))) and
+    arg_str_low = arg_str.lower()
+
+    # Shapes('test33').      TextFrame.TextRange.text
+    # Shapes('FrXXBbPlWaco').TextFrame.TextRange
+    if (((arg_str_low.endswith("textrange.text")) or
+         (arg_str_low.endswith("textframe.textrange")) or
+         (arg_str_low.endswith(".alternativetext")) or
+         (arg_str_low.endswith(".containingrange"))) and
         ("MemberAccessExpression" in str(type(arg)))):
 
         # Yes we do. 
@@ -411,7 +414,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     try:
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
-                        return val
+                        print "------"
+                        print val
+                        print arg
+                        if (val != str(arg)):
+                            return val
 
                     except KeyError:
                         log.debug("eval_arg: Not found as variable")
@@ -427,7 +434,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # Lookp and execute the function.
                     log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
-                    r = eval_arg(func, context, treat_as_var_name=True)
+                    r = func
+                    if (isinstance(func, Function) or isinstance(func, Sub)):
+                        r = eval_arg(func, context, treat_as_var_name=True)
 
                     # Did the function resolve to a value?
                     if (r != func):
