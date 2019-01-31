@@ -573,6 +573,33 @@ class Context(object):
         self.globals["vbKeyX".lower()] = 88
         self.globals["vbKeyY".lower()] = 89
         self.globals["vbKeyZ".lower()] = 90
+
+        self.globals["KeyCodeConstants.vbKeyA".lower()] = 65
+        self.globals["KeyCodeConstants.vbKeyB".lower()] = 66
+        self.globals["KeyCodeConstants.vbKeyC".lower()] = 67
+        self.globals["KeyCodeConstants.vbKeyD".lower()] = 68
+        self.globals["KeyCodeConstants.vbKeyE".lower()] = 69
+        self.globals["KeyCodeConstants.vbKeyF".lower()] = 70
+        self.globals["KeyCodeConstants.vbKeyG".lower()] = 71
+        self.globals["KeyCodeConstants.vbKeyH".lower()] = 72
+        self.globals["KeyCodeConstants.vbKeyI".lower()] = 73
+        self.globals["KeyCodeConstants.vbKeyJ".lower()] = 74
+        self.globals["KeyCodeConstants.vbKeyK".lower()] = 75
+        self.globals["KeyCodeConstants.vbKeyL".lower()] = 76
+        self.globals["KeyCodeConstants.vbKeyM".lower()] = 77
+        self.globals["KeyCodeConstants.vbKeyN".lower()] = 78
+        self.globals["KeyCodeConstants.vbKeyO".lower()] = 79
+        self.globals["KeyCodeConstants.vbKeyP".lower()] = 80
+        self.globals["KeyCodeConstants.vbKeyQ".lower()] = 81
+        self.globals["KeyCodeConstants.vbKeyR".lower()] = 82
+        self.globals["KeyCodeConstants.vbKeyS".lower()] = 83
+        self.globals["KeyCodeConstants.vbKeyT".lower()] = 84
+        self.globals["KeyCodeConstants.vbKeyU".lower()] = 85
+        self.globals["KeyCodeConstants.vbKeyV".lower()] = 86
+        self.globals["KeyCodeConstants.vbKeyW".lower()] = 87
+        self.globals["KeyCodeConstants.vbKeyX".lower()] = 88
+        self.globals["KeyCodeConstants.vbKeyY".lower()] = 89
+        self.globals["KeyCodeConstants.vbKeyZ".lower()] = 90
         
         self.globals["vbKey0".lower()] = 48
         self.globals["vbKey1".lower()] = 49
@@ -584,7 +611,17 @@ class Context(object):
         self.globals["vbKey7".lower()] = 55
         self.globals["vbKey8".lower()] = 56
         self.globals["vbKey9".lower()] = 57
-        
+        self.globals["KeyCodeConstants.vbKey0".lower()] = 48
+        self.globals["KeyCodeConstants.vbKey1".lower()] = 49
+        self.globals["KeyCodeConstants.vbKey2".lower()] = 50
+        self.globals["KeyCodeConstants.vbKey3".lower()] = 51
+        self.globals["KeyCodeConstants.vbKey4".lower()] = 52
+        self.globals["KeyCodeConstants.vbKey5".lower()] = 53
+        self.globals["KeyCodeConstants.vbKey6".lower()] = 54
+        self.globals["KeyCodeConstants.vbKey7".lower()] = 55
+        self.globals["KeyCodeConstants.vbKey8".lower()] = 56
+        self.globals["KeyCodeConstants.vbKey9".lower()] = 57
+
         self.globals["vbKeyNumpad0".lower()] = 0x60
         self.globals["vbKeyNumpad1".lower()] = 0x61
         self.globals["vbKeyNumpad2".lower()] = 0x62
