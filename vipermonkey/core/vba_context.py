@@ -650,20 +650,6 @@ class Context(object):
         for n in namespaces:
             self.globals[ (n+key).lower() ] = value
 
-    def add_key_macro(self,key,value):
-        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
-        for n in namespaces:
-            self.globals[ (n+key).lower() ] = value
-
-    def add_color_constant_macro(self,color,value):
-        namespaces = ['', 'VBA.ColorConstants', 'VBA.SystemColorConstants']
-        for n in namespaces:
-            self.globals[ (n+color).lower() ] = value
-
-    def add_multiple_macro(self,namespaces,key,value):
-        for n in namespaces:
-            self.globals[ (n+key).lower() ] = value
-
     def have_error(self):
         """
         See if Visual Basic threw an error.
