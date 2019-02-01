@@ -946,9 +946,9 @@ class BoolExprItem(VBA_Object):
             return lhs > rhs
         elif (self.op == "<"):
             return lhs < rhs
-        elif (self.op == ">="):
+        elif ((self.op == ">=") or (self.op == "=>")):
             return lhs >= rhs
-        elif (self.op == "<="):
+        elif ((self.op == "<=") or (self.op == "=<")):
             return lhs <= rhs
         elif (self.op == "<>"):
             return lhs != rhs
@@ -972,7 +972,7 @@ class BoolExprItem(VBA_Object):
             return False
 
 bool_expr_item = (limited_expression + \
-                  (oneOf(">= <= <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
+                  (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
