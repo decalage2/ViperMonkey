@@ -972,9 +972,7 @@ class BoolExprItem(VBA_Object):
             return False
 
 bool_expr_item = (limited_expression + \
-                  (CaselessKeyword(">=") | CaselessKeyword("<=") | CaselessKeyword("<>") | \
-                   CaselessKeyword("=") | CaselessKeyword(">") | CaselessKeyword("<") | CaselessKeyword("<>") | \
-                   CaselessKeyword("Like") | CaselessKeyword("Is")) + \
+                  (oneOf(">= <= <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
