@@ -48,6 +48,7 @@ from comments_eol import *
 from procedures import *
 from statements import *
 import vba_context
+from function_defn_visitor import *
 
 from logger import log
 
@@ -71,6 +72,13 @@ class Module(VBA_Object):
         self.global_vars = {}
         self.loose_lines = []
 
+        # Save all function/sub definitions.
+        visitor = function_defn_visitor()
+        self.accept(visitor)
+        for f in visitor.func_objects:
+            log.debug("saving func decl: %r" % f.name)
+            self.functions[f.name] = f
+        
         for token in tokens:
             if isinstance(token, If_Statement_Macro):
                 for n in token.external_functions.keys():
@@ -79,9 +87,9 @@ class Module(VBA_Object):
             if isinstance(token, Sub):
                 log.debug("saving sub decl: %r" % token.name)
                 self.subs[token.name] = token
-            if isinstance(token, Function):
-                log.debug("saving func decl: %r" % token.name)
-                self.functions[token.name] = token
+            #if isinstance(token, Function):
+            #    log.debug("saving func decl: %r" % token.name)
+            #    self.functions[token.name] = token
             if isinstance(token, External_Function):
                 log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token

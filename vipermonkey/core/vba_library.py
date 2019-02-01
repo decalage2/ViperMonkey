@@ -1241,6 +1241,9 @@ class Val(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+
+        if (params is None):
+            return ''
         assert (len(params) == 1)
 
         # Sanity check.

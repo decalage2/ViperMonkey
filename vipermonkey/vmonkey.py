@@ -1032,6 +1032,7 @@ def parse_stream(subfilename,
         print '-'*79
         print 'PARSING VBA CODE:'
         try:
+            #extend_statement_grammar()
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
             ParserElement.resetCache()
             m.code = vba_code
