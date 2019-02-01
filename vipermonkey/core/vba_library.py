@@ -1141,7 +1141,10 @@ class Dir(VbaLibraryFunc):
         # TODO: Handle multiple attributes.
         if (len(params) > 1):
             attrib = params[1]
-        r = ""
+
+        # Just act like we found something always.
+        r = pat.replace("*", "foo")
+
         # TODO: Figure out how to simulate actual file searches.            
         log.debug("Dir: %r returns %r" % (self, r))
         return r
