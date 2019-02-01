@@ -1264,20 +1264,21 @@ def _process_file (filename, data,
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
                         global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
-                        tag = form_variables['tag']
-                        if (tag is None):
+                        if 'tag' in form_variables:
+                            tag = form_variables['tag']
+                        else:
                             tag = ''
                         tag = tag.replace('\xb1', '').replace('\x03', '')
-                        if form_variables.has_key('caption'):
+                        if 'caption' in form_variables:
                             caption = form_variables['caption']
                         else:
                             caption = ''
                         caption = caption.replace('\xb1', '').replace('\x03', '')
-                        if form_variables.has_key('value'):
+                        if 'value' in form_variables:
                             val = form_variables['value']
                         else:
                             val = caption
-                        if form_variables.has_key('control_tip_text'):
+                        if 'control_tip_text' in form_variables:
                             control_tip_text = form_variables['control_tip_text']
                         else:
                             control_tip_text = ''
