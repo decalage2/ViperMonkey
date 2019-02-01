@@ -91,6 +91,11 @@ class Context(object):
                  loaded_excel=None,
                  filename=None):
 
+        # Track the maximum number of iterations to emulate in a while loop before
+        # breaking out (infinite loop) due to no vars in the loop guard being
+        # modified.
+        self.max_static_iters = 2
+        
         # Track callback functions that should not be called. This is to handle
         # recusive change handler calls caused by modifying the element handled
         # by the change handler inside the handler.

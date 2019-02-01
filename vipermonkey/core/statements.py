@@ -1397,6 +1397,7 @@ class While_Statement(VBA_Object):
             
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
+        num_no_change = 0
         while (True):
 
             # Break infinite loops.
@@ -1442,8 +1443,12 @@ class While_Statement(VBA_Object):
             # guard.
             curr_guard_vals = self._get_guard_variables(context)
             if (curr_guard_vals == old_guard_vals):
-                log.warn("Possible infinite While loop detected. Exiting loop.")
-                break
+                num_no_change += 1
+                if (num_no_change >= context.max_static_iters):
+                    log.warn("Possible infinite While loop detected. Exiting loop.")
+                    break
+            else:
+                num_no_change = 0
         
         # Remove tracking of this loop.
         context.loop_stack.pop()
