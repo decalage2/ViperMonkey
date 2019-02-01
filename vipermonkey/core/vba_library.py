@@ -59,6 +59,7 @@ from vba_object import str_convert
 from vba_object import int_convert
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
+from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 import expressions
 import meta
@@ -371,7 +372,29 @@ class Execute(Shell):
     WScript Execute() function.
     """
     pass
+
+class Eval(VbaLibraryFunc):
+    """
+    VBScript expression Eval() function.
+    """
     
+    def eval(self, context, params=None):
+
+        # Pull out the expression to eval.
+        if (len(params) < 1):
+            return 0
+        expr = str(params[0])
+
+        # Parse it. Assume this is an expression.
+        obj = expressions.expression.parseString(expr, parseAll=True)[0]
+
+        # Evaluate the expression in the current context.
+        # TODO: Does this actually get evalled in the current context?
+        r = obj
+        if (isinstance(obj, VBA_Object)):
+            r = obj.eval(context)
+        return r
+
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -2415,7 +2438,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month, ExecQuery, ExpandEnvironmentStrings, Execute):
+               Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
