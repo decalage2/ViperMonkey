@@ -1268,15 +1268,18 @@ def _process_file (filename, data,
                         if (tag is None):
                             tag = ''
                         tag = tag.replace('\xb1', '').replace('\x03', '')
-                        caption = form_variables['caption']
-                        if (caption is None):
+                        if form_variables.has_key('caption'):
+                            caption = form_variables['caption']
+                        else:
                             caption = ''
                         caption = caption.replace('\xb1', '').replace('\x03', '')
-                        val = form_variables['value']
-                        if (val is None):
+                        if form_variables.has_key('value'):
+                            val = form_variables['value']
+                        else:
                             val = caption
-                        control_tip_text = form_variables['control_tip_text']
-                        if (control_tip_text is None):
+                        if form_variables.has_key('control_tip_text'):
+                            control_tip_text = form_variables['control_tip_text']
+                        else:
                             control_tip_text = ''
                         control_tip_text = control_tip_text.replace('\xb1', '').replace('\x03', '')
                             
