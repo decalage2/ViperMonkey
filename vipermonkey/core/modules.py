@@ -111,6 +111,10 @@ class Module(VBA_Object):
 
             elif isinstance(token, Dim_Statement):
 
+                # Global variable initialization is now handled by emulating the
+                # LooseLines blocks of code in the module.
+                self.loose_lines.append(token)
+                """
                 # Add the declared variables to the global variables.
                 for var in token.variables:
 
@@ -141,6 +145,7 @@ class Module(VBA_Object):
                     # Set the initial value of the declared variable.
                     self.global_vars[var[0]] = curr_init_val
                     log.debug("saving global var decl (1): %r = %r" % (var[0], curr_init_val))
+                """
 
             elif isinstance(token, LooseLines):
                 self.loose_lines.append(token)
@@ -164,7 +169,9 @@ class Module(VBA_Object):
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
         for block in self.loose_lines:
+            context.global_scope = True
             block.eval(context, params)
+            context.global_scope = False
 
 # see MS-VBAL 4.2 Modules
 #

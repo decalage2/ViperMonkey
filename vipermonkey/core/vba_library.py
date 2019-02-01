@@ -591,6 +591,8 @@ class Split(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return ""
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = params[0]

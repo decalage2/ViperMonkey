@@ -916,15 +916,18 @@ class Context(object):
 
         # Does the name make sense?
         if (not isinstance(name, basestring)):
+            log.debug("context.set() " + str(name) + " failed. Invalid type for name.")
             return
 
         # Does the value make sense?
         if (value is None):
+            log.debug("context.set() " + str(name) + " failed. Value is None.")
             return
         
         # convert to lowercase
         name = name.lower()
         if name in self.locals:
+            log.debug("Set local var " + str(name) + " = " + str(value))
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
@@ -937,6 +940,7 @@ class Context(object):
         else:
             # new name, typically store in local scope.
             if (not self.global_scope):
+                log.debug("Set local var " + str(name) + " = " + str(value))
                 self.locals[name] = value
             else:
                 self.globals[name] = value

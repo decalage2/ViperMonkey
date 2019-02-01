@@ -111,7 +111,12 @@ class Sub(VBA_Object):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
+
+        # Variable updates can go in the local scope.
+        old_global_scope = context.global_scope
+        context.global_scope = False
                     
+        # Emulate the function.
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
@@ -127,6 +132,9 @@ class Sub(VBA_Object):
             if (context.must_handle_error()):
                 break
 
+        # Reset variable update scoping.
+        context.global_scope = old_global_scope
+            
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
@@ -317,7 +325,12 @@ class Function(VBA_Object):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
-                
+
+        # Variable updates can go in the local scope.
+        old_global_scope = context.global_scope
+        context.global_scope = False
+                    
+        # Emulate the function.
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
         context.got_error = False
@@ -333,6 +346,9 @@ class Function(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+
+        # Reset variable update scoping.
+        context.global_scope = old_global_scope
 
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
