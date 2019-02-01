@@ -2474,12 +2474,6 @@ simple_statement = NotAny(Regex(r"End\s+Sub")) + \
                     rem_statement | print_statement | resume_statement)
 simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
 
-# statement has to be declared beforehand using Forward(), so here we use
-# the "<<=" operator:
-statement <<= type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
-              simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-              with_statement| simple_statement | rem_statement
-
 statements_line = tagged_block ^ \
                   (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
 
@@ -2631,3 +2625,21 @@ external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Opt
                                                 (CaselessKeyword('Function') | CaselessKeyword('Sub'))) + \
                                                 lex_identifier('function_name') + lib_info('lib_info') + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)
+
+# WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
+# statements. To allow local function/sub definitions the grammar elements from procedure are
+# needed here in statements. But, procedures also needs the grammar elements defined here in
+# statements. Just placing the statement grammar definition in this file like normal leads
+# to a Python import error. To get around this the statement grammar element is being actually
+# set in extend_statement_grammar(). extend_statement_grammar() is called at the end of
+# procedures.py, so when all of the elements in procedures.py have actually beed defined the
+# statement grammar element can be safely set.
+def extend_statement_grammar():
+
+    # statement has to be declared beforehand using Forward(), so here we use
+    # the "<<=" operator:
+    global statement
+    statement <<= type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+                  simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub
+
