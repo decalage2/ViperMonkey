@@ -69,7 +69,7 @@ statement_keyword = caselessKeywordsList(
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
      "Enum", "Erase", "Event", "Exit", "For", "Friend", "Function", "Global",
-     "GoSub", "GoTo", "If", "Implements", "Input", "Let", "Lock", "Loop", "LSet", "Next",
+     "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub", "Type",
      "Unlock", "Wend", "While", "With", "Write"))
@@ -101,7 +101,7 @@ reserved_name = caselessKeywordsList((  # TODO: fix this one!
 # if it was a program defined procedure name but which has special syntactic rules for
 # its argument.
 special_form = caselessKeywordsList((
-    "Array", "Circle", "Input", "InputB", "LBound", "Scale", "UBound"))
+    "Array", "Circle", "InputB", "LBound", "Scale", "UBound"))
 
 # A <reserved-type-identifier> is used within a declaration to identify the specific
 # declared type (section 2.2) of an entity.
