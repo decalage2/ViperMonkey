@@ -428,8 +428,10 @@ class MemberAccessExpression(VBA_Object):
 l_expression = Forward()
 
 function_call_limited = Forward()
+func_call_array_access_limited = Forward()
 function_call = Forward()
-member_object = function_call_limited | \
+member_object = (func_call_array_access_limited ^ function_call_limited) | \
+                func_call_array_access_limited  | \
                 Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
 member_access_expression.setParseAction(MemberAccessExpression)
@@ -779,6 +781,9 @@ class Function_Call_Array_Access(VBA_Object):
             
 func_call_array_access = function_call("array") + Suppress("(") + expression("index") + Suppress(")")
 func_call_array_access.setParseAction(Function_Call_Array_Access)
+
+func_call_array_access_limited <<= function_call_limited("array") + Suppress("(") + expression("index") + Suppress(")")
+func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 
 # --- EXPRESSION ITEM --------------------------------------------------------
 
