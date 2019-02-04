@@ -553,7 +553,7 @@ class Function_Call(VBA_Object):
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
                  "FileCopy", "Load", "ShellExecute"]
     

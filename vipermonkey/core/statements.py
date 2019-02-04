@@ -1999,7 +1999,7 @@ class Call_Statement(VBA_Object):
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
     
     def __init__(self, original_str, location, tokens):
