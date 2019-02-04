@@ -82,7 +82,7 @@ class WeekDay(VbaLibraryFunc):
         # Get date string.
         if (len(params) == 0):
             return 1
-        date_str = params[0].replace("#", "")
+        date_str = str(params[0]).replace("#", "")
         date_obj = None
         
         # TODO: Handle more and more date formats.
