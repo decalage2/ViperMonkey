@@ -373,6 +373,12 @@ class Execute(Shell):
     """
     pass
 
+class ExecuteGlobal(Execute):
+    """
+    WScript ExecuteGlobal() function.
+    """
+    pass
+
 class Eval(VbaLibraryFunc):
     """
     VBScript expression Eval() function.
@@ -2379,6 +2385,66 @@ class Timer(VbaLibraryFunc):
     def eval(self, context, params=None):
         return int(time.mktime(datetime.now().timetuple()))
 
+class Unescape(VbaLibraryFunc):
+    """
+    Unescape() strin unescaping method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+
+        # Get the string to unescape.
+        assert len(params) > 0
+        s = str(params[0])
+
+        # It reverses the transformation performed by the Escape
+        # method by removing the escape character ("\") from each
+        # character escaped by the method. These include the \, *, +,
+        # ?, |, {, [, (,), ^, $, ., #, and white space characters.
+        s = s.replace("\\\\", "\\")
+        s = s.replace("\\*", "*")
+        s = s.replace("\\+", "+")
+        s = s.replace("\\?", "?")
+        s = s.replace("\\|", "|")
+        s = s.replace("\\{", "{")
+        s = s.replace("\\[", "[")
+        s = s.replace("\\(", "(")
+        s = s.replace("\\)", ")")
+        s = s.replace("\\^", "^")
+        s = s.replace("\\$", "$")
+        s = s.replace("\\.", ".")
+        s = s.replace("\\#", "#")
+        s = s.replace("\\ ", " ")
+        # TODO: Figure out more whitespace characters.
+
+        # In addition, the Unescape method unescapes the closing
+        # bracket (]) and closing brace (}) characters.
+        if ("\\]" in s):
+            start = s.rindex("\\]")
+            end = start + len("\\]")
+            s = s[:start] + "]" + s[end:]
+        if ("\\}" in s):
+            start = s.rindex("\\}")
+            end = start + len("\\}")
+            s = s[:start] + "}" + s[end:]
+
+        # It replaces the hexadecimal values in verbatim string
+        # literals with the actual printable characters. For example,
+        # it replaces @"\x07" with "\a", or @"\x0A" with "\n". It
+        # converts to supported escape characters such as \a, \b, \e,
+        # \n, \r, \f, \t, \v, and alphanumeric characters.
+        #
+        # TODO: Do the hex unescaping.
+
+        # Not documented, but it looks like %xx% is also handled as hex
+        # unescaping.
+        pat = r"%([0-9a-fA-F][0-9a-fA-F])"
+        hex_strs = re.findall(pat, s)
+        for h in hex_strs:            
+            s = s.replace("%" + h, chr(int("0x" + h, 16)))
+
+        # Return the unsescaped string.
+        return s
+
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -2441,7 +2507,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval):
+               Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
+               Unescape):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
