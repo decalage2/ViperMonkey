@@ -2094,13 +2094,14 @@ class Call_Statement(VBA_Object):
             s = context.get(func_name)
             if (s is None):
                 raise KeyError("func not found")
-            s.eval(context=context, params=call_params)
+            if (hasattr(s, "eval")):
+                s.eval(context=context, params=call_params)
 
-            # Set the values of the arguments passed as ByRef parameters.
-            if (hasattr(s, "byref_params")):
-                for byref_param_info in s.byref_params.keys():
-                    arg_var_name = str(self.params[byref_param_info[1]])
-                    context.set(arg_var_name, s.byref_params[byref_param_info])
+                # Set the values of the arguments passed as ByRef parameters.
+                if (hasattr(s, "byref_params")):
+                    for byref_param_info in s.byref_params.keys():
+                        arg_var_name = str(self.params[byref_param_info[1]])
+                        context.set(arg_var_name, s.byref_params[byref_param_info])
             
         except KeyError:
             try:

@@ -63,6 +63,7 @@ from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 import expressions
 import meta
+import modules
 
 from logger import log
 
@@ -121,6 +122,14 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class FolderExists(VbaLibraryFunc):
+    """
+    FolderExists() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return False
+        
 class Switch(VbaLibraryFunc):
     """
     Switch() logic flow function.
@@ -367,18 +376,6 @@ class ShellExecute(Shell):
         context.report_action('Execute Command', command + " " + args, 'Shell function', strip_null_bytes=True)
         return 0
 
-class Execute(Shell):
-    """
-    WScript Execute() function.
-    """
-    pass
-
-class ExecuteGlobal(Execute):
-    """
-    WScript ExecuteGlobal() function.
-    """
-    pass
-
 class Eval(VbaLibraryFunc):
     """
     VBScript expression Eval() function.
@@ -400,6 +397,34 @@ class Eval(VbaLibraryFunc):
         if (isinstance(obj, VBA_Object)):
             r = obj.eval(context)
         return r
+
+class Execute(VbaLibraryFunc):
+    """
+    WScript Execute() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Save the command.
+        command = str(params[0])
+        context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
+        command += "\n"
+
+        # Parse it.
+        obj = modules.module.parseString(command, parseAll=True)[0]
+
+        # Evaluate the expression in the current context.
+        # TODO: Does this actually get evalled in the current context?
+        r = obj
+        if (isinstance(obj, VBA_Object)):
+            r = obj.eval(context)
+        return r
+
+class ExecuteGlobal(Execute):
+    """
+    WScript ExecuteGlobal() function.
+    """
+    pass
 
 class Array(VbaLibraryFunc):
     """
@@ -2510,7 +2535,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape):
+               Unescape, FolderExists):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

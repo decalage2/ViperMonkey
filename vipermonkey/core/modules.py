@@ -206,7 +206,8 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function | rem_statement
+loose_lines = Forward()
+declaration_statement = loose_lines | option_statement | dim_statement | global_variable_declaration | external_function | rem_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -260,7 +261,7 @@ class LooseLines(VBA_Object):
         # loop with an error.
         context.handle_error(params)
             
-loose_lines = OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('block')
+loose_lines <<= OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('block')
 loose_lines.setParseAction(LooseLines)
 
 # TODO: add optional empty lines after each sub/function?
