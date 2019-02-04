@@ -1450,8 +1450,6 @@ class While_Statement(VBA_Object):
             else:
                 num_no_change = 0
 
-        print "END WHILE"
-                
         # Remove tracking of this loop.
         context.loop_stack.pop()
         log.debug('WHILE loop: end.')
