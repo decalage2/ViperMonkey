@@ -1228,6 +1228,25 @@ simple_for_each_statement.setParseAction(For_Each_Statement)
 
 # --- WHILE statement -----------------------------------------------------------
 
+def _get_guard_variables(loop_obj, context):
+    """
+    Pull out the variables that appear in the guard expression and their
+    values in the context. Return as a dict.
+    """
+
+    # Get the names of the variables in the loop guard.
+    var_visitor = var_in_expr_visitor()
+    loop_obj.guard.accept(var_visitor)
+    guard_var_names = var_visitor.variables
+
+    # Get their current values.
+    r = {}
+    for var in guard_var_names:
+        r[var] = context.get(var)
+
+    # Return the values of the vars in the loop guard.
+    return r
+
 class While_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
@@ -1344,26 +1363,7 @@ class While_Statement(VBA_Object):
 
         # We short circuited the loop evaluation.
         return True
-    
-    def _get_guard_variables(self, context):
-        """
-        Pull out the variables that appear in the guard expression and their
-        values in the context. Return as a dict.
-        """
-
-        # Get the names of the variables in the loop guard.
-        var_visitor = var_in_expr_visitor()
-        self.guard.accept(var_visitor)
-        guard_var_names = var_visitor.variables
-
-        # Get their current values.
-        r = {}
-        for var in guard_var_names:
-            r[var] = context.get(var)
-
-        # Return the values of the vars in the loop guard.
-        return r
-        
+            
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -1393,7 +1393,7 @@ class While_Statement(VBA_Object):
             max_loop_iters = 5
 
         # Get the initial values of all the variables that appear in the loop guard.
-        old_guard_vals = self._get_guard_variables(context)
+        old_guard_vals = _get_guard_variables(self, context)
             
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
@@ -1441,7 +1441,7 @@ class While_Statement(VBA_Object):
             # Does it look like this might be an infinite loop? Check this by
             # seeing if any changes have been made to the variables in the loop
             # guard.
-            curr_guard_vals = self._get_guard_variables(context)
+            curr_guard_vals = _get_guard_variables(self, context)
             if (curr_guard_vals == old_guard_vals):
                 num_no_change += 1
                 if (num_no_change >= context.max_static_iters):
@@ -1449,7 +1449,7 @@ class While_Statement(VBA_Object):
                     break
             else:
                 num_no_change = 0
-        
+
         # Remove tracking of this loop.
         context.loop_stack.pop()
         log.debug('WHILE loop: end.')
@@ -1506,9 +1506,13 @@ class Do_Statement(VBA_Object):
         if (".readyState" in str(self.guard)):
             log.info("Limiting # of iterations of a .readyState loop.")
             max_loop_iters = 5
-        
+
+        # Get the initial values of all the variables that appear in the loop guard.
+        old_guard_vals = _get_guard_variables(self, context)
+            
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
+        num_no_change = 0
         while (True):
 
             # Break infinite loops.
@@ -1548,6 +1552,18 @@ class Do_Statement(VBA_Object):
                 guard_val = (not guard_val)
             if (not guard_val):
                 break
+
+            # Does it look like this might be an infinite loop? Check this by
+            # seeing if any changes have been made to the variables in the loop
+            # guard.
+            curr_guard_vals = _get_guard_variables(self, context)
+            if (curr_guard_vals == old_guard_vals):
+                num_no_change += 1
+                if (num_no_change >= context.max_static_iters):
+                    log.warn("Possible infinite While loop detected. Exiting loop.")
+                    break
+            else:
+                num_no_change = 0
             
         # Remove tracking of this loop.
         context.loop_stack.pop()
@@ -1999,7 +2015,7 @@ class Call_Statement(VBA_Object):
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
+                 "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
     
     def __init__(self, original_str, location, tokens):
@@ -2076,13 +2092,14 @@ class Call_Statement(VBA_Object):
             s = context.get(func_name)
             if (s is None):
                 raise KeyError("func not found")
-            s.eval(context=context, params=call_params)
+            if (hasattr(s, "eval")):
+                s.eval(context=context, params=call_params)
 
-            # Set the values of the arguments passed as ByRef parameters.
-            if (hasattr(s, "byref_params")):
-                for byref_param_info in s.byref_params.keys():
-                    arg_var_name = str(self.params[byref_param_info[1]])
-                    context.set(arg_var_name, s.byref_params[byref_param_info])
+                # Set the values of the arguments passed as ByRef parameters.
+                if (hasattr(s, "byref_params")):
+                    for byref_param_info in s.byref_params.keys():
+                        arg_var_name = str(self.params[byref_param_info[1]])
+                        context.set(arg_var_name, s.byref_params[byref_param_info])
             
         except KeyError:
             try:
@@ -2369,7 +2386,9 @@ class File_Open(VBA_Object):
         super(File_Open, self).__init__(original_str, location, tokens)
         self.file_name = tokens.file_name
         self.file_id = tokens.file_id
-        self.file_mode = tokens.type.mode
+        self.file_mode = None
+        if (hasattr(tokens.type, "mode")):
+            self.file_mode = tokens.type.mode
         self.file_access = None
         if (hasattr(tokens.type, "access")):
             self.file_access = tokens.type.access
@@ -2411,8 +2430,8 @@ file_type = Suppress(CaselessKeyword("For")) + \
             Optional(Optional(Suppress(CaselessKeyword("Access"))) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + file_type("type") + \
-                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + \
+                      Optional(file_type("type") + Suppress(CaselessKeyword("As")) + file_pointer("file_id"))
 file_open_statement.setParseAction(File_Open)
 
 # --- PRINT -------------------------------------------------------------

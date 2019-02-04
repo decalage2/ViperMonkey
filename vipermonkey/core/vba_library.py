@@ -63,6 +63,7 @@ from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 import expressions
 import meta
+import modules
 
 from logger import log
 
@@ -82,7 +83,7 @@ class WeekDay(VbaLibraryFunc):
         # Get date string.
         if (len(params) == 0):
             return 1
-        date_str = params[0].replace("#", "")
+        date_str = str(params[0]).replace("#", "")
         date_obj = None
         
         # TODO: Handle more and more date formats.
@@ -121,6 +122,14 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class FolderExists(VbaLibraryFunc):
+    """
+    FolderExists() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return False
+        
 class Switch(VbaLibraryFunc):
     """
     Switch() logic flow function.
@@ -367,12 +376,6 @@ class ShellExecute(Shell):
         context.report_action('Execute Command', command + " " + args, 'Shell function', strip_null_bytes=True)
         return 0
 
-class Execute(Shell):
-    """
-    WScript Execute() function.
-    """
-    pass
-
 class Eval(VbaLibraryFunc):
     """
     VBScript expression Eval() function.
@@ -395,6 +398,42 @@ class Eval(VbaLibraryFunc):
             r = obj.eval(context)
         return r
 
+class Execute(VbaLibraryFunc):
+    """
+    WScript Execute() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Save the command.
+        command = str(params[0])
+        context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
+        command += "\n"
+
+        # Parse it.
+        obj = modules.module.parseString(command, parseAll=True)[0]
+
+        # Evaluate the expression in the current context.
+        # TODO: Does this actually get evalled in the current context?
+        r = obj
+        if (isinstance(obj, VBA_Object)):
+
+            # Load any new function definitions into the current context.
+            obj.load_context(context)
+            
+            # Emulate the parsed code.
+            r = obj.eval(context)
+            
+        # Add any functions declared in the execution to the global
+        # context.
+        return r
+
+class ExecuteGlobal(Execute):
+    """
+    WScript ExecuteGlobal() function.
+    """
+    pass
+
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -402,6 +441,8 @@ class Array(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         r = []
+        if ((len(params) == 1) and (params[0] == "NULL")):
+            return []
         for v in params:
             r.append(v)
         log.debug("Array: return %r" % r)
@@ -442,12 +483,14 @@ class Trim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
-        r = None
-        if (isinstance(params[0], int)):
-            r = str(params[0])
-        else:
-            r = params[0].strip()
+        
+        # Sanity check arguments.
+        if ((params is None) or (len(params) == 0)):
+            log.error("Invalid paramater to Trim().")
+            return ""
+
+        # Trim the string.
+        r = str(params[0]).strip()
         log.debug("Trim: return %r" % r)
         return r
 
@@ -620,7 +663,9 @@ class Split(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         string = params[0]
         sep = ","
-        if ((len(params) > 1) and (isinstance(params[1], str))):
+        if ((len(params) > 1) and
+            (isinstance(params[1], str)) and
+            (len(params[1]) > 0)):
             sep = params[1]            
         r = string.split(sep)
         log.debug("Split: return %r" % r)
@@ -2052,6 +2097,15 @@ class Specialfolders(VbaLibraryFunc):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
 
+class IsArray(VbaLibraryFunc):
+    """
+    IsArray() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) > 0)
+        return isinstance(params[0], list)
+
 class Month(VbaLibraryFunc):
     """
     Excel Month() function. Currently stubbed.
@@ -2379,6 +2433,66 @@ class Timer(VbaLibraryFunc):
     def eval(self, context, params=None):
         return int(time.mktime(datetime.now().timetuple()))
 
+class Unescape(VbaLibraryFunc):
+    """
+    Unescape() strin unescaping method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+
+        # Get the string to unescape.
+        assert len(params) > 0
+        s = str(params[0])
+
+        # It reverses the transformation performed by the Escape
+        # method by removing the escape character ("\") from each
+        # character escaped by the method. These include the \, *, +,
+        # ?, |, {, [, (,), ^, $, ., #, and white space characters.
+        s = s.replace("\\\\", "\\")
+        s = s.replace("\\*", "*")
+        s = s.replace("\\+", "+")
+        s = s.replace("\\?", "?")
+        s = s.replace("\\|", "|")
+        s = s.replace("\\{", "{")
+        s = s.replace("\\[", "[")
+        s = s.replace("\\(", "(")
+        s = s.replace("\\)", ")")
+        s = s.replace("\\^", "^")
+        s = s.replace("\\$", "$")
+        s = s.replace("\\.", ".")
+        s = s.replace("\\#", "#")
+        s = s.replace("\\ ", " ")
+        # TODO: Figure out more whitespace characters.
+
+        # In addition, the Unescape method unescapes the closing
+        # bracket (]) and closing brace (}) characters.
+        if ("\\]" in s):
+            start = s.rindex("\\]")
+            end = start + len("\\]")
+            s = s[:start] + "]" + s[end:]
+        if ("\\}" in s):
+            start = s.rindex("\\}")
+            end = start + len("\\}")
+            s = s[:start] + "}" + s[end:]
+
+        # It replaces the hexadecimal values in verbatim string
+        # literals with the actual printable characters. For example,
+        # it replaces @"\x07" with "\a", or @"\x0A" with "\n". It
+        # converts to supported escape characters such as \a, \b, \e,
+        # \n, \r, \f, \t, \v, and alphanumeric characters.
+        #
+        # TODO: Do the hex unescaping.
+
+        # Not documented, but it looks like %xx% is also handled as hex
+        # unescaping.
+        pat = r"%([0-9a-fA-F][0-9a-fA-F])"
+        hex_strs = re.findall(pat, s)
+        for h in hex_strs:            
+            s = s.replace("%" + h, chr(int("0x" + h, 16)))
+
+        # Return the unsescaped string.
+        return s
+
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -2441,7 +2555,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
-               Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval):
+               Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
+               Unescape, FolderExists, IsArray):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
