@@ -417,7 +417,15 @@ class Execute(VbaLibraryFunc):
         # TODO: Does this actually get evalled in the current context?
         r = obj
         if (isinstance(obj, VBA_Object)):
+
+            # Load any new function definitions into the current context.
+            obj.load_context(context)
+            
+            # Emulate the parsed code.
             r = obj.eval(context)
+            
+        # Add any functions declared in the execution to the global
+        # context.
         return r
 
 class ExecuteGlobal(Execute):

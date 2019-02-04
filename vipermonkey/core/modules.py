@@ -101,59 +101,12 @@ class Module(VBA_Object):
                 # Global variable initialization is now handled by emulating the
                 # LooseLines blocks of code in the module.
                 self.loose_lines.append(token)
-                """
-                # Get the initial value(s) for the global variable(s).
-                context = vba_context.Context()
-                token.eval(context)
-
-                # Set up the global variables.
-                for var in token.variables:
-                    init_val = "NULL"
-                    try:
-                        init_val = context.get(var[0])
-                    except KeyError:
-                        pass
-                    log.debug("saving global var decl (0): %r = %r" % (var[0], init_val))
-                    self.global_vars[var[0]] = init_val
-                """
 
             elif isinstance(token, Dim_Statement):
 
                 # Global variable initialization is now handled by emulating the
                 # LooseLines blocks of code in the module.
                 self.loose_lines.append(token)
-                """
-                # Add the declared variables to the global variables.
-                for var in token.variables:
-
-                    # Get the initial value.
-                    curr_init_val = token.init_val
-                    
-                    # Get initial var value based on type.
-                    curr_type = var[2]
-                    if ((curr_type is not None) and
-                        ((curr_init_val is None) or (curr_init_val is "NULL"))):
-
-                        # Get the initial value.
-                        if ((curr_type == "Long") or
-                            (curr_type == "Integer") or
-                            (curr_type == "Byte")):
-                            curr_init_val = 0
-                        if (curr_type == "String"):
-                            curr_init_val = ''
-                
-                        # Is this variable an array?
-                        if (var[1]):
-                            curr_type += " Array"
-                            if ((len(var) >= 4) and (var[3] is not None)):
-                                curr_init_val = [curr_init_val] * var[3]
-                            else:
-                                curr_init_val = []
-                                
-                    # Set the initial value of the declared variable.
-                    self.global_vars[var[0]] = curr_init_val
-                    log.debug("saving global var decl (1): %r = %r" % (var[0], curr_init_val))
-                """
 
             elif isinstance(token, LooseLines):
                 self.loose_lines.append(token)
@@ -181,6 +134,28 @@ class Module(VBA_Object):
             block.eval(context, params)
             context.global_scope = False
 
+    def load_context(self, context):
+        """
+        Load functions/subs defined in the module into the given
+        context.
+        """
+        
+        for name, _sub in self.subs.items():
+            log.debug('storing sub "%s" in globals' % name)
+            context.set(name, _sub)
+        for name, _function in self.functions.items():
+            log.debug('storing function "%s" in globals' % name)
+            context.set(name, _function)
+        for name, _function in self.external_functions.items():
+            log.debug('storing external function "%s" in globals' % name)
+            context.set(name, _function)
+        for name, _var in self.global_vars.items():
+            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+            if (isinstance(name, str)):
+                context.set(name, _var)
+            if (isinstance(name, list)):
+                context.set(name[0], _var, var_type=name[1])
+            
 # see MS-VBAL 4.2 Modules
 #
 # MS-GRAMMAR: procedural_module_header = CaselessKeyword('Attribute') + CaselessKeyword('VB_Name') + Literal('=') + quoted_string

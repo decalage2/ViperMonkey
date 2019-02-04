@@ -2386,7 +2386,9 @@ class File_Open(VBA_Object):
         super(File_Open, self).__init__(original_str, location, tokens)
         self.file_name = tokens.file_name
         self.file_id = tokens.file_id
-        self.file_mode = tokens.type.mode
+        self.file_mode = None
+        if (hasattr(tokens.type, "mode")):
+            self.file_mode = tokens.type.mode
         self.file_access = None
         if (hasattr(tokens.type, "access")):
             self.file_access = tokens.type.access
@@ -2428,8 +2430,8 @@ file_type = Suppress(CaselessKeyword("For")) + \
             Optional(Optional(Suppress(CaselessKeyword("Access"))) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + file_type("type") + \
-                      Suppress(CaselessKeyword("As")) + file_pointer("file_id")
+file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + \
+                      Optional(file_type("type") + Suppress(CaselessKeyword("As")) + file_pointer("file_id"))
 file_open_statement.setParseAction(File_Open)
 
 # --- PRINT -------------------------------------------------------------
