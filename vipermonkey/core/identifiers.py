@@ -103,7 +103,7 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # # Double
 # @ Currency
 # $ String
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
+type_suffix = Word(r"%&^!#@$", exact=1) + White() + NotAny(Word(alphanums) | '"')
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
@@ -133,4 +133,3 @@ TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
 TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
                                                  Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
                                                  Optional(CaselessLiteral('$')))
-

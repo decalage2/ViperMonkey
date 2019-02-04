@@ -433,6 +433,8 @@ class Array(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         r = []
+        if ((len(params) == 1) and (params[0] == "NULL")):
+            return []
         for v in params:
             r.append(v)
         log.debug("Array: return %r" % r)
@@ -653,7 +655,9 @@ class Split(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         string = params[0]
         sep = ","
-        if ((len(params) > 1) and (isinstance(params[1], str))):
+        if ((len(params) > 1) and
+            (isinstance(params[1], str)) and
+            (len(params[1]) > 0)):
             sep = params[1]            
         r = string.split(sep)
         log.debug("Split: return %r" % r)
@@ -2085,6 +2089,15 @@ class Specialfolders(VbaLibraryFunc):
         assert (len(params) == 1)
         return "%" + str(params[0]) + "%"
 
+class IsArray(VbaLibraryFunc):
+    """
+    IsArray() function.
+    """
+
+    def eval(self, context, params=None):
+        assert (len(params) > 0)
+        return isinstance(params[0], list)
+
 class Month(VbaLibraryFunc):
     """
     Excel Month() function. Currently stubbed.
@@ -2535,7 +2548,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists):
+               Unescape, FolderExists, IsArray):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
