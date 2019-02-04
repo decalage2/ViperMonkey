@@ -675,9 +675,14 @@ class Context(object):
         """
         Run the current error handler (if there is one) if there is an error.
         """
+
+        # Run the error handler if needed.
         if (self.must_handle_error()):
             log.warning("Running On Error error handler...")
             self.error_handler.eval(context=self, params=params)
+
+        # The error has now been cleared.
+        self.got_error = False
     
     def get_true_name(self, name):
         """

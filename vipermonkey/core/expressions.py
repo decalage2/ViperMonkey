@@ -423,7 +423,7 @@ class MemberAccessExpression(VBA_Object):
         # Punt and just try to eval this as a string.
         else:
             return eval_arg(self.__repr__(), context)
-
+        
 # need to use Forward(), because the definition of l-expression is recursive:
 l_expression = Forward()
 

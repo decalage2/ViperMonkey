@@ -448,12 +448,14 @@ class Trim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
-        r = None
-        if (isinstance(params[0], int)):
-            r = str(params[0])
-        else:
-            r = params[0].strip()
+        
+        # Sanity check arguments.
+        if ((params is None) or (len(params) == 0)):
+            log.error("Invalid paramater to Trim().")
+            return ""
+
+        # Trim the string.
+        r = str(params[0]).strip()
         log.debug("Trim: return %r" % r)
         return r
 
