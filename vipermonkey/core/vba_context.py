@@ -640,6 +640,7 @@ class Context(object):
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
+        self.globals["OSlanguage".lower()] = "**MATCH ANY**"
 
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
