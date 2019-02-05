@@ -129,6 +129,14 @@ class FolderExists(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return False
+
+class FileExists(VbaLibraryFunc):
+    """
+    FileExists() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return False
         
 class Switch(VbaLibraryFunc):
     """
@@ -2556,7 +2564,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray):
+               Unescape, FolderExists, IsArray, FileExists):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
