@@ -1133,3 +1133,6 @@ class New_Expression(VBA_Object):
 
 new_expression << CaselessKeyword('New').suppress() + expression('expression')
 new_expression.setParseAction(New_Expression)
+
+any_expression = expression ^ boolean_expression
+
