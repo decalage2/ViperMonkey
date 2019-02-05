@@ -321,6 +321,8 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        if (params is None):
+            return "NULL"
         assert len(params) == 1
 
         # Get the property we are looking for.
