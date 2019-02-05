@@ -680,6 +680,7 @@ class Context(object):
         # Run the error handler if needed.
         if (self.must_handle_error()):
             log.warning("Running On Error error handler...")
+            self.got_error = False
             self.error_handler.eval(context=self, params=params)
 
         # The error has now been cleared.
