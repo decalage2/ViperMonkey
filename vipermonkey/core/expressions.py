@@ -643,8 +643,9 @@ class Function_Call(VBA_Object):
                 if (len(params) > 0):
                     tmp = f
                     # Try to guess whether we are accessing a character in a string.
-                    if ((len(f) == 1) and (isinstance(f[0], str))):
-                        tmp = f[0]
+                    # TODO: Revisit this.
+                    #if ((len(f) == 1) and (isinstance(f[0], str))):
+                    #    tmp = f[0]
                     log.debug('Array Access: %r[%r]' % (tmp, params[0]))
                     index = int_convert(params[0])
                     try:
