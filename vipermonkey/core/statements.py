@@ -1235,6 +1235,10 @@ def _get_guard_variables(loop_obj, context):
     values in the context. Return as a dict.
     """
 
+    # Sanity check.
+    if (not hasattr(loop_obj.guard, "accept")):
+        return {}
+    
     # Get the names of the variables in the loop guard.
     var_visitor = var_in_expr_visitor()
     loop_obj.guard.accept(var_visitor)
@@ -2256,6 +2260,8 @@ class With_Statement(VBA_Object):
             
         # Evaluate each statement in the with block.
         log.debug("START WITH")
+        if (not isinstance(self.body, list)):
+            self.body = [self.body]
         for s in self.body:
 
             # Emulate the statement.
