@@ -1169,6 +1169,8 @@ class For_Each_Statement(VBA_Object):
             pass
 
         # Try iterating over the values in the container.
+        if (not isinstance(container, list)):
+            container = [container]
         try:
             for item_val in container:
 

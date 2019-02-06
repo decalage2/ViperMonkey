@@ -2420,7 +2420,17 @@ class FollowHyperlink(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (len(params) >= 1):
             context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
-            
+
+class GetExtensionName(VbaLibraryFunc):
+
+    def eval(self, context, params=None):
+        r = ""
+        if (len(params) >= 1):
+            fname = str(params[0])
+            if ("." in fname):
+                r = fname[fname.rindex("."):]
+        return r
+                
 class CreateTextFile(VbaLibraryFunc):
     """
     CreateTextFile() method.
@@ -2590,7 +2600,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray, FileExists, Debug):
+               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
