@@ -2394,6 +2394,12 @@ class Print(VbaLibraryFunc):
 
         context.report_action("Debug Print", str(params[0]), '')
 
+class Debug(Print):
+    """
+    Debug() debugging function.
+    """
+    pass
+        
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function.
@@ -2579,7 +2585,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray, FileExists):
+               Unescape, FolderExists, IsArray, FileExists, Debug):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
