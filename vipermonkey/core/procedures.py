@@ -291,7 +291,7 @@ class Function(VBA_Object):
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
-
+        
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks

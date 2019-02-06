@@ -2435,6 +2435,9 @@ class CreateTextFile(VbaLibraryFunc):
         # Save that the file is opened.
         context.open_file(fname)
 
+        # How about returning the name of the opened file.
+        return fname
+
 class Open(CreateTextFile):
     """
     Open() file function. Also Open() HTTP function.

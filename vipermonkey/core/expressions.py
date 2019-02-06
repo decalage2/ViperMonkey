@@ -272,7 +272,7 @@ class MemberAccessExpression(VBA_Object):
         if (not isinstance(read_call, Function_Call)):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
-
+        
         # Read the file contents.
         try:
             f = open(read_file, 'r')
