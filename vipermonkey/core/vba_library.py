@@ -203,9 +203,17 @@ class Mid(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
         if ((len(params) > 0) and (params[0] == "ActiveDocument")):
             params = params[1:]
-        assert len(params) in (2,3)
+        if (params is None):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
+        if (len(params) not in (2,3)):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
