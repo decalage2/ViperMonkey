@@ -290,7 +290,7 @@ def _read_from_object_text(arg, context):
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
-            
+    
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -313,7 +313,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
         return obj_text_val
-
+    
     # Not reading from an Excel cell. Try as a VBA object.
     if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
 
