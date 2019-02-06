@@ -730,7 +730,7 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
