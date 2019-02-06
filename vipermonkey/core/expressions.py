@@ -186,6 +186,13 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_oslanguage(self, context):
+        """
+        Handle references to the OSlanguage field.
+        """
+        if (str(self).lower().endswith(".oslanguage")):
+            return context.get("oslanguage")
+    
     def _handle_application_run(self, context):
         """
         Handle functions called with Application.Run()
@@ -333,6 +340,11 @@ class MemberAccessExpression(VBA_Object):
     
     def eval(self, context, params=None):
 
+        # See if this is reading the OSlanguage.
+        call_retval = self._handle_oslanguage(context)
+        if (call_retval is not None):
+            return call_retval
+        
         # See if this is a function call like Application.Run("foo", 12, 13).
         call_retval = self._handle_application_run(context)
         if (call_retval is not None):
@@ -631,8 +643,9 @@ class Function_Call(VBA_Object):
                 if (len(params) > 0):
                     tmp = f
                     # Try to guess whether we are accessing a character in a string.
-                    if ((len(f) == 1) and (isinstance(f[0], str))):
-                        tmp = f[0]
+                    # TODO: Revisit this.
+                    #if ((len(f) == 1) and (isinstance(f[0], str))):
+                    #    tmp = f[0]
                     log.debug('Array Access: %r[%r]' % (tmp, params[0]))
                     index = int_convert(params[0])
                     try:
@@ -946,6 +959,8 @@ class BoolExprItem(VBA_Object):
                 
         # Evaluate the expression.
         if ((self.op == "=") or (self.op.lower() == "is")):
+            if ((lhs == "**MATCH ANY**") or (rhs == "**MATCH ANY**")):
+                return True
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
@@ -1133,3 +1148,6 @@ class New_Expression(VBA_Object):
 
 new_expression << CaselessKeyword('New').suppress() + expression('expression')
 new_expression.setParseAction(New_Expression)
+
+any_expression = expression ^ boolean_expression
+

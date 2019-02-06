@@ -54,6 +54,8 @@ import random
 from from_unicode_str import *
 import decimal
 
+from pyparsing import *
+
 from vba_context import VBA_LIBRARY
 from vba_object import str_convert
 from vba_object import int_convert
@@ -125,6 +127,14 @@ class MsgBox(VbaLibraryFunc):
 class FolderExists(VbaLibraryFunc):
     """
     FolderExists() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return False
+
+class FileExists(VbaLibraryFunc):
+    """
+    FileExists() VB function (stubbed).
     """
 
     def eval(self, context, params=None):
@@ -311,6 +321,8 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        if (params is None):
+            return "NULL"
         assert len(params) == 1
 
         # Get the property we are looking for.
@@ -388,15 +400,21 @@ class Eval(VbaLibraryFunc):
             return 0
         expr = str(params[0])
 
-        # Parse it. Assume this is an expression.
-        obj = expressions.expression.parseString(expr, parseAll=True)[0]
+        try:
 
-        # Evaluate the expression in the current context.
-        # TODO: Does this actually get evalled in the current context?
-        r = obj
-        if (isinstance(obj, VBA_Object)):
-            r = obj.eval(context)
-        return r
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(expr, parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            # TODO: Does this actually get evalled in the current context?
+            r = obj
+            if (isinstance(obj, VBA_Object)):
+                r = obj.eval(context)
+            return r
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + expr + "'")
+            return "NULL"
 
 class Execute(VbaLibraryFunc):
     """
@@ -411,8 +429,13 @@ class Execute(VbaLibraryFunc):
         command += "\n"
 
         # Parse it.
-        obj = modules.module.parseString(command, parseAll=True)[0]
-
+        obj = None
+        try:
+            obj = modules.module.parseString(command, parseAll=True)[0]
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + expr + "'")
+            return "NULL"
+            
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?
         r = obj
@@ -661,12 +684,12 @@ class Split(VbaLibraryFunc):
             return ""
         assert len(params) > 0
         # TODO: Actually implement this properly.
-        string = params[0]
+        string = str(params[0])
         sep = ","
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
             (len(params[1]) > 0)):
-            sep = params[1]            
+            sep = str(params[1])
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
@@ -2371,6 +2394,12 @@ class Print(VbaLibraryFunc):
 
         context.report_action("Debug Print", str(params[0]), '')
 
+class Debug(Print):
+    """
+    Debug() debugging function.
+    """
+    pass
+        
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function.
@@ -2556,7 +2585,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray):
+               Unescape, FolderExists, IsArray, FileExists, Debug):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -753,6 +753,10 @@ def strip_useless_code(vba_code, local_funcs):
     stripped statements are commented out.
     """
 
+    # Clear out lines broken up on multiple lines.
+    vba_code = re.sub(r"_\s*\n", "", vba_code)
+    vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
+    
     # Track data change callback function names.
     change_callbacks = set()    
     

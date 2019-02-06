@@ -93,7 +93,7 @@ operator_identifier = caselessKeywordsList(
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
-    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr", "Debug",
+    "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr",
     "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String",
     "Format"))
 

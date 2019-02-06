@@ -640,6 +640,7 @@ class Context(object):
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
+        self.globals["OSlanguage".lower()] = "**MATCH ANY**"
 
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
@@ -677,6 +678,7 @@ class Context(object):
         # Run the error handler if needed.
         if (self.must_handle_error()):
             log.warning("Running On Error error handler...")
+            self.got_error = False
             self.error_handler.eval(context=self, params=params)
 
         # The error has now been cleared.

@@ -342,6 +342,7 @@ external_function = Forward()
 block_statement = rem_statement | external_function | statement
 # tagged_block broken out so it does not consume the final EOS in the statement block.
 statement_block = ZeroOrMore(tagged_block ^ (block_statement + EOS.suppress()))
+statement_block_not_empty = OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))
 tagged_block <<= label_statement('label') + Suppress(EOS) + statement_block('block')
 tagged_block.setParseAction(TaggedBlock)
 
@@ -1234,6 +1235,10 @@ def _get_guard_variables(loop_obj, context):
     values in the context. Return as a dict.
     """
 
+    # Sanity check.
+    if (not hasattr(loop_obj.guard, "accept")):
+        return {}
+    
     # Get the names of the variables in the loop guard.
     var_visitor = var_in_expr_visitor()
     loop_obj.guard.accept(var_visitor)
@@ -1798,7 +1803,7 @@ class Select_Case(VBA_Object):
 
     def __repr__(self):
         r = ""
-        r += str(self.case_val) + str(self.body)
+        r += str(self.case_val) + " " + str(self.body)
         return r
 
     def eval(self, context, params=None):
@@ -1812,17 +1817,20 @@ select_clause.setParseAction(Select_Clause)
 
 case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
                       (CaselessKeyword("Else")) | \
-                      (expression("case_val") + ZeroOrMore(Suppress(",") + expression)))
+                      (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
 case_clause = CaselessKeyword("Case").suppress() + case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
-select_case = case_clause("case_val") + Suppress(EOS) + Group(statement_block('statements'))("body")
+simple_statements_line = Forward()
+select_case = case_clause("case_val") + \
+              Optional((NotAny(EOS) + Group(simple_statements_line)("body")) ^ \
+                       (Suppress(EOS) + Group(statement_block_not_empty('statements'))("body")))
 select_case.setParseAction(Select_Case)
 
-simple_select_statement = select_clause("select_val") + Suppress(EOS) + Group(OneOrMore(select_case))("cases") \
-                          + CaselessKeyword("End").suppress() + CaselessKeyword("Select").suppress()
+simple_select_statement = select_clause("select_val") + Suppress(EOS) + Group(OneOrMore(select_case + Suppress(Optional(EOS))))("cases") \
+                          + Suppress(Optional(EOS)) + CaselessKeyword("End").suppress() + CaselessKeyword("Select").suppress()
 simple_select_statement.setParseAction(Select_Statement)
 
 
@@ -1949,7 +1957,7 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                               Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
                                     Group(statement_block('statements')))
                           )
-simple_statements_line = Forward()
+
 single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
                                   Group(simple_statements_line('statements')) )  + \
                                   ZeroOrMore(
@@ -2252,6 +2260,8 @@ class With_Statement(VBA_Object):
             
         # Evaluate each statement in the with block.
         log.debug("START WITH")
+        if (not isinstance(self.body, list)):
+            self.body = [self.body]
         for s in self.body:
 
             # Emulate the statement.
@@ -2279,7 +2289,8 @@ class With_Statement(VBA_Object):
         return
 
 # With statement
-with_statement = CaselessKeyword('With').suppress() + (member_access_expression('env') ^ lex_identifier('env') ^ function_call_limited('env')) + Suppress(EOS) + \
+with_statement = CaselessKeyword('With').suppress() + (member_access_expression('env') ^ \
+                                                       (Optional(".") + (lex_identifier('env') ^ function_call_limited('env')))) + Suppress(EOS) + \
                  Group(statement_block('body')) + \
                  CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
 with_statement.setParseAction(With_Statement)
@@ -2491,7 +2502,8 @@ simple_statement = NotAny(Regex(r"End\s+Sub")) + \
                    (dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement)) | exit_loop_statement | \
                     exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
                     rem_statement | print_statement | resume_statement)
-simple_statements_line <<= simple_statement + ZeroOrMore(Suppress(':') + simple_statement)
+simple_statements_line <<= (simple_statement + OneOrMore(Suppress(':') + simple_statement)) ^ \
+                           simple_statement
 
 statements_line = tagged_block ^ \
                   (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
