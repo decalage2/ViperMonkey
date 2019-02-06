@@ -282,6 +282,8 @@ def _read_from_object_text(arg, context):
 
         # Not found. Try looking for the object with index 1.
         lhs_str = str(lhs)
+        if ("'" not in lhs_str):
+            return None
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
         doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
