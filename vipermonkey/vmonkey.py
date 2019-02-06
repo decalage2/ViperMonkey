@@ -796,14 +796,19 @@ def strip_useless_code(vba_code, local_funcs):
             if (line.strip().startswith("While ")):
                 log.debug("SKIP: While loop. Keep it.")
                 continue
+
+            # Skip function definitions.
+            if (line.strip().lower().startswith("if ")):
+                log.debug("SKIP: If statement. Keep it.")
+                continue
             
             # Skip function definitions.
-            if (line.strip().startswith("Function ")):
+            if (line.strip().lower().startswith("function ")):
                 log.debug("SKIP: Function decl. Keep it.")
                 continue
 
             # Skip const definitions.
-            if (line.strip().startswith("Const ")):
+            if (line.strip().lower().startswith("const ")):
                 log.debug("SKIP: Const decl. Keep it.")
                 continue
                 
@@ -813,7 +818,7 @@ def strip_useless_code(vba_code, local_funcs):
                 continue
 
             # Skip function definitions.
-            if (("Sub " in line) or ("Function " in line)):
+            if (("sub " in line.lower()) or ("function " in line.lower())):
                 log.debug("SKIP: Function definition. Keep it.")
                 continue
 

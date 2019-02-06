@@ -414,9 +414,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     try:
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
-                        print "------"
-                        print val
-                        print arg
                         if (val != str(arg)):
                             return val
 
@@ -483,7 +480,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # Try to pull the result from the document data.
                     var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
                     var = var.replace("activeworkbook.builtindocumentproperties(", "")
-                    print var
                     val = context.get_doc_var(var)
                     if (val is not None):
                         return val

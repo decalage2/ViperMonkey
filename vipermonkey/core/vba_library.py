@@ -433,7 +433,9 @@ class Execute(VbaLibraryFunc):
         try:
             obj = modules.module.parseString(command, parseAll=True)[0]
         except ParseException:
-            log.error("Parse error. Cannot evaluate '" + expr + "'")
+            if (len(command) > 50):
+                command = command[:50] + " ..."
+            log.error("Parse error. Cannot evaluate '" + command + "'")
             return "NULL"
             
         # Evaluate the expression in the current context.
