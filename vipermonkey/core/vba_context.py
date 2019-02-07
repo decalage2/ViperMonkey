@@ -939,7 +939,10 @@ class Context(object):
         # convert to lowercase
         name = name.lower()
         if name in self.locals:
-            log.debug("Set local var " + str(name) + " = " + str(value))
+            try:
+                log.debug("Set local var " + str(name) + " = " + str(value))
+            except:
+                pass
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
@@ -956,7 +959,10 @@ class Context(object):
                 self.locals[name] = value
             else:
                 self.globals[name] = value
-                log.debug("Set global var " + name + " = " + str(value))
+                try:
+                    log.debug("Set global var " + name + " = " + str(value))
+                except:
+                    pass
                 if ("." in name):
                     text_name = name + ".text"
                     self.globals[text_name] = value
