@@ -138,6 +138,11 @@ class FileExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return False
+        fname = str(params[0])
+        if ("powershell.exe" in fname):
+            return True
         return False
         
 class Switch(VbaLibraryFunc):

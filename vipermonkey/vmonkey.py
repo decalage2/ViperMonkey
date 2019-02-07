@@ -1002,6 +1002,27 @@ def strip_useless_code(vba_code, local_funcs):
     r = collapse_macro_if_blocks(r)
         
     return r
+
+def get_vb_contents(vba_code):
+    """
+    Pull out Visual Basic code from .hta file contents.
+    """
+
+    # Pull out the VB code.
+    pat = r"<\s*script\s+language\s*=\s*\"VBScript\"\s*>(.{20,})</\s*script\s*>"
+    code = re.findall(pat, vba_code, re.DOTALL)
+
+    # Did we find any VB code in a script block?
+    if (len(code) == 0):
+        return vba_code
+
+    # We have script block VB code.    
+    
+    # Return the code.
+    r = ""
+    for b in code:
+        r += b + "\n"
+    return r
     
 def parse_stream(subfilename,
                  stream_path=None,
@@ -1022,6 +1043,12 @@ def parse_stream(subfilename,
         
     # Filter cruft from the VBA.
     vba_code = filter_vba(vba_code)
+
+    # Pull out Visual Basic from .hta contents (if we are looking at a
+    # .hta file).
+    vba_code = get_vb_contents(vba_code)
+
+    # Strip out code that does not affect the end result of the program.
     if (strip_useless):
         vba_code = strip_useless_code(vba_code, local_funcs)
     print '-'*79
