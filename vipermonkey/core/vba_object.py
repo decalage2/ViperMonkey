@@ -282,6 +282,8 @@ def _read_from_object_text(arg, context):
 
         # Not found. Try looking for the object with index 1.
         lhs_str = str(lhs)
+        if ("'" not in lhs_str):
+            return None
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
         doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
@@ -290,7 +292,7 @@ def _read_from_object_text(arg, context):
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
-            
+    
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -313,7 +315,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
         return obj_text_val
-
+    
     # Not reading from an Excel cell. Try as a VBA object.
     if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
 
@@ -414,9 +416,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     try:
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
-                        print "------"
-                        print val
-                        print arg
                         if (val != str(arg)):
                             return val
 
@@ -483,7 +482,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # Try to pull the result from the document data.
                     var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
                     var = var.replace("activeworkbook.builtindocumentproperties(", "")
-                    print var
                     val = context.get_doc_var(var)
                     if (val is not None):
                         return val

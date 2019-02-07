@@ -907,19 +907,30 @@ class For_Statement(VBA_Object):
             
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
+        #   v787311 = v787311 + v350504 - v979958
         fields = body.split(" ")
-        if (len(fields) != 5):
+        if (len(fields) < 5):
             return (None, None)
         op = fields[3].strip()
-        num = fields[4].strip()
         var = fields[0].strip()
         if (var != fields[2].strip()):
-            return (None, None)
-        if (not num.isdigit()):
             return (None, None)
         if (op not in ['+', '-', '*']):
             return (None, None)
 
+        # Figure out the value to use to change the variable in the loop.
+        expr_str = ""
+        for e in fields[4:]:
+            expr_str += e
+        num = None
+        try:
+            expr = expression.parseString(expr_str, parseAll=True)[0]
+            num = str(expr.eval(context))
+        except ParseException:
+            return (None, None)
+        if (not num.isdigit()):
+            return (None, None)
+        
         # Get the initial value of variable being modified in the loop.
         init_val = None
         try:
@@ -1169,6 +1180,8 @@ class For_Each_Statement(VBA_Object):
             pass
 
         # Try iterating over the values in the container.
+        if (not isinstance(container, list)):
+            container = [container]
         try:
             for item_val in container:
 

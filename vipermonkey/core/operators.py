@@ -436,7 +436,6 @@ class Mod(VBA_Object):
         # return the sum of all the arguments:
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
-            print coerce_args(eval_args(self.arg, context))
             return reduce(lambda x, y: int(x) % int(y), coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError) as e:
             log.error('Impossible to mod arguments of different types. ' + str(e))

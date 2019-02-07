@@ -272,7 +272,7 @@ class MemberAccessExpression(VBA_Object):
         if (not isinstance(read_call, Function_Call)):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
-
+        
         # Read the file contents.
         try:
             f = open(read_file, 'r')
@@ -337,6 +337,33 @@ class MemberAccessExpression(VBA_Object):
         r = new_replace.eval(context)
         print r
         return r
+
+    def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
+        """
+        Handle expressions like "foo.Write(...)" where foo = "ADODB.Stream".
+        """
+        
+        # Is this a .Write() call?
+        rhs_str = str(rhs).strip()
+        if ("Write(" not in rhs_str):
+            return False
+
+        # Is this a Write() being called on an ADODB.Stream object?
+        if (lhs != "ADODB.Stream"):
+            return False
+
+        # Are we referencing a stream contained in a variable?        
+        if (not context.contains(str(lhs_orig))):
+            return False
+        
+        # Pull out the text to write to the text stream.
+        txt = str(eval_arg(rhs.params[0], context))
+
+        # Set the text value of the string as a faux variable.
+        context.set(str(lhs_orig) + ".ReadText", txt)
+        
+        # We handled the write.
+        return True
     
     def eval(self, context, params=None):
 
@@ -368,7 +395,7 @@ class MemberAccessExpression(VBA_Object):
             # This is something like ".foo.bar" in a With statement. The LHS
             # is the With context item.
             tmp_lhs = eval_arg(context.with_prefix, context)
-        
+            
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
         tmp_rhs = None
@@ -384,7 +411,11 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_text_file_read(context)
         if (call_retval is not None):
             return call_retval
-                
+
+        # Handle writes of text to ADODB.Stream variables.
+        if (self._handle_adodb_writes(self.lhs, tmp_lhs, rhs, context)):
+            return "NULL"
+        
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
@@ -730,7 +761,7 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \

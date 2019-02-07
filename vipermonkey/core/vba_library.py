@@ -203,9 +203,17 @@ class Mid(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
         if ((len(params) > 0) and (params[0] == "ActiveDocument")):
             params = params[1:]
-        assert len(params) in (2,3)
+        if (params is None):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
+        if (len(params) not in (2,3)):
+            log.error("Invalid arguments " + str(params) + " to Mid().")
+            return ""
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
@@ -433,7 +441,9 @@ class Execute(VbaLibraryFunc):
         try:
             obj = modules.module.parseString(command, parseAll=True)[0]
         except ParseException:
-            log.error("Parse error. Cannot evaluate '" + expr + "'")
+            if (len(command) > 50):
+                command = command[:50] + " ..."
+            log.error("Parse error. Cannot evaluate '" + command + "'")
             return "NULL"
             
         # Evaluate the expression in the current context.
@@ -2418,7 +2428,17 @@ class FollowHyperlink(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (len(params) >= 1):
             context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
-            
+
+class GetExtensionName(VbaLibraryFunc):
+
+    def eval(self, context, params=None):
+        r = ""
+        if (len(params) >= 1):
+            fname = str(params[0])
+            if ("." in fname):
+                r = fname[fname.rindex("."):]
+        return r
+                
 class CreateTextFile(VbaLibraryFunc):
     """
     CreateTextFile() method.
@@ -2432,6 +2452,9 @@ class CreateTextFile(VbaLibraryFunc):
 
         # Save that the file is opened.
         context.open_file(fname)
+
+        # How about returning the name of the opened file.
+        return fname
 
 class Open(CreateTextFile):
     """
@@ -2585,7 +2608,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray, FileExists, Debug):
+               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
