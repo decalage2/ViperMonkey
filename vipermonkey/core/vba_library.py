@@ -467,6 +467,12 @@ class ExecuteGlobal(Execute):
     """
     pass
 
+class AddCode(Execute):
+    """
+    Visual Basic script control AddCode() method..
+    """
+    pass
+
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -2608,7 +2614,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName):
+               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
+               AddCode):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
