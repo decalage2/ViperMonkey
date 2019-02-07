@@ -1009,7 +1009,7 @@ def get_vb_contents(vba_code):
     """
 
     # Pull out the VB code.
-    pat = r"<\s*script\s+language\s*=\s*\"VBScript\"\s*>(.{20,})</\s*script\s*>"
+    pat = r"<\s*script\s+language\s*=\s*\"VBScript\"\s*>(.{20,})</\s*script[^>]*>"
     code = re.findall(pat, vba_code, re.DOTALL)
 
     # Did we find any VB code in a script block?
