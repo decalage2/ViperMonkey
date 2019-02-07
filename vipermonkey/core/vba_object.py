@@ -236,14 +236,11 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
-    arg_str_low = arg_str.lower()
+    arg_str_low = arg_str.lower().strip()
 
     # Shapes('test33').      TextFrame.TextRange.text
     # Shapes('FrXXBbPlWaco').TextFrame.TextRange
-    if (((arg_str_low.endswith("textrange.text")) or
-         (arg_str_low.endswith("textframe.textrange")) or
-         (arg_str_low.endswith(".alternativetext")) or
-         (arg_str_low.endswith(".containingrange"))) and
+    if (("shapes(" in arg_str_low) and
         ("MemberAccessExpression" in str(type(arg)))):
 
         # Yes we do. 
@@ -266,7 +263,9 @@ def _read_from_object_text(arg, context):
                 lhs = context.get(var_name)
             except KeyError:
                 lhs = var_name
-                
+
+        if (lhs == "NULL"):
+            lhs = "Shapes('1')"
         log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
