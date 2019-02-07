@@ -1208,6 +1208,7 @@ def _process_file (filename, data,
             out_dir = out_dir.replace(".", "").strip()
             out_dir = "./" + out_dir + "/"
             vba_context.out_dir = out_dir
+            orig_filename = filename
             del filename # We already have this in memory, we don't need to read it again.
                 
             # Parse the VBA streams.
@@ -1353,9 +1354,11 @@ def _process_file (filename, data,
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
+            print('Finished analyzing ' + str(orig_filename) + " .\n")
             return (vm.actions, vm.external_funcs)
 
         else:
+            print('Finished analyzing ' + str(orig_filename) + " .\n")
             print 'No VBA macros found.'
             print ''
             return ([], [])
