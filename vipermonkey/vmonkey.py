@@ -1200,6 +1200,7 @@ def _process_file (filename, data,
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
     vm = ViperMonkey(filename)
+    orig_filename = filename
     if (entry_points is not None):
         for entry_point in entry_points:
             vm.entry_points.append(entry_point)
@@ -1235,7 +1236,6 @@ def _process_file (filename, data,
             out_dir = out_dir.replace(".", "").strip()
             out_dir = "./" + out_dir + "/"
             vba_context.out_dir = out_dir
-            orig_filename = filename
             del filename # We already have this in memory, we don't need to read it again.
                 
             # Parse the VBA streams.
