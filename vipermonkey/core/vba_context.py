@@ -819,8 +819,12 @@ class Context(object):
         elif name in VBA_LIBRARY:
             log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]
+        # Is it a doc var?
+        elif name in self.doc_vars:
+            return self.doc_vars[name]
         # Unknown symbol.
-        else:            
+        else:
+            # Not found.
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
