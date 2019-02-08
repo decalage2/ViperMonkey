@@ -100,6 +100,8 @@ import colorlog
 import re
 from datetime import datetime
 from datetime import timedelta
+import subprocess
+import zipfile
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -482,8 +484,33 @@ def get_doc_var_info(ole):
     doc_var_size = struct.unpack('!I', tmp)[0]
     
     return (doc_var_offset, doc_var_size)
+
+def _read_doc_vars_zip(fname):
+    """
+    Read doc vars from an Office 2007+ file.
+    """
+
+    # Open the zip archive.
+    f = zipfile.ZipFile(fname, 'r')
+
+    # Doc vars are in word/settings.xml. Does that file exist?
+    if ('word/settings.xml' not in f.namelist()):
+        return []
+
+    # Read the contents of settings.xml.
+    f1 = f.open('word/settings.xml')
+    data = f1.read()
+    f1.close()
+    f.close()
+
+    # Pull out any doc var names/values.
+    pat = r'<w\:docVar w\:name="(\w+)" w:val="([^"]*)"'
+    var_info = re.findall(pat, data)
+
+    # Return the doc vars.
+    return var_info
     
-def _read_doc_vars(fname):
+def _read_doc_vars_ole(fname):
     """
     Use a heuristic to try to read in document variable names and values from
     the 1Table OLE stream. Note that this heuristic is kind of hacky and is not
@@ -535,6 +562,20 @@ def _read_doc_vars(fname):
         log.error("Cannot read document variables. " + str(e))
         return []
 
+def _read_doc_vars(data, fname):
+    """
+    Read document variables from Office 97 or 2007+ files.
+    """
+
+    # Get the file type.
+    typ = subprocess.check_output(["file", fname])
+
+    # Pull doc vars based on the file type.
+    if (("Microsoft" in typ) and ("2007+" in typ)):
+        return _read_doc_vars_zip(fname)
+    else:
+        return _read_doc_vars_ole(data)
+    
 def _read_custom_doc_props(fname):
     """
     Use a heuristic to try to read in custom document property names
@@ -1247,12 +1288,12 @@ def _process_file (filename, data,
                     vm.add_compiled_module(m)
 
             # Pull out document variables.
-            for (var_name, var_val) in _read_doc_vars(data):
+            for (var_name, var_val) in _read_doc_vars(data, orig_filename):
                 vm.doc_vars[var_name] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
-
+                
             # Pull text associated with Shapes() objects.
             got_it = False
             for (var_name, var_val) in _get_shapes_text_values(data, 'worddocument'):
