@@ -568,13 +568,21 @@ def _read_doc_vars(data, fname):
     """
 
     # Get the file type.
-    typ = subprocess.check_output(["file", fname])
+    import magic  # pip install python-magic ; install libmagic from somewhere.
+    if len(fname) < 1:
+        # it has to be a file in memory...
+        obj = data
+        typ = magic.from_buffer(obj)
+    else:
+        # if we have a filename, we'll defer to using that...
+        obj = fname
+        typ = magic.from_file(obj)
 
     # Pull doc vars based on the file type.
     if (("Microsoft" in typ) and ("2007+" in typ)):
-        return _read_doc_vars_zip(fname)
+        return _read_doc_vars_zip(obj)
     else:
-        return _read_doc_vars_ole(data)
+        return _read_doc_vars_ole(obj)
     
 def _read_custom_doc_props(fname):
     """
