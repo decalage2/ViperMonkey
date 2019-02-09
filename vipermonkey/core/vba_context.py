@@ -536,7 +536,11 @@ class Context(object):
 
     def add_multiple_macro(self,namespaces,key,value):
         for n in namespaces:
-            self.globals[ (n+key).lower() ] = value
+            if n != "" and n[-1] != ".":
+                namespace = n + "."
+            else:
+                namespace = n
+            self.globals[ (namespace+key).lower() ] = value
 
     def have_error(self):
         """
