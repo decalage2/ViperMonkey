@@ -540,6 +540,7 @@ class Context(object):
                 namespace = n + "."
             else:
                 namespace = n
+            log.debug("adding global {} = {}".format((namespace+key).lower(), value))
             self.globals[ (namespace+key).lower() ] = value
 
     def have_error(self):
