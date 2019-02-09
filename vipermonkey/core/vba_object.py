@@ -236,38 +236,40 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
-    arg_str_low = arg_str.lower()
+    arg_str_low = arg_str.lower().strip()
 
     # Shapes('test33').      TextFrame.TextRange.text
     # Shapes('FrXXBbPlWaco').TextFrame.TextRange
-    if (((arg_str_low.endswith("textrange.text")) or
-         (arg_str_low.endswith("textframe.textrange")) or
-         (arg_str_low.endswith(".alternativetext")) or
-         (arg_str_low.endswith(".containingrange"))) and
-        ("MemberAccessExpression" in str(type(arg)))):
+    if ("shapes(" in arg_str_low):
 
         # Yes we do. 
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
 
-        # Drop off ActiveDocument prefix.
-        lhs = arg.lhs
-        if ((str(lhs) == "ActiveDocument") or (str(lhs) == "ThisDocument")):
-            lhs = arg.rhs[0]
-        
-        # Eval the leftmost prefix element of the member access expression first.
-        log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
-        if (hasattr(lhs, "eval")):
-            lhs = lhs.eval(context)
-        else:
+        # Handle member access?
+        lhs = "Shapes('1')"
+        if ("MemberAccessExpression" in str(type(arg))):
 
-            # Look this up as a variable name.
-            var_name = str(lhs)
-            try:
-                lhs = context.get(var_name)
-            except KeyError:
-                lhs = var_name
-                
-        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+            # Drop off ActiveDocument prefix.
+            lhs = arg.lhs
+            if ((str(lhs) == "ActiveDocument") or (str(lhs) == "ThisDocument")):
+                lhs = arg.rhs[0]
+        
+            # Eval the leftmost prefix element of the member access expression first.
+            log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+            if (hasattr(lhs, "eval")):
+                lhs = lhs.eval(context)
+            else:
+
+                # Look this up as a variable name.
+                var_name = str(lhs)
+                try:
+                    lhs = context.get(var_name)
+                except KeyError:
+                    lhs = var_name
+
+            if (lhs == "NULL"):
+                lhs = "Shapes('1')"
+            log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"

@@ -98,7 +98,8 @@ class Chr(VBA_Object):
         elif isinstance(param, int):
             pass
         else:
-            raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
+            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
+            return ''
             
         # Figure out whether to create a unicode or ascii character.
         converter = chr

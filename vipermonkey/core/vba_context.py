@@ -817,8 +817,12 @@ class Context(object):
         elif name in VBA_LIBRARY:
             log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]
+        # Is it a doc var?
+        elif name in self.doc_vars:
+            return self.doc_vars[name]
         # Unknown symbol.
-        else:            
+        else:
+            # Not found.
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
@@ -937,7 +941,10 @@ class Context(object):
         # convert to lowercase
         name = name.lower()
         if name in self.locals:
-            log.debug("Set local var " + str(name) + " = " + str(value))
+            try:
+                log.debug("Set local var " + str(name) + " = " + str(value))
+            except:
+                pass
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
@@ -954,7 +961,10 @@ class Context(object):
                 self.locals[name] = value
             else:
                 self.globals[name] = value
-                log.debug("Set global var " + name + " = " + str(value))
+                try:
+                    log.debug("Set global var " + name + " = " + str(value))
+                except:
+                    pass
                 if ("." in name):
                     text_name = name + ".text"
                     self.globals[text_name] = value

@@ -100,6 +100,8 @@ import colorlog
 import re
 from datetime import datetime
 from datetime import timedelta
+import subprocess
+import zipfile
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -482,8 +484,33 @@ def get_doc_var_info(ole):
     doc_var_size = struct.unpack('!I', tmp)[0]
     
     return (doc_var_offset, doc_var_size)
+
+def _read_doc_vars_zip(fname):
+    """
+    Read doc vars from an Office 2007+ file.
+    """
+
+    # Open the zip archive.
+    f = zipfile.ZipFile(fname, 'r')
+
+    # Doc vars are in word/settings.xml. Does that file exist?
+    if ('word/settings.xml' not in f.namelist()):
+        return []
+
+    # Read the contents of settings.xml.
+    f1 = f.open('word/settings.xml')
+    data = f1.read()
+    f1.close()
+    f.close()
+
+    # Pull out any doc var names/values.
+    pat = r'<w\:docVar w\:name="(\w+)" w:val="([^"]*)"'
+    var_info = re.findall(pat, data)
+
+    # Return the doc vars.
+    return var_info
     
-def _read_doc_vars(fname):
+def _read_doc_vars_ole(fname):
     """
     Use a heuristic to try to read in document variable names and values from
     the 1Table OLE stream. Note that this heuristic is kind of hacky and is not
@@ -535,6 +562,20 @@ def _read_doc_vars(fname):
         log.error("Cannot read document variables. " + str(e))
         return []
 
+def _read_doc_vars(data, fname):
+    """
+    Read document variables from Office 97 or 2007+ files.
+    """
+
+    # Get the file type.
+    typ = subprocess.check_output(["file", fname])
+
+    # Pull doc vars based on the file type.
+    if (("Microsoft" in typ) and ("2007+" in typ)):
+        return _read_doc_vars_zip(fname)
+    else:
+        return _read_doc_vars_ole(data)
+    
 def _read_custom_doc_props(fname):
     """
     Use a heuristic to try to read in custom document property names
@@ -1002,6 +1043,27 @@ def strip_useless_code(vba_code, local_funcs):
     r = collapse_macro_if_blocks(r)
         
     return r
+
+def get_vb_contents(vba_code):
+    """
+    Pull out Visual Basic code from .hta file contents.
+    """
+
+    # Pull out the VB code.
+    pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee]\s*=\s*\"VBScript\"\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
+    code = re.findall(pat, vba_code, re.DOTALL)
+
+    # Did we find any VB code in a script block?
+    if (len(code) == 0):
+        return vba_code
+
+    # We have script block VB code.    
+    
+    # Return the code.
+    r = ""
+    for b in code:
+        r += b + "\n"
+    return r
     
 def parse_stream(subfilename,
                  stream_path=None,
@@ -1022,6 +1084,12 @@ def parse_stream(subfilename,
         
     # Filter cruft from the VBA.
     vba_code = filter_vba(vba_code)
+
+    # Pull out Visual Basic from .hta contents (if we are looking at a
+    # .hta file).
+    vba_code = get_vb_contents(vba_code)
+
+    # Strip out code that does not affect the end result of the program.
     if (strip_useless):
         vba_code = strip_useless_code(vba_code, local_funcs)
     print '-'*79
@@ -1173,6 +1241,7 @@ def _process_file (filename, data,
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
     
     vm = ViperMonkey(filename)
+    orig_filename = filename
     if (entry_points is not None):
         for entry_point in entry_points:
             vm.entry_points.append(entry_point)
@@ -1219,12 +1288,12 @@ def _process_file (filename, data,
                     vm.add_compiled_module(m)
 
             # Pull out document variables.
-            for (var_name, var_val) in _read_doc_vars(data):
+            for (var_name, var_val) in _read_doc_vars(data, orig_filename):
                 vm.doc_vars[var_name] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
-
+                
             # Pull text associated with Shapes() objects.
             got_it = False
             for (var_name, var_val) in _get_shapes_text_values(data, 'worddocument'):
@@ -1357,9 +1426,11 @@ def _process_file (filename, data,
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
+            print('Finished analyzing ' + str(orig_filename) + " .\n")
             return (vm.actions, vm.external_funcs)
 
         else:
+            print('Finished analyzing ' + str(orig_filename) + " .\n")
             print 'No VBA macros found.'
             print ''
             return ([], [])

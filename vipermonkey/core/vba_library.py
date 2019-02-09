@@ -138,6 +138,11 @@ class FileExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return False
+        fname = str(params[0])
+        if ("powershell.exe" in fname):
+            return True
         return False
         
 class Switch(VbaLibraryFunc):
@@ -464,6 +469,12 @@ class Execute(VbaLibraryFunc):
 class ExecuteGlobal(Execute):
     """
     WScript ExecuteGlobal() function.
+    """
+    pass
+
+class AddCode(Execute):
+    """
+    Visual Basic script control AddCode() method..
     """
     pass
 
@@ -2608,7 +2619,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
-               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName):
+               Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
+               AddCode):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
