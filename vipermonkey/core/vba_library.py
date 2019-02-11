@@ -971,7 +971,11 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = ''
         try:
-            r = int(math.copysign(1, int_convert(num)))
+            n = int_convert(num)
+            if n == 0:
+                r = 0
+            else:
+                r = int(math.copysign(1, n))
         except:
             pass
         log.debug("Sgn: %r returns %r" % (self, r))

@@ -568,13 +568,21 @@ def _read_doc_vars(data, fname):
     """
 
     # Get the file type.
-    typ = subprocess.check_output(["file", fname])
+    import magic  # pip install python-magic ; install libmagic from somewhere.
+    if len(fname) < 1:
+        # it has to be a file in memory...
+        obj = data
+        typ = magic.from_buffer(obj)
+    else:
+        # if we have a filename, we'll defer to using that...
+        obj = fname
+        typ = magic.from_file(obj)
 
     # Pull doc vars based on the file type.
     if (("Microsoft" in typ) and ("2007+" in typ)):
-        return _read_doc_vars_zip(fname)
+        return _read_doc_vars_zip(obj)
     else:
-        return _read_doc_vars_ole(data)
+        return _read_doc_vars_ole(obj)
     
 def _read_custom_doc_props(fname):
     """
@@ -1343,19 +1351,23 @@ def _process_file (filename, data,
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
                         global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
-                        tag = form_variables['tag']
-                        if (tag is None):
+                        if 'tag' in form_variables:
+                            tag = form_variables['tag']
+                        else:
                             tag = ''
                         tag = tag.replace('\xb1', '').replace('\x03', '')
-                        caption = form_variables['caption']
-                        if (caption is None):
+                        if 'caption' in form_variables:
+                            caption = form_variables['caption']
+                        else:
                             caption = ''
                         caption = caption.replace('\xb1', '').replace('\x03', '')
-                        val = form_variables['value']
-                        if (val is None):
+                        if 'value' in form_variables:
+                            val = form_variables['value']
+                        else:
                             val = caption
-                        control_tip_text = form_variables['control_tip_text']
-                        if (control_tip_text is None):
+                        if 'control_tip_text' in form_variables:
+                            control_tip_text = form_variables['control_tip_text']
+                        else:
                             control_tip_text = ''
                         control_tip_text = control_tip_text.replace('\xb1', '').replace('\x03', '')
                             
