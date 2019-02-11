@@ -818,7 +818,7 @@ class Let_Statement(VBA_Object):
 # TODO: remove Set when Set_Statement implemented:
 
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
-                Optional(Suppress(CaselessKeyword('Const'))) + \
+                Optional(Suppress(CaselessKeyword('Const'))) + Optional(".") + \
                 ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + Optional(expression('index')) + Suppress(')'))) ^ \
                  member_access_expression('name')) + \
                 Literal('=').suppress() + \
@@ -843,7 +843,7 @@ class Prop_Assign_Statement(VBA_Object):
         if (context.exit_func):
             return
 
-prop_assign_statement = ((member_access_expression("prop") ^ (Suppress(".") + lex_identifier("prop")))+ \
+prop_assign_statement = (Optional(Suppress(".")) + (member_access_expression("prop") ^ lex_identifier("prop"))+ \
                          lex_identifier('param') + Suppress(':=') + expression('value') + \
                          ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value')))
 prop_assign_statement.setParseAction(Prop_Assign_Statement)

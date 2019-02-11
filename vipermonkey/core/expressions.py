@@ -589,7 +589,8 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # MS-GRAMMAR: index-expression / dictionary-access-expression / with-expression
 
 new_expression = Forward()
-l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | dictionary_access_expression | simple_name_expression
+l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | \
+    dictionary_access_expression | simple_name_expression
 
 # --- FUNCTION CALL ---------------------------------------------------------
 
@@ -841,7 +842,7 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 # - finally literals (strings, integers, etc)
 
 expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
-            ( float_literal | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
+            ( float_literal | named_argument | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
               simple_name_expression | asc | strReverse | literal | file_pointer | placeholder)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
