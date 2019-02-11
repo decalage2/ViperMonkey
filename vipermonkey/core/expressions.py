@@ -769,7 +769,7 @@ expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(S
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
                   (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + \
-                   Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + \
+                   Suppress(Optional('$') + Optional('#') + Optional('!')) + \
                    Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | \
                    Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
 function_call.setParseAction(Function_Call)
