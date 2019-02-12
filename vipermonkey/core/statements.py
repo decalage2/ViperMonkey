@@ -329,6 +329,8 @@ class TaggedBlock(VBA_Object):
         if (context.exit_func):
             return
         for curr_statement in self.block:
+            print "______________"
+            print curr_statement
             curr_statement.eval(context, params=params)
 
 tagged_block = Forward()
@@ -569,9 +571,16 @@ global_variable_declaration.setParseAction(Global_Var_Statement)
 # --- LET STATEMENT --------------------------------------------------------------
 
 class Let_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(Let_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
+        string_ops = set(["mid"])
+        self.string_op = None
+        if ((len(self.name) > 0) and (self.name[0].lower() in string_ops)):
+            self.string_op = {}
+            self.string_op["op"] = self.name[0].lower()
+            self.string_op["args"] = self.name[1:]
         self.expression = tokens.expression
         self.index = None
         if (tokens.index != ''):
@@ -619,6 +628,48 @@ class Let_Statement(VBA_Object):
 
             # No callback.
             pass
+
+    def _handle_string_mod(self, context, rhs):
+        """
+        Handle assignments like Mid(a_string, start_pos, len) = "..."
+        """
+
+        # Are we modifying a string?
+        if (self.string_op is None):
+            return False
+
+        # Modifying a substring?
+        if (self.string_op["op"] == "mid"):
+
+            # Get the string to modify, substring start index, and substring length.
+            args = self.string_op["args"]
+            if (len(args) < 3):
+                return False
+            the_str = eval_arg(args[0], context)
+            the_str_var = args[0]
+            start = eval_arg(args[1], context)
+            size = eval_arg(args[2], context)
+
+            # Sanity check.
+            if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
+                log.error("Assigning " + str(self.name) + " failed. " + str(the_str_var) + " not str or list.")
+                return False
+            if (type(the_str) != type(rhs)):
+                log.error("Assigning " + str(self.name) + " failed. " + str(type(the_str)) + " != " + str(type(rhs)))
+                return False
+            if ((start + size) > len(the_str)):
+                log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
+                return False
+            
+            # Modify the string.
+            mod_str = the_str[:start] + rhs + the_str[start + size:]
+
+            # Set the string in the context.
+            context.set(str(the_str_var), mod_str)
+            return True
+
+        # No string modification.
+        return False
         
     def eval(self, context, params=None):
 
@@ -654,7 +705,11 @@ class Let_Statement(VBA_Object):
         if ((str(self.name).endswith(".Arguments")) or
             (str(self.name).endswith(".Path"))):
             context.report_action(self.name, value, 'Possible Scheduled Task Setup', strip_null_bytes=True)
-        
+
+        # Modifying a string using something like Mid() on the LHS of the assignment?
+        if (self._handle_string_mod(context, value)):
+            return
+            
         # set variable, non-array access.
         if (self.index is None):
 
@@ -817,10 +872,13 @@ class Let_Statement(VBA_Object):
 
 # TODO: remove Set when Set_Statement implemented:
 
+# Mid(zLGzE1gWt, MbgQPcQzy, 1)
+string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_list('params') + Optional(Suppress(')'))
+
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
                 Optional(Suppress(CaselessKeyword('Const'))) + Optional(".") + \
                 ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + Optional(expression('index')) + Suppress(')'))) ^ \
-                 member_access_expression('name')) + \
+                 member_access_expression('name') ^ string_modification('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
 let_statement.setParseAction(Let_Statement)
@@ -2395,7 +2453,7 @@ class On_Error_Statement(VBA_Object):
 
         return
 
-on_error_statement = CaselessKeyword('On') + CaselessKeyword('Error') + \
+on_error_statement = CaselessKeyword('On') + Optional(Suppress(CaselessKeyword('Local'))) + CaselessKeyword('Error') + \
                      ((CaselessKeyword('Goto') + (decimal_literal | lex_identifier)) |
                       (CaselessKeyword('Resume') + CaselessKeyword('Next')))
 

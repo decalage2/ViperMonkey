@@ -46,7 +46,12 @@ class var_in_expr_visitor(visitor):
 
     def __init__(self):
         self.variables = set()
+        self.visited = set()
     
     def visit(self, item):
+        if (item in self.visited):
+            return False
+        self.visited.add(item)        
         if (isinstance(item, SimpleNameExpression)):
             self.variables.add(str(item.name))
+        return True

@@ -169,7 +169,8 @@ class VBA_Object(object):
         limits_exceeded(throw_error=True)
         
         # Visit the current item.
-        visitor.visit(self)
+        if (not visitor.visit(self)):
+            return
 
         # Visit all the children.
         for child in self.get_children():
