@@ -102,6 +102,7 @@ from datetime import datetime
 from datetime import timedelta
 import subprocess
 import zipfile
+import io
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
