@@ -580,7 +580,10 @@ def _read_doc_vars(data, fname):
 
     # Pull doc vars based on the file type.
     if (("Microsoft" in typ) and ("2007+" in typ)):
-        return _read_doc_vars_zip(obj)
+        if obj==fname:
+            return _read_doc_vars_zip(fname)
+        else:
+            return _read_doc_vars_zip(io.BytesIO(data)) # why you gotta make things hard, zipfile?
     else:
         return _read_doc_vars_ole(obj)
     
