@@ -473,10 +473,8 @@ l_expression = Forward()
 function_call_limited = Forward()
 func_call_array_access_limited = Forward()
 function_call = Forward()
-#member_object = (func_call_array_access_limited ^ function_call_limited) | \
-#                Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
 member_object = (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]")) + \
-                 NotAny("(") + NotAny("#") + NotAny("$") + NotAny("!")) ^ \
+                 NotAny("(") + NotAny("#") + NotAny("$") + Optional(Suppress("!"))) ^ \
                 (func_call_array_access_limited ^ function_call_limited)
                 
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
