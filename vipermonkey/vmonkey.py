@@ -1355,23 +1355,26 @@ def _process_file (filename, data,
                             start = macro_name.rindex("/") + 1
                             macro_name = macro_name[start:]
                         global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
+                        tag = ''
                         if 'tag' in form_variables:
                             tag = form_variables['tag']
-                        else:
+                        if (tag is None):
                             tag = ''
                         tag = tag.replace('\xb1', '').replace('\x03', '')
+                        caption = ''
                         if 'caption' in form_variables:
                             caption = form_variables['caption']
-                        else:
+                        if (caption is None):
                             caption = ''
                         caption = caption.replace('\xb1', '').replace('\x03', '')
                         if 'value' in form_variables:
                             val = form_variables['value']
                         else:
                             val = caption
+                        control_tip_text = ''
                         if 'control_tip_text' in form_variables:
                             control_tip_text = form_variables['control_tip_text']
-                        else:
+                        if (control_tip_text is None):
                             control_tip_text = ''
                         control_tip_text = control_tip_text.replace('\xb1', '').replace('\x03', '')
                             
@@ -1408,6 +1411,7 @@ def _process_file (filename, data,
                 # We are not getting variable names this way. Assign wildcarded names that we can use
                 # later to try to heuristically guess form variables.
                 log.warning("Cannot read form strings. " + str(e) + ". Trying fallback method.")
+                traceback.print_exc()
                 try:
                     count = 0
                     skip_strings = ["Tahoma"]

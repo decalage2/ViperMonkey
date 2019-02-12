@@ -199,17 +199,28 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this an Application.Run() instance?
-        if (not str(self).startswith("Application.Run(")):
+        if ((not str(self).startswith("Application.Run(")) and
+            (not str(self).lower().startswith("thisdocument.run("))):
             return None
-
+        
         # Pull out the function name and arguments.
         if (len(self.rhs[0].params) == 0):
             return None
-        func_name = str(self.rhs[0].params[0])
-        func_args = []
-        if (len(self.rhs[0].params) > 1):
-            func_args = self.rhs[0].params[1:]
-        func_args = eval_args(func_args, context)
+
+        # Full function call?
+        func_name = None
+        func_args = None
+        if (isinstance(self.rhs[0].params[0], Function_Call)):
+            func_name = self.rhs[0].params[0].name
+            func_args = self.rhs[0].params[0].params
+
+        # List containing function name + args?
+        else:
+            func_name = str(self.rhs[0].params[0])
+            func_args = []
+            if (len(self.rhs[0].params) > 1):
+                func_args = self.rhs[0].params[1:]
+            func_args = eval_args(func_args, context)
 
         # See if we can run the other function.
         log.debug("Try indirect run of function '" + func_name + "'")
@@ -219,7 +230,13 @@ class MemberAccessExpression(VBA_Object):
                 s = context.get(s)
             if (s is None):
                 return None
-            return s.eval(context=context, params=func_args)
+            r = s.eval(context=context, params=func_args)
+
+            # Report actions if interesting.
+            if (str(self).lower().startswith("thisdocument.run(")):
+                context.report_action('Execute Command', r, 'ThisDocument.Run', strip_null_bytes=True)
+            return r
+        
         except KeyError:
             return None
 
@@ -473,10 +490,8 @@ l_expression = Forward()
 function_call_limited = Forward()
 func_call_array_access_limited = Forward()
 function_call = Forward()
-#member_object = (func_call_array_access_limited ^ function_call_limited) | \
-#                Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
 member_object = (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]")) + \
-                 NotAny("(") + NotAny("#") + NotAny("$") + NotAny("!")) ^ \
+                 NotAny("(") + NotAny("#") + NotAny("$") + Optional(Suppress("!"))) ^ \
                 (func_call_array_access_limited ^ function_call_limited)
                 
 member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
