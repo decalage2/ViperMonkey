@@ -103,7 +103,8 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # # Double
 # @ Currency
 # $ String
-type_suffix = Word(r"%&^!#@$", exact=1) + Optional(White()) + NotAny(Word(alphanums) | '"')
+#type_suffix = Word(r"%&^!#@$", exact=1) + White() + NotAny(Word(alphanums) | '"')
+type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure

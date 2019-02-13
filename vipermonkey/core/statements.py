@@ -329,8 +329,6 @@ class TaggedBlock(VBA_Object):
         if (context.exit_func):
             return
         for curr_statement in self.block:
-            print "______________"
-            print curr_statement
             curr_statement.eval(context, params=params)
 
 tagged_block = Forward()
