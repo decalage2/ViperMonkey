@@ -42,6 +42,7 @@ __version__ = '0.03'
 # --- IMPORTS ------------------------------------------------------------------
 
 import re
+import sys
 
 from identifiers import *
 from lib_functions import *
@@ -328,28 +329,33 @@ class MemberAccessExpression(VBA_Object):
 
     def _handle_replace(self, context, lhs, rhs):
         """
-        Handle string replaces of the form foo.Replace(bar, baz).
+        Handle string replaces of the form foo.Replace(bar, baz). foo is a RegExp object.
         """
 
-        #print "FIX THIS!!!"
-        return None
-        
         # Sanity check.
-        print lhs
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
-        print rhs
         if (not isinstance(rhs, Function_Call)):
-            print "SKIP: 2"
             return None
         if (rhs.name != "Replace"):
-            print "SKIP: 3"
+            return None
+        if (str(lhs) != "RegExp"):
             return None
 
+        # Do we have a pattern for the RegExp?
+        pat_name = str(self.lhs) + ".pattern"
+        if (not context.contains(pat_name)):
+            return None
+        repl = context.get(pat_name)
+        
         # Run the string replace.
+        # expression, find, replace
         new_replace = Function_Call(None, None, None, old_call=rhs)
-        new_replace.params = [lhs] + new_replace.params
-
+        tmp = [new_replace.params[0]]
+        tmp.append(repl)
+        tmp.append(new_replace.params[1])
+        new_replace.params = tmp
+        
         # Evaluate the string replace.
         r = new_replace.eval(context)
         print r
@@ -628,6 +634,7 @@ class Function_Call(VBA_Object):
         if (old_call is not None):
             self.name = old_call.name
             self.params = old_call.params
+            print "***********************"
             return
 
         # Making a new one.
