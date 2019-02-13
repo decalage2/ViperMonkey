@@ -769,6 +769,7 @@ class Context(object):
         var = var.lower()
         # strip VBA nonsense
         var = var.replace('!','').\
+                    replace('^','').\
                     replace('%','').\
                     replace('&','').\
                     replace('@','').\
