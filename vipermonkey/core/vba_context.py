@@ -527,7 +527,7 @@ class Context(object):
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
 
     def add_key_macro(self,key,value):
-        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.', 'keycodeconstants!']
+        namespaces = ['', 'VBA', 'KeyCodeConstants', 'VBA.KeyCodeConstants', 'VBA.vbStrConv', 'vbStrConv']
         self.add_multiple_macro(namespaces,key,value)
 
     def add_color_constant_macro(self,color,value):
@@ -767,6 +767,13 @@ class Context(object):
 
         # Normalize the variable name to lower case.
         var = var.lower()
+        # strip VBA nonsense
+        var = var.replace('!','').\
+                    replace('%','').\
+                    replace('&','').\
+                    replace('@','').\
+                    replace('#','').\
+                    replace('$','')
         log.info("Looking up doc var " + var)
 
         # Are we pulling out all the doc vars?
