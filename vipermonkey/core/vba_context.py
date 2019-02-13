@@ -527,7 +527,7 @@ class Context(object):
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
 
     def add_key_macro(self,key,value):
-        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.']
+        namespaces = ['', 'VBA.', 'KeyCodeConstants.', 'VBA.KeyCodeConstants.', 'VBA.vbStrConv.', 'vbStrConv.', 'keycodeconstants!']
         self.add_multiple_macro(namespaces,key,value)
 
     def add_color_constant_macro(self,color,value):
