@@ -241,7 +241,10 @@ def _read_from_object_text(arg, context):
 
     # Shapes('test33').      TextFrame.TextRange.text
     # Shapes('FrXXBbPlWaco').TextFrame.TextRange
-    if ("shapes(" in arg_str_low):
+    #
+    # Make sure not to pull out Shapes() references that appear as arguments to function
+    # calls.
+    if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
@@ -597,11 +600,18 @@ def coerce_to_int(obj):
         return 0
 
     # Do we have a float string?
-    if (isinstance(obj, str) and ("." in obj)):
-        try:
-            obj = float(obj)
-        except:
-            pass
+    if (isinstance(obj, str)):
+
+        # Float string?
+        if ("." in obj):
+            try:
+                obj = float(obj)
+            except:
+                pass
+
+        # Do we have a null byte string?
+        if (obj.count('\x00') == len(obj)):
+            return 0
             
     return int(obj)
 

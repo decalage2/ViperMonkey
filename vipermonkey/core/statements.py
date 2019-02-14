@@ -328,8 +328,22 @@ class TaggedBlock(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
-        for curr_statement in self.block:
-            curr_statement.eval(context, params=params)
+        for s in self.block:
+            s.eval(context, params=params)
+
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
+            
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
 
 tagged_block = Forward()
 label_statement = Forward()
@@ -1119,7 +1133,7 @@ class For_Statement(VBA_Object):
                 if (not isinstance(s, VBA_Object)):
                     continue
                 s.eval(context=context)
-
+                
                 # Has 'Exit For' been called?
                 if (not context.loop_stack[-1]):
 
@@ -1131,6 +1145,12 @@ class For_Statement(VBA_Object):
                 # Was there an error that will make us jump to an error handler?
                 if (context.must_handle_error()):
                     done = True
+                    break
+
+                # Did we just run a GOTO? If so we should not run the
+                # statements after the GOTO.
+                if (isinstance(s, Goto_Statement)):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                     break
                 
             # Finished with the loop due to 'Exit For' or error?
@@ -1265,6 +1285,12 @@ class For_Each_Statement(VBA_Object):
                     if (context.must_handle_error()):
                         done = True
                         break
+
+                    # Did we just run a GOTO? If so we should not run the
+                    # statements after the GOTO.
+                    if (isinstance(s, Goto_Statement)):
+                        log.debug("GOTO executed. Go to next loop iteration.")
+                        break
                     
                 # Finished with the loop due to 'Exit For' or error?
                 if (done):
@@ -1316,7 +1342,10 @@ def _get_guard_variables(loop_obj, context):
     # Get their current values.
     r = {}
     for var in guard_var_names:
-        r[var] = context.get(var)
+        try:
+            r[var] = context.get(var)
+        except:
+            pass
 
     # Return the values of the vars in the loop guard.
     return r
@@ -1508,6 +1537,12 @@ class While_Statement(VBA_Object):
                     done = True
                     break
 
+                # Did we just run a GOTO? If so we should not run the
+                # statements after the GOTO.
+                if (isinstance(s, Goto_Statement)):
+                    log.debug("GOTO executed. Go to next loop iteration.")
+                    break
+                
             # Finished with the loop due to 'Exit For' or error?
             if (done):
                 break
@@ -1614,6 +1649,12 @@ class Do_Statement(VBA_Object):
                 # Was there an error that will make us jump to an error handler?
                 if (context.must_handle_error()):
                     done = True
+                    break
+
+                # Did we just run a GOTO? If so we should not run the
+                # statements after the GOTO.
+                if (isinstance(s, Goto_Statement)):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                     break
                 
             # Finished with the loop due to 'Exit For'?
@@ -2343,6 +2384,12 @@ class With_Statement(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
             
         log.debug("END WITH")
             
@@ -2394,6 +2441,7 @@ class Goto_Statement(VBA_Object):
         block = context.tagged_blocks[self.label]
 
         # Execute the code block.
+        log.info("GOTO " + str(self.label))
         block.eval(context, params)
 
 # Goto statement

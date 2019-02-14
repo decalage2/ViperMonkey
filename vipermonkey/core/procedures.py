@@ -132,6 +132,12 @@ class Sub(VBA_Object):
             if (context.must_handle_error()):
                 break
 
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
+            
         # Reset variable update scoping.
         context.global_scope = old_global_scope
             
@@ -355,6 +361,12 @@ class Function(VBA_Object):
             if (context.must_handle_error()):
                 break
 
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
+            
         # Reset variable update scoping.
         context.global_scope = old_global_scope
 
