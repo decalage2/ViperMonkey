@@ -131,6 +131,7 @@ class Sub(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+            context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
@@ -360,6 +361,7 @@ class Function(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+            context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.

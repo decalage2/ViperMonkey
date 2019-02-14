@@ -239,6 +239,7 @@ class LooseLines(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+            context.clear_error()
             
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.

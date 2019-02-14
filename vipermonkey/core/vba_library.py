@@ -935,10 +935,14 @@ class InStrRev(VbaLibraryFunc):
             start = params[0] - 1
             if (start < 0):
                 start = 0
+            if (len(params) < 3):
+                return 0
             s1 = params[1]
             s2 = params[2]
 
         # Were we given a search type?
+        s1 = str(s1)
+        s2 = str(s2)
         search_type = 1
         if (isinstance(params[-1], int)):
             search_type = params[-1]

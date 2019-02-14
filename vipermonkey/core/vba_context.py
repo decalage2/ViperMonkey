@@ -550,6 +550,12 @@ class Context(object):
         """
         return (hasattr(self, "got_error") and
                 self.got_error)
+
+    def clear_error(self):
+        """
+        Clear out the error flag.
+        """
+        self.got_error = False
         
     def must_handle_error(self):
         """

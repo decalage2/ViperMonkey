@@ -328,12 +328,14 @@ class TaggedBlock(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+        #print "START TAGGED BLOCK: " + str(self.label)
         for s in self.block:
             s.eval(context, params=params)
 
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+            context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
@@ -344,6 +346,7 @@ class TaggedBlock(VBA_Object):
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
+        #print "END TAGGED BLOCK: " + str(self.label)
 
 tagged_block = Forward()
 label_statement = Forward()
@@ -1122,6 +1125,7 @@ class For_Statement(VBA_Object):
         context.loop_stack.append(True)
 
         # Loop until the loop is broken out of or we hit the last index.
+        #print "START FOR LOOP: " + str(self)
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
@@ -1146,6 +1150,7 @@ class For_Statement(VBA_Object):
                 if (context.must_handle_error()):
                     done = True
                     break
+                context.clear_error()
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
@@ -1163,6 +1168,7 @@ class For_Statement(VBA_Object):
         
         # Remove tracking of this loop.
         context.loop_stack.pop()
+        #print "DONE FOR LOOP: " + str(self)
         log.debug('FOR loop: end.')
 
         # Run the error handler if we have one and we broke out of the statement
@@ -1285,6 +1291,7 @@ class For_Each_Statement(VBA_Object):
                     if (context.must_handle_error()):
                         done = True
                         break
+                    context.clear_error()
 
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
@@ -1536,6 +1543,7 @@ class While_Statement(VBA_Object):
                 if (context.must_handle_error()):
                     done = True
                     break
+                context.clear_error()
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
@@ -1650,6 +1658,7 @@ class Do_Statement(VBA_Object):
                 if (context.must_handle_error()):
                     done = True
                     break
+                context.clear_error()
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
@@ -1746,6 +1755,7 @@ class Select_Statement(VBA_Object):
                     # Was there an error that will make us jump to an error handler?
                     if (context.must_handle_error()):
                         break
+                    context.clear_error()
 
                 # Run the error handler if we have one and we broke out of the statement
                 # loop with an error.
@@ -2384,6 +2394,7 @@ class With_Statement(VBA_Object):
             # Was there an error that will make us jump to an error handler?
             if (context.must_handle_error()):
                 break
+            context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
