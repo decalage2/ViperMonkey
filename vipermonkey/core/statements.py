@@ -462,8 +462,9 @@ class Dim_Statement(VBA_Object):
                 if (var[1]):
                     curr_type += " Array"
                     curr_init_val = []
-                    if ((var[3] is not None) and (curr_type == "Byte Array")):
-                        curr_init_val = [0] * var[3]
+                    if ((var[3] is not None) and
+                        ((curr_type == "Byte Array")) or (curr_type == "Integer Array")):
+                        curr_init_val = [0] * (var[3] + 1)
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = [''] * var[3]
 
