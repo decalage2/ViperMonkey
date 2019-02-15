@@ -119,6 +119,7 @@ class String(VBA_Object):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]
         # Replace Python control characters.
+        """
         self.value = self.value.\
                      replace("\0","\\0").\
                      replace("\1","\\1").\
@@ -135,6 +136,19 @@ class String(VBA_Object):
                      replace("\b", "\\b").\
                      replace("\r", "\\r").\
                      replace("\v", "\\v")
+        """
+        # Some maldocs use the above characters in strings to decode. Replacing
+        # them breaks decoding, so they are commented out until something else
+        # breaks.
+        self.value = self.value.\
+                     replace("\0","\\0").\
+                     replace("\n", "\\n").\
+                     replace("\t", "\\t").\
+                     replace("\f", "\\f").\
+                     replace("\b", "\\b").\
+                     replace("\r", "\\r").\
+                     replace("\v", "\\v")
+        
         log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
