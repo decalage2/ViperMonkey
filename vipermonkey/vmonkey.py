@@ -1066,6 +1066,7 @@ def get_vb_contents(vba_code):
     code = re.findall(pat, vba_code, re.DOTALL)
 
     # Did we find any VB code in a script block?
+    print code
     if (len(code) == 0):
         return vba_code
 
@@ -1074,6 +1075,8 @@ def get_vb_contents(vba_code):
     # Return the code.
     r = ""
     for b in code:
+        if ("</script>" in b):
+            b = b[:b.index("</script>")]
         r += b + "\n"
     return r
     
