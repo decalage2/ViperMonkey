@@ -731,7 +731,7 @@ class Context(object):
             return self.get(".Text")
         
         # Try to get the item using the current with context.
-        tmp_name = str(self.with_prefix) + str(name)
+        tmp_name = str(self.with_prefix) + "." + str(name)
         try:
             return self._get(tmp_name)
         except KeyError:
@@ -880,7 +880,7 @@ class Context(object):
         # Also set the variable using the current With name prefix, if
         # we have one.
         if ((do_with_prefix) and (len(self.with_prefix) > 0)):
-            tmp_name = str(self.with_prefix) + str(name)
+            tmp_name = str(self.with_prefix) + "." + str(name)
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
 
         # Handle base64 conversion with VBA objects.

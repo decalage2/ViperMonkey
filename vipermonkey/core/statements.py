@@ -592,7 +592,9 @@ class Let_Statement(VBA_Object):
         self.name = tokens.name
         string_ops = set(["mid"])
         self.string_op = None
-        if ((len(self.name) > 0) and (self.name[0].lower() in string_ops)):
+        if (hasattr(self.name, "__len__") and
+            (len(self.name) > 0) and
+            (self.name[0].lower() in string_ops)):
             self.string_op = {}
             self.string_op["op"] = self.name[0].lower()
             self.string_op["args"] = self.name[1:]
@@ -980,6 +982,64 @@ class For_Statement(VBA_Object):
         return 'For %s = %r to %r step %r' % (self.name,
                                               self.start_value, self.end_value, self.step_value)
 
+    def _handle_medium_loop(self, context, params, end, step):
+
+        # Handle loops used purely for obfuscation that just do the same
+        # repeated assignment.
+        #
+        # For j = 0 To 190
+        # .TextBox1 = s1
+        # .TextBox1 = s2
+        # Next j
+
+        # Do we just do assignments to simple name expressions that are not
+        # the loop counter in the body?
+        all_static_assigns = True
+        for s in self.statements:
+
+            # Is asignment?
+            if (not isinstance(s, Let_Statement)):
+                all_static_assigns = False
+                break
+
+            # Is a variable on the rhs?
+            if (not isinstance(s.expression, SimpleNameExpression)):
+                all_static_assigns = False
+                break
+
+            # Is the variable the loop index variable?
+            if (str(s.expression).strip().lower() == str(self.name).strip().lower()):
+                all_static_assigns = False
+                break
+
+            # Does the loop body do the same thing repeatedly?
+            if (not all_static_assigns):
+                return False
+
+            # Emulate the loop body once.
+            log.info("Short circuited loop. " + str(self))
+            for s in self.statements:
+
+                # Emulate the statement.
+                log.debug('FOR loop eval statement: %r' % s)
+                if (not isinstance(s, VBA_Object)):
+                    continue
+                s.eval(context=context)
+                
+                # Was there an error that will make us jump to an error handler?
+                if (context.must_handle_error()):
+                    break
+                context.clear_error()
+
+            # Run the error handler if we have one and we broke out of the statement
+            # loop with an error.
+            context.handle_error(params)
+
+            # Set the loop index.
+            context.set(self.name, end + step)
+                     
+            return True
+                
     def _handle_simple_loop(self, context, start, end, step):
 
         # Handle simple loops used purely for obfuscation.
@@ -1155,6 +1215,11 @@ class For_Statement(VBA_Object):
         if ((var is not None) and (val is not None)):
             log.info("Short circuited loop. Set " + str(var) + " = " + str(val))
             context.set(var, val)
+            return
+
+        # See if we have a more complicated style loop put in purely for obfuscation.
+        do_body_once = self._handle_medium_loop(context, params, end, step)
+        if (do_body_once):
             return
 
         # Set end to valid values.
@@ -2089,7 +2154,8 @@ class If_Statement(VBA_Object):
                 for stmt in piece["body"]:
                     if (not isinstance(stmt, VBA_Object)):
                         continue
-                    stmt.eval(context)
+                    if (hasattr(stmt, "eval")):
+                        stmt.eval(context)
 
                 # We have emulated the if.
                 break
@@ -2419,10 +2485,14 @@ class With_Statement(VBA_Object):
             context.with_prefix += "." + str(self.env)
         else:
             context.with_prefix = str(self.env)
+        if (context.with_prefix.startswith(".")):
+            context.with_prefix = context.with_prefix[1:]
             
         # Evaluate each statement in the with block.
         log.debug("START WITH")
-        if (not isinstance(self.body, list)):
+        try:
+            tmp1 = iter(self.body)
+        except TypeError:
             self.body = [self.body]
         for s in self.body:
 
@@ -2448,6 +2518,7 @@ class With_Statement(VBA_Object):
         if ("." not in context.with_prefix):
             context.with_prefix = ""
         else:
+            # Pop back to previous With context.
             end = context.with_prefix.rindex(".")
             context.with_prefix = context.with_prefix[:end]
 

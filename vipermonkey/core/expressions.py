@@ -358,7 +358,6 @@ class MemberAccessExpression(VBA_Object):
         
         # Evaluate the string replace.
         r = new_replace.eval(context)
-        print r
         return r
 
     def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
@@ -500,13 +499,13 @@ member_object = (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional
                  NotAny("(") + NotAny("#") + NotAny("$") + Optional(Suppress("!"))) ^ \
                 (func_call_array_access_limited ^ function_call_limited)
                 
-member_access_expression = Group( Group( member_object("lhs") + OneOrMore( Suppress(".") + member_object("rhs") ) ) )
+member_access_expression = Group( Group( member_object("lhs") + OneOrMore( NotAny(White()) + Suppress(".") + NotAny(White()) + member_object("rhs") ) ) ).leaveWhitespace()
 member_access_expression.setParseAction(MemberAccessExpression)
 
 # TODO: Figure out how to have unlimited member accesses.
 member_object_limited = Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
-member_access_expression_limited = Group( Group( member_object("lhs") + Suppress(".") + member_object_limited("rhs") + \
-                                                 Optional(Suppress(".") + member_object_limited("rhs1")) ) )
+member_access_expression_limited = Group( Group( (member_object("lhs") + NotAny(White()) + Suppress(".") + NotAny(White()) + member_object_limited("rhs") + \
+                                                 Optional(NotAny(White()) + Suppress(".") + NotAny(White()) + member_object_limited("rhs1")) ).leaveWhitespace() ) )
 member_access_expression_limited.setParseAction(MemberAccessExpression)
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
@@ -634,7 +633,6 @@ class Function_Call(VBA_Object):
         if (old_call is not None):
             self.name = old_call.name
             self.params = old_call.params
-            print "***********************"
             return
 
         # Making a new one.
@@ -787,7 +785,9 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression
-expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+# WARNING: This may break parsing in function calls when the 1st argument is skipped.
+#expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
