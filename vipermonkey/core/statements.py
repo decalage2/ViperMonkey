@@ -1002,8 +1002,10 @@ class For_Statement(VBA_Object):
                 all_static_assigns = False
                 break
 
-            # Is a variable on the rhs?
-            if (not isinstance(s.expression, SimpleNameExpression)):
+            # Is a variable on the rhs? Or a constant?
+            # TODO: Add other constant types.
+            is_constant = (str(s.expression).isdigit())
+            if ((not isinstance(s.expression, SimpleNameExpression)) and (not is_constant)):
                 all_static_assigns = False
                 break
 

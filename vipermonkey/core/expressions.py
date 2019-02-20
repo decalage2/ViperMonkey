@@ -589,6 +589,7 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
 with_member_access_expression = OneOrMore( Suppress(".") + (unrestricted_name ^ function_call_limited) )
+with_member_access_expression.setParseAction(lambda t: ''.join('.%s' % u for u in t)[1:])
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
 
