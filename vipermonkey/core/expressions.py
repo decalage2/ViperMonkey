@@ -171,7 +171,9 @@ class MemberAccessExpression(VBA_Object):
         # Make a member access object from parse results.
         else:
             super(MemberAccessExpression, self).__init__(original_str, location, tokens)
+            print tokens
             tokens = tokens[0][0]
+            print tokens
             self.rhs = tokens[1:]
             self.lhs = tokens.lhs
             self.rhs1 = ""
@@ -499,7 +501,8 @@ member_object = (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional
                  NotAny("(") + NotAny("#") + NotAny("$") + Optional(Suppress("!"))) ^ \
                 (func_call_array_access_limited ^ function_call_limited)
                 
-member_access_expression = Group( Group( member_object("lhs") + OneOrMore( NotAny(White()) + Suppress(".") + NotAny(White()) + member_object("rhs") ) ) ).leaveWhitespace()
+member_access_expression = Group( Group( Suppress(ZeroOrMore(" ")) + member_object("lhs") + \
+                                         OneOrMore( NotAny(White()) + Suppress(".") + member_object("rhs") ) ) + Suppress(ZeroOrMore(" ")) ).leaveWhitespace()
 member_access_expression.setParseAction(MemberAccessExpression)
 
 # TODO: Figure out how to have unlimited member accesses.
