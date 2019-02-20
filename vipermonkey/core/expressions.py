@@ -171,9 +171,7 @@ class MemberAccessExpression(VBA_Object):
         # Make a member access object from parse results.
         else:
             super(MemberAccessExpression, self).__init__(original_str, location, tokens)
-            print tokens
             tokens = tokens[0][0]
-            print tokens
             self.rhs = tokens[1:]
             self.lhs = tokens.lhs
             self.rhs1 = ""
