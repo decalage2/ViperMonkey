@@ -1022,6 +1022,12 @@ def strip_useless_code(vba_code, local_funcs):
             log.debug("STRIP: Stripping Line (3): " + line)
             r += "' STRIPPED LINE\n"
             continue
+
+        # For now we are just stripping out class declarations. Need to actually
+        # emulate classes somehow.
+        if ((line.strip().startswith("Class ")) or (line.strip() == "End Class")):
+            log.warning("Classes not handled. Stripping '" + line.strip() + "'.")
+            continue
         
         # The line is useful. Keep it.
 

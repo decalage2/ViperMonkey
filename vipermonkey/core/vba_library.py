@@ -820,7 +820,11 @@ class Replace(VbaLibraryFunc):
         if ((rep is None) or (rep == 0)):
             rep = ''
         #r = string.replace(pat, rep)
-        r = re.sub(pat, rep, string)
+        try:
+            r = re.sub(pat, rep, string)
+        except:
+            r = string.replace(pat, rep)
+            
         log.debug("Replace: return %r" % r)
         return r
 

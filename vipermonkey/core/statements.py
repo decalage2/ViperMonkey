@@ -57,6 +57,7 @@ from vba_object import int_convert
 import procedures
 from var_in_expr_visitor import *
 
+import traceback
 import string
 from logger import log
 import sys
@@ -2372,6 +2373,7 @@ class Call_Statement(VBA_Object):
                         pass
                 log.error('Procedure %r not found' % func_name)
             except Exception as e:
+                traceback.print_exc(file=sys.stdout)
                 log.debug("General error: " + str(e))
                 raise e
                 
