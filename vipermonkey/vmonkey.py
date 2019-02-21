@@ -851,7 +851,8 @@ def strip_useless_code(vba_code, local_funcs):
                 continue
 
             # Skip function definitions.
-            if (line.strip().lower().startswith("if ")):
+            if ((line.strip().lower().startswith("if ")) or
+                (line.strip().lower().startswith("elseif "))):
                 log.debug("SKIP: If statement. Keep it.")
                 continue
             
