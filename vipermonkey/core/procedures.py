@@ -278,6 +278,10 @@ class Function(VBA_Object):
         self.name = tokens.function_name
         self.params = tokens.params
         self.statements = tokens.statements
+        try:
+            len(self.statements)
+        except:
+            self.statements = [self.statements]
         self.return_type = tokens.return_type
         self.vars = {}
         self.bogus_if = None

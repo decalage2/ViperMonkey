@@ -744,7 +744,10 @@ class Int(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         val = params[0]
         try:
-            if (isinstance(val, str) and (("e" in val) or ("E" in val))):
+            if (isinstance(val, str) and (val.startswith("&H"))):
+                val = val.replace("&H", "0x")
+                r = int(val, 16)
+            elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
             else:
                 r = int_convert(val)
