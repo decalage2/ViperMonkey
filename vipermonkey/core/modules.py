@@ -130,7 +130,9 @@ class Module(VBA_Object):
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
         for block in self.loose_lines:
-            if (isinstance(block, Sub) or isinstance(block, Function)):
+            if (isinstance(block, Sub) or
+                isinstance(block, Function) or
+                isinstance(block, External_Function)):
                 log.debug("Skip loose line eval of " + str(block))
                 continue
             context.global_scope = True
@@ -227,7 +229,9 @@ class LooseLines(VBA_Object):
         for curr_statement in self.block:
 
             # Don't emulate declared functions.
-            if (isinstance(curr_statement, Sub) or isinstance(curr_statement, Function)):
+            if (isinstance(curr_statement, Sub) or
+                isinstance(curr_statement, Function) or
+                isinstance(curr_statement, External_Function)):
                 log.debug("Skip loose line eval of " + str(curr_statement))
                 continue
             
