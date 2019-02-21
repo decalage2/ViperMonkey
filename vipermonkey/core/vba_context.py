@@ -525,6 +525,7 @@ class Context(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = self.filename
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
+        self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
 
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA', 'KeyCodeConstants', 'VBA.KeyCodeConstants', 'VBA.vbStrConv', 'vbStrConv']

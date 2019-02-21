@@ -1028,7 +1028,12 @@ def strip_useless_code(vba_code, local_funcs):
         if ((line.strip().startswith("Class ")) or (line.strip() == "End Class")):
             log.warning("Classes not handled. Stripping '" + line.strip() + "'.")
             continue
-        
+
+        # Also not handling Attribute statements at all.
+        if (line.strip().startswith("Attribute ")):
+            log.warning("Attribute statements not handled. Stripping '" + line.strip() + "'.")
+            continue
+            
         # The line is useful. Keep it.
 
         # At least 1 maldoc builder is not putting a newline before the
