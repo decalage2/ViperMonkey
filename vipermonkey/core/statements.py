@@ -1060,7 +1060,8 @@ class For_Statement(VBA_Object):
             return (None, None)
 
         # Are we just declaring a variable in the loop body?
-        body = str(self.statements[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        body_raw = str(self.statements[0]).replace("Let ", "")
+        body = body_raw.replace("(", "").replace(")", "").strip()
         if (body.startswith("Dim ")):
 
             # Just run the loop body once.
@@ -1076,11 +1077,13 @@ class For_Statement(VBA_Object):
         # Are we just assigning a variable to the loop counter?
         if (body.endswith(" = " + str(self.name))):
 
-            # Just assign the variable to the final loop counter value.
-            fields = body.split(" ")
+            # Just assign the variable to the final loop counter value, unless
+            # we have an array update on the LHS.
+            fields = body_raw.split(" ")
             var = fields[0].strip()
-            context.set(self.name, end + step)
-            return (var, end + step)
+            if (("(" not in var) and (")" not in var)):
+                context.set(self.name, end + step)
+                return (var, end + step)
             
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
