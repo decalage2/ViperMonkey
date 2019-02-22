@@ -822,12 +822,17 @@ class Replace(VbaLibraryFunc):
         rep = params[2]
         if ((rep is None) or (rep == 0)):
             rep = ''
-        #r = string.replace(pat, rep)
-        try:
-            r = re.sub(pat, rep, string)
-        except:
+
+        # Don't do a regex replacement of everything.
+        if (pat.strip() != "."):
+            try:
+                r = re.sub(pat, rep, string)
+            except:
+                r = string.replace(pat, rep)
+        else:
             r = string.replace(pat, rep)
-            
+
+        # Done.
         log.debug("Replace: return %r" % r)
         return r
 
