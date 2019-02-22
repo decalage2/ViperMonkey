@@ -2324,7 +2324,9 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p.replace("\x00", ""))
                     else:
                         tmp_call_params.append(p)
-            if (func_name != "Debug.Print"):
+            if ((func_name != "Debug.Print") and
+                (not func_name.endswith("Add")) and
+                (len(tmp_call_params) > 0)):
                 context.report_action('Object.Method Call', tmp_call_params, func_name, strip_null_bytes=True)
         try:
 
