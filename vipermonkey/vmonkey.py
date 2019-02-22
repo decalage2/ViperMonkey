@@ -911,6 +911,11 @@ def strip_useless_code(vba_code, local_funcs):
             log.debug("SKIP: Assigned vars = " + str(match))
             for var in match:
 
+                # Skip empty.
+                var = var[0]
+                if (len(var.strip()) == 0):
+                    continue
+                
                 # Keep lines where we may be running a command via an object.
                 val = line[line.rindex("=") + 1:]
                 if ("." in val):
@@ -919,9 +924,13 @@ def strip_useless_code(vba_code, local_funcs):
                 # Keep object creations.
                 if ("CreateObject" in val):
                     continue
+
+                # Keep updates of the LHS where the LHS appears on the RHS
+                # (ex. a = a + 1).
+                if (var.lower() in val.lower()):
+                    continue
                 
                 # It does not look like we are running something. Track the variable.
-                var = var[0]
                 if (var not in assigns):
                     assigns[var] = set()
                 assigns[var].add(line_num)
@@ -1136,7 +1145,6 @@ def parse_stream(subfilename,
         print '-'*79
         print 'PARSING VBA CODE:'
         try:
-            #extend_statement_grammar()
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
             ParserElement.resetCache()
             m.code = vba_code
@@ -1226,8 +1234,12 @@ def process_file (container,
                   altparser=False,
                   strip_useless=False,
                   entry_points=None,
-                  time_limit=None):
+                  time_limit=None,
+                  verbose=False):
 
+    if (verbose):
+        colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
+    
     if not data:
         #TODO: replace print by writing to a provided output file (sys.stdout by default)
         if container:
