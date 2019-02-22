@@ -84,7 +84,7 @@ class Sub(VBA_Object):
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val)
+            context.set(param.name, init_val, force_local=True)
 
         # Set given parameter values.
         self.byref_params = {}
@@ -104,7 +104,7 @@ class Sub(VBA_Object):
 
                 # Add the parameter value to the local function context.
                 log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value)
+                context.set(param_name, param_value, force_local=True)
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
@@ -311,14 +311,14 @@ class Function(VBA_Object):
         # needed since otherwise it is not possible to differentiate a function call
         # from a reference to the function return value in the function body.
         if (len(self.params) == 0):
-            context.set(self.name, 'NULL')
+            context.set(self.name, 'NULL', force_local=True)
 
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val)
+            context.set(param.name, init_val, force_local=True)
             
         # Set given parameter values.
         self.byref_params = {}
@@ -337,7 +337,7 @@ class Function(VBA_Object):
 
                 # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value)
+                context.set(param_name, param_value, force_local=True)
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):

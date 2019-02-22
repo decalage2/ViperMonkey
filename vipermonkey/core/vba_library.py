@@ -789,9 +789,9 @@ class StrReverse(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert len(params) > 0
         # TODO: Actually implement this properly.
-        string = params[0]
-        if (string is None):
-            string = ''
+        string =''
+        if (params[0] is not None):
+            string = str(params[0])
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
         return r

@@ -91,6 +91,10 @@ class Context(object):
                  loaded_excel=None,
                  filename=None):
 
+        # Track the current call stack. This is used to detect simple cases of
+        # infinite recursion.
+        self.call_stack = []
+        
         # Track the maximum number of iterations to emulate in a while loop before
         # breaking out (infinite loop) due to no vars in the loop guard being
         # modified.
@@ -144,6 +148,7 @@ class Context(object):
             self.dll_func_true_names = context.dll_func_true_names
             self.filename = context.filename
             self.skip_handlers = context.skip_handlers
+            self.call_stack = context.call_stack
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -830,7 +835,7 @@ class Context(object):
             
     # TODO: set_global?
 
-    def set(self, name, value, var_type=None, do_with_prefix=True):
+    def set(self, name, value, var_type=None, do_with_prefix=True, force_local=False):
 
         # Does the name make sense?
         if (not isinstance(name, basestring)):
@@ -844,7 +849,7 @@ class Context(object):
         
         # convert to lowercase
         name = name.lower()
-        if name in self.locals:
+        if ((name in self.locals) or force_local):
             try:
                 log.debug("Set local var " + str(name) + " = " + str(value))
             except:

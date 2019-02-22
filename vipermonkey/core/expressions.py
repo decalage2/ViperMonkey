@@ -675,12 +675,23 @@ class Function_Call(VBA_Object):
         str_params = repr(params)[1:-1]
         if (len(str_params) > 80):
             str_params = str_params[:80] + "..."
+
+        # Do we have an obvious recursive loop? Detect this by looking for the current call
+        # with the exact same arguments appearing in the call stack.
+        # TODO: This needs more work and testing.
+        #if (context.call_stack.count(self) > 3):
+        #    #print context.call_stack
+        #    log.warn("Recursive infinite loop detected. Aborting call " + str(self))
+        #    return "NULL"
             
         # Would Visual Basic have thrown an error when evaluating the arguments?
         if (context.have_error()):
             log.warn('Short circuiting function call %s(%s) due to thrown VB error.' % (self.name, str_params))
             return None
-            
+
+        # Add the current call to the call stack.
+        context.call_stack.append(self)
+        
         # Actually emulate the function call.
         log.info('calling Function: %s(%s)' % (self.name, str_params))
         save = False
@@ -706,16 +717,31 @@ class Function_Call(VBA_Object):
                     log.debug('Array Access: %r[%r]' % (tmp, params[0]))
                     index = int_convert(params[0])
                     try:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
+                        # Return function result.
                         r = tmp[index]
                         log.debug('Returning: %r' % r)
                         return r
                     except:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
+                        # Return function result.
                         log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
                         context.got_error = True
                         return 0
 
                 # Looks like we want the whole array (ex. foo()).
                 else:
+
+                    # Done with call. Pop this call off the call stack.
+                    context.call_stack = context.call_stack[:-1]
+                    
+                    # Return function result.
                     return f
                     
             log.debug('Calling: %r' % f)
@@ -734,30 +760,60 @@ class Function_Call(VBA_Object):
                                 arg_var_name = str(self.params[byref_param_info[1]])
                                 context.set(arg_var_name, f.byref_params[byref_param_info])
 
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
                         # Return result.
                         return r
 
                     except AttributeError as e:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+                        
+                        # Return result.
                         log.error(str(f) + " has no eval() method. " + str(e))
                         return f
+
                 elif (len(params) > 0):
 
                     # Looks like this is actually an array access.
                     log.debug("Looks like array access.")
                     try:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
+                        # Return result.
                         i = int_convert(params[0])
                         r = f[i]
                         if (isinstance(f, str)):
                             r = ord(r)
                         log.debug("Return " + str(r))
                         return r
+
                     except:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
+                        # Return result.
                         log.error("Array access %r[%r] failed." % (f, params[0]))
                         return 0
                     else:
+
+                        # Done with call. Pop this call off the call stack.
+                        context.call_stack = context.call_stack[:-1]
+
+                        # Return result.
                         log.error("Improper type for function.")
                         return None
             else:
+
+                # Done with call. Pop this call off the call stack.
+                context.call_stack = context.call_stack[:-1]
+                
+                # Return result.
                 log.error('Function %r resolves to None' % self.name)
                 return None
 
@@ -777,10 +833,20 @@ class Function_Call(VBA_Object):
                 # See if we can run the other function.
                 log.debug("Try indirect run of function '" + new_func + "'")
                 try:
+
+                    # Done with call. Pop this call off the call stack.
+                    context.call_stack = context.call_stack[:-1]
+                    
+                    # Return result.
                     s = context.get(new_func)
                     return s.eval(context=context, params=new_params)
                 except KeyError:
                     pass
+                
+            # Done with call. Pop this call off the call stack.
+            context.call_stack = context.call_stack[:-1]
+            
+            # Return result.                
             log.warning('Function %r not found' % self.name)
             return None
 

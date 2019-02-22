@@ -82,7 +82,7 @@ def limits_exceeded(throw_error=False):
 
     # Check to see if we are approaching the recursion limit.
     level = len(getouterframes(currentframe(1)))
-    recursion_exceeded = (level > (sys.getrecursionlimit() * .75))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
     # Check to see if we have exceeded the time limit.
