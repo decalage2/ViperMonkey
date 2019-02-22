@@ -471,6 +471,15 @@ class MemberAccessExpression(VBA_Object):
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
             if (call_retval is not None):
                 return call_retval
+
+            # Is the LHS a 0 argument function?
+            if ((isinstance(tmp_lhs, procedures.Function)) and
+                (len(tmp_lhs.params) == 0)):
+
+                # The LHS is actually a function call. Emulate the function
+                # in the current context.
+                r = tmp_lhs.eval(context)
+                return r
             
             # Construct a new partially resolved member access object.
             r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
