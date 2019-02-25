@@ -2238,7 +2238,6 @@ class Cells(VbaLibraryFunc):
         if (context.loaded_excel is None):
             log.warning("Cannot process Cells() call. No Excel file loaded.")
             return "NULL"
-        print "EXCEL: 2"
         
         # Currently only handles Cells(x, y) calls.
         if (len(params) != 2):
@@ -2302,7 +2301,6 @@ class Range(VbaLibraryFunc):
         if (context.loaded_excel is None):
             log.warning("Cannot process Range() call. No Excel file loaded.")
             return "NULL"
-        print "EXCEL: 3"
         
         # Currently only handles Range(x) calls.
         if (len(params) != 1):

@@ -393,10 +393,7 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Evaluate the Cells() call.
-        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        r = eval_arg(rhs, context)
-        print "CELL READ"
-        print r
+        #r = eval_arg(rhs, context)
         return None
     
     def eval(self, context, params=None):
