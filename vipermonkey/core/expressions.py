@@ -386,6 +386,18 @@ class MemberAccessExpression(VBA_Object):
         
         # We handled the write.
         return True
+
+    def _handle_excel_read(self, context, rhs):
+        """
+        Handle Excel reads like worksheets.cells(1,2).
+        """
+
+        # Evaluate the Cells() call.
+        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        r = eval_arg(rhs, context)
+        print "CELL READ"
+        print r
+        return None
     
     def eval(self, context, params=None):
 
@@ -451,6 +463,11 @@ class MemberAccessExpression(VBA_Object):
 
             # Handle things like foo.Replace(bar, baz).
             call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
+
+            # Handle Excel cells() references.
+            call_retval = self._handle_excel_read(context, self.rhs)
             if (call_retval is not None):
                 return call_retval
                     

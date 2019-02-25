@@ -2238,6 +2238,7 @@ class Cells(VbaLibraryFunc):
         if (context.loaded_excel is None):
             log.warning("Cannot process Cells() call. No Excel file loaded.")
             return "NULL"
+        print "EXCEL: 2"
         
         # Currently only handles Cells(x, y) calls.
         if (len(params) != 2):
@@ -2278,7 +2279,7 @@ class Cells(VbaLibraryFunc):
                 r = str(sheet.cell(col, row)).replace("text:", "").replace("'", "")
                 if (r.startswith('u')):
                     r = r[1:]
-                log.debug("Cell(" + str(col) + ", " + str(row) + ") = " + str(r))
+                log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
                 return r
 
             except Exception as e:
@@ -2301,6 +2302,7 @@ class Range(VbaLibraryFunc):
         if (context.loaded_excel is None):
             log.warning("Cannot process Range() call. No Excel file loaded.")
             return "NULL"
+        print "EXCEL: 3"
         
         # Currently only handles Range(x) calls.
         if (len(params) != 1):

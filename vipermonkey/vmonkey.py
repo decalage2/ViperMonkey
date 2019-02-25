@@ -1371,7 +1371,7 @@ def _process_file (filename, data,
                 
             # Pull out the document text.
             vm.doc_text = _read_doc_text('', data=data)
-                
+
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
@@ -1551,8 +1551,20 @@ def process_file_scanexpr (container, filename, data):
         traceback.print_exc()
     print ''
 
+def print_version():
+    """
+    Print version information.
+    """
 
-
+    print "Version Information:\n"
+    print "Python:\t\t\t" + str(sys.version_info)
+    import pyparsing
+    print "pyparsing:\t\t" + str(pyparsing.__version__)
+    import olefile
+    print "olefile:\t\t" + str(olefile.__version__)
+    import oletools.olevba
+    print "olevba:\t\t\t" + str(oletools.olevba.__version__)
+    
 def main():
     """
     Main function, called when vipermonkey is run from the command line
@@ -1585,10 +1597,6 @@ def main():
 
     usage = 'usage: %prog [options] <filename> [filename2 ...]'
     parser = optparse.OptionParser(usage=usage)
-    # parser.add_option('-o', '--outfile', dest='outfile',
-    #     help='output file')
-    # parser.add_option('-c', '--csv', dest='csv',
-    #     help='export results to a CSV file')
     parser.add_option("-r", action="store_true", dest="recursive",
         help='find files recursively in subdirectories.')
     parser.add_option("-z", "--zip", dest='zip_password', type='str', default=None,
@@ -1607,9 +1615,16 @@ def main():
                       help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
     parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
                       type='int', help="Time limit (in minutes) for emulation.")
-
+    parser.add_option("-v", '--version', action="store_true", dest="print_version",
+        help='Print version information of packages used by ViperMonkey.')
+    
     (options, args) = parser.parse_args()
 
+    # Print version information and exit?
+    if (options.print_version):
+        print_version()
+        sys.exit(0)
+    
     # Print help if no arguments are passed
     if len(args) == 0:
         print __doc__
@@ -1619,7 +1634,7 @@ def main():
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
-
+    
     for container, filename, data in xglob.iter_files(args,
                                                       recursive=options.recursive,
                                                       zip_password=options.zip_password,

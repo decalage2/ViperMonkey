@@ -204,6 +204,7 @@ def _read_from_excel(arg, context):
         try:
             
             # Load the sheet.
+            print "EXCEL: 1"
             sheet = context.loaded_excel.sheet_by_name(sheet_name)
             
             # Pull out the cell column and row.
