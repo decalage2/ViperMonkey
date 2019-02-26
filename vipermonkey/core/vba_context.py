@@ -524,6 +524,60 @@ class Context(object):
         self.globals["msoCapsMixed".lower()] = -2
         self.globals["msoNoCaps".lower()] = 0
         self.globals["msoSmallCaps".lower()] = 1
+
+        # XlApplicationInternational enumeration (Excel)
+        self.globals["xl24HourClock".lower()] = 33
+        self.globals["xl4DigitYears".lower()] = 43
+        self.globals["xlAlternateArraySeparator".lower()] = 16
+        self.globals["xlColumnSeparator".lower()] = 14
+        self.globals["xlCountryCode".lower()] = 1
+        self.globals["xlCountrySetting".lower()] = 2
+        self.globals["xlCurrencyBefore".lower()] = 37
+        self.globals["xlCurrencyCode".lower()] = 25
+        self.globals["xlCurrencyDigits".lower()] = 27
+        self.globals["xlCurrencyLeadingZeros".lower()] = 40
+        self.globals["xlCurrencyMinusSign".lower()] = 38
+        self.globals["xlCurrencyNegative".lower()] = 28
+        self.globals["xlCurrencySpaceBefore".lower()] = 36
+        self.globals["xlCurrencyTrailingZeros".lower()] = 39
+        self.globals["xlDateOrder".lower()] = 32
+        self.globals["xlDateSeparator".lower()] = 17
+        self.globals["xlDayCode".lower()] = 21
+        self.globals["xlDayLeadingZero".lower()] = 42
+        self.globals["xlDecimalSeparator".lower()] = 3
+        self.globals["xlGeneralFormatName".lower()] = 26
+        self.globals["xlHourCode".lower()] = 22
+        self.globals["xlLeftBrace".lower()] = 12
+        self.globals["xlLeftBracket".lower()] = 10
+        self.globals["xlListSeparator".lower()] = 5
+        self.globals["xlLowerCaseColumnLetter".lower()] = 9
+        self.globals["xlLowerCaseRowLetter".lower()] = 8
+        self.globals["xlMDY".lower()] = 44
+        self.globals["xlMetric".lower()] = 35
+        self.globals["xlMinuteCode".lower()] = 23
+        self.globals["xlMonthCode".lower()] = 20
+        self.globals["xlMonthLeadingZero".lower()] = 41
+        self.globals["xlMonthNameChars".lower()] = 30
+        self.globals["xlNoncurrencyDigits".lower()] = 29
+        self.globals["xlNonEnglishFunctions".lower()] = 34
+        self.globals["xlRightBrace".lower()] = 13
+        self.globals["xlRightBracket".lower()] = 11
+        self.globals["xlRowSeparator".lower()] = 15
+        self.globals["xlSecondCode".lower()] = 24
+        self.globals["xlThousandsSeparator".lower()] = 4
+        self.globals["xlTimeLeadingZero".lower()] = 45
+        self.globals["xlTimeSeparator".lower()] = 18
+        self.globals["xlUpperCaseColumnLetter".lower()] = 7
+        self.globals["xlUpperCaseRowLetter".lower()] = 6
+        self.globals["xlWeekdayNameChars".lower()] = 31
+        self.globals["xlYearCode".lower()] = 19
+
+        # XlBinsType enumeration (Word)
+        self.globals["xlBinsTypeAutomatic".lower()] = 0
+        self.globals["xlBinsTypeCategorical".lower()] = 1
+        self.globals["xlBinsTypeManual".lower()] = 2
+        self.globals["xlBinsTypeBinSize".lower()] = 3
+        self.globals["xlBinsTypeBinCount".lower()] = 4
         
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0

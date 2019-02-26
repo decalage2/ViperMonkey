@@ -434,7 +434,7 @@ class ViperMonkey(object):
             for suffix in self.callback_suffixes:
 
                 # Is this a callback?
-                if (name.lower().endswith(suffix.lower())):
+                if (str(name).lower().endswith(suffix.lower())):
 
                     # Is this a function?
                     item = self.globals[name]

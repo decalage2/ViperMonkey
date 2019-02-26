@@ -386,6 +386,9 @@ class Shell(VbaLibraryFunc):
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
 
+class ExecuteStatement(Shell):
+    pass
+    
 class ShellExecute(Shell):
     """
     shell.application.ShellExecute() function.
@@ -585,6 +588,25 @@ class AscW(VbaLibraryFunc):
 
 class AscB(AscW):
     pass
+
+class International(VbaLibraryFunc):
+    """
+    application.international() Function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) == 0):
+            return "NULL"
+        val = params[0]
+
+        # xlCountrySetting
+        if (val == 2):
+
+            # Act like we are in the USA.
+            return 1
+
+        # Not emulated.
+        return "NULL"
 
 class StrComp(VbaLibraryFunc):
     """
@@ -2658,7 +2680,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
-               AddCode, StrPtr):
+               AddCode, StrPtr, International, ExecuteStatement):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
