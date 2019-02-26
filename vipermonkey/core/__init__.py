@@ -362,14 +362,6 @@ class ViperMonkey(object):
             module.accept(defn_visitor)
             module.accept(var_visitor)
             module.accept(import_visitor)
-        """
-        print("************ CALLED FUNCS *************************")
-        print(call_visitor.called_funcs)
-        print("************ DEFINED FUNCS *************************")
-        print(defn_visitor.funcs)
-        print("************ DEFINED VARIABLES *************************")
-        print(var_visitor.variables)
-        """
 
         # Eliminate variables and local functions from the list of called functions.
         r = []
