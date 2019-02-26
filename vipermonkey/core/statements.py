@@ -2380,7 +2380,7 @@ class Call_Statement(VBA_Object):
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
                 log.debug("General error: " + str(e))
-                raise e
+                return
                 
 # 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
