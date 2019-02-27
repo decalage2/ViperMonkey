@@ -725,6 +725,17 @@ class Shapes(VbaLibraryFunc):
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
         return "Shapes('" + str(params[0]) + "')"
+
+class InlineShapes(VbaLibraryFunc):
+    """
+    InlineShapes() object reference. Stubbed.
+    """
+
+    def eval(self, context, params=None):
+
+        # Just return the string representation of the access. This is used in
+        # vba_object._read_from_object_text()
+        return "InlineShapes('" + str(params[0]) + "')"
     
 class Split(VbaLibraryFunc):
     """
@@ -2680,7 +2691,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
-               AddCode, StrPtr, International, ExecuteStatement):
+               AddCode, StrPtr, International, ExecuteStatement, InlineShapes):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

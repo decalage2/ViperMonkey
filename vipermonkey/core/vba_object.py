@@ -251,6 +251,8 @@ def _read_from_object_text(arg, context):
 
         # Handle member access?
         lhs = "Shapes('1')"
+        if ("inlineshapes" in arg_str_low):
+            lhs = "InlineShapes('1')"
         if ("MemberAccessExpression" in str(type(arg))):
 
             # Drop off ActiveDocument prefix.
@@ -273,12 +275,18 @@ def _read_from_object_text(arg, context):
 
             if (lhs == "NULL"):
                 lhs = "Shapes('1')"
+            if ("inlineshapes" in arg_str_low):
+                lhs = "InlineShapes('1')"
             log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
         doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
-        if (("Shapes(" in doc_var_name) and (not doc_var_name.startswith("Shapes("))):
+        if (("InlineShapes(" in doc_var_name) and (not doc_var_name.startswith("InlineShapes("))):
+            doc_var_name = doc_var_name[doc_var_name.index("InlineShapes("):]
+        elif (("Shapes(" in doc_var_name) and
+              (not doc_var_name.startswith("Shapes(")) and
+              ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
         log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
@@ -293,7 +301,11 @@ def _read_from_object_text(arg, context):
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
         doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
-        if (("Shapes(" in doc_var_name) and (not doc_var_name.startswith("Shapes("))):
+        if (("InlineShapes(" in doc_var_name) and (not doc_var_name.startswith("InlineShapes("))):
+            doc_var_name = doc_var_name[doc_var_name.index("InlineShapes("):]
+        elif (("Shapes(" in doc_var_name) and
+              (not doc_var_name.startswith("Shapes(")) and
+              ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())

@@ -391,6 +391,53 @@ def _get_shapes_text_values(fname, stream):
 
     return r
 
+def _get_inlineshapes_text_values(data):
+    """
+    Read in the text associated with InlineShape objects in the document.
+    NOTE: This currently is a hack.
+    """
+
+    r = []
+    try:
+
+        # It looks like maybe(?) the shapes text appears as text blocks starting at
+        # ^@p^@i^@x^@e^@l (wide char "pixel") and ended by several null bytes.
+        pat = r"\x00p\x00i\x00x\x00e\x00l\x00*((?:\x00?[\x20-\x7e])+)\x00\x00\x00"
+        strs = re.findall(pat, data)
+
+        # Hope that the InlineShapes() object indexing follows the same order as the strings
+        # we found.
+        pos = 1
+        for shape_text in strs:
+
+            # Access value with .TextFrame.TextRange.Text accessor.
+            shape_text = shape_text.replace("\x00", "")
+            var = "InlineShapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            r.append((var, shape_text))
+            
+            # Access value with .TextFrame.ContainingRange accessor.
+            var = "InlineShapes('" + str(pos) + "').TextFrame.ContainingRange"
+            r.append((var, shape_text))
+
+            # Access value with .AlternativeText accessor.
+            var = "InlineShapes('" + str(pos) + "').AlternativeText"
+            r.append((var, shape_text))
+            
+            # Move to next shape.
+            pos += 1
+            
+    except Exception as e:
+
+        # Report the error.
+        log.error("Cannot read associated Shapes text. " + str(e))
+
+        # See if we can read Shapes() info from an XML file.
+        if ("not an OLE2 structured storage file" in str(e)):
+            r = _get_shapes_text_values_xml(fname)
+
+    return r
+
+
 def _get_embedded_object_values(fname):
     """
     Read in the tag and caption associated with Embedded Objects in the document.
@@ -1347,6 +1394,17 @@ def _process_file (filename, data,
                     vm.doc_vars[var_name.lower()] = var_val
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
 
+            # Pull text associated with InlineShapes() objects.
+            got_it = False
+            for (var_name, var_val) in _get_inlineshapes_text_values(data):
+                got_it = True
+                vm.doc_vars[var_name.lower()] = var_val
+                log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+            if (not got_it):
+                for (var_name, var_val) in _get_inlineshapes_text_values(data):
+                    vm.doc_vars[var_name.lower()] = var_val
+                    log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+                    
             # Pull out embedded OLE form textbox text.
             for (var_name, var_val) in _get_ole_textbox_values(data, 'worddocument'):
                 vm.doc_vars[var_name.lower()] = var_val
