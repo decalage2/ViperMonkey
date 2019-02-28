@@ -1118,7 +1118,9 @@ class For_Statement(VBA_Object):
         num = None
         try:
             expr = expression.parseString(expr_str, parseAll=True)[0]
-            num = str(expr.eval(context))
+            num = str(expr)
+            if (hasattr(expr, "eval")):
+                num = str(expr.eval(context))
         except ParseException:
             return (None, None)
         if (not num.isdigit()):
