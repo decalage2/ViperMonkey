@@ -603,6 +603,9 @@ class Let_Statement(VBA_Object):
         self.index = None
         if (tokens.index != ''):
             self.index = tokens.index
+        self.index1 = None
+        if (tokens.index1 != ''):
+            self.index1 = tokens.index1
         log.debug('parsed %r' % self)
 
     def __repr__(self):
@@ -754,34 +757,6 @@ class Let_Statement(VBA_Object):
                 # Do we have an actual value to assign?
                 if (value != "NULL"):
 
-                    """
-                    # This is trying to handle converting non-english unicode strings to
-                    # byte arrays properly. It needs work.
-
-                    # Do we have a unicode string in a non-english character set?
-                    if (isinstance(value, from_unicode_str)):
-
-                        # Is the 1st byte in the string a non-printable character?
-                        # This assumes UTF-16 and assumes that the character set byte
-                        # is not ASCII printable.
-                        if ((value[0] not in string.printable) and
-                            (value.count(value[0]) == len(value)/2)):
-
-                            # Now do a tighter check and see if every other character
-                            # is equal to the potential character set byte.
-                            new_value = ""
-                            pos = 0
-                            got_it = True
-                            while (pos < len(value)):
-                                if (value[pos] != value[0]):
-                                    got_it = False
-                                    break
-                                new_value += value[pos + 1]
-                                pos += 2
-                            if (got_it):
-                                value = from_unicode_str(new_value)
-                    """
-
                     # Generate the byte array for the string.
                     tmp = []
                     pos = 0
@@ -870,13 +845,15 @@ class Let_Statement(VBA_Object):
                 # used. Need to actually check what is being done on error.
                 log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
 
-        # set variable, array access.
+        # Set variable, array access.
         else:
 
-            # Evaluate the index expression.
+            # Evaluate the index expression(s).
             index = int_convert(eval_arg(self.index, context=context))
-            log.debug('setting %s(%r) = %s' % (self.name, index, value))
-
+            if (self.index1 is not None):
+                log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, index, index1, value))
+                return
+                
             # Is array variable being set already represented as a list?
             # Or a string?
             arr_var = None
@@ -949,7 +926,8 @@ string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_li
 
 let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
                 Optional(Suppress(CaselessKeyword('Const'))) + Optional(".") + \
-                ((TODO_identifier_or_object_attrib('name') + Optional(Suppress('(') + Optional(expression('index')) + Suppress(')'))) ^ \
+                ((TODO_identifier_or_object_attrib('name') + \
+                  Optional(Suppress('(') + Optional(expression('index')) + Optional("," + expression('index1')) + Suppress(')'))) ^ \
                  member_access_expression('name') ^ string_modification('name')) + \
                 Literal('=').suppress() + \
                 (expression('expression') ^ boolean_expression('expression'))
@@ -2495,7 +2473,9 @@ class Redim_Statement(VBA_Object):
 redim_statement = CaselessKeyword('ReDim').suppress() + \
                   Optional(CaselessKeyword('Preserve')) + \
                   expression('item') + \
-                  Optional('(' + expression + CaselessKeyword('To') + expression + ')').suppress() + \
+                  Optional('(' + expression + CaselessKeyword('To') + expression + \
+                           ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + \
+                           ')').suppress() + \
                   Optional(CaselessKeyword('As') + lex_identifier).suppress()
 redim_statement.setParseAction(Redim_Statement)
 
