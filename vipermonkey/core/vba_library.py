@@ -835,7 +835,7 @@ class RegWrite(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.report_action("Registry Write", str(params), strip_null_bytes=True)
+        context.report_action("Registry Write", str(params), "Registry Write", strip_null_bytes=True)
         return "NULL"
 
 class Replace(VbaLibraryFunc):
