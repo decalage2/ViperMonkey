@@ -124,6 +124,37 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class QBColor(VbaLibraryFunc):
+    """
+    QBColor() color lookup function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) == 0):
+            return 0
+        val = int(params[0])
+        if ((val < 0) or (val > 15)):
+            return 0
+        lookup = {
+            0 : 0,
+            1 : 8388608,
+            2 : 32768,
+            3 : 8421376,
+            4 : 128,
+            5 : 8388736,
+            6 : 32896,
+            7 : 12632256,
+            8 : 8421504,
+            9 : 16711680,
+            10 : 65280,
+            11 : 16776960,
+            12 : 255,
+            13 : 16711935,
+            14 : 65535,
+            15 : 16777215
+        }
+        return lookup[val]
+
 class FolderExists(VbaLibraryFunc):
     """
     FolderExists() VB function (stubbed).
@@ -2701,7 +2732,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
-               RegWrite):
+               RegWrite, QBColor):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
