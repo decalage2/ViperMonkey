@@ -730,7 +730,20 @@ class Let_Statement(VBA_Object):
         # Modifying a string using something like Mid() on the LHS of the assignment?
         if (self._handle_string_mod(context, value)):
             return
-            
+
+        # Setting OnSheetActivate function?
+        if (str(self.name).endswith("OnSheetActivate")):
+
+            # Emulate the OnSheetActivate function.
+            func_name = str(self.expression).strip()
+            try:
+                func = context.get(func_name)
+                log.info("Emulating OnSheetActivate handler function " + func_name + "...")
+                func.eval(context)
+                return
+            except KeyError:
+                log.error("WARNING: Cannot find OnSheetActivate handler function %s" % func_name)
+        
         # set variable, non-array access.
         if (self.index is None):
 

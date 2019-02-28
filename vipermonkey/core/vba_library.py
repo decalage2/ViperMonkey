@@ -829,6 +829,15 @@ class StrReverse(VbaLibraryFunc):
         log.debug("StrReverse: return %r" % r)
         return r
 
+class RegWrite(VbaLibraryFunc):
+    """
+    RegWrite() function.
+    """
+
+    def eval(self, context, params=None):
+        context.report_action("Registry Write", str(params), strip_null_bytes=True)
+        return "NULL"
+
 class Replace(VbaLibraryFunc):
     """
     Replace() string function.
@@ -2691,7 +2700,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Format, Range, Switch, WeekDay, ShellExecute, OpenTextFile, GetTickCount,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
-               AddCode, StrPtr, International, ExecuteStatement, InlineShapes):
+               AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
+               RegWrite):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
