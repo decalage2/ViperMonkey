@@ -526,6 +526,11 @@ member_access_expression = Group( Group( Suppress(ZeroOrMore(" ")) + member_obje
                                          OneOrMore( NotAny(White()) + Suppress(".") + member_object("rhs") ) ) + Suppress(ZeroOrMore(" ")) ).leaveWhitespace()
 member_access_expression.setParseAction(MemberAccessExpression)
 
+# Whitespace allowed before the "."
+member_access_expression_loose = Group( Group( Suppress(ZeroOrMore(" ")) + member_object("lhs") + \
+                                               OneOrMore( Suppress(".") + member_object("rhs") ) ) + Suppress(ZeroOrMore(" ")) )
+member_access_expression_loose.setParseAction(MemberAccessExpression)
+
 # TODO: Figure out how to have unlimited member accesses.
 member_object_limited = Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
 member_access_expression_limited = Group( Group( (member_object("lhs") + NotAny(White()) + Suppress(".") + NotAny(White()) + member_object_limited("rhs") + \
@@ -875,7 +880,8 @@ class Function_Call(VBA_Object):
 
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
-expr_list_item = expression ^ boolean_expression
+expr_list_item = expression ^ boolean_expression ^ member_access_expression_loose
+#expr_list_item = expression ^ boolean_expression
 # WARNING: This may break parsing in function calls when the 1st argument is skipped.
 #expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))

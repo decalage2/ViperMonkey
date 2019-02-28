@@ -2285,7 +2285,14 @@ class Call_Statement(VBA_Object):
         dll_func_name = context.get_true_name(self.name)
         if (dll_func_name is not None):
             self.name = dll_func_name
-        
+
+        # Are we calling a member access expression?
+        if (isinstance(self.name, MemberAccessExpression)):
+
+            # Just evaluate the expression as the call.
+            log.debug("Call of member access expression " + str(self.name))
+            return self.name.eval(context, self.params)
+            
         # Get argument values.
         log.debug("Call: eval params: " + str(self.params))
         call_params = eval_args(self.params, context=context)
@@ -2386,9 +2393,16 @@ class Call_Statement(VBA_Object):
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
+"""
 call_statement = NotAny(known_keywords_statement_start) + \
                  Optional(CaselessKeyword('Call').suppress()) + \
                  (member_access_expression_limited('name') | TODO_identifier_or_object_attrib_loose('name')) + \
+                 Suppress(Optional(NotAny(White()) + '$') + Optional(NotAny(White()) + '#') + Optional(NotAny(White()) + '!')) + \
+                 Optional(call_params)
+"""
+call_statement = NotAny(known_keywords_statement_start) + \
+                 Optional(CaselessKeyword('Call').suppress()) + \
+                 (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
                  Suppress(Optional(NotAny(White()) + '$') + Optional(NotAny(White()) + '#') + Optional(NotAny(White()) + '!')) + \
                  Optional(call_params)
 call_statement.setParseAction(Call_Statement)
