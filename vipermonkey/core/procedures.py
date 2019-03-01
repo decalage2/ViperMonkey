@@ -78,23 +78,26 @@ class Sub(VBA_Object):
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
-        
+
+        # Compute the argument values.
+        call_info = {}
+        call_info["FUNCTION_NAME -->"] = self.name
+
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val, force_local=True)
+            call_info[param.name] = init_val
 
         # Set given parameter values.
         self.byref_params = {}
         if params is not None:
+
             # TODO: handle named parameters
             for i in range(len(params)):
 
                 # Set the parameter value.
-                if (i >= len(self.params)):
-                    break
                 param_name = self.params[i].name
                 param_value = params[i]
 
@@ -103,14 +106,28 @@ class Sub(VBA_Object):
                     param_value = ""
 
                 # Add the parameter value to the local function context.
-                log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value, force_local=True)
+                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+                call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
+            
+        # Do we have an obvious recursive loop? Detect this by looking for the current call
+        # with the exact same arguments appearing in the call stack.
+        # TODO: This needs more work and testing.
+        if (context.call_stack.count(call_info) > 0):
+            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            return "NULL"
+
+        # Add the current call to the call stack.
+        context.call_stack.append(call_info)
+
+        # Set the parameter values in the current context.
+        for param_name in call_info.keys():
+            context.set(param_name, call_info[param_name], force_local=True)
 
         # Variable updates can go in the local scope.
         old_global_scope = context.global_scope
@@ -153,6 +170,9 @@ class Sub(VBA_Object):
         # Save the values of the ByRef parameters.
         for byref_param in self.byref_params.keys():
             self.byref_params[byref_param] = context.get(byref_param[0].lower())
+
+        # Done with call. Pop this call off the call stack.
+        del context.call_stack[-1]
             
         # Handle subs with no return values.
         try:            
@@ -306,20 +326,24 @@ class Function(VBA_Object):
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
-        
+
+        # Compute the argument values.
+        call_info = {}
+        call_info["FUNCTION_NAME -->"] = self.name
+
         # add function name in locals if the function takes 0 arguments. This is
         # needed since otherwise it is not possible to differentiate a function call
         # from a reference to the function return value in the function body.
         if (len(self.params) == 0):
-            context.set(self.name, 'NULL', force_local=True)
+            call_info[self.name] = 'NULL'
 
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val, force_local=True)
-            
+            call_info[param.name] = init_val
+
         # Set given parameter values.
         self.byref_params = {}
         if params is not None:
@@ -337,18 +361,32 @@ class Function(VBA_Object):
 
                 # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value, force_local=True)
+                call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
+            
+        # Do we have an obvious recursive loop? Detect this by looking for the current call
+        # with the exact same arguments appearing in the call stack.
+        # TODO: This needs more work and testing.
+        if (context.call_stack.count(call_info) > 0):
+            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            return "NULL"
 
+        # Add the current call to the call stack.
+        context.call_stack.append(call_info)
+
+        # Set the parameter values in the current context.
+        for param_name in call_info.keys():
+            context.set(param_name, call_info[param_name], force_local=True)
+        
         # Variable updates can go in the local scope.
         old_global_scope = context.global_scope
         context.global_scope = False
-                    
+        
         # Emulate the function.
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
@@ -384,6 +422,9 @@ class Function(VBA_Object):
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
 
+        # Done with call. Pop this call off the call stack.
+        del context.call_stack[-1]
+            
         # TODO: get result from context.locals
         context.exit_func = False
         try:
@@ -391,7 +432,7 @@ class Function(VBA_Object):
             # Save the values of the ByRef parameters.
             for byref_param in self.byref_params.keys():
                 self.byref_params[byref_param] = context.get(byref_param[0].lower())
-            
+
             # Get the return value.
             return_value = context.get(self.name)
             if ((return_value is None) or (isinstance(return_value, Function))):
@@ -400,7 +441,7 @@ class Function(VBA_Object):
             log.debug('Function %s: return value = %r' % (self.name, return_value))
             return return_value
         except KeyError:
-
+            
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
             #context.set(self.name, '')

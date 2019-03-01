@@ -1268,6 +1268,12 @@ class For_Statement(VBA_Object):
 
             # Increment the loop counter by the step.
             val = context.get(self.name)
+            try:
+                val = int(val)
+                step = int(step)
+            except Exception as e:
+                log.error("Cannot update loop counter. Breaking loop. " + str(e))
+                break                
             context.set(self.name, val + step)
         
         # Remove tracking of this loop.
