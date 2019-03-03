@@ -47,6 +47,8 @@ __version__ = '0.02'
 from comments_eol import *
 from procedures import *
 from statements import *
+import vba_context
+from function_defn_visitor import *
 
 from logger import log
 
@@ -55,8 +57,11 @@ from logger import log
 # --- MODULE -----------------------------------------------------------------
 
 class Module(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
+
         super(Module, self).__init__(original_str, location, tokens)
+
         self.name = None
         self.code = None  # set by ViperMonkey after parsing
         self.attributes = {}
@@ -65,13 +70,26 @@ class Module(VBA_Object):
         self.external_functions = {}
         self.subs = {}
         self.global_vars = {}
+        self.loose_lines = []
+
+        # Save all function/sub definitions.
+        visitor = function_defn_visitor()
+        self.accept(visitor)
+        for f in visitor.func_objects:
+            log.debug("saving func decl: %r" % f.name)
+            self.functions[f.name] = f
+        
         for token in tokens:
+            if isinstance(token, If_Statement_Macro):
+                for n in token.external_functions.keys():
+                    log.debug("saving external func decl: %r" % n)
+                    self.external_functions[n] = token.external_functions[n]
             if isinstance(token, Sub):
                 log.debug("saving sub decl: %r" % token.name)
                 self.subs[token.name] = token
-            if isinstance(token, Function):
-                log.debug("saving func decl: %r" % token.name)
-                self.functions[token.name] = token
+            #if isinstance(token, Function):
+            #    log.debug("saving func decl: %r" % token.name)
+            #    self.functions[token.name] = token
             if isinstance(token, External_Function):
                 log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
@@ -79,35 +97,20 @@ class Module(VBA_Object):
                 log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
             elif isinstance(token, Global_Var_Statement):
-                log.debug("saving global var decl: %r = %r" % (token.name, token.value))
-                self.global_vars[token.name] = token.value
+
+                # Global variable initialization is now handled by emulating the
+                # LooseLines blocks of code in the module.
+                self.loose_lines.append(token)
+
             elif isinstance(token, Dim_Statement):
 
-                # Add the declared variables to the global variables.
-                for var in token.variables:
+                # Global variable initialization is now handled by emulating the
+                # LooseLines blocks of code in the module.
+                self.loose_lines.append(token)
 
-                    # Get the initial value.
-                    curr_init_val = var[2]
+            elif isinstance(token, LooseLines):
+                self.loose_lines.append(token)
                     
-                    # Get initial var value based on type.
-                    curr_type = var[3]
-                    if ((curr_type is not None) and (curr_init_val is None)):
-
-                        # Get the initial value.
-                        if ((curr_type == "Long") or (curr_type == "Integer")):
-                            curr_init_val = 0
-                        if (curr_type == "String"):
-                            curr_init_val = ''
-                
-                        # Is this variable an array?
-                        if (var[1]):
-                            curr_type += " Array"
-                            curr_init_val = []
-
-                    # Set the initial value of the declared variable.
-                    self.global_vars[var[0]] = curr_init_val
-                    log.debug("saving global var decl: %r = %r" % (var[0], curr_init_val))
-
         self.name = self.attributes.get('VB_Name', None)
         # TODO: should not use print
         print(self)
@@ -122,6 +125,42 @@ class Module(VBA_Object):
             r += '  %r\n' % extfunc
         return r
 
+    def eval(self, context, params=None):
+
+        # Emulate the loose line blocks (statements that appear outside sub/func
+        # defs) in order.
+        for block in self.loose_lines:
+            if (isinstance(block, Sub) or
+                isinstance(block, Function) or
+                isinstance(block, External_Function)):
+                log.debug("Skip loose line eval of " + str(block))
+                continue
+            context.global_scope = True
+            block.eval(context, params)
+            context.global_scope = False
+
+    def load_context(self, context):
+        """
+        Load functions/subs defined in the module into the given
+        context.
+        """
+        
+        for name, _sub in self.subs.items():
+            log.debug('storing sub "%s" in globals' % name)
+            context.set(name, _sub)
+        for name, _function in self.functions.items():
+            log.debug('storing function "%s" in globals' % name)
+            context.set(name, _function)
+        for name, _function in self.external_functions.items():
+            log.debug('storing external function "%s" in globals' % name)
+            context.set(name, _function)
+        for name, _var in self.global_vars.items():
+            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+            if (isinstance(name, str)):
+                context.set(name, _var)
+            if (isinstance(name, list)):
+                context.set(name[0], _var, var_type=name[1])
+            
 # see MS-VBAL 4.2 Modules
 #
 # MS-GRAMMAR: procedural_module_header = CaselessKeyword('Attribute') + CaselessKeyword('VB_Name') + Literal('=') + quoted_string
@@ -147,7 +186,8 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.2 Implicit Definition Directives
 # TODO: 5.2.3 Module Declarations
 
-declaration_statement = option_statement | dim_statement | global_variable_declaration | external_function | rem_statement
+loose_lines = Forward()
+declaration_statement = external_function | loose_lines | option_statement | dim_statement | global_variable_declaration | rem_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -160,8 +200,60 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 # TODO: add rem statememt and others?
 empty_line = EOL.suppress()
 
+class LooseLines(VBA_Object):
+    """
+    A list of Visual Basic statements that don't appear in a Sub or Function.
+    This is mainly appicable to VBScript files.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(LooseLines, self).__init__(original_str, location, tokens)
+        self.block = tokens.block
+        log.info('parsed %r' % self)
+
+    def __repr__(self):
+        s = repr(self.block)
+        if (len(s) > 35):
+            s = s[:35] + " ...)"
+        return 'Loose Lines Block: %s: %s statement(s)' % (s, len(self.block))
+
+    def eval(self, context, params=None):
+
+        # Exit if an exit function statement was previously called.
+        #if (context.exit_func):
+        #    return
+
+        # Emulate the statements in the block.
+        log.info("Emulating " + str(self) + " ...")
+        context.global_scope = True
+        for curr_statement in self.block:
+
+            # Don't emulate declared functions.
+            if (isinstance(curr_statement, Sub) or
+                isinstance(curr_statement, Function) or
+                isinstance(curr_statement, External_Function)):
+                log.debug("Skip loose line eval of " + str(curr_statement))
+                continue
+            
+            # Is this something we can emulate?
+            if (not isinstance(curr_statement, VBA_Object)):
+                continue
+            curr_statement.eval(context, params=params)
+
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            context.clear_error()
+            
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
+loose_lines <<= OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('block')
+loose_lines.setParseAction(LooseLines)
+
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line))
+module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line) | simple_if_statement_macro | loose_lines)
 
 module_body = module_declaration + module_code
 

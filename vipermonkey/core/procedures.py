@@ -78,40 +78,91 @@ class Sub(VBA_Object):
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
-        
+
+        # Compute the argument values.
+        call_info = {}
+        call_info["FUNCTION_NAME -->"] = self.name
+
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val)
+            call_info[param.name] = init_val
 
         # Set given parameter values.
         self.byref_params = {}
         if params is not None:
+
             # TODO: handle named parameters
             for i in range(len(params)):
 
                 # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
-                log.debug('Sub %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value)
+
+                # Handle empty string parameters.
+                if ((param_value == 0) and (self.params[i].my_type == "String")):
+                    param_value = ""
+
+                # Add the parameter value to the local function context.
+                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+                call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
+            
+        # Do we have an obvious recursive loop? Detect this by looking for the current call
+        # with the exact same arguments appearing in the call stack.
+        # TODO: This needs more work and testing.
+        if (context.call_stack.count(call_info) > 0):
+            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            return "NULL"
+
+        # Add the current call to the call stack.
+        context.call_stack.append(call_info)
+
+        # Set the parameter values in the current context.
+        for param_name in call_info.keys():
+            context.set(param_name, call_info[param_name], force_local=True)
+
+        # Variable updates can go in the local scope.
+        old_global_scope = context.global_scope
+        context.global_scope = False
                     
+        # Emulate the function.
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
+        context.got_error = False
         for s in self.statements:
+
+            # Emulate the current statement.
             log.debug('Sub %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
 
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            context.clear_error()
+
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
+            
+        # Reset variable update scoping.
+        context.global_scope = old_global_scope
+            
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
@@ -119,6 +170,9 @@ class Sub(VBA_Object):
         # Save the values of the ByRef parameters.
         for byref_param in self.byref_params.keys():
             self.byref_params[byref_param] = context.get(byref_param[0].lower())
+
+        # Done with call. Pop this call off the call stack.
+        del context.call_stack[-1]
             
         # Handle subs with no return values.
         try:            
@@ -207,13 +261,27 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 
 sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
+sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+                   + Optional(params_list_paren) + Suppress(':')
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
-sub = (sub_start + \
-       Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
-       Optional(bad_if_statement('bogus_if')) + \
-       Suppress(Optional(bad_next_statement)) + \
-       sub_end)
+simple_sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function'))).suppress()
+sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+multiline_sub = (sub_start + \
+                 Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                 Optional(bad_if_statement('bogus_if')) + \
+                 Suppress(Optional(bad_next_statement)) + \
+                 sub_end)
+simple_multiline_sub = (sub_start + \
+                        Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                        Optional(bad_if_statement('bogus_if')) + \
+                        Suppress(Optional(bad_next_statement)) + \
+                        simple_sub_end)
+# Static Sub autoopEN(): Call atecyx: End Sub
+singleline_sub = sub_start_single + simple_statements_line('statements') + sub_end_single
+sub = singleline_sub | multiline_sub
+simple_sub = simple_multiline_sub
 sub.setParseAction(Sub)
+simple_sub.setParseAction(Sub)
 
 # for line parser:
 sub_start_line = public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
@@ -230,6 +298,10 @@ class Function(VBA_Object):
         self.name = tokens.function_name
         self.params = tokens.params
         self.statements = tokens.statements
+        try:
+            len(self.statements)
+        except:
+            self.statements = [self.statements]
         self.return_type = tokens.return_type
         self.vars = {}
         self.bogus_if = None
@@ -250,24 +322,28 @@ class Function(VBA_Object):
         # create a new context for this execution:
         caller_context = context
         context = Context(context=caller_context)
-
+        
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
-        
+
+        # Compute the argument values.
+        call_info = {}
+        call_info["FUNCTION_NAME -->"] = self.name
+
         # add function name in locals if the function takes 0 arguments. This is
         # needed since otherwise it is not possible to differentiate a function call
         # from a reference to the function return value in the function body.
         if (len(self.params) == 0):
-            context.set(self.name, 'NULL')
+            call_info[self.name] = 'NULL'
 
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            context.set(param.name, init_val)
-            
+            call_info[param.name] = init_val
+
         # Set given parameter values.
         self.byref_params = {}
         if params is not None:
@@ -278,17 +354,43 @@ class Function(VBA_Object):
                 # Set the parameter value.
                 param_name = self.params[i].name
                 param_value = params[i]
+
+                # Handle empty string parameters.
+                if ((param_value == 0) and (self.params[i].my_type == "String")):
+                    param_value = ""
+
+                # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-                context.set(param_name, param_value)
+                call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
 
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
-                
+            
+        # Do we have an obvious recursive loop? Detect this by looking for the current call
+        # with the exact same arguments appearing in the call stack.
+        # TODO: This needs more work and testing.
+        if (context.call_stack.count(call_info) > 0):
+            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            return "NULL"
+
+        # Add the current call to the call stack.
+        context.call_stack.append(call_info)
+
+        # Set the parameter values in the current context.
+        for param_name in call_info.keys():
+            context.set(param_name, call_info[param_name], force_local=True)
+        
+        # Variable updates can go in the local scope.
+        old_global_scope = context.global_scope
+        context.global_scope = False
+        
+        # Emulate the function.
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
+        context.got_error = False
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
@@ -298,10 +400,31 @@ class Function(VBA_Object):
             if (context.exit_func):
                 break
 
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            context.clear_error()
+
+            # Did we just run a GOTO? If so we should not run the
+            # statements after the GOTO.
+            if (isinstance(s, Goto_Statement)):
+                log.debug("GOTO executed. Go to next loop iteration.")
+                break
+            
+        # Reset variable update scoping.
+        context.global_scope = old_global_scope
+
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
+            
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
 
+        # Done with call. Pop this call off the call stack.
+        del context.call_stack[-1]
+            
         # TODO: get result from context.locals
         context.exit_func = False
         try:
@@ -309,7 +432,7 @@ class Function(VBA_Object):
             # Save the values of the ByRef parameters.
             for byref_param in self.byref_params.keys():
                 self.byref_params[byref_param] = context.get(byref_param[0].lower())
-            
+
             # Get the return value.
             return_value = context.get(self.name)
             if ((return_value is None) or (isinstance(return_value, Function))):
@@ -318,7 +441,7 @@ class Function(VBA_Object):
             log.debug('Function %s: return value = %r' % (self.name, return_value))
             return return_value
         except KeyError:
-
+            
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
             #context.set(self.name, '')
@@ -326,20 +449,36 @@ class Function(VBA_Object):
 
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
-                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') \
-                 + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+                 CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
+                 Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+                        CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
+                        Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
 function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
+simple_function_end = (CaselessKeyword('End') + CaselessKeyword('Function')).suppress()
+function_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
-function = (function_start + \
-            Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
-            Optional(bad_if_statement('bogus_if')) + \
-            Suppress(Optional(bad_next_statement)) + \
-            function_end)
-            
+multiline_function = (function_start + \
+                      Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                      Optional(bad_if_statement('bogus_if')) + \
+                      Suppress(Optional(bad_next_statement)) + \
+                      function_end)
+simple_multiline_function = (function_start + \
+                             Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+                             Optional(bad_if_statement('bogus_if')) + \
+                             Suppress(Optional(bad_next_statement)) + \
+                             simple_function_end)
+
+singleline_function = function_start_single + simple_statements_line('statements') + function_end_single
+function = singleline_function | multiline_function
+simple_function = simple_multiline_function            
 function.setParseAction(Function)
+simple_function.setParseAction(Function)
 
 # for line parser:
 function_start_line = public_private + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 function_start_line.setParseAction(Function)
+
+extend_statement_grammar()

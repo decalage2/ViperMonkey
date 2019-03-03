@@ -60,6 +60,7 @@ import sys
 from datetime import datetime
 import pyparsing
 
+from meta import read_metadata_item
 import expressions
 
 max_emulation_time = None
@@ -81,7 +82,7 @@ def limits_exceeded(throw_error=False):
 
     # Check to see if we are approaching the recursion limit.
     level = len(getouterframes(currentframe(1)))
-    recursion_exceeded = (level > (sys.getrecursionlimit() * .75))
+    recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
     # Check to see if we have exceeded the time limit.
@@ -91,11 +92,11 @@ def limits_exceeded(throw_error=False):
     if (recursion_exceeded):
         log.error("Call recursion depth approaching limit.")
         if (throw_error):
-            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting.")
+            raise RuntimeError("The ViperMonkey recursion depth will be exceeded. Aborting analysis.")
     if (time_exceeded):
         log.error("Emulation time exceeded.")
         if (throw_error):
-            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting.")
+            raise RuntimeError("The ViperMonkey emulation time limit was exceeded. Aborting analysis.")
         
     return (recursion_exceeded or time_exceeded)
 
@@ -168,7 +169,8 @@ class VBA_Object(object):
         limits_exceeded(throw_error=True)
         
         # Visit the current item.
-        visitor.visit(self)
+        if (not visitor.visit(self)):
+            return
 
         # Visit all the children.
         for child in self.get_children():
@@ -235,49 +237,80 @@ def _read_from_object_text(arg, context):
 
     # Do we have an object text access?
     arg_str = str(arg)
-    if (((arg_str.endswith(".TextFrame.TextRange.Text")) or
-         (arg_str.endswith(".AlternativeText")) or
-         (arg_str.endswith(".TextFrame.ContainingRange"))) and
-        isinstance(arg, expressions.MemberAccessExpression)):
+    arg_str_low = arg_str.lower().strip()
+
+    # Shapes('test33').      TextFrame.TextRange.text
+    # Shapes('FrXXBbPlWaco').TextFrame.TextRange
+    #
+    # Make sure not to pull out Shapes() references that appear as arguments to function
+    # calls.
+    if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
         log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
 
-        # Drop off ActiveDocument prefix.
-        lhs = arg.lhs
-        if (str(lhs) == "ActiveDocument"):
-            lhs = arg.rhs[0]
-        
-        # Eval the leftmost prefix element of the member access expression first.
-        log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
-        if (hasattr(lhs, "eval")):
-            lhs = lhs.eval(context)
-        else:
+        # Handle member access?
+        lhs = "Shapes('1')"
+        if ("inlineshapes" in arg_str_low):
+            lhs = "InlineShapes('1')"
+        if ("MemberAccessExpression" in str(type(arg))):
 
-            # Look this up as a variable name.
-            var_name = str(lhs)
-            try:
-                lhs = context.get(var_name)
-            except KeyError:
-                lhs = var_name
-                
-        log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+            # Drop off ActiveDocument prefix.
+            lhs = arg.lhs
+            if ((str(lhs) == "ActiveDocument") or (str(lhs) == "ThisDocument")):
+                lhs = arg.rhs[0]
+        
+            # Eval the leftmost prefix element of the member access expression first.
+            log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+            if (hasattr(lhs, "eval")):
+                lhs = lhs.eval(context)
+            else:
+
+                # Look this up as a variable name.
+                var_name = str(lhs)
+                try:
+                    lhs = context.get(var_name)
+                except KeyError:
+                    lhs = var_name
+
+            if (lhs == "NULL"):
+                lhs = "Shapes('1')"
+            if ("inlineshapes" in arg_str_low):
+                lhs = "InlineShapes('1')"
+            log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
-        log.debug("eval_arg: Looking for object text " + str(doc_var_name))
+        doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
+        if (("InlineShapes(" in doc_var_name) and (not doc_var_name.startswith("InlineShapes("))):
+            doc_var_name = doc_var_name[doc_var_name.index("InlineShapes("):]
+        elif (("Shapes(" in doc_var_name) and
+              (not doc_var_name.startswith("Shapes(")) and
+              ("InlineShapes(" not in doc_var_name)):
+            doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
+        log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         if (val is not None):
+            log.debug("eval_obj_text: Found " + str(doc_var_name) + " = " + str(val))
             return val
 
         # Not found. Try looking for the object with index 1.
         lhs_str = str(lhs)
+        if ("'" not in lhs_str):
+            return None
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
         doc_var_name = new_lhs + ".TextFrame.TextRange.Text"
+        doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
+        if (("InlineShapes(" in doc_var_name) and (not doc_var_name.startswith("InlineShapes("))):
+            doc_var_name = doc_var_name[doc_var_name.index("InlineShapes("):]
+        elif (("Shapes(" in doc_var_name) and
+              (not doc_var_name.startswith("Shapes(")) and
+              ("InlineShapes(" not in doc_var_name)):
+            doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
         log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
-            
+    
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -287,11 +320,10 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
     # pypy seg faults sometimes if the recursion depth is exceeded. Try to
     # avoid that. Also check to see if emulation has taken too long.
-    if (limits_exceeded()):
-        raise RuntimeError("The ViperMonkey recursion depth will be exceeded or emulation time limit was exceeded. Aborting.")
+    limits_exceeded(throw_error=True)
 
-    log.debug("try eval arg: %s (%s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object)))
-
+    log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
+    
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
@@ -301,11 +333,34 @@ def eval_arg(arg, context, treat_as_var_name=False):
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
         return obj_text_val
-
+    
     # Not reading from an Excel cell. Try as a VBA object.
     if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
+
+        # Handle cases where wscriptshell.run() is being called and there is a local run() function.
+        if ((".run(" in str(arg).lower()) and (context.contains("run"))):
+
+            # Resolve the run() call.
+            if ("MemberAccessExpression" in str(type(arg))):
+                arg_evaled = arg.eval(context)
+                return arg_evaled
+
+        # Handle as a regular VBA object.
         log.debug("eval_arg: eval as VBA_Object %s" % arg)
-        return arg.eval(context=context)
+        r = arg.eval(context=context)
+
+        # Is this a Shapes() access that still needs to be handled?
+        poss_shape_txt = ""
+        try:
+            poss_shape_txt = str(r)
+        except:
+            pass
+        if (poss_shape_txt.startswith("Shapes(")):
+            log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
+            return eval_arg(r, context)
+
+        # Regular VBA object.
+        return r
 
     # Not a VBA object.
     else:
@@ -318,6 +373,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
             try:
                 log.debug("eval_arg: Try as variable name: %r" % arg)
                 r = context.get(arg)
+                log.debug("eval_arg: Got %r = %r" % (arg, r))
                 return r
             except:
                     
@@ -378,7 +434,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     try:
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
-                        return val
+                        if (val != str(arg)):
+                            return val
 
                     except KeyError:
                         log.debug("eval_arg: Not found as variable")
@@ -394,7 +451,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # Lookp and execute the function.
                     log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
-                    r = eval_arg(func, context, treat_as_var_name=True)
+                    r = func
+                    if (isinstance(func, Function) or isinstance(func, Sub)):
+                        r = eval_arg(func, context, treat_as_var_name=True)
 
                     # Did the function resolve to a value?
                     if (r != func):
@@ -435,20 +494,27 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     return r
 
                 # Are we trying to load some document data?
-                if (tmp.startswith("thisdocument.builtindocumentproperties(")):
+                if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
+                    (tmp.startswith("activeworkbook.builtindocumentproperties("))):
 
                     # Try to pull the result from the document data.
                     var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
+                    var = var.replace("activeworkbook.builtindocumentproperties(", "")
                     val = context.get_doc_var(var)
                     if (val is not None):
                         return val
 
+                    # Try getting from meta data.
+                    val = read_metadata_item(var)
+                    if (val is not None):
+                        return val
+                    
                 # Are we loading a document variable?
                 if (tmp.startswith("activedocument.variables(")):
 
                     # ActiveDocument.Variables("ER0SNQAWT").Value
                     # Try to pull the result from the document variables.
-                    log.debug("eval_arg: look for '")
+                    log.debug("eval_arg: handle expression as doc var lookup '" + tmp + "'")
                     var = tmp.replace("activedocument.variables(", "").\
                           replace(")", "").\
                           replace("'","").\
@@ -508,7 +574,8 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    return map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    return r
 
 def coerce_to_str(obj):
     """
@@ -520,7 +587,10 @@ def coerce_to_str(obj):
     if ((obj is None) or (obj == "NULL")):
         return ''
     else:
-        return str(obj)
+        try:
+            return str(obj)
+        except:
+            return ''
 
 def coerce_args_to_str(args):
     """
@@ -540,8 +610,22 @@ def coerce_to_int(obj):
     # in VBA, Null/None is equivalent to 0
     if ((obj is None) or (obj == "NULL")):
         return 0
-    else:
-        return int(obj)
+
+    # Do we have a float string?
+    if (isinstance(obj, str)):
+
+        # Float string?
+        if ("." in obj):
+            try:
+                obj = float(obj)
+            except:
+                pass
+
+        # Do we have a null byte string?
+        if (obj.count('\x00') == len(obj)):
+            return 0
+            
+    return int(obj)
 
 def coerce_args_to_int(args):
     """
@@ -613,7 +697,7 @@ def coerce_args(orig_args):
             else:
                 new_args.append(arg)
 
-        #log.debug("Coerce to str " + str(new_args))
+        log.debug("Coerce to str " + str(new_args))
         return coerce_args_to_str(new_args)
 
     else:
@@ -625,8 +709,8 @@ def coerce_args(orig_args):
                 new_args.append(0)
             else:
                 new_args.append(arg)
-
-        #log.debug("Coerce to int " + str(new_args))
+                
+        log.debug("Coerce to int " + str(new_args))
         return coerce_args_to_int(new_args)
 
 def int_convert(arg):
@@ -638,7 +722,11 @@ def int_convert(arg):
     arg_str = str(arg)
     if ("." in arg_str):
         arg_str = arg_str[:arg_str.index(".")]
-    return int(arg_str)
+    try:
+        return int(arg_str)
+    except Exception as e:
+        log.error("Cannot convert '" + str(arg_str) + "' to int. " + str(e))
+        return 0
 
 def str_convert(arg):
     """

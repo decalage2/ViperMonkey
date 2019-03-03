@@ -98,13 +98,16 @@ class Chr(VBA_Object):
         elif isinstance(param, int):
             pass
         else:
-            raise TypeError('Chr: parameter must be an integer or a string, not %s' % type(param))
+            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
+            return ''
             
         # Figure out whether to create a unicode or ascii character.
         converter = chr
         if (param > 255):
             converter = unichr
-
+        if (param < 0):
+            param = param * -1
+            
         # Do the conversion.
         try:
             r = converter(param)
@@ -139,7 +142,11 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        r = ord(eval_arg(self.arg, context)[0])
+        r = 0
+        try:
+            r = ord(eval_arg(self.arg, context)[0])
+        except:
+            pass
         log.debug("Asc(%r): return %r" % (self.arg, r))
         return r
 

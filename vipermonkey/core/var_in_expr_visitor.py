@@ -39,9 +39,9 @@ https://github.com/decalage2/ViperMonkey
 from visitor import *
 from statements import *
 
-class var_defn_visitor(visitor):
+class var_in_expr_visitor(visitor):
     """
-    Collect the names of all declared variables.
+    Get the names of all variables that appear in an expression.
     """
 
     def __init__(self):
@@ -52,9 +52,6 @@ class var_defn_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)        
-        if (isinstance(item, Dim_Statement)):
-            for name, _, _, _ in item.variables:
-                self.variables.add(str(name))
-        if (isinstance(item, Let_Statement)):
+        if (isinstance(item, SimpleNameExpression)):
             self.variables.add(str(item.name))
         return True

@@ -7,3 +7,4 @@ pyparsing
 antlr4-python2-runtime
 xlrd
 unidecode
+python-magic

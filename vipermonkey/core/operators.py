@@ -76,17 +76,22 @@ class Sum(VBA_Object):
         # (Note: sum() is not applicable here, because it does not work for strings)
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
-            return reduce(lambda x, y: x + y, coerce_args(eval_args(self.arg, context)))
+            log.debug("Compute sum (1) " + str(self.arg))
+            r = reduce(lambda x, y: x + y, coerce_args(eval_args(self.arg, context)))
+            return r
         except (TypeError, ValueError):
             # NOTE: In VB you are not supposed to be able to add integers and strings.
             # However, there are maldocs that do this. If the strings are integer strings,
             # integer addition is performed.
             log.debug('Impossible to sum arguments of different types. Try converting strings to common type.')
             try:
-                return reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
-            except ValueError:
+                r = reduce(lambda x, y: int(x) + int(y), eval_args(self.arg, context))
+                return r
+            except (TypeError, ValueError):
                 # Punt and sum all arguments as strings.
-                return reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(eval_args(self.arg, context)))
+                log.debug("Compute sum (2) " + str(self.arg))
+                r = reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(eval_args(self.arg, context)))
+                return r
         except RuntimeError as e:
             log.error("overflow trying eval sum: %r" % self.arg)
             raise e
@@ -109,6 +114,7 @@ class Eqv(VBA_Object):
     def eval(self, context, params=None):
         # return the eqv of all the arguments:
         try:
+            log.debug("Compute eqv " + str(self.arg))
             return reduce(lambda a, b: (a & b) | ~(a | b), coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             log.error('Impossible to Eqv arguments of different types.')
@@ -136,6 +142,7 @@ class Xor(VBA_Object):
     def eval(self, context, params=None):
         # return the xor of all the arguments:
         try:
+            log.debug("Compute xor " + str(self.arg))
             return reduce(lambda x, y: x ^ y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -166,6 +173,7 @@ class And(VBA_Object):
     def eval(self, context, params=None):
         # return the and of all the arguments:
         try:
+            log.debug("Compute and " + str(self.arg))
             return reduce(lambda x, y: x & y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -196,6 +204,7 @@ class Or(VBA_Object):
     def eval(self, context, params=None):
         # return the and of all the arguments:
         try:
+            log.debug("Compute or " + str(self.arg))
             return reduce(lambda x, y: x | y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -228,12 +237,13 @@ class Subtraction(VBA_Object):
     def eval(self, context, params=None):
         # return the subtraction of all the arguments:
         try:
+            log.debug("Compute subract " + str(self.arg))
             return reduce(lambda x, y: x - y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
-                return reduce(lambda x, y: int(x) - int(y), eval_args(self.arg, context))
+                return reduce(lambda x, y: coerce_to_int(x) - coerce_to_int(y), eval_args(self.arg, context))
             except Exception as e:
 
                 # Are we doing math on character ordinals?
@@ -275,6 +285,7 @@ class Multiplication(VBA_Object):
     def eval(self, context, params=None):
         # return the multiplication of all the arguments:
         try:
+            log.debug("Compute mult " + str(self.arg))
             return reduce(lambda x, y: x * y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -305,6 +316,7 @@ class Power(VBA_Object):
     def eval(self, context, params=None):
         # return the exponentiation of all the arguments:
         try:
+            log.debug("Compute pow " + str(self.arg))
             return reduce(lambda x, y: pow(x, y), coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -335,6 +347,7 @@ class Division(VBA_Object):
     def eval(self, context, params=None):
         # return the division of all the arguments:
         try:
+            log.debug("Compute div " + str(self.arg))
             return reduce(lambda x, y: x / y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -369,6 +382,7 @@ class FloorDivision(VBA_Object):
     def eval(self, context, params=None):
         # return the floor division of all the arguments:
         try:
+            log.debug("Compute floor div " + str(self.arg))
             return reduce(lambda x, y: x // y, coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -433,7 +447,8 @@ class Mod(VBA_Object):
         # return the sum of all the arguments:
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
-            return reduce(lambda x, y: x % y, coerce_args(eval_args(self.arg, context)))
+            log.debug("Compute mod " + str(self.arg))
+            return reduce(lambda x, y: int(x) % int(y), coerce_args(eval_args(self.arg, context)))
         except (TypeError, ValueError) as e:
             log.error('Impossible to mod arguments of different types. ' + str(e))
             return ''
