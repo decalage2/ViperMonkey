@@ -899,7 +899,8 @@ class Replace(VbaLibraryFunc):
         # Don't do a regex replacement of everything.
         if (pat.strip() != "."):
             try:
-                r = re.sub(pat, rep, string)
+                pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                r = re.sub(pat1, rep, string)
             except:
                 r = string.replace(pat, rep)
         else:
