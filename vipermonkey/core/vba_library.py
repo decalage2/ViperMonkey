@@ -66,6 +66,7 @@ from vba_object import excel_col_letter_to_index
 import expressions
 import meta
 import modules
+from strip_lines import strip_useless_code
 
 from logger import log
 
@@ -475,6 +476,9 @@ class Execute(VbaLibraryFunc):
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
+        # Strip useless lines and fix up the code to emulate.
+        command = strip_useless_code(command, [])
+        
         # Parse it.
         obj = None
         try:
