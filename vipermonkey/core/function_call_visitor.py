@@ -55,7 +55,8 @@ class function_call_visitor(visitor):
             return False
         self.visited.add(item)
         if (isinstance(item, Call_Statement)):
-            self.called_funcs.add(str(item.name))
+            if (not isinstance(item.name, MemberAccessExpression)):
+                self.called_funcs.add(str(item.name))
         if (isinstance(item, Function_Call)):
             self.called_funcs.add(str(item.name))
         if (isinstance(item, Chr)):
