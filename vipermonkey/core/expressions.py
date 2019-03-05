@@ -411,22 +411,16 @@ class MemberAccessExpression(VBA_Object):
         Handle calls to 0 argument functions.
         """
 
-        print "TRY 0 ARG"
-        
         # Got possible function name?
         if ((not isinstance(rhs, str)) or (not context.contains(rhs))):
-            print "NO: 1"
             return None
         func = context.get(rhs)
         if ((not isinstance(func, procedures.Sub)) and
             (not isinstance(func, procedures.Function))):
-            print "NO: 2"
-            print type(func)
             return None
 
         # Is this a 0 argument function?
         if (len(func.params) > 0):
-            print "NO: 3"
             return None
 
         # 0 parameter function. Evaluate it.
