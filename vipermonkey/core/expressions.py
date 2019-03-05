@@ -405,6 +405,35 @@ class MemberAccessExpression(VBA_Object):
         # Evaluate the Cells() call.
         #r = eval_arg(rhs, context)
         return None
+
+    def _handle_0_arg_call(self, context, rhs):
+        """
+        Handle calls to 0 argument functions.
+        """
+
+        print "TRY 0 ARG"
+        
+        # Got possible function name?
+        if ((not isinstance(rhs, str)) or (not context.contains(rhs))):
+            print "NO: 1"
+            return None
+        func = context.get(rhs)
+        if ((not isinstance(func, procedures.Sub)) and
+            (not isinstance(func, procedures.Function))):
+            print "NO: 2"
+            print type(func)
+            return None
+
+        # Is this a 0 argument function?
+        if (len(func.params) > 0):
+            print "NO: 3"
+            return None
+
+        # 0 parameter function. Evaluate it.
+        log.debug('evaluating function %r' % func)
+        r = func.eval(context)
+        log.debug('evaluated function %r = %r' % (func.name, r))
+        return r
     
     def eval(self, context, params=None):
 
@@ -448,6 +477,11 @@ class MemberAccessExpression(VBA_Object):
             if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
 
+        # Handle simple 0-argument function calls.
+        call_retval = self._handle_0_arg_call(context, rhs)
+        if (call_retval is not None):
+            return call_retval
+        
         # Handle reading the contents of a text file.
         call_retval = self._handle_text_file_read(context)
         if (call_retval is not None):
