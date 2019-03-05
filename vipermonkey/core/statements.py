@@ -178,7 +178,7 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
-                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
+                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(Optional("*" + decimal_literal)) + Suppress(EOS)) + \
                              CaselessKeyword('End') + CaselessKeyword('Type') + \
                              ZeroOrMore( Literal(':') + (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
