@@ -853,7 +853,8 @@ class Context(object):
             log.debug("doc var named " + var + " not found.")
             try:
                 var_value = self.get(var)
-                if (var_value is not None):
+                if ((var_value is not None) and
+                    (str(var_value).lower() != str(var).lower())):
                     r = self.get_doc_var(var_value)
                     if (r is not None):
                         return r
