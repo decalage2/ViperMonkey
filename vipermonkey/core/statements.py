@@ -396,7 +396,9 @@ class Dim_Statement(VBA_Object):
 
             # Do we have a type for the variable?
             curr_type = None
-            if ((len(var) > 1) and (var[-1:][0] != ")")):
+            if ((len(var) > 1) and
+                (var[-1:][0] != ")") and
+                (var[-1:][0] != self.init_val)):
                 curr_type = var[-1:][0]
 
             # Save the variable info.
@@ -560,22 +562,6 @@ dim_statement.setParseAction(Dim_Statement)
 
 class Global_Var_Statement(Dim_Statement):
     pass
-
-#class Global_Var_Statement(VBA_Object):
-#    """
-#    Dim statement, global variable.
-#    """
-#
-#    def __init__(self, original_str, location, tokens):
-#        super(Global_Var_Statement, self).__init__(original_str, location, tokens)
-#        self.name = tokens[0][0]
-#        self.value = ''
-#        if (len(tokens[0]) >= 3):
-#            self.value = tokens[0][len(tokens[0]) - 1]
-#        log.debug('parsed %r' % self)
-#
-#    def __repr__(self):
-#        return 'Global %r' % repr(self.tokens)
 
 public_private = Forward()
 global_variable_declaration = Suppress(Optional(public_private)) + \

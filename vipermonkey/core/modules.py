@@ -187,7 +187,7 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.3 Module Declarations
 
 loose_lines = Forward()
-declaration_statement = external_function | loose_lines | option_statement | dim_statement | global_variable_declaration | rem_statement
+declaration_statement = external_function | global_variable_declaration | loose_lines | option_statement | dim_statement | rem_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
