@@ -2159,8 +2159,8 @@ multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expr
                                             Group(statement_block('statements')))
                                  ) + \
                                  Optional(
-                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + \
-                                           Group(statement_block('statements')))
+                                     Group(CaselessKeyword("Else").suppress() + Group(simple_statements_line('statements'))) + Suppress(EOS) | \
+                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + Group(statement_block('statements')))
                                  ) + \
                                  CaselessKeyword("End").suppress() + CaselessKeyword("If").suppress()
 bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
