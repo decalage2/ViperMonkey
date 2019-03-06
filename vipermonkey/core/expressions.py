@@ -374,15 +374,22 @@ class MemberAccessExpression(VBA_Object):
         """
         Handle expressions like "foo.Write(...)" where foo = "ADODB.Stream".
         """
-        
+
         # Is this a .Write() call?
         rhs_str = str(rhs).strip()
         if ("Write(" not in rhs_str):
             return False
-
+        
         # Is this a Write() being called on an ADODB.Stream object?
         if (lhs != "ADODB.Stream"):
-            return False
+
+            # Maybe we need a sub field? Do we have a subfield?
+            if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
+                return False
+
+            # Look for ADODB.Stream in a variable from a subfield.
+            for field in self.rhs[:-1]:
+                lhs_orig += "." + str(field)
 
         # Are we referencing a stream contained in a variable?        
         if (not context.contains(str(lhs_orig))):
@@ -391,8 +398,9 @@ class MemberAccessExpression(VBA_Object):
         # Pull out the text to write to the text stream.
         txt = str(eval_arg(rhs.params[0], context))
 
-        # Set the text value of the string as a faux variable.
-        context.set(str(lhs_orig) + ".ReadText", txt)
+        # Set the text value of the string as a faux variable. Make this
+        # global as a hacky solution to handle fields in user defined objects.
+        context.set(str(lhs_orig) + ".ReadText", txt, force_global=True)
         
         # We handled the write.
         return True

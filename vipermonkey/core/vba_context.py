@@ -785,6 +785,7 @@ class Context(object):
     def get(self, name):
         
         # See if this is an aliased reference to an objects .Text field.
+        name = str(name)
         if (((name == "NodeTypedValue") or (name == ".NodeTypedValue")) and
             (not name in self.locals) and
             (".Text".lower() in self.locals)):
@@ -803,9 +804,17 @@ class Context(object):
         except KeyError:
             pass
 
-        # Finally see if the variable was initially defined with a trailing '$'.
+        # Are we referencing a field in an object?
+        if ("." in name):
+            new_name = "me." + name[name.index(".")+1:]
+            try:
+                return self._get(str(new_name))
+            except KeyError:
+                pass
+            
+        # See if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
-
+        
     def contains(self, name, local=False):
         if (local):
             return (str(name).lower() in self.locals)
@@ -890,12 +899,18 @@ class Context(object):
             
     # TODO: set_global?
 
-    def set(self, name, value, var_type=None, do_with_prefix=True, force_local=False):
+    def set(self,
+            name,
+            value,
+            var_type=None,
+            do_with_prefix=True,
+            force_local=False,
+            force_global=False):
 
         # Does the name make sense?
         if (not isinstance(name, basestring)):
-            log.debug("context.set() " + str(name) + " failed. Invalid type for name.")
-            return
+            log.warning("context.set() " + str(name) + " is improper type. " + str(type(name)))
+            name = str(name)
 
         # Does the value make sense?
         if (value is None):
@@ -904,7 +919,15 @@ class Context(object):
         
         # convert to lowercase
         name = name.lower()
-        if ((name in self.locals) or force_local):
+
+        # Set the variable
+        if (force_global):
+            try:
+                log.debug("Set local var " + str(name) + " = " + str(value))
+            except:
+                pass
+            self.globals[name] = value
+        elif ((name in self.locals) or force_local):
             try:
                 log.debug("Set local var " + str(name) + " = " + str(value))
             except:
