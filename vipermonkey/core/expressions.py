@@ -364,6 +364,7 @@ class MemberAccessExpression(VBA_Object):
         tmp = [new_replace.params[0]]
         tmp.append(repl)
         tmp.append(new_replace.params[1])
+        tmp.append["<-- USE REGEX -->"]
         new_replace.params = tmp
         
         # Evaluate the string replace.

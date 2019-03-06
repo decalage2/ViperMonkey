@@ -900,13 +900,18 @@ class Replace(VbaLibraryFunc):
         if ((rep is None) or (rep == 0)):
             rep = ''
 
-        # Don't do a regex replacement of everything.
-        if (pat.strip() != "."):
-            try:
-                pat1 = pat.replace("$", "\\$").replace("-", "\\-")
-                r = re.sub(pat1, rep, string)
-            except:
-                r = string.replace(pat, rep)
+        # regex replacement?
+        if (params[-1] == "<-- USE REGEX -->"):
+            
+            # Don't do a regex replacement of everything.
+            if (pat.strip() != "."):
+                try:
+                    pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                    r = re.sub(pat1, rep, string)
+                except:
+                    r = string
+
+        # Regular string replacement?
         else:
             r = string.replace(pat, rep)
 
