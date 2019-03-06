@@ -71,7 +71,7 @@ statement_keyword = caselessKeywordsList(
      "Enum", "Event", "Exit", "For", "Friend", "Function", "Global",
      "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
-     "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
+     "Resume", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
      "Unlock", "Wend", "While", "With", "Write"))
 
 rem_keyword = CaselessKeyword("Rem")
