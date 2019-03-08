@@ -67,6 +67,7 @@ https://github.com/decalage2/ViperMonkey
 # TODO later:
 # - add VBS support (two modes?)
 
+import sys
 import re
 from logger import log
 import vba_context
@@ -272,6 +273,11 @@ def strip_useless_code(vba_code, local_funcs):
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
                 log.debug("SKIP: While loop. Keep it.")
+                continue
+
+            # Skip multistatement lines.
+            if (":" in line):
+                log.debug("SKIP: Multi-statement line. Keep it.")
                 continue
 
             # Skip function definitions.
@@ -498,5 +504,5 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Now collapse down #if blocks.
     r = collapse_macro_if_blocks(r)
-        
+
     return r

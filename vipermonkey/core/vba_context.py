@@ -3189,7 +3189,7 @@ class Context(object):
                     replace('@','').\
                     replace('#','').\
                     replace('$','')
-        log.info("Looking up doc var " + var)
+        log.debug("Looking up doc var " + var)
 
         # Are we pulling out all the doc vars?
         if (var == "activedocument.variables"):

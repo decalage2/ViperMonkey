@@ -173,7 +173,7 @@ class FileExists(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return False
         fname = str(params[0])
-        if ("powershell.exe" in fname):
+        if ("powershell" in fname.lower()):
             return True
         return False
         
@@ -919,6 +919,54 @@ class Replace(VbaLibraryFunc):
         log.debug("Replace: return %r" % r)
         return r
 
+class SaveToFile(VbaLibraryFunc):
+    """
+    SaveToFile() ADODB.Stream method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) == 0):
+            return ""
+
+        # Just return the file name. This is used in
+        # expressions.MemberAccessExpression._handle_savetofile().
+        return str(params[0])
+    
+class LoadXML(VbaLibraryFunc):
+    """
+    LoadXML() MSXML2.DOMDocument.3.0 method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) == 0):
+            return ""
+
+        # Get the XML.
+        xml = str(params[0]).strip()
+
+        # Is this some base64?
+        if (xml.startswith("<B64DECODE")):
+
+            # Yes it is. Pull it out.
+            start = xml.index(">") + 1
+            end = xml.rindex("<")
+            xml = xml[start:end].strip()
+
+            # It looks like maybe this magically does base64 decode? Try that.
+            try:
+                log.debug("eval_arg: Try base64 decode of '" + xml + "'...")
+                xml = base64.b64decode(xml).replace(chr(0), "")
+                log.debug("eval_arg: Base64 decode success.")
+            except Exception as e:
+                log.debug("eval_arg: Base64 decode fail. " + str(e))
+
+        # Return the XML or base64 string.
+        return xml
+        
 class Join(VbaLibraryFunc):
     """
     Join() string function.
@@ -2586,6 +2634,7 @@ class CreateTextFile(VbaLibraryFunc):
         context.open_file(fname)
 
         # How about returning the name of the opened file.
+        print "OPENED: " + fname
         return fname
 
 class Open(CreateTextFile):
@@ -2677,6 +2726,26 @@ class Unescape(VbaLibraryFunc):
         # Return the unsescaped string.
         return s
 
+class InternetGetConnectedState(VbaLibraryFunc):
+    """
+    InternetGetConnectedState() function from wininet.dll.
+    """
+
+    def eval(self, context, params=None):
+
+        # Always connected.
+        return True
+
+class InternetOpenA(VbaLibraryFunc):
+    """
+    InternetOpenA() function from wininet.dll.
+    """
+
+    def eval(self, context, params=None):
+
+        # Always succeeds.
+        return True
+    
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -2742,7 +2811,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
-               RegWrite, QBColor):
+               RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -43,6 +43,9 @@ __version__ = '0.03'
 
 import re
 import sys
+import os
+import array
+from hashlib import sha256
 
 from identifiers import *
 from lib_functions import *
@@ -52,6 +55,7 @@ import procedures
 from vba_object import eval_arg
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
+import vba_context
 
 from logger import log
 
@@ -437,6 +441,82 @@ class MemberAccessExpression(VBA_Object):
         r = func.eval(context)
         log.debug('evaluated function %r = %r' % (func.name, r))
         return r
+
+    def _handle_loadxml(self, context, load_xml_result):
+        """
+        Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is 
+        specifically targeting BASE64 XML elements used for base64 decoding.
+        """
+
+        # Is this a call to LoadXML()?
+        memb_str = str(self)
+        if (".LoadXML(" not in memb_str):
+            return False
+
+        # We have a call to LoadXML(). Set the value of the .text field in
+        # the VBA object to the XML or base64 contents.
+        var_name = memb_str[:memb_str.index(".")] + ".text"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".selectsinglenode('b64decode').text"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".nodetypedvalue"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".selectsinglenode('b64decode').nodetypedvalue"
+        context.set(var_name, load_xml_result)
+        
+        # Done.
+        return True
+
+    def _handle_savetofile(self, context, filename):
+        """
+        Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+        """
+
+        # Is this a call to SaveToFile()?
+        memb_str = str(self)
+        if (".SaveToFile(" not in memb_str):
+            return False
+
+        # We have a call to SaveToFile(). Get the value to save from .ReadText
+        var_name = memb_str[:memb_str.index(".")] + ".ReadText"
+        val = None
+        try:
+            val = context.get(var_name)
+        except KeyError:
+            return False
+
+        # Make the dropped file directory if needed.
+        out_dir = vba_context.out_dir
+        if (not os.path.isdir(out_dir)):
+            os.makedirs(out_dir)
+        
+        # Dump the data to a file.
+        if ("/" in filename):
+            filename = filename[filename.rindex("/") + 1:]
+        if ("\\" in filename):
+            filename = filename[filename.rindex("\\") + 1:]
+        fname = out_dir + "/" + filename
+        try:
+
+            # Write out the file.
+            f = open(fname, 'wb')
+            f.write(val)
+            f.close()
+            context.report_action('Write File', filename, 'ADODB.Stream SaveToFile()', strip_null_bytes=True)
+
+            # Save the hash of the written file.
+            raw_data = array.array('B', val).tostring()
+            h = sha256()
+            h.update(raw_data)
+            file_hash = h.hexdigest()
+            context.report_action("Dropped File Hash", file_hash, 'File Name: ' + filename)
+
+        except Exception as e:
+            log.error("Writing " + fname + " failed. " + str(e))
+            return False
+        
+        # Done.
+        return True
     
     def eval(self, context, params=None):
 
@@ -517,6 +597,16 @@ class MemberAccessExpression(VBA_Object):
                     
             # This is not a builtin. Evaluate it
             tmp_rhs = eval_arg(rhs, context)
+
+            # Was this a call to LoadXML()?
+            if (self._handle_loadxml(context, tmp_rhs)):
+                return "NULL"
+
+            # Was this a call to SaveToFile()?
+            if (self._handle_savetofile(context, tmp_rhs)):
+                return "NULL"
+
+            # It was a regular call.
             return tmp_rhs
 
         # Did the lhs resolve to something new?
