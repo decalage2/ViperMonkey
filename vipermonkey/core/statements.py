@@ -2183,7 +2183,7 @@ single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_exp
                                   Optional(
                                       Group(CaselessKeyword("Else").suppress() + \
                                             Group(simple_statements_line('statements')))
-                                  )
+                                  ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
 simple_if_statement = multi_line_if_statement ^ single_line_if_statement
 
 simple_if_statement.setParseAction(If_Statement)
@@ -2379,18 +2379,11 @@ class Call_Statement(VBA_Object):
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
-"""
-call_statement = NotAny(known_keywords_statement_start) + \
-                 Optional(CaselessKeyword('Call').suppress()) + \
-                 (member_access_expression_limited('name') | TODO_identifier_or_object_attrib_loose('name')) + \
-                 Suppress(Optional(NotAny(White()) + '$') + Optional(NotAny(White()) + '#') + Optional(NotAny(White()) + '!')) + \
-                 Optional(call_params)
-"""
 call_statement = NotAny(known_keywords_statement_start) + \
                  Optional(CaselessKeyword('Call').suppress()) + \
                  (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
                  Suppress(Optional(NotAny(White()) + '$') + Optional(NotAny(White()) + '#') + Optional(NotAny(White()) + '!')) + \
-                 Optional(call_params)
+                 Optional(call_params) + Suppress(Optional("," + (CaselessKeyword("true") | CaselessKeyword("true"))))
 call_statement.setParseAction(Call_Statement)
 
 # --- EXIT FOR statement ----------------------------------------------------------
