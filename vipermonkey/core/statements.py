@@ -459,6 +459,8 @@ class Dim_Statement(VBA_Object):
                     curr_init_val = 0
                 if (curr_type == "String"):
                     curr_init_val = ''
+                if (curr_type == "Boolean"):
+                    curr_init_val = False
                 
                 # Is this variable an array?
                 if (var[1]):
@@ -2685,9 +2687,16 @@ class File_Open(VBA_Object):
             pass
 
         # Save that the file is opened.
-        context.open_files[self.file_id] = {}
-        context.open_files[self.file_id]["name"] = name
-        context.open_files[self.file_id]["contents"] = []
+        #context.open_files[self.file_id] = {}
+        #context.open_files[self.file_id]["name"] = name
+        #context.open_files[self.file_id]["contents"] = []
+
+        # Also save by file ID with '#' prefix.
+        context.report_action("OPEN", str(name), 'Open File', strip_null_bytes=True)
+        tmp_id = "#" + str(self.file_id)
+        context.open_files[tmp_id] = {}
+        context.open_files[tmp_id]["name"] = name
+        context.open_files[tmp_id]["contents"] = []
 
 file_type = Suppress(CaselessKeyword("For")) + \
             (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
@@ -2696,7 +2705,8 @@ file_type = Suppress(CaselessKeyword("For")) + \
                      (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
 file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + \
-                      Optional(file_type("type") + Suppress(CaselessKeyword("As")) + file_pointer("file_id"))
+                      Optional(file_type("type") + Suppress(CaselessKeyword("As")) + \
+                               (file_pointer("file_id") | TODO_identifier_or_object_attrib("file_id")))
 file_open_statement.setParseAction(File_Open)
 
 # --- PRINT -------------------------------------------------------------

@@ -2634,7 +2634,6 @@ class CreateTextFile(VbaLibraryFunc):
         context.open_file(fname)
 
         # How about returning the name of the opened file.
-        print "OPENED: " + fname
         return fname
 
 class Open(CreateTextFile):
@@ -2745,7 +2744,18 @@ class InternetOpenA(VbaLibraryFunc):
 
         # Always succeeds.
         return True
-    
+
+class FreeFile(VbaLibraryFunc):
+    """
+    FreeFile() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Return index of next open file.
+        v = len(context.open_files) + 1
+        return v
+
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -2811,7 +2821,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
-               RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA):
+               RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
+               FreeFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
