@@ -458,10 +458,11 @@ def strip_useless_code(vba_code, local_funcs):
 
         # Does this line get stripped based on being a Dim that we will not use
         # when emulating?
-        if ((in_func) and (is_useless_dim(line))):
-            log.debug("STRIP: Stripping Line (3): " + line)
-            r += "' STRIPPED LINE\n"
-            continue
+        # TODO: Some of these are needed. Comment this out for now.
+        #if ((in_func) and (is_useless_dim(line))):
+        #    log.debug("STRIP: Stripping Line (3): " + line)
+        #    r += "' STRIPPED LINE\n"
+        #    continue
 
         # For now we are just stripping out class declarations. Need to actually
         # emulate classes somehow.

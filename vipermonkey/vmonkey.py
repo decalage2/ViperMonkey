@@ -760,6 +760,7 @@ def parse_stream(subfilename,
         print 'VBA CODE (with long lines collapsed):'
         print vba_code
         print '-'*79
+        #sys.exit(0)
         print 'PARSING VBA CODE:'
         try:
             m = module.parseString(vba_code + "\n", parseAll=True)[0]

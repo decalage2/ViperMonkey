@@ -2624,7 +2624,7 @@ class CreateTextFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) < 2):
+        if (len(params) == 0):
             return "NULL"
 
         # Get the name of the file being opened.
