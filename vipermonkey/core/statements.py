@@ -2382,7 +2382,10 @@ call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ 
 call_statement = NotAny(known_keywords_statement_start) + \
                  Optional(CaselessKeyword('Call').suppress()) + \
                  (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
-                 Suppress(Optional(NotAny(White()) + '$') + Optional(NotAny(White()) + '#') + Optional(NotAny(White()) + '!')) + \
+                 Suppress(Optional(NotAny(White()) + '$') + \
+                          Optional(NotAny(White()) + '#') + \
+                          Optional(NotAny(White()) + '%') + \
+                          Optional(NotAny(White()) + '!')) + \
                  Optional(call_params) + Suppress(Optional("," + (CaselessKeyword("true") | CaselessKeyword("true"))))
 call_statement.setParseAction(Call_Statement)
 
