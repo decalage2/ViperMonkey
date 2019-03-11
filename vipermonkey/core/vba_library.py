@@ -1767,9 +1767,60 @@ class Environ(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # TODO: Actually simulate getting common environment variable values.
+
+        # Common environment variables.
+        env_vars = {}
+        env_vars["ALLUSERSPROFILE".lower()] = 'C:\\ProgramData'
+        env_vars["APPDATA".lower()] = 'C:\\Users\\admin\\AppData\\Roaming'
+        env_vars["CommonProgramFiles".lower()] = 'C:\\Program Files\\Common Files'
+        env_vars["CommonProgramFiles(x86)".lower()] = 'C:\\Program Files (x86)\\Common Files'
+        env_vars["CommonProgramW6432".lower()] = 'C:\\Program Files\\Common Files'
+        env_vars["COMPUTERNAME".lower()] = 'ADJH676F'
+        env_vars["ComSpec".lower()] = 'C:\\WINDOWS\\system32\\cmd.exe'
+        env_vars["DriverData".lower()] = 'C:\\Windows\\System32\\Drivers\\DriverData'
+        env_vars["HOMEDRIVE".lower()] = 'C:'
+        env_vars["HOMEPATH".lower()] = '\\Users\\admin'
+        env_vars["LOCALAPPDATA".lower()] = 'C:\\Users\\admin\\AppData\\Local'
+        env_vars["LOGONSERVER".lower()] = '\\\\HEROG76'
+        env_vars["NUMBER_OF_PROCESSORS".lower()] = '4'
+        env_vars["OneDrive".lower()] = 'C:\\Users\\admin\\OneDrive'
+        env_vars["OS".lower()] = 'Windows_NT'
+        env_vars["Path".lower()] = 'C:\\ProgramData\\Oracle\\Java\\javapath'
+        env_vars["PATHEXT".lower()] = '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC'
+        env_vars["PROCESSOR_ARCHITECTURE".lower()] = 'AMD64'
+        env_vars["PROCESSOR_IDENTIFIER".lower()] = 'Intel64 Family 6 Model 158 Stepping 9, GenuineIntel'
+        env_vars["PROCESSOR_LEVEL".lower()] = '6'
+        env_vars["PROCESSOR_REVISION".lower()] = '9e09'
+        env_vars["ProgramData".lower()] = 'C:\\ProgramData'
+        env_vars["ProgramFiles".lower()] = 'C:\\Program Files'
+        env_vars["ProgramFiles(x86)".lower()] = 'C:\\Program Files (x86)'
+        env_vars["ProgramW6432".lower()] = 'C:\\Program Files'
+        env_vars["PROMPT".lower()] = '$P$G'
+        env_vars["PSModulePath".lower()] = 'C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules;C:\\Program Files\\Microsoft Message Analyzer\\PowerShell\\'
+        env_vars["PUBLIC".lower()] = 'C:\\Users\\Public'
+        env_vars["SESSIONNAME".lower()] = 'Console'
+        env_vars["SystemDrive".lower()] = 'C:'
+        env_vars["SystemRoot".lower()] = 'C:\\WINDOWS'
+        env_vars["TEMP".lower()] = 'C:\\Users\\admin\\AppData\\Local\\Temp'
+        env_vars["TMP".lower()] = 'C:\\Users\\admin\\AppData\\Local\\Temp'
+        env_vars["USERDNSDOMAIN".lower()] = 'REMOTE.FOURTHWALL.COM'
+        env_vars["USERDOMAIN".lower()] = 'FOURTHWALL'
+        env_vars["USERDOMAIN_ROAMINGPROFILE".lower()] = 'FOURTHWALL'
+        env_vars["USERNAME".lower()] = 'admin'
+        env_vars["USERPROFILE".lower()] = 'C:\\Users\\admin'
+        env_vars["VS110COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\Common7\\Tools\\'
+        env_vars["VS120COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\Common7\\Tools\\'
+        env_vars["VS140COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\Common7\\Tools\\'
+        env_vars["VSSDK140Install".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VSSDK\\'
+        env_vars["windir".lower()] = 'C:\\WINDOWS'
+
+        # Is this an environment variable we know?
         r = "%" + str(params[0]).upper() + "%"
-        r = r.replace("%%", "%")
+        var_name = str(params[0]).lower().replace("%", "")
+        if (var_name in env_vars):
+            r = env_vars[var_name]
+        
+        # Done.
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
