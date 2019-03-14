@@ -876,7 +876,11 @@ def process_file (container,
 def read_sheet_from_csv(filename):
 
     # Open the CVS file.
-    f = open(filename, 'r')
+    f = None
+    try:
+        f = open(filename, 'r')
+    except:
+        return None
 
     # Read in all the cells. Note that this only works for a single sheet.
     row = 0
