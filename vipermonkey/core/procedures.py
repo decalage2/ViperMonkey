@@ -51,6 +51,7 @@ from tagged_block_finder_visitor import *
 # --- SUB --------------------------------------------------------------------
 
 class Sub(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name

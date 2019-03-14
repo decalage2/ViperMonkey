@@ -84,12 +84,6 @@ class Module(VBA_Object):
                 for n in token.external_functions.keys():
                     log.debug("saving external func decl: %r" % n)
                     self.external_functions[n] = token.external_functions[n]
-            if isinstance(token, Sub):
-                log.debug("saving sub decl: %r" % token.name)
-                self.subs[token.name] = token
-            #if isinstance(token, Function):
-            #    log.debug("saving func decl: %r" % token.name)
-            #    self.functions[token.name] = token
             if isinstance(token, External_Function):
                 log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token

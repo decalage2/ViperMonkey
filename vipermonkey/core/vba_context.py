@@ -41,8 +41,6 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-import xlrd
-
 import array
 import os
 from hashlib import sha256
