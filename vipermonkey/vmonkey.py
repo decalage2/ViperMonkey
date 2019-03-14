@@ -953,10 +953,12 @@ def load_excel_libreoffice(data):
 
     finally:
 
-        # Delete the temporary Excel file.
+        # Delete the temporary Excel files.
         os.remove(filename)
+        os.remove(filename + ".csv")
 
-    out.close()
+        # Cleanup.
+        out.close()
         
 def load_excel_xlrd(data):
     try:
