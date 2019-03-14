@@ -954,8 +954,11 @@ def load_excel_libreoffice(data):
     finally:
 
         # Delete the temporary Excel files.
-        os.remove(filename)
-        os.remove(filename + ".csv")
+        try:
+            os.remove(filename)
+            os.remove(filename + ".csv")
+        except:
+            pass
 
         # Cleanup.
         out.close()
