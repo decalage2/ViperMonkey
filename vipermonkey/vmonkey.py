@@ -726,7 +726,8 @@ def is_interesting_call(line, external_funcs, local_funcs):
 
     # Is this an interesting function call?
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
-                 "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
+                 "Open", "CreateMutex", "CreateRemoteThread", "InternetOpen",
+                 ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
                  "Split"]
