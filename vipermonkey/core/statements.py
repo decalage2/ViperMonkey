@@ -2388,7 +2388,9 @@ call_statement = NotAny(known_keywords_statement_start) + \
                           Optional(NotAny(White()) + '#') + \
                           Optional(NotAny(White()) + '%') + \
                           Optional(NotAny(White()) + '!')) + \
-                 Optional(call_params) + Suppress(Optional("," + (CaselessKeyword("true") | CaselessKeyword("true"))))
+                 Optional(call_params) + \
+                 Suppress(Optional("," + CaselessKeyword("0")) + \
+                          Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
 call_statement.setParseAction(Call_Statement)
 
 # --- EXIT FOR statement ----------------------------------------------------------
