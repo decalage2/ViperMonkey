@@ -516,6 +516,30 @@ class AddCode(Execute):
     """
     pass
 
+class Add(VbaLibraryFunc):
+    """
+    Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
+    """
+
+    def eval(self, context, params=None):
+        """
+        params[0] = object
+        params[1] = key
+        params[2] = value
+        """
+
+        # Sanity check.
+        if (len(params) != 3):
+            return
+
+        # Get the object (dict), key, and value.
+        obj = params[0]
+        key = params[1]
+        val = params[2]
+        if (not isinstance(obj, dict)):
+            return
+        obj[key] = val
+
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -771,7 +795,75 @@ class InlineShapes(VbaLibraryFunc):
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
         return "InlineShapes('" + str(params[0]) + "')"
-    
+
+class GetByteCount_2(VbaLibraryFunc):
+    """
+    String encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) == 0) or (not isinstance(params[0], str))):
+            return 0
+        return len(params[0])
+
+class GetBytes_4(VbaLibraryFunc):
+    """
+    String encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) == 0) or (not isinstance(params[0], str))):
+            return []
+        r = []
+        for c in params[0]:
+            r.append(ord(c))
+        return r
+
+class TransformFinalBlock(VbaLibraryFunc):
+    """
+    Base64 encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) != 3) or (not isinstance(params[0], list))):
+            return "NULL"
+
+        # Pull out the byte values and start/end of the bytes to decode.
+        vals = params[0]
+        start = 0
+        try:
+            start = int(params[1])
+        except:
+            pass
+        end = len(vals) - 1
+        try:
+            end = int(params[2])
+        except:
+            pass
+        if (end > len(vals) - 1):
+            end = len(vals) - 1
+        if (start > end):
+            start = end - 1
+
+        # Reconstruct the base64 encoded string.
+        base64_str = ""
+        end += 1
+        for b in vals[start : end]:
+            base64_str += chr(b)
+
+        # Decode the base64 encoded string.
+        r = "NULL"
+        try:
+            log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
+            r = base64.b64decode(base64_str).replace(chr(0), "")
+            log.debug("eval_arg: Base64 decode success.")
+        except Exception as e:
+            log.debug("eval_arg: Base64 decode fail. " + str(e))
+
+        # Return the decoded string.
+        log.debug("Decoded string: " + r)
+        return r
+            
 class Split(VbaLibraryFunc):
     """
     Split() string function.
@@ -2305,6 +2397,10 @@ class CreateObject(VbaLibraryFunc):
         if (obj_type == 'ADODB.Stream'):
             context.open_file('ADODB.Stream')
 
+        # Handle certain object types.
+        if (obj_type == "Scripting.Dictionary"):
+            return {}
+            
         # Just return a string representation of the name of the object
         # being created.
         return str(obj_type)
@@ -2873,7 +2969,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
-               FreeFile):
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
