@@ -521,6 +521,7 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
 
         # See if this is reading the OSlanguage.
+        log.debug("MemberAccess eval of " + str(self))
         call_retval = self._handle_oslanguage(context)
         if (call_retval is not None):
             return call_retval
@@ -613,7 +614,7 @@ class MemberAccessExpression(VBA_Object):
         elif (str(self.lhs) != str(tmp_lhs)):
 
             # Is this a read from an Excel cell?
-            if (isinstance(tmp_lhs, str)):
+            if ((isinstance(tmp_lhs, str)) and (not "Shapes(" in tmp_lhs)):
 
                 # Just work with the returned string value.
                 return tmp_lhs

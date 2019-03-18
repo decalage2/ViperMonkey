@@ -356,7 +356,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
             poss_shape_txt = str(r)
         except:
             pass
-        if (poss_shape_txt.startswith("Shapes(")):
+        if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
             return eval_arg(r, context)
 
