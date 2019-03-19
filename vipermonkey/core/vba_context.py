@@ -3026,7 +3026,11 @@ class Context(object):
         del self.open_files[file_id]
 
         # Save the hash of the written file.
-        raw_data = array.array('B', data).tostring()
+        raw_data = ''
+        try:
+            raw_data = array.array('B', data).tostring()
+        except Exception as e:
+            log.error("Computing raw file data failed. " + str(e))
         h = sha256()
         h.update(raw_data)
         file_hash = h.hexdigest()

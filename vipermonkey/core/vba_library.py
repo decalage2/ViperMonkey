@@ -563,8 +563,8 @@ class UBound(VbaLibraryFunc):
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
-        if (arr is None):
-            log.error("UBound(None) cannotbe computed.")
+        if ((arr is None) or (not hasattr(arr, 'length'))):
+            log.error("UBound(" + str(arr) + ") cannot be computed.")
             return 0
         r = len(arr) - 1
         log.debug("UBound: return %r" % r)
@@ -1345,7 +1345,9 @@ class CLng(VbaLibraryFunc):
 
         # Handle abstracted pointers to memory.
         val = params[0]
-        if (isinstance(val, str) and (val.startswith("&"))):
+        if (isinstance(val, str) and
+            (not val.startswith("&H")) and
+            (val.startswith("&"))):
             return val
 
         # Actually try to convert to a number.
