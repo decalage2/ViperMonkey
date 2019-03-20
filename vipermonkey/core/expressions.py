@@ -341,6 +341,22 @@ class MemberAccessExpression(VBA_Object):
         # Don't know what we are getting.
         return None
 
+    def _handle_file_close(self, context, lhs, rhs):
+        """
+        Handle close of file object foo like foo.Close().
+        """
+
+        # Pull out proper RHS.
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (str(rhs) != "Close"):
+            return None
+        from vba_library import Close
+        file_close = Close()
+            
+        # File closed.
+        return file_close.eval(context, [str(lhs)])
+    
     def _handle_replace(self, context, lhs, rhs):
         """
         Handle string replaces of the form foo.Replace(bar, baz). foo is a RegExp object.
@@ -649,13 +665,22 @@ class MemberAccessExpression(VBA_Object):
         elif (str(self.lhs) != str(tmp_lhs)):
 
             # Is this a read from an Excel cell?
-            if ((isinstance(tmp_lhs, str)) and (not "Shapes(" in tmp_lhs)):
+            # TODO: Need to do this logic based on what IS an Excel read rather
+            # than what IS NOT an Excel read.
+            if ((isinstance(tmp_lhs, str)) and
+                (not "Shapes(" in tmp_lhs) and
+                (not "Close" in str(self.rhs))):
 
                 # Just work with the returned string value.
                 return tmp_lhs
 
             # See if this is reading a doc var name or item.
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
+
+            # See if this is closing a file.
+            call_retval = self._handle_file_close(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
                 return call_retval
 
