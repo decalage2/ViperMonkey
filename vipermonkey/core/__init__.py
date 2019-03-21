@@ -166,7 +166,8 @@ class ViperMonkey(object):
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
         # See https://www.greyhathacker.net/?m=201609
-        self.callback_suffixes = ['_BeforeNavigate2',
+        self.callback_suffixes = ['_Activate',
+                                  '_BeforeNavigate2',
                                   '_BeforeScriptExecute',
                                   '_Change',
                                   '_DocumentComplete',

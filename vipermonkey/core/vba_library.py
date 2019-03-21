@@ -563,7 +563,7 @@ class UBound(VbaLibraryFunc):
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
-        if ((arr is None) or (not hasattr(arr, 'length'))):
+        if ((arr is None) or (not hasattr(arr, '__len__'))):
             log.error("UBound(" + str(arr) + ") cannot be computed.")
             return 0
         r = len(arr) - 1

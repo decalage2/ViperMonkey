@@ -133,7 +133,82 @@ import core.excel as excel
 
 # === MAIN (for tests) ===============================================================================================
 
-def _read_doc_text(fname, data=None):
+def _read_doc_text_libreoffice(data):
+    
+    # Discard output.
+    out = open(os.devnull, "w")
+    
+    # Is LibreOffice installed?
+    try:
+        rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
+        if (rc != 0):
+
+            # Not installed.
+            log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
+            out.close()
+            return None
+
+    except OSError:
+
+        # Not installed.
+        log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
+        out.close()
+        return None
+
+    # LibreOffice is installed.
+
+    # Try to get sheet data.
+    (fd, filename) = tempfile.mkstemp()
+    try:
+        
+        # Save the possible Word document to a temporary file.
+        tfile = os.fdopen(fd, "wb")
+        tfile.write(data)
+        tfile.close()
+
+        # Try to convert the file to a text file.
+        try:
+            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", "/tmp/", filename],
+                                 stdout=out, stderr=out)
+            if (rc != 0):
+
+                # Conversion failed.
+                log.error("Cannot read doc text with LibreOffice. Conversion failed.")
+                out.close()
+                return None
+            
+        except OSError as e:
+            
+            # Conversion failed.
+            log.error("Cannot read doc text with LibreOffice. Conversion failed. " + str(e))
+            out.close()
+            return None
+
+        # Read the paragraphs from the converted text file.
+        r = []
+        f = open(filename + ".txt")
+        for line in f:
+            if (line.endswith("\n")):
+                line = line[:-1]
+            r.append(line)
+
+        # Return the paragraph text.
+        return r
+
+    finally:
+
+        # Delete the temporary Excel files.
+        try:
+            os.remove(filename)
+            os.remove(filename + ".txt")
+        except:
+            pass
+
+        # Cleanup.
+        out.close()
+
+
+def _read_doc_text_strings(data):
     """
     Use a heuristic to read in the document text. The current
     heuristic (basically run strings on the document file) is not
@@ -142,6 +217,20 @@ def _read_doc_text(fname, data=None):
 
     TODO: Replace this when a real Python solution for reading the doc
     text is found.
+    """
+
+    # Pull strings from doc.
+    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
+    r = ""
+    for s in str_list:
+        r += s + "\n"
+    
+    # Return all the strings.
+    return r
+
+def _read_doc_text(fname, data=None):
+    """
+    Read in text from the given document.
     """
 
     # Read in the file.
@@ -154,14 +243,14 @@ def _read_doc_text(fname, data=None):
             log.error("Cannot read document text from " + str(fname) + ". " + str(e))
             return ""
 
-    # Pull strings from doc.
-    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
-    r = ""
-    for s in str_list:
-        r += s + "\n"
-    
-    # Return all the strings.
-    return r
+    # First try to read the doc text with LibreOffice.
+    r = _read_doc_text_libreoffice(data)
+    if (r is not None):
+        return r
+
+    # LibreOffice might not be installed or this is not a Word doc. Punt and
+    # just pull strings from the file.
+    return _read_doc_text_strings(data)
 
 def _get_shapes_text_values_xml(fname):
     """
@@ -1118,6 +1207,7 @@ def _process_file (filename, data,
                 
             # Pull out the document text.
             vm.doc_text = _read_doc_text('', data=data)
+            print "\n\nDOC TEXT:\n" + str(vm.doc_text)
 
             try:
                 # Pull out form variables.
