@@ -434,8 +434,9 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this a .Write() call?
+        log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
         rhs_str = str(rhs).strip()
-        if ("Write(" not in rhs_str):
+        if ("write(" not in rhs_str.lower()):
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?

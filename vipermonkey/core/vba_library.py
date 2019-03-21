@@ -1479,11 +1479,12 @@ class Log(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
-        r = ''
+        r = params[0]
         try:
             num = float(params[0])
             r = math.log(num)
-        except ValueError:
+        except ValueError as e:
+            log.error("Log(" + str(params[0]) + ") failed. " + str(e))
             pass
         log.debug("Log: %r returns %r" % (self, r))
         return r
@@ -1550,11 +1551,12 @@ class Exp(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
-        r = ''
+        r = params[0]
         try:
             num = float(params[0])
             r = math.exp(num)
-        except:
+        except Exception as e:
+            log.error("Exp(" + str(params[0]) + ") failed. " + str(e))
             pass
         log.debug("Exp: %r returns %r" % (self, r))
         return r
@@ -2936,6 +2938,7 @@ class Write(VbaLibraryFunc):
 
         # Get the ID of the file.
         file_id = context.open_files.keys()[0]
+        log.info("Writing data to " + str(file_id) + " .")
 
         # Get the data.
         data = params[0]

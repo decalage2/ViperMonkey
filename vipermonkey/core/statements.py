@@ -1098,6 +1098,8 @@ class For_Statement(VBA_Object):
 
             # Get the initial value if there is one.
             init_val = context.get(var)
+            if (init_val == "NULL"):
+                init_val = 0
 
             # Can only handle integers.
             if (not str(init_val).isdigit()):
