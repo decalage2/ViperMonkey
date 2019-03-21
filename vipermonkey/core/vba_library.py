@@ -2000,7 +2000,8 @@ class CallByName(VbaLibraryFunc):
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
-        if (("Open" in cmd) and ("WinHttpRequest" in obj)):
+        if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
+            ((len(params) > 5) and (params[3] == "GET"))):
             context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):

@@ -427,8 +427,8 @@ def _get_shapes_text_values(fname, stream):
         # 0x0D bytes. We will look for that.
         pat = r"\x0d[\x20-\x7e]{100,}\x0d"
         strs = re.findall(pat, data)
-        print "STREAM: " + str(stream)
-        print data
+        #print "STREAM: " + str(stream)
+        #print data
         
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
@@ -802,7 +802,7 @@ def get_vb_contents(vba_code):
     code = re.findall(pat, vba_code, re.DOTALL)
 
     # Did we find any VB code in a script block?
-    print code
+    #print code
     if (len(code) == 0):
         return vba_code
 
@@ -986,7 +986,10 @@ def read_sheet_from_csv(filename):
         cells = line.split(",")
         col = 0
         for cell in cells:
-            r[(col, row)] = str(cell)
+            dat = str(cell)
+            if (dat.startswith('"')):
+                dat = dat[1:]
+            r[(col, row)] = dat
             col += 1
         row += 1
 
@@ -995,6 +998,8 @@ def read_sheet_from_csv(filename):
 
     # Make an object with a subset of the xlrd book methods.
     r = excel.make_book(r)
+    #print "EXCEL:\n"
+    #print r
     return r
 
 def load_excel_libreoffice(data):
@@ -1214,7 +1219,7 @@ def _process_file (filename, data,
                 
             # Pull out the document text.
             vm.doc_text = _read_doc_text('', data=data)
-            print "\n\nDOC TEXT:\n" + str(vm.doc_text)
+            #print "\n\nDOC TEXT:\n" + str(vm.doc_text)
 
             try:
                 # Pull out form variables.
