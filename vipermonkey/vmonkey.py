@@ -186,7 +186,12 @@ def _read_doc_text_libreoffice(data):
 
         # Read the paragraphs from the converted text file.
         r = []
-        f = open(filename + ".txt")
+        f = None
+        try:
+            f = open(filename + ".txt")
+        except IOError as e:
+            log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
+            return None
         for line in f:
             if (line.endswith("\n")):
                 line = line[:-1]
@@ -197,7 +202,7 @@ def _read_doc_text_libreoffice(data):
 
     finally:
 
-        # Delete the temporary Excel files.
+        # Delete the temporary files.
         try:
             os.remove(filename)
             os.remove(filename + ".txt")
@@ -221,9 +226,9 @@ def _read_doc_text_strings(data):
 
     # Pull strings from doc.
     str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
-    r = ""
+    r = []
     for s in str_list:
-        r += s + "\n"
+        r.append(s)
     
     # Return all the strings.
     return r
@@ -422,7 +427,9 @@ def _get_shapes_text_values(fname, stream):
         # 0x0D bytes. We will look for that.
         pat = r"\x0d[\x20-\x7e]{100,}\x0d"
         strs = re.findall(pat, data)
-
+        print "STREAM: " + str(stream)
+        print data
+        
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
         pos = 1

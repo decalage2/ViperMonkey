@@ -201,6 +201,13 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_paragraphs(self, context):
+        """
+        Handle references to the .Paragraphs field of the current doc.
+        """
+        if (str(self).lower().endswith(".paragraphs")):
+            return context.get("ActiveDocument.Paragraphs".lower())
+    
     def _handle_oslanguage(self, context):
         """
         Handle references to the OSlanguage field.
@@ -566,9 +573,15 @@ class MemberAccessExpression(VBA_Object):
     
     def eval(self, context, params=None):
 
-        # See if this is reading the OSlanguage.
         log.debug("MemberAccess eval of " + str(self))
+        
+        # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # See if this is reading the doc paragraphs.
+        call_retval = self._handle_paragraphs(context)
         if (call_retval is not None):
             return call_retval
         
