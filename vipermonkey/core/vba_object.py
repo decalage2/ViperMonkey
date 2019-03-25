@@ -359,7 +359,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
             return eval_arg(r, context)
-
+        
         # Regular VBA object.
         return r
 
@@ -494,12 +494,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
 
-                # Are we referring to a form tag element?
-                # fix this later! treating all .tag entries as zero-length strings
-                elif (".tag" in tmp):
-                    val = ""
-                    return val
-
                 # Are we trying to load some document data?
                 if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
                     (tmp.startswith("activeworkbook.builtindocumentproperties("))):
@@ -571,7 +565,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # We did not resolve the variable. Treat it as unitialized.
             log.debug("eval_arg: return 'NULL'")
             return "NULL"
-                
+
+        # Are we referring to a form tag element that we cannot find?
+        if (str(arg).lower().endswith(".tag")):
+            return ""
+        
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))
         return arg
