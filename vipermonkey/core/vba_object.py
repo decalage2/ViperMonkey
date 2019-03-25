@@ -494,6 +494,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
 
+                # Are we referring to a form tag element?
+                # fix this later! treating all .tag entries as zero-length strings
+                elif (".tag" in tmp):
+                    val = ""
+                    return val
+
                 # Are we trying to load some document data?
                 if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
                     (tmp.startswith("activeworkbook.builtindocumentproperties("))):
