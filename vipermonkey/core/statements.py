@@ -2388,6 +2388,7 @@ call_statement = NotAny(known_keywords_statement_start) + \
                  (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
                  Suppress(Optional(NotAny(White()) + '$') + \
                           Optional(NotAny(White()) + '#') + \
+                          Optional(NotAny(White()) + '@') + \
                           Optional(NotAny(White()) + '%') + \
                           Optional(NotAny(White()) + '!')) + \
                  Optional(call_params) + \
