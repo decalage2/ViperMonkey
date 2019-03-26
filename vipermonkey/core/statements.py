@@ -1181,7 +1181,9 @@ class For_Statement(VBA_Object):
 
                     # Looks like this Chr() should be an int.
                     end = ord(end[0])
-                
+
+        if (isinstance(end, float)):
+            end = int(end)
         if (not isinstance(end, int)):
             end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))

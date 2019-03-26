@@ -605,6 +605,7 @@ class Context(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
+        self.globals["Err.Number".lower()] = "**MATCH ANY**"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
 
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
