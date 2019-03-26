@@ -851,8 +851,8 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # MS-GRAMMAR: index-expression / dictionary-access-expression / with-expression
 
 new_expression = Forward()
-l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | \
-    dictionary_access_expression | simple_name_expression
+l_expression << (with_expression ^ member_access_expression ^ new_expression ^ member_access_expression_loose) | instance_expression | \
+    dictionary_access_expression | simple_name_expression 
 
 # --- FUNCTION CALL ---------------------------------------------------------
 

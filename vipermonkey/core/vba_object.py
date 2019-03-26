@@ -566,8 +566,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
             log.debug("eval_arg: return 'NULL'")
             return "NULL"
 
-        # Are we referring to a form tag element that we cannot find?
-        if (str(arg).lower().endswith(".tag")):
+        # Are we referring to a form element that we cannot find?
+        if ((str(arg).lower().endswith(".tag")) or
+            (str(arg).lower().endswith(".value"))):
             return ""
         
         # The .text hack did not work.
