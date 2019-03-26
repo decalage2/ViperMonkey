@@ -238,6 +238,7 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
+    vba_code = vba_code.replace('\x88', '')
     
     # Track data change callback function names.
     change_callbacks = set()    
