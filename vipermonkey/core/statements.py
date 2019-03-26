@@ -2876,7 +2876,11 @@ class External_Function(VBA_Object):
             # return 0 when no error occurred:
             return 0
         elif function_name.startswith('shellexecute'):
-            cmd = str(params[2]) + str(params[3])
+            cmd = None
+            if (len(params) >= 4):
+                cmd = str(params[2]) + " " + str(params[3])
+            else:
+                cmd = str(params[1]) + " " + str(params[2])
             context.report_action('Run Command', cmd, function_name, strip_null_bytes=True)
             # return 0 when no error occurred:
             return 0
