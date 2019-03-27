@@ -123,6 +123,7 @@ class Module(VBA_Object):
 
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
+        done_emulation = False
         for block in self.loose_lines:
             if (isinstance(block, Sub) or
                 isinstance(block, Function) or
@@ -132,6 +133,10 @@ class Module(VBA_Object):
             context.global_scope = True
             block.eval(context, params)
             context.global_scope = False
+            done_emulation = True
+
+        # Return if we ran anything.
+        return done_emulation
 
     def load_context(self, context):
         """

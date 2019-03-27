@@ -408,11 +408,12 @@ class ViperMonkey(object):
 
         # First emulate any Visual Basic that appears outside of subs/funcs.
         log.info("Emulating loose statements...")
+        done_emulation = False
         for m in self.modules:
-            m.eval(context=context)
+            if (m.eval(context=context)):
+                done_emulation = True
         
         # Look for hardcoded entry functions.
-        done_emulation = False
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
             log.debug("Trying entry point " + entry_point)

@@ -50,6 +50,7 @@ import base64
 import re
 import random
 import string
+import codecs
 
 def is_procedure(vba_object):
     """
@@ -3009,6 +3010,8 @@ class Context(object):
         file_id - The name of the file.
         """
 
+        global file_count
+        
         # Make sure the "file" exists.
         file_id = str(file_id)
         if (file_id not in self.open_files):
@@ -3058,12 +3061,14 @@ class Context(object):
                     start = short_name.rindex('/') + 1
                 short_name = out_dir + short_name[start:].strip()
                 try:
+                    print "Try save to: " + short_name
                     f = open(short_name, 'r')
                     # Already exists. Get a unique name.
                     f.close()
                     file_count += 1
                     short_name += " (" + str(file_count) + ")"
-                except:
+                except Exception as e:
+                    print e
                     pass
                     
                 # Write out the dropped file.
@@ -3313,9 +3318,11 @@ class Context(object):
         # Handle base64 conversion with VBA objects.
         if (name.endswith(".text")):
 
-            # Is the root object something set to the "bin.base64" data type?
+            # Handle doing conversions on the data.
             node_type = name.replace(".text", ".datatype")
             try:
+
+                # Is the root object something set to the "bin.base64" data type?
                 val = str(self.get(node_type)).strip()
                 if (val == "bin.base64"):
 
@@ -3328,6 +3335,29 @@ class Context(object):
                         self.set(val_name, conv_val)
                     except Exception as e:
                         log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                        
+            except KeyError:
+                pass
+
+        # Handle hex conversion with VBA objects.
+        if (name.endswith(".nodetypedvalue")):
+
+            # Handle doing conversions on the data.
+            node_type = name.replace(".nodetypedvalue", ".datatype")
+            try:
+
+                # Something set to type "bin.hex"?
+                val = str(self.get(node_type)).strip()
+                if (val == "bin.hex"):
+
+                    # Try converting from hex.
+                    try:
+
+                        # Set the typed vale of the node to the decoded value.
+                        conv_val = codecs.decode(str(value).strip(), "hex")
+                        self.set(name, conv_val)
+                    except Exception as e:
+                        log.error("hex conversion of '" + str(value) + "' failed. " + str(e))
                         
             except KeyError:
                 pass
