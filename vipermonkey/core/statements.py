@@ -215,6 +215,10 @@ class Parameter(VBA_Object):
         if (('(' in str(tokens)) and (')' in str(tokens))):
             # Arrays are always passed by reference.
             self.mechanism = 'ByRef'
+        # The default parameter passing mechanism is ByRef.
+        # See https://www.bettersolutions.com/vba/macros/byval-or-byref.htm
+        if (len(self.mechanism) == 0):
+            self.mechanism = 'ByRef'
         log.debug('parsed %r' % self)
 
     def __repr__(self):
