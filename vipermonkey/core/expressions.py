@@ -575,6 +575,7 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
+        #print self
         
         # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)
