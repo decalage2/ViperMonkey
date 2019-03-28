@@ -262,6 +262,44 @@ class MemberAccessExpression(VBA_Object):
         except KeyError:
             return None
 
+    def _handle_set_clipboard(self, context):
+        """
+        Handle calls like objHTML.ParentWindow.clipboardData.setData(...).
+        """
+
+        # Is this a setData() instance?
+        if (".setdata(" not in str(self).lower()):
+            return None
+        
+        # Pull out the clipboard text.
+        # objHTML.ParentWindow.clipboardData.setData(Text, hh)
+        func = self.rhs[-1]
+        if (not isinstance(func, Function_Call)):
+            return None
+        if (len(func.params) < 2):
+            return None
+        val = func.params[1]
+        val = str(eval_arg(val, context))
+
+        # Set the clipboard value in a synthetic variable.
+        log.debug("Save clipboard text '" + val + "'")
+        context.set("** CLIPBOARD **", val, force_global=True)
+        return True
+
+    def _handle_get_clipboard(self, context):
+        """
+        Handle calls like objHTML.ParentWindow.clipboardData.getData(...).
+        """
+
+        # Is this an getData() instance?
+        if (".getdata(" not in str(self).lower()):
+            return None
+        
+        # Retrn the clipboard text if we have it.
+        if (context.contains("** CLIPBOARD **")):
+            return context.get("** CLIPBOARD **")
+        return None
+        
     def _handle_docprops_read(self, context):
         """
         Handle data reads with ActiveDocument.BuiltInDocumentProperties(...).
@@ -575,7 +613,6 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
-        #print self
         
         # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)
@@ -599,6 +636,16 @@ class MemberAccessExpression(VBA_Object):
         
         # Handle accessing document variables as a special case.
         call_retval = self._handle_docvars_read(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # Handle setting the clipboard text.
+        call_retval = self._handle_set_clipboard(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # Handle getting the clipboard text.
+        call_retval = self._handle_get_clipboard(context)
         if (call_retval is not None):
             return call_retval
 
