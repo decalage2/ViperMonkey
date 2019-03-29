@@ -569,6 +569,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         # Are we referring to a form element that we cannot find?
         if ((str(arg).lower().endswith(".tag")) or
             (str(arg).lower().endswith(".passwordchar")) or
+            (str(arg).lower().endswith(".controlsource")) or
             (str(arg).lower().endswith(".value"))):
             return ""
         
