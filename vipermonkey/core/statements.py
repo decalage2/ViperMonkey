@@ -2390,18 +2390,32 @@ class Call_Statement(VBA_Object):
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
 call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
-call_statement = NotAny(known_keywords_statement_start) + \
-                 Optional(CaselessKeyword('Call').suppress()) + \
-                 (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
-                 Suppress(Optional(NotAny(White()) + '$') + \
-                          Optional(NotAny(White()) + '#') + \
-                          Optional(NotAny(White()) + '@') + \
-                          Optional(NotAny(White()) + '%') + \
-                          Optional(NotAny(White()) + '!')) + \
-                 Optional(call_params) + \
-                 Suppress(Optional("," + CaselessKeyword("0")) + \
-                          Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
-call_statement.setParseAction(Call_Statement)
+call_statement0 = NotAny(known_keywords_statement_start) + \
+                  Optional(CaselessKeyword('Call').suppress()) + \
+                  (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
+                  Suppress(Optional(NotAny(White()) + '$') + \
+                           Optional(NotAny(White()) + '#') + \
+                           Optional(NotAny(White()) + '@') + \
+                           Optional(NotAny(White()) + '%') + \
+                           Optional(NotAny(White()) + '!')) + \
+                           Optional(call_params) + \
+                           Suppress(Optional("," + CaselessKeyword("0")) + \
+                                    Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
+call_statement1 = NotAny(known_keywords_statement_start) + \
+                  Optional(CaselessKeyword('Call').suppress()) + \
+                  (TODO_identifier_or_object_attrib_loose('name')) + \
+                  Suppress(Optional(NotAny(White()) + '$') + \
+                           Optional(NotAny(White()) + '#') + \
+                           Optional(NotAny(White()) + '@') + \
+                           Optional(NotAny(White()) + '%') + \
+                           Optional(NotAny(White()) + '!')) + \
+                           Optional(call_params) + \
+                           Suppress(Optional("," + CaselessKeyword("0")) + \
+                                    Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
+call_statement0.setParseAction(Call_Statement)
+call_statement1.setParseAction(Call_Statement)
+
+call_statement = (call_statement0 ^ call_statement1)
 
 # --- EXIT FOR statement ----------------------------------------------------------
 
