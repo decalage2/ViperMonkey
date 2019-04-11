@@ -64,6 +64,26 @@ import sys
 import re
 import base64
 
+def is_simple_statement(s):
+    """
+    Check to see if the given VBAObject is a simple_statement.
+    """
+
+    return (isinstance(s, Dim_Statement) or
+            isinstance(s, Option_Statement) or
+            isinstance(s, Prop_Assign_Statement) or
+            isinstance(s, Let_Statement) or
+            isinstance(s, Call_Statement) or
+            isinstance(s, Exit_For_Statement) or
+            isinstance(s, Exit_While_Statement) or
+            isinstance(s, Exit_Function_Statement) or
+            isinstance(s, Redim_Statement) or
+            isinstance(s, Goto_Statement) or
+            isinstance(s, On_Error_Statement) or
+            isinstance(s, File_Open) or
+            isinstance(s, Print_Statement))
+    
+
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
 class UnknownStatement(VBA_Object):
@@ -1140,7 +1160,34 @@ class For_Statement(VBA_Object):
 
         # Return the loop result.
         return r
+
+    def _no_state_change(self, prev_context, context):
+        """
+        Return True if the loop body only contains atomic statements (no ifs, selects, etc.) and
+        the previous program state (minus the loop variable) is equal to the current program state.
+        """
+
+        # Sanity check.
+        if ((prev_context is None) or (context is None)):
+            return False
         
+        # First check to see if the loop body only contains atomic statements.
+        for s in self.statements:
+            if (not isinstance(s, VBA_Object)):
+                continue
+            if ((not is_simple_statement(s)) and (not s.is_useless)):
+                return False
+
+        # Remove the loop counter variable from the previous loop iteration
+        # program state and the current program state.
+        prev_context = Context(context=prev_context, _locals=prev_context.locals).delete(self.name).delete("now").delete("application.username")
+        context = Context(context=context, _locals=context.locals).delete(self.name).delete("now").delete("application.username")
+
+        # There is no state change if the previous state is equal to the
+        # current state.
+        r = (prev_context == context)
+        return r
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -1211,11 +1258,13 @@ class For_Statement(VBA_Object):
         if ((var is not None) and (val is not None)):
             log.info("Short circuited loop. Set " + str(var) + " = " + str(val))
             context.set(var, val)
+            self.is_useless = True
             return
 
         # See if we have a more complicated style loop put in purely for obfuscation.
         do_body_once = self._handle_medium_loop(context, params, end, step)
         if (do_body_once):
+            self.is_useless = True
             return
 
         # Set end to valid values.
@@ -1226,10 +1275,25 @@ class For_Statement(VBA_Object):
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
+        # Track the context from the previous loop iteration to see if we have
+        # a loop that is just there for obfuscation.
+        num_no_change = 0
+        prev_context = None
+        
         # Loop until the loop is broken out of or we hit the last index.
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
+            # Is the loop body a simple series of atomic statements and has
+            # nothing changed in the program state since the last iteration?
+            if (self._no_state_change(prev_context, context)):
+                num_no_change += 1
+                if (num_no_change >= context.max_static_iters * 5):
+                    log.warn("Possible useless For loop detected. Exiting loop.")
+                    self.is_useless = True
+                    break
+            prev_context = Context(context=context, _locals=context.locals)
+            
             # Execute the loop body.
             log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
             done = False

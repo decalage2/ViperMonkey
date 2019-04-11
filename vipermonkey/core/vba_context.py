@@ -140,7 +140,7 @@ class Context(object):
             # direct copy of the pointer to globals:
             self.globals = _globals
         elif context is not None:
-            self.globals = context.globals
+            self.globals = dict(context.globals)
             self.open_files = context.open_files
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
@@ -2925,6 +2925,18 @@ class Context(object):
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
         
+    def __eq__(self, other):
+        if isinstance(other, Context):
+            return ((self.call_stack == other.call_stack) and
+                    (self.globals == other.globals) and
+                    (self.locals == other.locals))
+        return NotImplemented
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
         
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA', 'KeyCodeConstants', 'VBA.KeyCodeConstants', 'VBA.vbStrConv', 'vbStrConv']
@@ -2986,7 +2998,24 @@ class Context(object):
         if (name in self.dll_func_true_names):
             return self.dll_func_true_names[name]
         return None
-        
+
+    def delete(self, name):
+        """
+        Delete a variable from the context.
+        """
+
+        # Punt if we don't have the variable.
+        if (not self.contains(name)):
+            return self
+
+        # Delete the variable
+        if name in self.locals:
+            del self.locals[name]
+        elif name in self.globals:
+            del self.globals[name]
+
+        return self
+            
     def open_file(self, fname):
         """
         Simulate opening a file.

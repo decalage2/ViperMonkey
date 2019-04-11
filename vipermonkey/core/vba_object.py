@@ -121,6 +121,7 @@ class VBA_Object(object):
         self.location = location
         self.tokens = tokens
         self._children = None
+        self.is_useless = False
         
     def eval(self, context, params=None):
         """
