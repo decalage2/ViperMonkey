@@ -1528,6 +1528,7 @@ def _get_guard_variables(loop_obj, context):
     return r
 
 class While_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
         self.loop_type = tokens.clause.type
@@ -1562,18 +1563,21 @@ class While_Statement(VBA_Object):
         # b52 = b52 + 1
         # Wend
 
-        # Do we just have 1 line in the loop body?
-        if (len(self.body) != 1):
+        # Do we just have 1 or 2 lines in the loop body?
+        if ((len(self.body) != 1) and (len(self.body) != 2)):
+            #print "OUT: -10"
             return False
 
         # Are we just sleeping in the loop?
         if ("sleep(" in str(self.body[0]).lower()):
+            #print "OUT: -9"
             return True
         
         # Do we have a simple loop guard?
         loop_counter = str(self.guard).strip()
         m = re.match(r"(\w+)\s*([<>=]{1,2})\s*(\w+)", loop_counter)
         if (m is None):
+            #print "OUT: -8"
             return False
 
         # We have a simple loop guard. Pull out the loop variable, upper bound, and
@@ -1585,21 +1589,78 @@ class While_Statement(VBA_Object):
         # Are we just modifying the loop counter variable each loop iteration?
         var_inc = loop_counter + " = " + loop_counter
         body = str(self.body[0]).replace("Let ", "").replace("(", "").replace(")", "").strip()
+        if_block = None
+        if_val = None
         if (not body.startswith(var_inc)):
-            return False
 
+            # We can handle a single if statement and a single loop variable modify statement.
+            if (len(self.body) != 2):
+                #print "OUT: -7"
+                return False
+            
+            # Are we incrementing the loop counter and doing something if the loop counter
+            # is equal to a specific value?
+            body = None
+            for s in self.body:
+
+                # Modifying the loop variable?
+                tmp = str(s).replace("Let ", "").replace("(", "").replace(")", "").strip()
+                if (tmp.startswith(var_inc)):
+                    #print "BODY:"
+                    body = tmp
+                    #print body
+                    continue
+
+                # If statement looking for specific value of the loop variable?
+                if (isinstance(s, If_Statement)):
+
+                    # Check the loop guard to see if it is 'loop_var = ???'.
+                    if_guard = s.pieces[0]["guard"]
+                    if_guard_str = str(if_guard).strip()
+                    #print "GUARD:"
+                    #print if_guard
+                    if (if_guard_str.startswith(loop_counter + " = ")):
+
+                        # Pull out the loop counter value we are looking for and
+                        # what to run when the counter equals that.
+                        if_block = s.pieces[0]["body"]
+                        #print "IF BLOCK:"
+                        #print if_block
+
+                        # We can only handle ints for the loop counter value to check for.
+                        try:
+                            start = if_guard_str.rindex("=") + 1
+                            tmp = if_guard_str[start:].strip()
+                            if_val = int(str(tmp))
+                            #print "IF VAL:"
+                            #print if_val
+                        except ValueError:
+                            #print "OUT: -6"
+                            return False
+
+            if (if_block is None):
+                body = None
+                        
+        # Bomb out if this is not a simple loop.
+        if (body is None):
+            #print "OUT: 1"
+            return False
+                        
         # Pull out the operator and integer value used to update the loop counter
         # in the loop body.
         if (" " not in body):
+            #print "OUT: 2"
             return False
         body = body.replace(var_inc, "").strip()
         op = body[:body.index(" ")]
         if (op not in ["+", "-", "*"]):
+            #print "OUT: 3"
             return False
         num = body[body.index(" ") + 1:]
         try:
             num = int(num)
         except:
+            #print "OUT: 4"
             return False
 
         # Now just compute the final loop counter value right here in Python.
@@ -1608,6 +1669,7 @@ class While_Statement(VBA_Object):
         try:
             final_val = int(final_val)
         except:
+            #print "OUT: 5"
             return False
         
         # Simple case first. Set the final loop counter value if possible.
@@ -1622,7 +1684,7 @@ class While_Statement(VBA_Object):
         log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
         log.debug("Short circuiting loop evaluation: Body: " + str(self.body))
         while (running):
-
+            
             # Update the loop counter.
             log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
             log.debug("Short circuiting loop evaluation: Test: " + str(curr_counter) + " " + comp_op + " " + str(final_val))
@@ -1641,6 +1703,15 @@ class While_Statement(VBA_Object):
         # Update the loop counter in the context.
         context.set(loop_counter, curr_counter)
 
+        # Do the targeted if block if we have one and we have reached the proper loop
+        # counter value.
+        if (if_block is not None):
+            for stmt in if_block:
+                if (not isinstance(stmt, VBA_Object)):
+                    continue
+                if (hasattr(stmt, "eval")):
+                    stmt.eval(context)
+        
         # We short circuited the loop evaluation.
         return True
             

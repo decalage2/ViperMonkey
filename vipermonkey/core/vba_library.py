@@ -548,7 +548,7 @@ class Array(VbaLibraryFunc):
     def eval(self, context, params=None):
         r = []
         if ((len(params) == 1) and (params[0] == "NULL")):
-            return []
+            return []        
         for v in params:
             r.append(v)
         log.debug("Array: return %r" % r)
