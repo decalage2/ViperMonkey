@@ -53,6 +53,7 @@ import os
 import random
 from from_unicode_str import *
 import decimal
+from curses.ascii import isprint
 
 from pyparsing import *
 
@@ -855,6 +856,8 @@ class TransformFinalBlock(VbaLibraryFunc):
         r = "NULL"
         try:
             log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
+            base64_str = filter(isprint, str(base64_str).strip())
+            print "B64: 1"
             r = base64.b64decode(base64_str).replace(chr(0), "")
             log.debug("eval_arg: Base64 decode success.")
         except Exception as e:

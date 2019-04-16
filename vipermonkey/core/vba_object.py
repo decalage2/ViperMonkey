@@ -54,6 +54,7 @@ __version__ = '0.02'
 import base64
 from logger import log
 import re
+from curses.ascii import isprint
 
 from inspect import getouterframes, currentframe
 import sys
@@ -397,6 +398,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # It looks like maybe this magically does base64 decode? Try that.
                     try:
                         log.debug("eval_arg: Try base64 decode of '" + val + "'...")
+                        base64_str = filter(isprint, str(base64_str).strip())
+                        print "B64: 2"
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
                         log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
                         return val_decode

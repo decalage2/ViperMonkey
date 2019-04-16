@@ -63,6 +63,7 @@ from logger import log
 import sys
 import re
 import base64
+from curses.ascii import isprint
 
 def is_simple_statement(s):
     """
@@ -734,7 +735,9 @@ class Let_Statement(VBA_Object):
 
             # Try converting the text from base64.
             try:
-                value = base64.b64decode(str(value).strip())
+                tmp_str = filter(isprint, str(value).strip())
+                print "B64: 3"
+                value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + str(value) + "' failed. " + str(e))
                 

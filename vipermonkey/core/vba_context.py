@@ -51,6 +51,7 @@ import re
 import random
 import string
 import codecs
+from curses.ascii import isascii
 
 def is_procedure(vba_object):
     """
@@ -3359,7 +3360,12 @@ class Context(object):
                     try:
 
                         # Set the typed vale of the node to the decoded value.
-                        conv_val = base64.b64decode(str(value).strip())
+                        tmp_str = filter(isascii, str(value).strip())
+                        print "B64: 4"
+                        missing_padding = len(tmp_str) % 4
+                        if missing_padding:
+                            tmp_str += b'='* (4 - missing_padding)
+                        conv_val = base64.b64decode(tmp_str)
                         val_name = name.replace(".text", ".nodetypedvalue")
                         self.set(val_name, conv_val)
                     except Exception as e:
