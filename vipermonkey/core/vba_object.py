@@ -399,7 +399,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     try:
                         log.debug("eval_arg: Try base64 decode of '" + val + "'...")
                         base64_str = filter(isprint, str(base64_str).strip())
-                        print "B64: 2"
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
                         log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
                         return val_decode

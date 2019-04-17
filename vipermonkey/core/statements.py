@@ -344,6 +344,9 @@ class TaggedBlock(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(TaggedBlock, self).__init__(original_str, location, tokens)
+        if (tokens is None):
+            # Make empty tagged block object.
+            return
         self.block = tokens.block
         self.label = str(tokens.label).replace(":", "")
         log.debug('parsed %r' % self)
@@ -570,10 +573,10 @@ constant_name = simple_name_expression
 string_length = constant_name | integer
 fixed_length_string_spec = CaselessKeyword("string").suppress() + Suppress("*") + string_length
 type_spec = fixed_length_string_spec | type_expression
-as_type = CaselessKeyword('as').suppress() + type_spec
+as_type = CaselessKeyword('As').suppress() + type_spec
 defined_type_expression = simple_name_expression  # TODO: | member_access_expression
 class_type_name = defined_type_expression
-as_auto_object = CaselessKeyword('as').suppress() + CaselessKeyword('new').suppress() + class_type_name
+as_auto_object = CaselessKeyword('as').suppress() + CaselessKeyword('new').suppress() + expression
 as_clause = as_auto_object | as_type
 array_clause = array_dim('bounds') + Optional(as_clause)
 untyped_variable_dcl = identifier + Optional(array_clause('bounds') | as_clause)
@@ -620,13 +623,14 @@ class Let_Statement(VBA_Object):
         self.index1 = None
         if (tokens.index1 != ''):
             self.index1 = tokens.index1
+        self.op = tokens["op"]
         log.debug('parsed %r' % self)
 
     def __repr__(self):
         if (self.index is None):
-            return 'Let %s = %r' % (self.name, self.expression)
+            return 'Let %s %s %r' % (self.name, self.op, self.expression)
         else:
-            return 'Let %s(%r) = %r' % (self.name, self.index, self.expression)
+            return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
 
     def _handle_change_callback(self, var_name, context):
 
@@ -705,13 +709,26 @@ class Let_Statement(VBA_Object):
 
         # No string modification.
         return False
-        
+
+    def _handle_autoincrement(self, lhs, rhs):
+
+        # Add/subtract the rhs from the lhs.
+        r = "NULL"
+        try:
+            if (self.op == "+="):
+                r = (lhs + rhs)
+            elif (self.op == "-="):
+                r = (lhs - rhs)
+        except:
+            pass
+        return r
+            
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
-
+        
         # If a function return value is being set (LHS == current function name),
         # treat references to the function name on the RHS as a variable rather
         # than a function. Do this by initializing a local variable with the function
@@ -736,7 +753,6 @@ class Let_Statement(VBA_Object):
             # Try converting the text from base64.
             try:
                 tmp_str = filter(isprint, str(value).strip())
-                print "B64: 3"
                 value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + str(value) + "' failed. " + str(e))
@@ -762,7 +778,12 @@ class Let_Statement(VBA_Object):
                 return
             except KeyError:
                 log.error("WARNING: Cannot find OnSheetActivate handler function %s" % func_name)
-        
+
+        # Handle auto increment/decrement.
+        if ((self.op == "+=") or (self.op == "-=")):
+            lhs = context.get(self.name)
+            value = self._handle_autoincrement(lhs, value)
+                
         # set variable, non-array access.
         if (self.index is None):
 
@@ -945,8 +966,8 @@ let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppre
                 ((TODO_identifier_or_object_attrib('name') + \
                   Optional(Suppress('(') + Optional(expression('index')) + Optional("," + expression('index1')) + Suppress(')'))) ^ \
                  member_access_expression('name') ^ string_modification('name')) + \
-                Literal('=').suppress() + \
-                (expression('expression') ^ boolean_expression('expression'))
+                 (Literal('=') | Literal('+=') | Literal('-='))('op') + \
+                 (expression('expression') ^ boolean_expression('expression'))
 let_statement.setParseAction(Let_Statement)
 
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
@@ -975,6 +996,7 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 # --- FOR statement -----------------------------------------------------------
 
 class For_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(For_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -1316,7 +1338,10 @@ class For_Statement(VBA_Object):
 
                 # Was there an error that will make us jump to an error handler?
                 if (context.must_handle_error()):
-                    done = True
+
+                    # Does the error handler just call Next to go to the next loop iteration?
+                    if (not context.do_next_iter_on_error()):
+                        done = True
                     break
                 context.clear_error()
 
@@ -1330,6 +1355,9 @@ class For_Statement(VBA_Object):
             if (done):
                 break
 
+            # No errors, so clear them.
+            context.clear_error()
+            
             # Increment the loop counter by the step.
             val = context.get(self.name)
             try:
@@ -1568,19 +1596,16 @@ class While_Statement(VBA_Object):
 
         # Do we just have 1 or 2 lines in the loop body?
         if ((len(self.body) != 1) and (len(self.body) != 2)):
-            #print "OUT: -10"
             return False
 
         # Are we just sleeping in the loop?
         if ("sleep(" in str(self.body[0]).lower()):
-            #print "OUT: -9"
             return True
         
         # Do we have a simple loop guard?
         loop_counter = str(self.guard).strip()
         m = re.match(r"(\w+)\s*([<>=]{1,2})\s*(\w+)", loop_counter)
         if (m is None):
-            #print "OUT: -8"
             return False
 
         # We have a simple loop guard. Pull out the loop variable, upper bound, and
@@ -1598,7 +1623,6 @@ class While_Statement(VBA_Object):
 
             # We can handle a single if statement and a single loop variable modify statement.
             if (len(self.body) != 2):
-                #print "OUT: -7"
                 return False
             
             # Are we incrementing the loop counter and doing something if the loop counter
@@ -1609,9 +1633,7 @@ class While_Statement(VBA_Object):
                 # Modifying the loop variable?
                 tmp = str(s).replace("Let ", "").replace("(", "").replace(")", "").strip()
                 if (tmp.startswith(var_inc)):
-                    #print "BODY:"
                     body = tmp
-                    #print body
                     continue
 
                 # If statement looking for specific value of the loop variable?
@@ -1620,25 +1642,18 @@ class While_Statement(VBA_Object):
                     # Check the loop guard to see if it is 'loop_var = ???'.
                     if_guard = s.pieces[0]["guard"]
                     if_guard_str = str(if_guard).strip()
-                    #print "GUARD:"
-                    #print if_guard
                     if (if_guard_str.startswith(loop_counter + " = ")):
 
                         # Pull out the loop counter value we are looking for and
                         # what to run when the counter equals that.
                         if_block = s.pieces[0]["body"]
-                        #print "IF BLOCK:"
-                        #print if_block
 
                         # We can only handle ints for the loop counter value to check for.
                         try:
                             start = if_guard_str.rindex("=") + 1
                             tmp = if_guard_str[start:].strip()
                             if_val = int(str(tmp))
-                            #print "IF VAL:"
-                            #print if_val
                         except ValueError:
-                            #print "OUT: -6"
                             return False
 
             if (if_block is None):
@@ -1646,24 +1661,20 @@ class While_Statement(VBA_Object):
                         
         # Bomb out if this is not a simple loop.
         if (body is None):
-            #print "OUT: 1"
             return False
                         
         # Pull out the operator and integer value used to update the loop counter
         # in the loop body.
         if (" " not in body):
-            #print "OUT: 2"
             return False
         body = body.replace(var_inc, "").strip()
         op = body[:body.index(" ")]
         if (op not in ["+", "-", "*"]):
-            #print "OUT: 3"
             return False
         num = body[body.index(" ") + 1:]
         try:
             num = int(num)
         except:
-            #print "OUT: 4"
             return False
 
         # Now just compute the final loop counter value right here in Python.
@@ -1672,7 +1683,6 @@ class While_Statement(VBA_Object):
         try:
             final_val = int(final_val)
         except:
-            #print "OUT: 5"
             return False
         
         # Simple case first. Set the final loop counter value if possible.
@@ -1824,7 +1834,9 @@ while_type = CaselessKeyword("While") | CaselessKeyword("Until")
 while_clause = Optional(CaselessKeyword("Do").suppress()) + while_type("type") + boolean_expression("guard")
 
 simple_while_statement = while_clause("clause") + Suppress(EOS) + Group(statement_block('body')) \
-                       + (CaselessKeyword("Loop").suppress() | CaselessKeyword("Wend").suppress())
+                       + (CaselessKeyword("Loop").suppress() |
+                          CaselessKeyword("Wend").suppress() |
+                          (CaselessKeyword("End").suppress() + CaselessKeyword("While").suppress()))
 
 simple_while_statement.setParseAction(While_Statement)
 
@@ -2850,11 +2862,6 @@ class File_Open(VBA_Object):
         except AssertionError:
             pass
 
-        # Save that the file is opened.
-        #context.open_files[self.file_id] = {}
-        #context.open_files[self.file_id]["name"] = name
-        #context.open_files[self.file_id]["contents"] = []
-
         # Also save by file ID with '#' prefix.
         context.report_action("OPEN", str(name), 'Open File', strip_null_bytes=True)
         tmp_id = "#" + str(self.file_id)
@@ -3090,6 +3097,47 @@ external_function <<= public_private + Suppress(CaselessKeyword('Declare') + Opt
                                                 lex_identifier('function_name') + lib_info('lib_info') + Optional(params_list_paren) + Optional(function_type2)
 external_function.setParseAction(External_Function)
 
+# --- TRY/CATCH STATEMENT ------------------------------------------------------
+
+class TryCatch(VBA_Object):
+    """
+    Try/Catch exception handling statement.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(TryCatch, self).__init__(original_str, location, tokens)
+        tmp = TaggedBlock(original_str, location, None)
+        tmp.block = tokens["try_block"]
+        tmp.label = "try_block"
+        self.try_block = tmp
+        tmp = TaggedBlock(original_str, location, None)
+        tmp.block = tokens["catch_block"]
+        tmp.label = "catch_block"
+        self.catch_block = tmp
+        self.except_var = tokens["exception_var"]
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return "Try::" + str(self.try_block) + "::Catch " + str(self.except_var) + " As Exception::" + str(self.catch_block) + "::End Try"
+
+    def eval(self, context, params=None):
+
+        # Treat the catch block like an onerror goto block. To do this locally override the current error
+        # handler block.
+        old_handler = context.get_error_handler()
+        context.error_handler = self.catch_block
+
+        # Evaluate the try block.
+        self.try_block.eval(context)
+
+        # Reset the error handler block.
+        context.error_handler = old_handler
+
+try_catch = Suppress(CaselessKeyword('Try')) + Suppress(EOS) + statement_block('try_block') + \
+            Suppress(CaselessKeyword('Catch')) + lex_identifier('exception_var') + Suppress(CaselessKeyword('As')) + Suppress(CaselessKeyword('Exception')) + \
+            Suppress(EOS) + statement_block('catch_block') + Suppress(CaselessKeyword('End')) + Suppress(CaselessKeyword('Try'))
+try_catch.setParseAction(TryCatch)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -3103,7 +3151,7 @@ def extend_statement_grammar():
     # statement has to be declared beforehand using Forward(), so here we use
     # the "<<=" operator:
     global statement
-    statement <<= type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+    statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
                   simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub
 

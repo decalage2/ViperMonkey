@@ -2956,6 +2956,32 @@ class Context(object):
             glbl = (namespace+key).lower()
             self.globals[ glbl ] = value
 
+    def get_error_handler(self):
+        """
+        Get the onerror goto error handler.
+        """
+        if (hasattr(self, "error_handler")):
+            return self.error_handler
+        return None
+
+    def do_next_iter_on_error(self):
+        """
+        See if the error handler just calls Next to advance to next loop iteration.
+        """
+
+        # Do we have an error handler?
+        handler = self.get_error_handler()
+        if (handler is None):
+            return False
+
+        # See if the 1st statement in the handler is Next.
+        if (len(handler.block) == 0):
+
+            # If it looks like no commands, let's just go to the next loop iteration.
+            return True
+        first_cmd = str(handler.block[0]).strip()
+        return (first_cmd == "Next")
+    
     def have_error(self):
         """
         See if Visual Basic threw an error.
@@ -3091,14 +3117,12 @@ class Context(object):
                     start = short_name.rindex('/') + 1
                 short_name = out_dir + short_name[start:].strip()
                 try:
-                    print "Try save to: " + short_name
                     f = open(short_name, 'r')
                     # Already exists. Get a unique name.
                     f.close()
                     file_count += 1
                     short_name += " (" + str(file_count) + ")"
                 except Exception as e:
-                    print e
                     pass
                     
                 # Write out the dropped file.
@@ -3361,7 +3385,6 @@ class Context(object):
 
                         # Set the typed vale of the node to the decoded value.
                         tmp_str = filter(isascii, str(value).strip())
-                        print "B64: 4"
                         missing_padding = len(tmp_str) % 4
                         if missing_padding:
                             tmp_str += b'='* (4 - missing_padding)

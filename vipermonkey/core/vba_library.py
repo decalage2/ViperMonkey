@@ -857,7 +857,6 @@ class TransformFinalBlock(VbaLibraryFunc):
         try:
             log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
             base64_str = filter(isprint, str(base64_str).strip())
-            print "B64: 1"
             r = base64.b64decode(base64_str).replace(chr(0), "")
             log.debug("eval_arg: Base64 decode success.")
         except Exception as e:
@@ -2006,7 +2005,7 @@ class CallByName(VbaLibraryFunc):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
-            ((len(params) > 5) and (params[3] == "GET"))):
+            ((len(params) > 5) and (params[3].lower() == "get"))):
             context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
@@ -2023,6 +2022,15 @@ class CallByName(VbaLibraryFunc):
 
         # Do nothing.
         return None
+
+class Raise(VbaLibraryFunc):
+    """
+    Raise() exception/error function.
+    """
+
+    def eval(self, context, params=None):
+        context.got_error = True
+        log.warning("Raise exception " + str(params))
             
 class Close(VbaLibraryFunc):
     """
@@ -2978,7 +2986,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
-               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add):
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

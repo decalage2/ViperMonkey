@@ -70,7 +70,7 @@ statement_keyword = caselessKeywordsList(
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
      "Enum", "Event", "Exit", "For", "Friend", "Function",
      "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
-     "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
+     "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
      "Unlock", "Wend", "While", "With", "Write"))
 
