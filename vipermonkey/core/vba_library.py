@@ -2737,7 +2737,11 @@ class Print(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+
+        # Regular Debug.Print() ?
+        if (len(params) != 1):
+            log.warning("Wrong # of arguments for Print " + str(params))
+            return
 
         # Save writes that look like they are writing URLs.
         data_str = str(params[0])

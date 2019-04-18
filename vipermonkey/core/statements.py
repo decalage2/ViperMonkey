@@ -2864,10 +2864,13 @@ class File_Open(VBA_Object):
 
         # Also save by file ID with '#' prefix.
         context.report_action("OPEN", str(name), 'Open File', strip_null_bytes=True)
-        tmp_id = "#" + str(self.file_id)
+        tmp_id = str(self.file_id)
+        if (not tmp_id.startswith('#')):
+            tmp_id = '#' + tmp_id
         context.open_files[tmp_id] = {}
         context.open_files[tmp_id]["name"] = name
         context.open_files[tmp_id]["contents"] = []
+        log.debug("Opened file '" + str(name) + "' with ID '" + str(tmp_id) + "'")
 
 file_type = Suppress(CaselessKeyword("For")) + \
             (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
@@ -2934,9 +2937,9 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 #                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
 #                   rem_statement | print_statement | resume_statement
 simple_statement = NotAny(Regex(r"End\s+Sub")) + \
-                   (dim_statement | option_statement | (prop_assign_statement ^ (let_statement | call_statement) ^ expression) | exit_loop_statement | \
+                   (print_statement | dim_statement | option_statement | (prop_assign_statement ^ (let_statement | call_statement) ^ expression) | exit_loop_statement | \
                     exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-                    rem_statement | print_statement | resume_statement)
+                    rem_statement | resume_statement)
 simple_statements_line <<= (simple_statement + OneOrMore(Suppress(':') + simple_statement)) ^ \
                            simple_statement
 
