@@ -130,8 +130,8 @@ reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | Caseless
 TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
                                            Combine(Literal('.') + lex_identifier) | \
                                            Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                           Optional(CaselessLiteral('$')))
+                                           Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))
 
 TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
                                                  Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                                 Optional(CaselessLiteral('$')))
+                                                 Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))

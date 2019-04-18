@@ -161,7 +161,7 @@ class ViperMonkey(object):
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
                              'workbook_activate', 'auto_close', 'workbook_close',
-                             'workbook_deactivate']
+                             'workbook_deactivate', 'documentopen', 'app_documentopen']
 
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
