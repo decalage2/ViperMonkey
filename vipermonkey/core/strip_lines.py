@@ -239,6 +239,9 @@ def strip_useless_code(vba_code, local_funcs):
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     vba_code = vba_code.replace('\x88', '')
+
+    # Fix function calls with a skipped 1st argument.
+    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
     
     # Track data change callback function names.
     change_callbacks = set()    

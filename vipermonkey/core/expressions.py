@@ -1135,7 +1135,6 @@ expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
 
 # WARNING: This may break parsing in function calls when the 1st argument is skipped.
 #expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
-#expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
