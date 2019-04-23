@@ -1123,7 +1123,8 @@ def _process_file (filename, data,
     # Set the emulation time limit.
     if (time_limit is not None):
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
-    
+
+    # Create the emulator.
     vm = ViperMonkey(filename)
     orig_filename = filename
     if (entry_points is not None):

@@ -1363,8 +1363,12 @@ class BoolExprItem(VBA_Object):
                 pass
                 
         # Evaluate the expression.
-        if ((self.op == "=") or (self.op.lower() == "is")):
-            if ((lhs == "**MATCH ANY**") or (rhs == "**MATCH ANY**")):
+        if ((self.op.lower() == "=") or
+            (self.op.lower() == "like") or
+            (self.op.lower() == "is")):
+            rhs_str = str(rhs)
+            lhs_str = str(lhs)
+            if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
                 return True
             return lhs == rhs
         elif (self.op == ">"):
@@ -1378,19 +1382,17 @@ class BoolExprItem(VBA_Object):
         elif (self.op == "<>"):
             return lhs != rhs
         elif (self.op.lower() == "like"):
-            
+
             # Try as a Python regex.
+            rhs = str(rhs)
+            lhs = str(lhs)
             try:
-                rhs = str(rhs)
-                lhs = str(lhs)
                 r = (re.match(rhs, lhs) is not None)
                 log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
                 return r
             except Exception as e:
 
                 # Not a valid Pyhton regex. Just check string equality.
-                rhs = str(rhs)
-                lhs = str(lhs)
                 return (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)

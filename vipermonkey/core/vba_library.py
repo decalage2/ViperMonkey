@@ -304,6 +304,11 @@ class Left(VbaLibraryFunc):
             params = params[-2:]
         assert len(params) == 2
         s = params[0]
+
+        # Don't modify the "**MATCH ANY**" special value.
+        if (s == "**MATCH ANY**"):
+            return s
+        
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
         if not isinstance(s, basestring):
@@ -337,6 +342,11 @@ class Right(VbaLibraryFunc):
             params = params[-2:]
         assert len(params) == 2
         s = params[0]
+
+        # Don't modify the "**MATCH ANY**" special value.
+        if (s == "**MATCH ANY**"):
+            return s
+        
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
         if not isinstance(s, basestring):
@@ -655,18 +665,9 @@ class International(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
-            return "NULL"
-        val = params[0]
 
-        # xlCountrySetting
-        if (val == 2):
-
-            # Act like we are in the USA.
-            return 1
-
-        # Not emulated.
-        return "NULL"
+        # Match anything compared to this result.
+        return "**MATCH ANY**"
 
 class StrComp(VbaLibraryFunc):
     """
