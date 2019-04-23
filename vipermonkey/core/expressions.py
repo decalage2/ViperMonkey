@@ -349,6 +349,10 @@ class MemberAccessExpression(VBA_Object):
         if (not isinstance(read_call, Function_Call)):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
+
+        # Fix the file name for emulation if needed.
+        if (read_file.startswith("C:\\")):
+            read_file = read_file.replace("C:\\", "./")
         
         # Read the file contents.
         try:
