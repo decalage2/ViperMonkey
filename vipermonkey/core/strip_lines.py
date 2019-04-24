@@ -273,7 +273,10 @@ def strip_useless_code(vba_code, local_funcs):
         
         # Is there an assignment on this line?
         line_num += 1
-        match = assign_re.findall(line)
+        tmp_line = line
+        if ("=" in line):
+            tmp_line = line[:line.index("=") + 1]
+        match = assign_re.findall(tmp_line)
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)

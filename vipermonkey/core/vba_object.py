@@ -641,7 +641,12 @@ def coerce_to_int(obj):
         # Do we have a null byte string?
         if (obj.count('\x00') == len(obj)):
             return 0
-            
+
+        # Hex string?
+        if ((obj.startswith("&H")) and (len(obj) <= 4)):
+            return int(obj.replace("&H", "0x"), 16)
+
+    # Try regular int.
     return int(obj)
 
 def coerce_args_to_int(args):

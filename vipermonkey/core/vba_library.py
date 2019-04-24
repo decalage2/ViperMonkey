@@ -77,6 +77,17 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+def strip_nonvb_chars(s):
+    """
+    Strip invalid VB characters from a string.
+    """
+
+    r = ""
+    for c in s:
+        if ((ord(c) > 8) and (ord(c) < 127)):
+            r += c
+    return r
+
 class WeekDay(VbaLibraryFunc):
     """
     VBA WeekDay function
@@ -457,7 +468,7 @@ class Eval(VbaLibraryFunc):
         # Pull out the expression to eval.
         if (len(params) < 1):
             return 0
-        expr = str(params[0])
+        expr = strip_nonvb_chars(str(params[0]))
 
         try:
 
@@ -483,7 +494,7 @@ class Execute(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Save the command.
-        command = str(params[0])
+        command = strip_nonvb_chars(str(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
