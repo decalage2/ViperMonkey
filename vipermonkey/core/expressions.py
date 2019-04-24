@@ -53,6 +53,7 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import coerce_to_int
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
 import vba_context
@@ -1183,7 +1184,7 @@ class Function_Call_Array_Access(VBA_Object):
         # Evaluate the value of the function returing the array.
         array_val = eval_arg(self.array, context=context)
         # Evaluate the index to read.
-        array_index = eval_arg(self.index, context=context)
+        array_index = coerce_to_int(eval_arg(self.index, context=context))
 
         # Do we have a list to read from?
         if (not isinstance(array_val, list)):
