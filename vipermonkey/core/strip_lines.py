@@ -391,7 +391,7 @@ def strip_useless_code(vba_code, local_funcs):
                 continue
 
             # Could the current variable be used on this line?
-            if (var in line):
+            if (var.lower() in line.lower()):
 
                 # Maybe. Count this as a reference.
                 log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
