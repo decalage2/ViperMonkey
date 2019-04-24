@@ -74,7 +74,8 @@ def is_simple_statement(s):
             isinstance(s, Option_Statement) or
             isinstance(s, Prop_Assign_Statement) or
             isinstance(s, Let_Statement) or
-            isinstance(s, Call_Statement) or
+            # Calls run other statements, so they are not simple.
+            #isinstance(s, Call_Statement) or
             isinstance(s, Exit_For_Statement) or
             isinstance(s, Exit_While_Statement) or
             isinstance(s, Exit_Function_Statement) or
