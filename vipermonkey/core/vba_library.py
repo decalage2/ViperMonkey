@@ -1597,7 +1597,8 @@ class Str(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params[0]) == 0)):
+            return ""
         r = str(params[0])
         log.debug("Str: %r returns %r" % (self, r))
         return r
