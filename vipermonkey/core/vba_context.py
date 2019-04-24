@@ -89,7 +89,8 @@ class Context(object):
                  engine=None,
                  doc_vars=None,
                  loaded_excel=None,
-                 filename=None):
+                 filename=None,
+                 copy_globals=False):
 
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
@@ -138,10 +139,15 @@ class Context(object):
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
-            # direct copy of the pointer to globals:
-            self.globals = _globals
+            if (copy_globals):
+                self.globals = dict(_globals)
+            else:
+                self.globals = _globals
         elif context is not None:
-            self.globals = dict(context.globals)
+            if (copy_globals):
+                self.globals = dict(context.globals)
+            else:
+                self.globals = context.globals
             self.open_files = context.open_files
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel

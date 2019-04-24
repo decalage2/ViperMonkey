@@ -1206,8 +1206,8 @@ class For_Statement(VBA_Object):
 
         # Remove the loop counter variable from the previous loop iteration
         # program state and the current program state.
-        prev_context = Context(context=prev_context, _locals=prev_context.locals).delete(self.name).delete("now").delete("application.username")
-        context = Context(context=context, _locals=context.locals).delete(self.name).delete("now").delete("application.username")
+        prev_context = Context(context=prev_context, _locals=prev_context.locals, copy_globals=True).delete(self.name).delete("now").delete("application.username")
+        context = Context(context=context, _locals=context.locals, copy_globals=True).delete(self.name).delete("now").delete("application.username")
 
         # There is no state change if the previous state is equal to the
         # current state.
