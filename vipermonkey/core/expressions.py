@@ -572,8 +572,6 @@ class MemberAccessExpression(VBA_Object):
         # Is this a call to SaveToFile()?
         memb_str = str(self)
         if (".savetofile(" not in memb_str.lower()):
-            print "OUT: 1"
-            print memb_str
             return False
 
         # We have a call to SaveToFile(). Get the value to save from .ReadText
@@ -582,8 +580,6 @@ class MemberAccessExpression(VBA_Object):
         try:
             val = context.get(var_name)
         except KeyError:
-            print "OUT: 2"
-            print var_name
             return False
 
         # Make the dropped file directory if needed.
@@ -614,7 +610,6 @@ class MemberAccessExpression(VBA_Object):
 
         except Exception as e:
             log.error("Writing " + fname + " failed. " + str(e))
-            print "OUT: 3"
             return False
         
         # Done.
