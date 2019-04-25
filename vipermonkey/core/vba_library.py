@@ -2768,6 +2768,12 @@ class Debug(Print):
     Debug() debugging function.
     """
     pass
+
+class Echo(Print):
+    """
+    WScript.Echo() debugging function.
+    """
+    pass
         
 class URLDownloadToFile(VbaLibraryFunc):
     """
@@ -3003,7 +3009,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
-               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise):
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

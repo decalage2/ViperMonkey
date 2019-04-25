@@ -847,7 +847,7 @@ def parse_stream(subfilename,
     print 'VBA MACRO %s ' % vba_filename
     print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
     print '- '*39
-
+    
     # Parse the macro.
     m = None
     if vba_code.strip() == '':
