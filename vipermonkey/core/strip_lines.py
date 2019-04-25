@@ -254,6 +254,11 @@ def strip_useless_code(vba_code, local_funcs):
     external_funcs = []
     for line in vba_code.split("\n"):
 
+        # Skip comment lines.
+        if (line.strip().startswith("'")):
+            log.debug("SKIP: Comment. Keep it.")
+            continue
+        
         # Save external function declarations lines so we can avoid stripping
         # calls to external functions.
         if (("Declare" in line) and ("Lib" in line)):
@@ -280,7 +285,7 @@ def strip_useless_code(vba_code, local_funcs):
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)
-
+                
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
                 log.debug("SKIP: While loop. Keep it.")
