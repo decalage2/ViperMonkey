@@ -1318,7 +1318,7 @@ class For_Statement(VBA_Object):
                     log.warn("Possible useless For loop detected. Exiting loop.")
                     self.is_useless = True
                     break
-            prev_context = Context(context=context, _locals=context.locals)
+            prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
             
             # Execute the loop body.
             log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
