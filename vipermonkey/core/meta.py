@@ -29,6 +29,11 @@ def get_metadata_exif(filename):
         log.error("Cannot read metadata with exiftool. " + str(e))
         return {}
 
+    # Sanity check results.
+    if (":" not in output):
+        log.warning("Cannot read metadata with exiftool.")
+        return {}
+    
     # Store the metadata in an object.
     lines = output.split("\n")
     r = FakeMeta()
