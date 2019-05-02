@@ -2206,7 +2206,7 @@ select_case = case_clause("case_val") + \
                        (Suppress(EOS) + Group(statement_block_not_empty('statements'))("body")))
 select_case.setParseAction(Select_Case)
 
-simple_select_statement = select_clause("select_val") + Suppress(EOS) + Group(OneOrMore(select_case + Suppress(Optional(EOS))))("cases") \
+simple_select_statement = select_clause("select_val") + Suppress(EOS) + Group(ZeroOrMore(select_case + Suppress(Optional(EOS))))("cases") \
                           + Suppress(Optional(EOS)) + CaselessKeyword("End").suppress() + CaselessKeyword("Select").suppress()
 simple_select_statement.setParseAction(Select_Statement)
 
