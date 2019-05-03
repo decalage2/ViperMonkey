@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 #=== LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -85,9 +85,9 @@ __version__ = '0.07'
 
 # Do this before any other imports to make sure we have an unlimited
 # packrat parsing cache. Do not move or remove this line.
-from pyparsing import *
+import pyparsing
 #ParserElement.enablePackrat(cache_size_limit=None)
-ParserElement.enablePackrat(cache_size_limit=100000)
+pyparsing.ParserElement.enablePackrat(cache_size_limit=100000)
 
 import struct
 import multiprocessing
