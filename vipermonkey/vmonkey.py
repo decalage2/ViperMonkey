@@ -712,27 +712,25 @@ def _read_doc_vars(data, fname):
     """
     Read document variables from Office 97 or 2007+ files.
     """
-
-    # Get the file type.
-    import magic  # pip install python-magic ; install libmagic from somewhere.
+    # TODO: make sure this test makes sense
     if len(fname) < 1:
         # it has to be a file in memory...
-        obj = data
-        typ = magic.from_buffer(obj)
+        # to call is_zipfile we need either a filename or a file-like object (not just data):
+        obj = io.BytesIO(data)
     else:
         # if we have a filename, we'll defer to using that...
         obj = fname
-        typ = magic.from_file(obj)
-
     # Pull doc vars based on the file type.
-    if (("Microsoft" in typ) and ("2007+" in typ)):
-        if obj==fname:
-            return _read_doc_vars_zip(fname)
-        else:
-            return _read_doc_vars_zip(io.BytesIO(data)) # why you gotta make things hard, zipfile?
-    else:
+    if olefile.isOleFile(obj):
+        # OLE file
         return _read_doc_vars_ole(obj)
-    
+    elif zipfile.is_zipfile(obj):
+        # assuming it's an OpenXML (zip) file:
+        return _read_doc_vars_zip(obj)
+    # else, it might be XML or text, can't read doc vars yet
+    # TODO: implement read_doc_vars for those formats
+    return []
+
 def _read_custom_doc_props(fname):
     """
     Use a heuristic to try to read in custom document property names
