@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -53,7 +53,7 @@ import os
 import random
 from from_unicode_str import *
 import decimal
-from curses.ascii import isprint
+from curses_ascii import isprint
 
 from pyparsing import *
 

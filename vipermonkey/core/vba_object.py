@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -44,7 +44,7 @@ https://github.com/decalage2/ViperMonkey
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
 
-__version__ = '0.02'
+__version__ = '0.08'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -54,7 +54,7 @@ __version__ = '0.02'
 import base64
 from logger import log
 import re
-from curses.ascii import isprint
+from curses_ascii import isprint
 
 from inspect import getouterframes, currentframe
 import sys
