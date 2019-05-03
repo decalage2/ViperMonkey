@@ -3,8 +3,7 @@ olefile
 prettytable
 colorlog
 colorama
-pyparsing
-antlr4-python2-runtime
+pyparsing==2.3.0 # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58)
 xlrd
 unidecode
 python-magic

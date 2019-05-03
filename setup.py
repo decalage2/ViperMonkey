@@ -47,8 +47,17 @@ setup(
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
-    install_requires=["oletools", "olefile", "prettytable", "colorlog", "colorama",
-                      "pyparsing", "unidecode", "xlrd", "python-magic"],
+    install_requires=[
+        "oletools",
+        "olefile",
+        "prettytable",
+        "colorlog",
+        "colorama",
+        "pyparsing==2.3.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58)
+        "unidecode",
+        "xlrd",
+        "python-magic"
+    ],
     packages=["vipermonkey", "vipermonkey.core"],
     #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
     entry_points=entry_points,
