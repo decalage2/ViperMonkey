@@ -37,7 +37,8 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from procedures import *
+#from procedures import *
+from core import *
 
 class function_defn_visitor(visitor):
     """
@@ -46,9 +47,17 @@ class function_defn_visitor(visitor):
 
     def __init__(self):
         self.funcs = set()
+        self.func_objects = set()
+        self.visited = set()
     
     def visit(self, item):
-        if (isinstance(item, Sub)):
+        if (item in self.visited):
+            return False
+        self.visited.add(item)
+        if (isinstance(item, procedures.Sub)):
             self.funcs.add(str(item.name))
-        if (isinstance(item, Function)):
+            self.func_objects.add(item)
+        if (isinstance(item, procedures.Function)):
             self.funcs.add(str(item.name))
+            self.func_objects.add(item)
+        return True

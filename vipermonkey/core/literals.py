@@ -44,6 +44,7 @@ __version__ = '0.02'
 from pyparsing import *
 
 from logger import log
+from vba_object import VBA_Object
 
 # --- BOOLEAN ------------------------------------------------------------
 
@@ -113,8 +114,57 @@ float_literal = float_literal_exp ^ float_literal_no_exp
 # MS-GRAMMAR: double-quote = %x0022 ; "
 # MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
 
-quoted_string = QuotedString('"', escQuote='""')
-quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n").replace("\t", "\\t"))
+class String(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(String, self).__init__(original_str, location, tokens)
+        self.value = tokens[0]
+        if (self.value.startswith('"') and self.value.endswith('"')):
+            self.value = self.value[1:-1]
+        # Replace Python control characters.
+        """
+        self.value = self.value.\
+                     replace("\0","\\0").\
+                     replace("\1","\\1").\
+                     replace("\2","\\2").\
+                     replace("\3","\\3").\
+                     replace("\4","\\4").\
+                     replace("\5","\\5").\
+                     replace("\6","\\6").\
+                     replace("\7","\\7").\
+                     replace("\n", "\\n").\
+                     replace("\t", "\\t").\
+                     replace("\f", "\\f").\
+                     replace("\a", "\\a").\
+                     replace("\b", "\\b").\
+                     replace("\r", "\\r").\
+                     replace("\v", "\\v")
+        """
+        # Some maldocs use the above characters in strings to decode. Replacing
+        # them breaks decoding, so they are commented out until something else
+        # breaks.
+        self.value = self.value.\
+                     replace("\0","\\0").\
+                     replace("\n", "\\n").\
+                     replace("\t", "\\t").\
+                     replace("\f", "\\f").\
+                     replace("\b", "\\b").\
+                     replace("\r", "\\r").\
+                     replace("\v", "\\v")
+        
+        log.debug('parsed "%r" as String' % self)
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, context, params=None):
+        r = self.value
+        log.debug("String.eval: return " + r)
+        return r
+
+#quoted_string = QuotedString('"', escQuote='""')('value')
+# Speed up string parsing with a regex.
+quoted_string = Regex('"(?:[^"]|"")*"')('value')
+quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
 quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))

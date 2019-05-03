@@ -139,7 +139,8 @@ from vba_library import *
 class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self):
+    def __init__(self, filename):
+        self.filename = filename
         self.modules = []
         self.modules_code = []
         self.globals = {}
@@ -159,12 +160,14 @@ class ViperMonkey(object):
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
-                             'workbook_activate', 'auto_close', 'workbook_close']
+                             'workbook_activate', 'auto_close', 'workbook_close',
+                             'workbook_deactivate', 'documentopen', 'app_documentopen']
 
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
         # See https://www.greyhathacker.net/?m=201609
-        self.callback_suffixes = ['_BeforeNavigate2',
+        self.callback_suffixes = ['_Activate',
+                                  '_BeforeNavigate2',
                                   '_BeforeScriptExecute',
                                   '_Change',
                                   '_DocumentComplete',
@@ -188,7 +191,9 @@ class ViperMonkey(object):
                                   '_SetSecureLockIcon',
                                   '_StatusTextChange',
                                   '_TitleChange',
-                                  '_Initialize']
+                                  '_Initialize',
+                                  '_Click',
+                                  '_BeforeClose']
                                   
     def add_compiled_module(self, m):
         """
@@ -359,14 +364,6 @@ class ViperMonkey(object):
             module.accept(defn_visitor)
             module.accept(var_visitor)
             module.accept(import_visitor)
-        """
-        print("************ CALLED FUNCS *************************")
-        print(call_visitor.called_funcs)
-        print("************ DEFINED FUNCS *************************")
-        print(defn_visitor.funcs)
-        print("************ DEFINED VARIABLES *************************")
-        print(var_visitor.variables)
-        """
 
         # Eliminate variables and local functions from the list of called functions.
         r = []
@@ -396,16 +393,25 @@ class ViperMonkey(object):
         context = Context(_globals=self.globals,
                           engine=self,
                           doc_vars=self.doc_vars,
-                          loaded_excel=self.loaded_excel)
+                          loaded_excel=self.loaded_excel,
+                          filename=self.filename)
 
         # Save the document text in the proper variable in the context.
-        context.globals["ActiveDocument.Content.Text".lower()] = self.doc_text
+        context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
         
         # reset the actions list, in case it is called several times
         self.actions = []
 
         # Track the external functions called.
         self.external_funcs = self._get_external_funcs()
+
+        # First emulate any Visual Basic that appears outside of subs/funcs.
+        log.info("Emulating loose statements...")
+        done_emulation = False
+        for m in self.modules:
+            if (m.eval(context=context)):
+                done_emulation = True
         
         # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
@@ -415,6 +421,7 @@ class ViperMonkey(object):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
                 context.dump_all_files()
+                done_emulation = True
 
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
@@ -423,7 +430,7 @@ class ViperMonkey(object):
             for suffix in self.callback_suffixes:
 
                 # Is this a callback?
-                if (name.lower().endswith(suffix.lower())):
+                if (str(name).lower().endswith(suffix.lower())):
 
                     # Is this a function?
                     item = self.globals[name]
@@ -433,7 +440,28 @@ class ViperMonkey(object):
                         context.report_action('Found Entry Point', str(name), '')
                         item.eval(context=context)
                         context.dump_all_files()
-                    
+                        done_emulation = True
+
+        # Did we find an entry point?
+        if (not done_emulation):
+
+            # Count the # of subroutines in the document.
+            only_sub = None
+            sub_name = None
+            sub_count = 0
+            for name in self.globals.keys():
+                item = self.globals[name]
+                if (isinstance(item, Sub)):
+                    only_sub = item
+                    sub_name = name
+                    sub_count += 1
+
+            # If there is only 1 subroutine, emulate that.
+            if (sub_count == 1):
+                context.report_action('Found Entry Point', str(sub_name), '')
+                only_sub.eval(context=context)
+                context.dump_all_files()
+                
     def eval(self, expr):
         """
         Parse and evaluate a single VBA expression

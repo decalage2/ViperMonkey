@@ -91,5 +91,5 @@ rem_statement = Suppress(Combine(CaselessKeyword('Rem') + comment_body))
 EOL = Optional(comment_single_quote) + line_terminator
 
 # End Of Statement, INCLUDING line terminator
-EOS = OneOrMore(EOL | Literal(':'))
+EOS = Suppress(Optional(";")) + OneOrMore(EOL | Literal(':'))
 

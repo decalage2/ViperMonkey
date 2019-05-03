@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names declared variables.
+ViperMonkey: Partial version of xlrd.book object interface.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -36,25 +36,42 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from statements import *
+__version__ = '0.03'
 
-class var_defn_visitor(visitor):
-    """
-    Collect the names of all declared variables.
-    """
+# --- IMPORTS ------------------------------------------------------------------
 
-    def __init__(self):
-        self.variables = set()
-        self.visited = set()
+class ExcelSheet(object):
+
+    def __init__(self, cells):
+        self.cells = cells
+
+    def cell(self, row, col):
+        if ((col, row) in self.cells):
+            return self.cells[(col, row)]
+        raise KeyError("Cell (" + str(row) + ", " + str(col) + ") not found.")
+
+    def cell_value(self, row, col):
+        return self.cell(row, col)
     
-    def visit(self, item):
-        if (item in self.visited):
-            return False
-        self.visited.add(item)        
-        if (isinstance(item, Dim_Statement)):
-            for name, _, _, _ in item.variables:
-                self.variables.add(str(name))
-        if (isinstance(item, Let_Statement)):
-            self.variables.add(str(item.name))
-        return True
+class ExcelBook(object):
+
+    def __init__(self, cells):
+        self.cells = cells
+
+    def __repr__(self):
+        r = ""
+        for cell in self.cells.keys():
+            r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
+        return r
+        
+    def sheet_names(self):
+        return ["Sheet1"]
+
+    def sheet_by_index(self, index):
+        return ExcelSheet(self.cells)
+
+    def sheet_by_name(self, name):
+        return ExcelSheet(self.cells)
+
+def make_book(cell_data):
+    return ExcelBook(cell_data)
