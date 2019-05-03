@@ -37,6 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import print_function
 
 #------------------------------------------------------------------------------
 # CHANGELOG:
@@ -841,32 +842,32 @@ def parse_stream(subfilename,
     # Strip out code that does not affect the end result of the program.
     if (strip_useless):
         vba_code = strip_lines.strip_useless_code(vba_code, local_funcs)
-    print '-'*79
-    print 'VBA MACRO %s ' % vba_filename
-    print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-    print '- '*39
+    print('-'*79)
+    print('VBA MACRO %s ' % vba_filename)
+    print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
+    print('- '*39)
     
     # Parse the macro.
     m = None
     if vba_code.strip() == '':
-        print '(empty macro)'
+        print('(empty macro)')
         m = "empty"
     else:
-        print '-'*79
-        print 'VBA CODE (with long lines collapsed):'
-        print vba_code
-        print '-'*79
+        print('-'*79)
+        print('VBA CODE (with long lines collapsed):')
+        print(vba_code)
+        print('-'*79)
         #sys.exit(0)
-        print 'PARSING VBA CODE:'
+        print('PARSING VBA CODE:')
         try:
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
             ParserElement.resetCache()
             m.code = vba_code
         except ParseException as err:
-            print err.line
-            print " "*(err.column-1) + "^"
-            print err
-            print "Parse Error. Processing Aborted."
+            print(err.line)
+            print(" "*(err.column-1) + "^")
+            print(err)
+            print("Parse Error. Processing Aborted.")
             return None
 
     # Check for timeouts.
@@ -960,8 +961,8 @@ def process_file (container,
             display_filename = '%s in %s' % (filename, container)
         else:
             display_filename = filename
-        print '='*79
-        print 'FILE:', display_filename
+        print('='*79)
+        print('FILE:', display_filename)
         f=open(filename,'r')
         data=f.read()
         f.close()
@@ -1309,8 +1310,8 @@ def _process_file (filename, data,
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
                 
-            print '-'*79
-            print 'TRACING VBA CODE (entrypoint = Auto*):'
+            print('-'*79)
+            print('TRACING VBA CODE (entrypoint = Auto*):')
             if (entry_points is not None):
                 log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
@@ -1325,8 +1326,8 @@ def _process_file (filename, data,
 
         else:
             print('Finished analyzing ' + str(orig_filename) + " .\n")
-            print 'No VBA macros found.'
-            print ''
+            print('No VBA macros found.')
+            print('')
             return ([], [])
     except Exception as e:
         if (("SystemExit" not in str(e)) and (". Aborting analysis." not in str(e))):
@@ -1348,13 +1349,13 @@ def process_file_scanexpr (container, filename, data):
         display_filename = '%s in %s' % (filename, container)
     else:
         display_filename = filename
-    print '='*79
-    print 'FILE:', display_filename
+    print('='*79)
+    print('FILE:', display_filename)
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
-        print 'Type:', vba.type
+        print('Type:', vba.type)
         if vba.detect_vba_macros():
 
             # Read in document metadata.
@@ -1366,52 +1367,52 @@ def process_file_scanexpr (container, filename, data):
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
                 vba_code = filter_vba(vba_code)
-                print '-'*79
-                print 'VBA MACRO %s ' % vba_filename
-                print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
-                print '- '*39
+                print('-'*79)
+                print('VBA MACRO %s ' % vba_filename)
+                print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
+                print('- '*39)
                 # detect empty macros:
                 if vba_code.strip() == '':
-                    print '(empty macro)'
+                    print('(empty macro)')
                 else:
                     # TODO: option to display code
-                    print vba_code
+                    print(vba_code)
                     vba_code = vba_collapse_long_lines(vba_code)
                     all_code += '\n' + vba_code
-            print '-'*79
-            print 'EVALUATED VBA EXPRESSIONS:'
+            print('-'*79)
+            print('EVALUATED VBA EXPRESSIONS:')
             t = prettytable.PrettyTable(('Obfuscated expression', 'Evaluated value'))
             t.align = 'l'
             t.max_width['Obfuscated expression'] = 36
             t.max_width['Evaluated value'] = 36
             for expression, expr_eval in scan_expressions(all_code):
                 t.add_row((repr(expression), repr(expr_eval)))
-            print t
+            print(t)
 
 
         else:
-            print 'No VBA macros found.'
+            print('No VBA macros found.')
     except: #TypeError:
         #raise
         #TODO: print more info if debug mode
         #print sys.exc_value
         # display the exception with full stack trace for debugging, but do not stop:
         traceback.print_exc()
-    print ''
+    print('')
 
 def print_version():
     """
     Print version information.
     """
 
-    print "Version Information:\n"
-    print "Python:\t\t\t" + str(sys.version_info)
+    print("Version Information:\n")
+    print("Python:\t\t\t" + str(sys.version_info))
     import pyparsing
-    print "pyparsing:\t\t" + str(pyparsing.__version__)
+    print("pyparsing:\t\t" + str(pyparsing.__version__))
     import olefile
-    print "olefile:\t\t" + str(olefile.__version__)
+    print("olefile:\t\t" + str(olefile.__version__))
     import oletools.olevba
-    print "olevba:\t\t\t" + str(oletools.olevba.__version__)
+    print("olevba:\t\t\t" + str(oletools.olevba.__version__))
     
 def main():
     """
@@ -1429,10 +1430,10 @@ def main():
 | |/ / / /_/ /  __/ /  / /  / / /_/ / / / / ,< /  __/ /_/ / 
 |___/_/ .___/\___/_/  /_/  /_/\____/_/ /_/_/|_|\___/\__, /  
      /_/                                           /____/   ''')
-    print ('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
-    print ('THIS IS WORK IN PROGRESS - Check updates regularly!')
-    print ('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
-    print ('')
+    print('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
+    print('THIS IS WORK IN PROGRESS - Check updates regularly!')
+    print('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
+    print('')
 
     DEFAULT_LOG_LEVEL = "info" # Default log level
     LOG_LEVELS = {
@@ -1475,7 +1476,7 @@ def main():
     
     # Print help if no arguments are passed
     if len(args) == 0:
-        print __doc__
+        print(__doc__)
         parser.print_help()
         sys.exit()
         
