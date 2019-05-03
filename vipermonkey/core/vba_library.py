@@ -469,7 +469,6 @@ class Eval(VbaLibraryFunc):
         if (len(params) < 1):
             return 0
         expr = strip_nonvb_chars(str(params[0]))
-
         try:
 
             # Parse it. Assume this is an expression.
@@ -495,11 +494,12 @@ class Execute(VbaLibraryFunc):
 
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
+        command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
         # Strip useless lines and fix up the code to emulate.
-        command = strip_useless_code(command, [])
+        #command = strip_useless_code(command, [])
         
         # Parse it.
         obj = None
