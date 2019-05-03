@@ -53,6 +53,7 @@ import os
 import random
 from from_unicode_str import *
 import decimal
+from curses.ascii import isprint
 
 from pyparsing import *
 
@@ -66,6 +67,7 @@ from vba_object import excel_col_letter_to_index
 import expressions
 import meta
 import modules
+from strip_lines import strip_useless_code
 
 from logger import log
 
@@ -74,6 +76,17 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 # TODO: Excel
 # TODO: other MS Office apps?
+
+def strip_nonvb_chars(s):
+    """
+    Strip invalid VB characters from a string.
+    """
+
+    r = ""
+    for c in s:
+        if ((ord(c) > 8) and (ord(c) < 127)):
+            r += c
+    return r
 
 class WeekDay(VbaLibraryFunc):
     """
@@ -172,7 +185,7 @@ class FileExists(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return False
         fname = str(params[0])
-        if ("powershell.exe" in fname):
+        if ("powershell" in fname.lower()):
             return True
         return False
         
@@ -302,6 +315,11 @@ class Left(VbaLibraryFunc):
             params = params[-2:]
         assert len(params) == 2
         s = params[0]
+
+        # Don't modify the "**MATCH ANY**" special value.
+        if (s == "**MATCH ANY**"):
+            return s
+        
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
         if not isinstance(s, basestring):
@@ -335,6 +353,11 @@ class Right(VbaLibraryFunc):
             params = params[-2:]
         assert len(params) == 2
         s = params[0]
+
+        # Don't modify the "**MATCH ANY**" special value.
+        if (s == "**MATCH ANY**"):
+            return s
+        
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
         if not isinstance(s, basestring):
@@ -445,7 +468,7 @@ class Eval(VbaLibraryFunc):
         # Pull out the expression to eval.
         if (len(params) < 1):
             return 0
-        expr = str(params[0])
+        expr = strip_nonvb_chars(str(params[0]))
 
         try:
 
@@ -471,10 +494,13 @@ class Execute(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Save the command.
-        command = str(params[0])
+        command = strip_nonvb_chars(str(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
+        # Strip useless lines and fix up the code to emulate.
+        command = strip_useless_code(command, [])
+        
         # Parse it.
         obj = None
         try:
@@ -512,6 +538,30 @@ class AddCode(Execute):
     """
     pass
 
+class Add(VbaLibraryFunc):
+    """
+    Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
+    """
+
+    def eval(self, context, params=None):
+        """
+        params[0] = object
+        params[1] = key
+        params[2] = value
+        """
+
+        # Sanity check.
+        if (len(params) != 3):
+            return
+
+        # Get the object (dict), key, and value.
+        obj = params[0]
+        key = params[1]
+        val = params[2]
+        if (not isinstance(obj, dict)):
+            return
+        obj[key] = val
+
 class Array(VbaLibraryFunc):
     """
     Create an array.
@@ -520,7 +570,7 @@ class Array(VbaLibraryFunc):
     def eval(self, context, params=None):
         r = []
         if ((len(params) == 1) and (params[0] == "NULL")):
-            return []
+            return []        
         for v in params:
             r.append(v)
         log.debug("Array: return %r" % r)
@@ -535,8 +585,8 @@ class UBound(VbaLibraryFunc):
         assert len(params) > 0
         arr = params[0]
         # TODO: Handle multidimensional arrays.
-        if (arr is None):
-            log.error("UBound(None) cannotbe computed.")
+        if ((arr is None) or (not hasattr(arr, '__len__'))):
+            log.error("UBound(" + str(arr) + ") cannot be computed.")
             return 0
         r = len(arr) - 1
         log.debug("UBound: return %r" % r)
@@ -626,18 +676,9 @@ class International(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
-            return "NULL"
-        val = params[0]
 
-        # xlCountrySetting
-        if (val == 2):
-
-            # Act like we are in the USA.
-            return 1
-
-        # Not emulated.
-        return "NULL"
+        # Match anything compared to this result.
+        return "**MATCH ANY**"
 
 class StrComp(VbaLibraryFunc):
     """
@@ -767,7 +808,76 @@ class InlineShapes(VbaLibraryFunc):
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
         return "InlineShapes('" + str(params[0]) + "')"
-    
+
+class GetByteCount_2(VbaLibraryFunc):
+    """
+    String encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) == 0) or (not isinstance(params[0], str))):
+            return 0
+        return len(params[0])
+
+class GetBytes_4(VbaLibraryFunc):
+    """
+    String encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) == 0) or (not isinstance(params[0], str))):
+            return []
+        r = []
+        for c in params[0]:
+            r.append(ord(c))
+        return r
+
+class TransformFinalBlock(VbaLibraryFunc):
+    """
+    Base64 encoder object method.
+    """
+
+    def eval(self, context, params=None):
+        if ((len(params) != 3) or (not isinstance(params[0], list))):
+            return "NULL"
+
+        # Pull out the byte values and start/end of the bytes to decode.
+        vals = params[0]
+        start = 0
+        try:
+            start = int(params[1])
+        except:
+            pass
+        end = len(vals) - 1
+        try:
+            end = int(params[2])
+        except:
+            pass
+        if (end > len(vals) - 1):
+            end = len(vals) - 1
+        if (start > end):
+            start = end - 1
+
+        # Reconstruct the base64 encoded string.
+        base64_str = ""
+        end += 1
+        for b in vals[start : end]:
+            base64_str += chr(b)
+
+        # Decode the base64 encoded string.
+        r = "NULL"
+        try:
+            log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
+            base64_str = filter(isprint, str(base64_str).strip())
+            r = base64.b64decode(base64_str).replace(chr(0), "")
+            log.debug("eval_arg: Base64 decode success.")
+        except Exception as e:
+            log.debug("eval_arg: Base64 decode fail. " + str(e))
+
+        # Return the decoded string.
+        log.debug("Decoded string: " + r)
+        return r
+            
 class Split(VbaLibraryFunc):
     """
     Split() string function.
@@ -896,12 +1006,18 @@ class Replace(VbaLibraryFunc):
         if ((rep is None) or (rep == 0)):
             rep = ''
 
-        # Don't do a regex replacement of everything.
-        if (pat.strip() != "."):
-            try:
-                r = re.sub(pat, rep, string)
-            except:
-                r = string.replace(pat, rep)
+        # regex replacement?
+        if (params[-1] == "<-- USE REGEX -->"):
+            
+            # Don't do a regex replacement of everything.
+            if (pat.strip() != "."):
+                try:
+                    pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                    r = re.sub(pat1, rep, string)
+                except:
+                    r = string
+
+        # Regular string replacement?
         else:
             r = string.replace(pat, rep)
 
@@ -909,6 +1025,54 @@ class Replace(VbaLibraryFunc):
         log.debug("Replace: return %r" % r)
         return r
 
+class SaveToFile(VbaLibraryFunc):
+    """
+    SaveToFile() ADODB.Stream method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) == 0):
+            return ""
+
+        # Just return the file name. This is used in
+        # expressions.MemberAccessExpression._handle_savetofile().
+        return str(params[0])
+    
+class LoadXML(VbaLibraryFunc):
+    """
+    LoadXML() MSXML2.DOMDocument.3.0 method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) == 0):
+            return ""
+
+        # Get the XML.
+        xml = str(params[0]).strip()
+
+        # Is this some base64?
+        if (xml.startswith("<B64DECODE")):
+
+            # Yes it is. Pull it out.
+            start = xml.index(">") + 1
+            end = xml.rindex("<")
+            xml = xml[start:end].strip()
+
+            # It looks like maybe this magically does base64 decode? Try that.
+            try:
+                log.debug("eval_arg: Try base64 decode of '" + xml + "'...")
+                xml = base64.b64decode(xml).replace(chr(0), "")
+                log.debug("eval_arg: Base64 decode success.")
+            except Exception as e:
+                log.debug("eval_arg: Base64 decode fail. " + str(e))
+
+        # Return the XML or base64 string.
+        return xml
+        
 class Join(VbaLibraryFunc):
     """
     Join() string function.
@@ -1195,7 +1359,9 @@ class CLng(VbaLibraryFunc):
 
         # Handle abstracted pointers to memory.
         val = params[0]
-        if (isinstance(val, str) and (val.startswith("&"))):
+        if (isinstance(val, str) and
+            (not val.startswith("&H")) and
+            (val.startswith("&"))):
             return val
 
         # Actually try to convert to a number.
@@ -1327,11 +1493,12 @@ class Log(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
-        r = ''
+        r = params[0]
         try:
             num = float(params[0])
             r = math.log(num)
-        except ValueError:
+        except ValueError as e:
+            log.error("Log(" + str(params[0]) + ") failed. " + str(e))
             pass
         log.debug("Log: %r returns %r" % (self, r))
         return r
@@ -1398,11 +1565,12 @@ class Exp(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) == 1)
-        r = ''
+        r = params[0]
         try:
             num = float(params[0])
             r = math.exp(num)
-        except:
+        except Exception as e:
+            log.error("Exp(" + str(params[0]) + ") failed. " + str(e))
             pass
         log.debug("Exp: %r returns %r" % (self, r))
         return r
@@ -1429,7 +1597,8 @@ class Str(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params[0]) == 0)):
+            return ""
         r = str(params[0])
         log.debug("Str: %r returns %r" % (self, r))
         return r
@@ -1709,9 +1878,60 @@ class Environ(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        # TODO: Actually simulate getting common environment variable values.
+
+        # Common environment variables.
+        env_vars = {}
+        env_vars["ALLUSERSPROFILE".lower()] = 'C:\\ProgramData'
+        env_vars["APPDATA".lower()] = 'C:\\Users\\admin\\AppData\\Roaming'
+        env_vars["CommonProgramFiles".lower()] = 'C:\\Program Files\\Common Files'
+        env_vars["CommonProgramFiles(x86)".lower()] = 'C:\\Program Files (x86)\\Common Files'
+        env_vars["CommonProgramW6432".lower()] = 'C:\\Program Files\\Common Files'
+        env_vars["COMPUTERNAME".lower()] = 'ADJH676F'
+        env_vars["ComSpec".lower()] = 'C:\\WINDOWS\\system32\\cmd.exe'
+        env_vars["DriverData".lower()] = 'C:\\Windows\\System32\\Drivers\\DriverData'
+        env_vars["HOMEDRIVE".lower()] = 'C:'
+        env_vars["HOMEPATH".lower()] = '\\Users\\admin'
+        env_vars["LOCALAPPDATA".lower()] = 'C:\\Users\\admin\\AppData\\Local'
+        env_vars["LOGONSERVER".lower()] = '\\\\HEROG76'
+        env_vars["NUMBER_OF_PROCESSORS".lower()] = '4'
+        env_vars["OneDrive".lower()] = 'C:\\Users\\admin\\OneDrive'
+        env_vars["OS".lower()] = 'Windows_NT'
+        env_vars["Path".lower()] = 'C:\\ProgramData\\Oracle\\Java\\javapath'
+        env_vars["PATHEXT".lower()] = '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC'
+        env_vars["PROCESSOR_ARCHITECTURE".lower()] = 'AMD64'
+        env_vars["PROCESSOR_IDENTIFIER".lower()] = 'Intel64 Family 6 Model 158 Stepping 9, GenuineIntel'
+        env_vars["PROCESSOR_LEVEL".lower()] = '6'
+        env_vars["PROCESSOR_REVISION".lower()] = '9e09'
+        env_vars["ProgramData".lower()] = 'C:\\ProgramData'
+        env_vars["ProgramFiles".lower()] = 'C:\\Program Files'
+        env_vars["ProgramFiles(x86)".lower()] = 'C:\\Program Files (x86)'
+        env_vars["ProgramW6432".lower()] = 'C:\\Program Files'
+        env_vars["PROMPT".lower()] = '$P$G'
+        env_vars["PSModulePath".lower()] = 'C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules;C:\\Program Files\\Microsoft Message Analyzer\\PowerShell\\'
+        env_vars["PUBLIC".lower()] = 'C:\\Users\\Public'
+        env_vars["SESSIONNAME".lower()] = 'Console'
+        env_vars["SystemDrive".lower()] = 'C:'
+        env_vars["SystemRoot".lower()] = 'C:\\WINDOWS'
+        env_vars["TEMP".lower()] = 'C:\\Users\\admin\\AppData\\Local\\Temp'
+        env_vars["TMP".lower()] = 'C:\\Users\\admin\\AppData\\Local\\Temp'
+        env_vars["USERDNSDOMAIN".lower()] = 'REMOTE.FOURTHWALL.COM'
+        env_vars["USERDOMAIN".lower()] = 'FOURTHWALL'
+        env_vars["USERDOMAIN_ROAMINGPROFILE".lower()] = 'FOURTHWALL'
+        env_vars["USERNAME".lower()] = 'admin'
+        env_vars["USERPROFILE".lower()] = 'C:\\Users\\admin'
+        env_vars["VS110COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\Common7\\Tools\\'
+        env_vars["VS120COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\Common7\\Tools\\'
+        env_vars["VS140COMNTOOLS".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\Common7\\Tools\\'
+        env_vars["VSSDK140Install".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VSSDK\\'
+        env_vars["windir".lower()] = 'C:\\WINDOWS'
+
+        # Is this an environment variable we know?
         r = "%" + str(params[0]).upper() + "%"
-        r = r.replace("%%", "%")
+        var_name = str(params[0]).lower().replace("%", "")
+        if (var_name in env_vars):
+            r = env_vars[var_name]
+        
+        # Done.
         log.debug("Environ: %r returns %r" % (self, r))
         return r
 
@@ -1797,7 +2017,8 @@ class CallByName(VbaLibraryFunc):
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
-        if (("Open" in cmd) and ("WinHttpRequest" in obj)):
+        if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
+            ((len(params) > 5) and (params[3].lower() == "get"))):
             context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
@@ -1814,6 +2035,15 @@ class CallByName(VbaLibraryFunc):
 
         # Do nothing.
         return None
+
+class Raise(VbaLibraryFunc):
+    """
+    Raise() exception/error function.
+    """
+
+    def eval(self, context, params=None):
+        context.got_error = True
+        log.warning("Raise exception " + str(params))
             
 class Close(VbaLibraryFunc):
     """
@@ -2196,6 +2426,10 @@ class CreateObject(VbaLibraryFunc):
         if (obj_type == 'ADODB.Stream'):
             context.open_file('ADODB.Stream')
 
+        # Handle certain object types.
+        if (obj_type == "Scripting.Dictionary"):
+            return {}
+            
         # Just return a string representation of the name of the object
         # being created.
         return str(obj_type)
@@ -2516,7 +2750,11 @@ class Print(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+
+        # Regular Debug.Print() ?
+        if (len(params) != 1):
+            log.warning("Wrong # of arguments for Print " + str(params))
+            return
 
         # Save writes that look like they are writing URLs.
         data_str = str(params[0])
@@ -2528,6 +2766,12 @@ class Print(VbaLibraryFunc):
 class Debug(Print):
     """
     Debug() debugging function.
+    """
+    pass
+
+class Echo(Print):
+    """
+    WScript.Echo() debugging function.
     """
     pass
         
@@ -2566,7 +2810,7 @@ class CreateTextFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) < 2):
+        if (len(params) == 0):
             return "NULL"
 
         # Get the name of the file being opened.
@@ -2667,6 +2911,37 @@ class Unescape(VbaLibraryFunc):
         # Return the unsescaped string.
         return s
 
+class InternetGetConnectedState(VbaLibraryFunc):
+    """
+    InternetGetConnectedState() function from wininet.dll.
+    """
+
+    def eval(self, context, params=None):
+
+        # Always connected.
+        return True
+
+class InternetOpenA(VbaLibraryFunc):
+    """
+    InternetOpenA() function from wininet.dll.
+    """
+
+    def eval(self, context, params=None):
+
+        # Always succeeds.
+        return True
+
+class FreeFile(VbaLibraryFunc):
+    """
+    FreeFile() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Return index of next open file.
+        v = len(context.open_files) + 1
+        return v
+
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -2697,6 +2972,7 @@ class Write(VbaLibraryFunc):
 
         # Get the ID of the file.
         file_id = context.open_files.keys()[0]
+        log.info("Writing data to " + str(file_id) + " .")
 
         # Get the data.
         data = params[0]
@@ -2732,7 +3008,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Month, ExecQuery, ExpandEnvironmentStrings, Execute, Eval, ExecuteGlobal,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
-               RegWrite, QBColor):
+               RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

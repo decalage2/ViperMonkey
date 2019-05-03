@@ -89,6 +89,7 @@ from pyparsing import *
 #ParserElement.enablePackrat(cache_size_limit=None)
 ParserElement.enablePackrat(cache_size_limit=100000)
 
+import tempfile
 import struct
 import multiprocessing
 import optparse
@@ -128,10 +129,91 @@ if (item is not None):
     
 # relative import of core ViperMonkey modules:
 from core import *
+import core.excel as excel
 
 # === MAIN (for tests) ===============================================================================================
 
-def _read_doc_text(fname, data=None):
+def _read_doc_text_libreoffice(data):
+    
+    # Discard output.
+    out = open(os.devnull, "w")
+    
+    # Is LibreOffice installed?
+    try:
+        rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
+        if (rc != 0):
+
+            # Not installed.
+            log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
+            out.close()
+            return None
+
+    except OSError:
+
+        # Not installed.
+        log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
+        out.close()
+        return None
+
+    # LibreOffice is installed.
+
+    # Try to get sheet data.
+    (fd, filename) = tempfile.mkstemp()
+    try:
+        
+        # Save the possible Word document to a temporary file.
+        tfile = os.fdopen(fd, "wb")
+        tfile.write(data)
+        tfile.close()
+
+        # Try to convert the file to a text file.
+        try:
+            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", "/tmp/", filename],
+                                 stdout=out, stderr=out)
+            if (rc != 0):
+
+                # Conversion failed.
+                log.error("Cannot read doc text with LibreOffice. Conversion failed.")
+                out.close()
+                return None
+            
+        except OSError as e:
+            
+            # Conversion failed.
+            log.error("Cannot read doc text with LibreOffice. Conversion failed. " + str(e))
+            out.close()
+            return None
+
+        # Read the paragraphs from the converted text file.
+        r = []
+        f = None
+        try:
+            f = open(filename + ".txt")
+        except IOError as e:
+            log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
+            return None
+        for line in f:
+            if (line.endswith("\n")):
+                line = line[:-1]
+            r.append(line)
+
+        # Return the paragraph text.
+        return r
+
+    finally:
+
+        # Delete the temporary files.
+        try:
+            os.remove(filename)
+            os.remove(filename + ".txt")
+        except:
+            pass
+
+        # Cleanup.
+        out.close()
+
+
+def _read_doc_text_strings(data):
     """
     Use a heuristic to read in the document text. The current
     heuristic (basically run strings on the document file) is not
@@ -140,6 +222,20 @@ def _read_doc_text(fname, data=None):
 
     TODO: Replace this when a real Python solution for reading the doc
     text is found.
+    """
+
+    # Pull strings from doc.
+    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
+    r = []
+    for s in str_list:
+        r.append(s)
+    
+    # Return all the strings.
+    return r
+
+def _read_doc_text(fname, data=None):
+    """
+    Read in text from the given document.
     """
 
     # Read in the file.
@@ -152,14 +248,14 @@ def _read_doc_text(fname, data=None):
             log.error("Cannot read document text from " + str(fname) + ". " + str(e))
             return ""
 
-    # Pull strings from doc.
-    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
-    r = ""
-    for s in str_list:
-        r += s + "\n"
-    
-    # Return all the strings.
-    return r
+    # First try to read the doc text with LibreOffice.
+    r = _read_doc_text_libreoffice(data)
+    if (r is not None):
+        return r
+
+    # LibreOffice might not be installed or this is not a Word doc. Punt and
+    # just pull strings from the file.
+    return _read_doc_text_strings(data)
 
 def _get_shapes_text_values_xml(fname):
     """
@@ -331,7 +427,9 @@ def _get_shapes_text_values(fname, stream):
         # 0x0D bytes. We will look for that.
         pat = r"\x0d[\x20-\x7e]{100,}\x0d"
         strs = re.findall(pat, data)
-
+        #print "STREAM: " + str(stream)
+        #print data
+        
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
         pos = 1
@@ -694,448 +792,17 @@ def _read_custom_doc_props(fname):
         log.error("Cannot read custom doc properties. " + str(e))
         return []
     
-def is_useless_dim(line):
-    """
-    See if we can skip this Dim statement and still successfully emulate.
-    We only use Byte type information when emulating.
-    """
-
-    # Is this dimming a variable with a type we want to save? Also
-    # keep Dim statements that set an initial value.
-    line = line.strip()
-    if (not line.startswith("Dim ")):
-        return False
-    r = (("Byte" not in line) and
-         ("Long" not in line) and
-         ("Integer" not in line) and
-         (":" not in line) and
-         ("=" not in line) and
-         (not line.strip().endswith("_")))
-
-    # Does the variable name collide with a builtin VBA function name? If so,
-    # keep the Dim statement.
-    line = line.lower()
-    for builtin in vba_context.VBA_LIBRARY.keys():
-        if (builtin in line):
-            r = False
-
-    # Done.
-    return r
-
-def is_interesting_call(line, external_funcs, local_funcs):
-
-    # Is this an interesting function call?
-    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
-                 "Open", "CreateMutex", "CreateRemoteThread", "InternetOpen",
-                 ".Open", "GetObject", "Create", ".Create", "Environ",
-                 "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
-                 "Split"]
-    log_funcs.extend(local_funcs)
-    for func in log_funcs:
-        if (func in line):
-            return True
-
-    # Are we calling an external function?
-    for ext_func_decl in external_funcs:
-        if (("Function" in ext_func_decl) and ("Lib" in ext_func_decl)):
-            start = ext_func_decl.index("Function") + len("Function")
-            end = ext_func_decl.index("Lib")
-            ext_func = ext_func_decl[start:end].strip()
-            if (ext_func in line):
-                return True
-        
-    # Not a call we are tracking.
-    return False
-
-def is_useless_call(line):
-    """
-    See if the given line contains a useless do-nothing function call.
-    """
-
-    # These are the functions that do nothing if they appear on a line by themselves.
-    # TODO: Add more functions as needed.
-    useless_funcs = set(["Cos", "Log", "Cos", "Exp", "Sin", "Tan", "DoEvents"])
-
-    # Is this an assignment line?
-    if ("=" in line):
-        return False
-
-    # Nothing is being assigned. See if a useless function is called and the
-    # return value is not used.
-    line = line.replace(" ", "")
-    called_func = line
-    if ("(" in line):
-        called_func = line[:line.index("(")]
-    called_func = called_func.strip()
-    for func in useless_funcs:
-        if (called_func == func):
-            return True
-    return False
-
-def collapse_macro_if_blocks(vba_code):
-    """
-    When emulating we only pick a single block from a #if statement. Speed up parsing
-    by picking the largest block and strip out the rest.
-    """
-
-    # Pick out the largest #if blocks.
-    log.debug("Collapsing macro blocks...")
-    curr_blocks = None
-    curr_block = None
-    r = ""
-    for line in vba_code.split("\n"):
-
-        # Are we tracking an #if block?
-        strip_line = line.strip()
-        if (curr_blocks is None):
-
-            # Is this the start of an #if block?
-            if (strip_line.startswith("#If")):
-
-                # Yes, start tracking blocks.
-                log.debug("Start block " + strip_line)
-                curr_blocks = []
-                curr_block = []
-                r += "' STRIPPED LINE\n"
-                continue
-
-            # Not the start of an #if. Save the line.
-            r += line + "\n"
-            continue
-
-        # If we get here we are tracking an #if statement.
-
-        # Is this the start of another block in the #if?
-        if ((strip_line.startswith("#Else")) or
-            (strip_line.startswith("Else"))):
-
-            # Save the current block.
-            curr_blocks.append(curr_block)
-            log.debug("Else if " + strip_line)
-            log.debug("Save block " + str(curr_block))
-
-            # Start a new block.
-            curr_block = []
-            r += "' STRIPPED LINE\n"
-            continue
-
-        # Have we finished the #if?
-        if (strip_line.startswith("#End")):
-
-            log.debug("End if " + strip_line)
-
-            # Save the current block.
-            curr_blocks.append(curr_block)
-            
-            # Add back in the largest block and skip the rest.
-            biggest_block = []
-            for block in curr_blocks:
-                if (len(block) > len(biggest_block)):
-                    biggest_block = block
-            for block_line in biggest_block:
-                r += block_line + "\n"
-            log.debug("Pick block " + str(biggest_block))
-                
-            # Done processing #if.
-            curr_blocks = None
-            curr_block = None
-            continue
-
-        # We have a block line. Save it.
-        curr_block.append(line)
-
-    # Return the stripped VBA.
-    return r
-    
-def strip_useless_code(vba_code, local_funcs):
-    """
-    Strip statements that have no usefull effect from the given VB. The
-    stripped statements are commented out.
-    """
-
-    # Clear out lines broken up on multiple lines.
-    vba_code = re.sub(r" _ *\r?\n", "", vba_code)
-    vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
-    
-    # Track data change callback function names.
-    change_callbacks = set()    
-    
-    # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+(\.\w+)*)\s*=\s*")
-    assigns = {}
-    line_num = 0
-    bool_statements = set(["If", "For", "Do"])
-    external_funcs = []
-    for line in vba_code.split("\n"):
-
-        # Save external function declarations lines so we can avoid stripping
-        # calls to external functions.
-        if (("Declare" in line) and ("Lib" in line)):
-            external_funcs.append(line.strip())
-        
-        # Is this a change function callback?
-        if (("Sub " in line) and ("_Change(" in line)):
-
-            # Pull out the name of the data item with the current change callback.
-            # ex: Private Sub besstirp_Change()
-            data_name = line.replace("Sub ", "").\
-                        replace("Private ", "").\
-                        replace(" ", "").\
-                        replace("()", "").\
-                        replace("_Change", "").strip()
-            change_callbacks.add(data_name)
-        
-        # Is there an assignment on this line?
-        line_num += 1
-        match = assign_re.findall(line)
-        if (len(match) > 0):
-
-            log.debug("SKIP: Assign line: " + line)
-
-            # Skip starts of while loops.
-            if (line.strip().startswith("While ")):
-                log.debug("SKIP: While loop. Keep it.")
-                continue
-
-            # Skip function definitions.
-            if ((line.strip().lower().startswith("if ")) or
-                (line.strip().lower().startswith("elseif "))):
-                log.debug("SKIP: If statement. Keep it.")
-                continue
-            
-            # Skip function definitions.
-            if (line.strip().lower().startswith("function ")):
-                log.debug("SKIP: Function decl. Keep it.")
-                continue
-
-            # Skip const definitions.
-            if (line.strip().lower().startswith("const ")):
-                log.debug("SKIP: Const decl. Keep it.")
-                continue
-                
-            # Skip lines that end with a continuation character.
-            if (line.strip().endswith("_")):
-                log.debug("SKIP: Continuation line. Keep it.")
-                continue
-
-            # Skip function definitions.
-            if (("sub " in line.lower()) or ("function " in line.lower())):
-                log.debug("SKIP: Function definition. Keep it.")
-                continue
-
-            # Skip calls to GetObject() or Shell().
-            if (("GetObject" in line) or ("Shell" in line)):
-                log.debug("SKIP: GetObject()/Shell() call. Keep it.")
-                continue
-
-            # Skip calls to various interesting calls.
-            if (is_interesting_call(line, external_funcs, local_funcs)):
-                continue
-            
-            # Skip lines where the '=' is part of a boolean expression.
-            strip_line = line.strip()            
-            skip = False
-            for bool_statement in bool_statements:
-                if (strip_line.startswith(bool_statement + " ")):
-                    skip = True
-                    break
-            if (skip):
-                continue
-
-            # Skip lines assigning variables in a with block.
-            if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
-                continue
-
-            # Skip lines where the '=' might be in a string.
-            if ('"' in line):
-                eq_index = line.index("=")
-                qu_index1 =  line.index('"')
-                qu_index2 =  line.rindex('"')
-                if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
-                    continue
-            
-            # Yes, there is an assignment. Save the assigned variable and line #
-            log.debug("SKIP: Assigned vars = " + str(match))
-            for var in match:
-
-                # Skip empty.
-                var = var[0]
-                if (len(var.strip()) == 0):
-                    continue
-                
-                # Keep lines where we may be running a command via an object.
-                val = line[line.rindex("=") + 1:]
-                if ("." in val):
-                    continue
-
-                # Keep object creations.
-                if ("CreateObject" in val):
-                    continue
-
-                # Keep updates of the LHS where the LHS appears on the RHS
-                # (ex. a = a + 1).
-                if (var.lower() in val.lower()):
-                    continue
-                
-                # It does not look like we are running something. Track the variable.
-                if (var not in assigns):
-                    assigns[var] = set()
-                assigns[var].add(line_num)
-
-    # Now do a very loose check to see if the assigned variable is referenced anywhere else.
-    refs = {}
-    for var in assigns.keys():
-        # Keep assignments to variables in other streams since we cannot
-        # tell based on the current stream whether the assignment is used.
-        refs[var] = ("." in var)
-    line_num = 0
-    for line in vba_code.split("\n"):
-
-        # Mark all the variables that MIGHT be referenced on this line.
-        line_num += 1
-        for var in assigns.keys():
-
-            # Skip variable references on the lines where the current variable was assigned.
-            if (line_num in assigns[var]):
-                continue
-
-            # Could the current variable be used on this line?
-            if (var in line):
-
-                # Maybe. Count this as a reference.
-                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
-                refs[var] = True
-
-    # Keep assignments that have change callbacks.
-    for change_var in change_callbacks:
-        for var in assigns.keys():
-            refs[var] = ((change_var in var) or (var in change_var) or refs[var])
-                
-    # Figure out what assignments to strip and keep.
-    comment_lines = set()
-    keep_lines = set()
-    for var in refs.keys():
-        if (not refs[var]):
-            for num in assigns[var]:
-                comment_lines.add(num)
-        else:
-            for num in assigns[var]:
-                keep_lines.add(num)
-
-    # Multiple variables can be assigned on 1 line (a = b = 12). If any of the variables
-    # on this assignment line are used, keep it.
-    tmp = set()
-    for l in comment_lines:
-        if (l not in keep_lines):
-            tmp.add(l)
-    comment_lines = tmp
-    
-    # Now strip out all useless assignments.
-    r = ""
-    line_num = 0
-    if_count = 0
-    in_func = False
-    for line in vba_code.split("\n"):
-
-        # Are we in a function?
-        if (("End Sub" in line) or ("End Function" in line)):
-            in_func = False
-        elif (("Sub " in line) or ("Function " in line)):
-            in_func = True
-        
-        # Keep track of if starts so we can match up end ifs.
-        line_num += 1
-        if (line.strip().startswith("If ")):
-            if_count += 1
-
-        # Do we have an unmatched 'end if'? If so, replace it with an
-        # 'end function' to handle some Carbanak maldocs.
-        #if (line.strip().startswith("End If")):
-        #    if_count -= 1
-        #    if (if_count < 0):
-        #        r += "End Function\n"
-        #        if_count = 0
-        #        continue
-        
-        # Does this line get stripped based on variable usage?
-        if ((line_num in comment_lines) and
-            (not line.strip().startswith("Function ")) and
-            (not line.strip().startswith("Sub ")) and
-            (not line.strip().startswith("End Sub")) and
-            (not line.strip().startswith("End Function"))):
-            log.debug("STRIP: Stripping Line (1): " + line)
-            r += "' STRIPPED LINE\n"
-            continue
-
-        # Does this line get stripped based on a useless function call?
-        if (is_useless_call(line)):
-            log.debug("STRIP: Stripping Line (2): " + line)
-            r += "' STRIPPED LINE\n"
-            continue
-
-        # Does this line get stripped based on being a Dim that we will not use
-        # when emulating?
-        if ((in_func) and (is_useless_dim(line))):
-            log.debug("STRIP: Stripping Line (3): " + line)
-            r += "' STRIPPED LINE\n"
-            continue
-
-        # For now we are just stripping out class declarations. Need to actually
-        # emulate classes somehow.
-        if ((line.strip().startswith("Class ")) or (line.strip() == "End Class")):
-            log.warning("Classes not handled. Stripping '" + line.strip() + "'.")
-            continue
-
-        # Also not handling Attribute statements at all.
-        if (line.strip().startswith("Attribute ")):
-            log.warning("Attribute statements not handled. Stripping '" + line.strip() + "'.")
-            continue
-            
-        # The line is useful. Keep it.
-
-        # At least 1 maldoc builder is not putting a newline before the
-        # 'End Function' closing out functions. Rather than changing the
-        # parser to deal with this we just fix those lines here.
-        if ((line.endswith("End Function")) and
-            (len(line) > len("End Function"))):
-            r += line.replace("End Function", "") + "\n"
-            r += "End Function\n"
-            continue
-
-        # Fix Application.Run "foo, bar baz" type expressions by removing
-        # the quotes.
-        if (line.strip().startswith("Application.Run") and
-            (line.count('"') == 2) and
-            (line.strip().endswith('"'))):
-
-            # Just directly run the command in the string.
-            line = line.replace('"', '').replace("Application.Run", "")
-
-            # Fix cases where the function to run is the 1st argument in the arg string.
-            fields = line.split(",")
-            if ((len(fields) > 1) and (" " not in fields[0].strip())):
-                line = "WScript.Shell " + line
-        
-        # This is a regular valid line. Add it.
-        r += line + "\n"
-
-    # Now collapse down #if blocks.
-    r = collapse_macro_if_blocks(r)
-        
-    return r
-
 def get_vb_contents(vba_code):
     """
     Pull out Visual Basic code from .hta file contents.
     """
 
     # Pull out the VB code.
-    pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee]\s*=\s*\"VBScript\"\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
+    pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\".{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
     code = re.findall(pat, vba_code, re.DOTALL)
 
     # Did we find any VB code in a script block?
-    print code
+    #print code
     if (len(code) == 0):
         return vba_code
 
@@ -1175,12 +842,12 @@ def parse_stream(subfilename,
 
     # Strip out code that does not affect the end result of the program.
     if (strip_useless):
-        vba_code = strip_useless_code(vba_code, local_funcs)
+        vba_code = strip_lines.strip_useless_code(vba_code, local_funcs)
     print '-'*79
     print 'VBA MACRO %s ' % vba_filename
     print 'in file: %s - OLE stream: %s' % (subfilename, repr(stream_path))
     print '- '*39
-
+    
     # Parse the macro.
     m = None
     if vba_code.strip() == '':
@@ -1191,6 +858,7 @@ def parse_stream(subfilename,
         print 'VBA CODE (with long lines collapsed):'
         print vba_code
         print '-'*79
+        #sys.exit(0)
         print 'PARSING VBA CODE:'
         try:
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
@@ -1301,6 +969,135 @@ def process_file (container,
         f.close()
     return _process_file(filename,data,altparser=altparser,strip_useless=strip_useless,entry_points=entry_points,time_limit=time_limit)
 
+def read_sheet_from_csv(filename):
+
+    # Open the CVS file.
+    f = None
+    try:
+        f = open(filename, 'r')
+    except:
+        return None
+
+    # Read in all the cells. Note that this only works for a single sheet.
+    row = 0
+    r = {}
+    for line in f:
+        line = line.strip()
+        cells = line.split(",")
+        col = 0
+        for cell in cells:
+            dat = str(cell)
+            if (dat.startswith('"')):
+                dat = dat[1:]
+            r[(col, row)] = dat
+            col += 1
+        row += 1
+
+    # Close file.
+    f.close()
+
+    # Make an object with a subset of the xlrd book methods.
+    r = excel.make_book(r)
+    #print "EXCEL:\n"
+    #print r
+    return r
+
+def load_excel_libreoffice(data):
+    
+    # Discard output.
+    out = open(os.devnull, "w")
+    
+    # Is LibreOffice installed?
+    try:
+        rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
+        if (rc != 0):
+
+            # Not installed.
+            log.error("Cannot convert Excel file with LibreOffice. LibreOffice not installed.")
+            out.close()
+            return None
+
+    except OSError:
+
+        # Not installed.
+        log.error("Cannot convert Excel file with LibreOffice. LibreOffice not installed.")
+        out.close()
+        return None
+
+    # LibreOffice is installed.
+
+    # Try to get sheet data.
+    (fd, filename) = tempfile.mkstemp()
+    try:
+        
+        # Save the possible spreadsheet to a temporary file.
+        tfile = os.fdopen(fd, "wb")
+        tfile.write(data)
+        tfile.close()
+
+        # Try to convert the file to a CSV file.
+        try:
+            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
+                                 stdout=out, stderr=out)
+            if (rc != 0):
+
+                # Conversion failed.
+                log.error("Cannot convert Excel file with LibreOffice. Conversion failed.")
+                out.close()
+                return None
+            
+        except OSError as e:
+            
+            # Conversion failed.
+            log.error("Cannot convert Excel file with LibreOffice. Conversion failed. " + str(e))
+            out.close()
+            return None
+
+        # Read the spreadsheet data from the CSV.
+        return read_sheet_from_csv(filename + ".csv")
+
+    finally:
+
+        # Delete the temporary Excel files.
+        try:
+            os.remove(filename)
+            os.remove(filename + ".csv")
+        except:
+            pass
+
+        # Cleanup.
+        out.close()
+        
+def load_excel_xlrd(data):
+    try:
+        log.debug("Trying to load with xlrd...")
+        return xlrd.open_workbook(file_contents=data)
+    except Exception as e:
+        log.error("Reading in file as Excel with xlrd failed. " + str(e))
+        return None
+    
+def load_excel(data):
+    """
+    Load the cells from a given Excel spreadsheet. This first tries getting the sheet
+    contents with LibreOffice if it is installed, and if that does not work try reading
+    it with the Python xlrd package.
+
+    data - The loaded Excel file contents.
+
+    return - An xlrd (like) object with the Excel file contents.
+    """
+
+    # First try loading the sheet with xlrd.
+    wb = load_excel_xlrd(data)
+    if (wb is not None):
+
+        # Did we load sheets with xlrd?
+        if (len(wb.sheet_names()) > 0):
+            return wb
+
+    # That failed. Fall back to LibreOffice.
+    return load_excel_libreoffice(data)
+
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename, data,
@@ -1326,7 +1123,8 @@ def _process_file (filename, data,
     # Set the emulation time limit.
     if (time_limit is not None):
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
-    
+
+    # Create the emulator.
     vm = ViperMonkey(filename)
     orig_filename = filename
     if (entry_points is not None):
@@ -1345,26 +1143,15 @@ def _process_file (filename, data,
                 meta.metadata = ole.get_metadata()
                 vba_object.meta = meta.metadata
             except Exception as e:
-                log.error("Reading in metadata failed. " + str(e))
-                meta.metadata = {}
+                log.warning("Reading in metadata failed. Trying fallback. " + str(e))
+                meta.metadata = meta.get_metadata_exif(orig_filename)
 
-            # If this is an Excel spreadsheet, read it in with xlrd.
-            try:
-                log.debug("Trying to load with xlrd...")
-                vm.loaded_excel = xlrd.open_workbook(file_contents=data)
-            except Exception as e:
-                log.error("Reading in file as Excel failed. " + str(e))
+            # If this is an Excel spreadsheet, read it in.
+            vm.loaded_excel = load_excel(data)
                 
             # Set the output directory in which to put dumped files generated by
             # the macros.
             out_dir = filename + "_artifacts/"
-            """
-            if ("/" in out_dir):
-                start = out_dir.rindex("/") + 1
-                out_dir = out_dir[start:]
-            out_dir = out_dir.replace(".", "").strip()
-            out_dir = "./" + out_dir + "/"
-            """
             log.info("Saving dropped analysis artifacts in " + out_dir)
             vba_context.out_dir = out_dir
             del filename # We already have this in memory, we don't need to read it again.
@@ -1433,6 +1220,7 @@ def _process_file (filename, data,
                 
             # Pull out the document text.
             vm.doc_text = _read_doc_text('', data=data)
+            #print "\n\nDOC TEXT:\n" + str(vm.doc_text)
 
             try:
                 # Pull out form variables.

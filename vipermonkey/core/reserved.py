@@ -68,10 +68,10 @@ statement_keyword = caselessKeywordsList(
     ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End", "EndIf",
-     "Enum", "Event", "Exit", "For", "Friend", "Function", "Global",
+     "Enum", "Event", "Exit", "For", "Friend", "Function",
      "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
-     "On", "Open", "Option", "Print", "Private", "Public", "RaiseEvent", "ReDim",
-     "Resume", "Return", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
+     "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
+     "Resume", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
      "Unlock", "Wend", "While", "With", "Write"))
 
 rem_keyword = CaselessKeyword("Rem")
@@ -80,7 +80,7 @@ rem_keyword = CaselessKeyword("Rem")
 # syntactic structure of a statement.
 marker_keyword = caselessKeywordsList(
     ("Any", "As", "ByRef", "ByVal ", "Case", "Each", "Else", "In", "New",
-     "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve", "Spc",
+     "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
      "Tab", "Then", "To"))
 
 # An <operator-identifier> is a <reserved-identifier> that is used
@@ -94,7 +94,7 @@ operator_identifier = caselessKeywordsList(
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr",
-    "DoEvents", "Fix", "Int", "Len", "LenB", "Me", "PSet", "Scale", "Sgn", "String"))
+    "DoEvents", "Fix", "Int", "Len", "LenB", "PSet", "Scale", "Sgn", "String"))
 
 # A <special-form> is a <reserved-identifier> that is used in an expression as
 # if it was a program defined procedure name but which has special syntactic rules for

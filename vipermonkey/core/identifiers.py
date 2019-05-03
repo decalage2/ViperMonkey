@@ -58,7 +58,7 @@ from logger import log
 # MS-GRAMMAR: subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
 # MS-GRAMMAR: identifier = expression
 
-general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit)
+general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit) + Suppress(Optional("^"))
 
 # MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
 # MS-GRAMMAR: Korean-identifier / simplified-Chinese-identifier / traditional-Chinese-identifier
@@ -103,8 +103,9 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # # Double
 # @ Currency
 # $ String
-#type_suffix = Word(r"%&^!#@$", exact=1) + White() + NotAny(Word(alphanums) | '"')
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
+# Don't parse 'c&' in 'c& d& e' as a typed_name. It's a string concat.
+#type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
+type_suffix = Word(r"%&^!#@$", exact=1) + NotAny((Optional(White()) + Word(alphanums)) | '"')
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
@@ -121,7 +122,7 @@ unrestricted_name = entity_name | reserved_identifier
 # TODO: reduce this list when corresponding statements are implemented
 reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
                      | CaselessKeyword('Asc') | CaselessKeyword('Case')
-                     | CaselessKeyword('End') | CaselessKeyword('On') | CaselessKeyword('Sub')
+                     | CaselessKeyword('On') | CaselessKeyword('Sub')
                      | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
                      | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
                      | CaselessKeyword('Function'))
@@ -129,8 +130,8 @@ reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | Caseless
 TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
                                            Combine(Literal('.') + lex_identifier) | \
                                            Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                           Optional(CaselessLiteral('$')))
+                                           Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))
 
 TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
                                                  Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                                 Optional(CaselessLiteral('$')))
+                                                 Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))

@@ -43,6 +43,9 @@ __version__ = '0.03'
 
 import re
 import sys
+import os
+import array
+from hashlib import sha256
 
 from identifiers import *
 from lib_functions import *
@@ -50,8 +53,10 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import coerce_to_int
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
+import vba_context
 
 from logger import log
 
@@ -197,6 +202,13 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_paragraphs(self, context):
+        """
+        Handle references to the .Paragraphs field of the current doc.
+        """
+        if (str(self).lower().endswith(".paragraphs")):
+            return context.get("ActiveDocument.Paragraphs".lower())
+    
     def _handle_oslanguage(self, context):
         """
         Handle references to the OSlanguage field.
@@ -251,6 +263,44 @@ class MemberAccessExpression(VBA_Object):
         except KeyError:
             return None
 
+    def _handle_set_clipboard(self, context):
+        """
+        Handle calls like objHTML.ParentWindow.clipboardData.setData(...).
+        """
+
+        # Is this a setData() instance?
+        if (".setdata(" not in str(self).lower()):
+            return None
+        
+        # Pull out the clipboard text.
+        # objHTML.ParentWindow.clipboardData.setData(Text, hh)
+        func = self.rhs[-1]
+        if (not isinstance(func, Function_Call)):
+            return None
+        if (len(func.params) < 2):
+            return None
+        val = func.params[1]
+        val = str(eval_arg(val, context))
+
+        # Set the clipboard value in a synthetic variable.
+        log.debug("Save clipboard text '" + val + "'")
+        context.set("** CLIPBOARD **", val, force_global=True)
+        return True
+
+    def _handle_get_clipboard(self, context):
+        """
+        Handle calls like objHTML.ParentWindow.clipboardData.getData(...).
+        """
+
+        # Is this an getData() instance?
+        if (".getdata(" not in str(self).lower()):
+            return None
+        
+        # Retrn the clipboard text if we have it.
+        if (context.contains("** CLIPBOARD **")):
+            return context.get("** CLIPBOARD **")
+        return None
+        
     def _handle_docprops_read(self, context):
         """
         Handle data reads with ActiveDocument.BuiltInDocumentProperties(...).
@@ -300,6 +350,10 @@ class MemberAccessExpression(VBA_Object):
         if (not isinstance(read_call, Function_Call)):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
+
+        # Fix the file name for emulation if needed.
+        if (read_file.startswith("C:\\")):
+            read_file = read_file.replace("C:\\", "./")
         
         # Read the file contents.
         try:
@@ -337,6 +391,22 @@ class MemberAccessExpression(VBA_Object):
         # Don't know what we are getting.
         return None
 
+    def _handle_file_close(self, context, lhs, rhs):
+        """
+        Handle close of file object foo like foo.Close().
+        """
+
+        # Pull out proper RHS.
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (str(rhs) != "Close"):
+            return None
+        from vba_library import Close
+        file_close = Close()
+            
+        # File closed.
+        return file_close.eval(context, [str(lhs)])
+    
     def _handle_replace(self, context, lhs, rhs):
         """
         Handle string replaces of the form foo.Replace(bar, baz). foo is a RegExp object.
@@ -364,25 +434,64 @@ class MemberAccessExpression(VBA_Object):
         tmp = [new_replace.params[0]]
         tmp.append(repl)
         tmp.append(new_replace.params[1])
+        tmp.append("<-- USE REGEX -->")
         new_replace.params = tmp
         
         # Evaluate the string replace.
         r = new_replace.eval(context)
         return r
 
+    def _handle_add(self, context, lhs, rhs):
+        """
+        Handle Add() object method calls like foo.Replace(bar, baz). 
+        foo is (currently) a Scripting.Dictionary object.
+        """
+
+        # Sanity check.
+        log.debug("_handle_add(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (not isinstance(rhs, Function_Call)):
+            return None
+        if (rhs.name != "Add"):
+            return None
+        if (not isinstance(lhs, dict)):
+            return None
+
+        # Run the dictionary add.
+        # dict, key, value
+        new_add = Function_Call(None, None, None, old_call=rhs)
+        tmp = [lhs]
+        for p in new_add.params:
+            tmp.append(p)
+        new_add.params = tmp
+        log.debug("Add() func = " + str(new_add))
+        
+        # Evaluate the dictionary add.
+        new_add.eval(context)
+        return "updated dict"
+
     def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
         """
         Handle expressions like "foo.Write(...)" where foo = "ADODB.Stream".
         """
-        
-        # Is this a .Write() call?
-        rhs_str = str(rhs).strip()
-        if ("Write(" not in rhs_str):
-            return False
 
+        # Is this a .Write() call?
+        log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        rhs_str = str(rhs).strip()
+        if ("write(" not in rhs_str.lower()):
+            return False
+        
         # Is this a Write() being called on an ADODB.Stream object?
         if (lhs != "ADODB.Stream"):
-            return False
+
+            # Maybe we need a sub field? Do we have a subfield?
+            if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
+                return False
+
+            # Look for ADODB.Stream in a variable from a subfield.
+            for field in self.rhs[:-1]:
+                lhs_orig += "." + str(field)
 
         # Are we referencing a stream contained in a variable?        
         if (not context.contains(str(lhs_orig))):
@@ -391,8 +500,9 @@ class MemberAccessExpression(VBA_Object):
         # Pull out the text to write to the text stream.
         txt = str(eval_arg(rhs.params[0], context))
 
-        # Set the text value of the string as a faux variable.
-        context.set(str(lhs_orig) + ".ReadText", txt)
+        # Set the text value of the string as a faux variable. Make this
+        # global as a hacky solution to handle fields in user defined objects.
+        context.set(str(lhs_orig) + ".ReadText", txt, force_global=True)
         
         # We handled the write.
         return True
@@ -405,11 +515,126 @@ class MemberAccessExpression(VBA_Object):
         # Evaluate the Cells() call.
         #r = eval_arg(rhs, context)
         return None
+
+    def _handle_0_arg_call(self, context, rhs):
+        """
+        Handle calls to 0 argument functions.
+        """
+
+        # Got possible function name?
+        if ((not isinstance(rhs, str)) or (not context.contains(rhs))):
+            return None
+        func = context.get(rhs)
+        if ((not isinstance(func, procedures.Sub)) and
+            (not isinstance(func, procedures.Function))):
+            return None
+
+        # Is this a 0 argument function?
+        if (len(func.params) > 0):
+            return None
+
+        # 0 parameter function. Evaluate it.
+        log.debug('evaluating function %r' % func)
+        r = func.eval(context)
+        log.debug('evaluated function %r = %r' % (func.name, r))
+        return r
+
+    def _handle_loadxml(self, context, load_xml_result):
+        """
+        Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is 
+        specifically targeting BASE64 XML elements used for base64 decoding.
+        """
+
+        # Is this a call to LoadXML()?
+        memb_str = str(self)
+        if (".LoadXML(" not in memb_str):
+            return False
+
+        # We have a call to LoadXML(). Set the value of the .text field in
+        # the VBA object to the XML or base64 contents.
+        var_name = memb_str[:memb_str.index(".")] + ".text"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".selectsinglenode('b64decode').text"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".nodetypedvalue"
+        context.set(var_name, load_xml_result)
+        var_name = memb_str[:memb_str.index(".")] + ".selectsinglenode('b64decode').nodetypedvalue"
+        context.set(var_name, load_xml_result)
+        
+        # Done.
+        return True
+
+    def _handle_savetofile(self, context, filename):
+        """
+        Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+        """
+
+        # Is this a call to SaveToFile()?
+        memb_str = str(self)
+        if (".savetofile(" not in memb_str.lower()):
+            return False
+
+        # We have a call to SaveToFile(). Get the value to save from .ReadText
+        var_name = memb_str[:memb_str.index(".")] + ".ReadText"
+        val = None
+        try:
+            val = context.get(var_name)
+        except KeyError:
+            return False
+
+        # Make the dropped file directory if needed.
+        out_dir = vba_context.out_dir
+        if (not os.path.isdir(out_dir)):
+            os.makedirs(out_dir)
+        
+        # Dump the data to a file.
+        if ("/" in filename):
+            filename = filename[filename.rindex("/") + 1:]
+        if ("\\" in filename):
+            filename = filename[filename.rindex("\\") + 1:]
+        fname = out_dir + "/" + filename
+        try:
+
+            # Write out the file.
+            f = open(fname, 'wb')
+            f.write(val)
+            f.close()
+            context.report_action('Write File', filename, 'ADODB.Stream SaveToFile()', strip_null_bytes=True)
+
+            # Save the hash of the written file.
+            raw_data = array.array('B', val).tostring()
+            h = sha256()
+            h.update(raw_data)
+            file_hash = h.hexdigest()
+            context.report_action("Dropped File Hash", file_hash, 'File Name: ' + filename)
+
+        except Exception as e:
+            log.error("Writing " + fname + " failed. " + str(e))
+            return False
+        
+        # Done.
+        return True
+
+    def _handle_path_access(self):
+        """
+        See if this is accessing the Path field of a file/folder object.
+        """
+        if (str(self.rhs).lower() == "path"):
+
+            # Fake a path.
+            return "C:\\Users\\admin\\"
     
     def eval(self, context, params=None):
 
+        log.debug("MemberAccess eval of " + str(self))
+        
         # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # See if this is reading the doc paragraphs.
+        call_retval = self._handle_paragraphs(context)
         if (call_retval is not None):
             return call_retval
         
@@ -425,6 +650,16 @@ class MemberAccessExpression(VBA_Object):
         
         # Handle accessing document variables as a special case.
         call_retval = self._handle_docvars_read(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # Handle setting the clipboard text.
+        call_retval = self._handle_set_clipboard(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # Handle getting the clipboard text.
+        call_retval = self._handle_get_clipboard(context)
         if (call_retval is not None):
             return call_retval
 
@@ -448,6 +683,11 @@ class MemberAccessExpression(VBA_Object):
             if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
 
+        # Handle simple 0-argument function calls.
+        call_retval = self._handle_0_arg_call(context, rhs)
+        if (call_retval is not None):
+            return call_retval
+        
         # Handle reading the contents of a text file.
         call_retval = self._handle_text_file_read(context)
         if (call_retval is not None):
@@ -456,6 +696,11 @@ class MemberAccessExpression(VBA_Object):
         # Handle writes of text to ADODB.Stream variables.
         if (self._handle_adodb_writes(self.lhs, tmp_lhs, rhs, context)):
             return "NULL"
+
+        # See if this is accessing the Path field of a file/folder object.
+        call_retval = self._handle_path_access()
+        if (call_retval is not None):
+            return call_retval
         
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
@@ -473,6 +718,11 @@ class MemberAccessExpression(VBA_Object):
             if (call_retval is not None):
                 return call_retval
 
+            # Handle things like foo.Add(bar, baz).
+            call_retval = self._handle_add(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
+
             # Handle Excel cells() references.
             call_retval = self._handle_excel_read(context, self.rhs)
             if (call_retval is not None):
@@ -480,19 +730,38 @@ class MemberAccessExpression(VBA_Object):
                     
             # This is not a builtin. Evaluate it
             tmp_rhs = eval_arg(rhs, context)
+
+            # Was this a call to LoadXML()?
+            if (self._handle_loadxml(context, tmp_rhs)):
+                return "NULL"
+
+            # Was this a call to SaveToFile()?
+            if (self._handle_savetofile(context, tmp_rhs)):
+                return "NULL"
+
+            # It was a regular call.
             return tmp_rhs
 
         # Did the lhs resolve to something new?
         elif (str(self.lhs) != str(tmp_lhs)):
 
             # Is this a read from an Excel cell?
-            if (isinstance(tmp_lhs, str)):
+            # TODO: Need to do this logic based on what IS an Excel read rather
+            # than what IS NOT an Excel read.
+            if ((isinstance(tmp_lhs, str)) and
+                (not "Shapes(" in tmp_lhs) and
+                (not "Close" in str(self.rhs))):
 
                 # Just work with the returned string value.
                 return tmp_lhs
 
             # See if this is reading a doc var name or item.
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                return call_retval
+
+            # See if this is closing a file.
+            call_retval = self._handle_file_close(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
                 return call_retval
 
@@ -649,8 +918,8 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # MS-GRAMMAR: index-expression / dictionary-access-expression / with-expression
 
 new_expression = Forward()
-l_expression << (with_expression ^ member_access_expression ^ new_expression) | instance_expression | \
-    dictionary_access_expression | simple_name_expression
+l_expression << (with_expression ^ member_access_expression ^ new_expression ^ member_access_expression_loose) | instance_expression | \
+    dictionary_access_expression | simple_name_expression 
 
 # --- FUNCTION CALL ---------------------------------------------------------
 
@@ -729,8 +998,22 @@ class Function_Call(VBA_Object):
         if (save):
             context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
+
+            # Get the (possible) function.
             f = context.get(self.name)
 
+            # Is this actually a hash lookup?
+            if (isinstance(f, dict)):
+
+                # Are we accessing an element?
+                if (len(params) > 0):
+                    log.debug('Dict Access: %r[%r]' % (f, params[0]))
+                    index = params[0]
+                    if (index in f):
+                        return f[index]
+                    else:
+                        return "NULL"
+            
             # Is this actually an array access?
             if (isinstance(f, list)):
 
@@ -847,22 +1130,29 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_list_item = expression ^ boolean_expression ^ member_access_expression_loose
-#expr_list_item = expression ^ boolean_expression
+
+# Parse large array expressions quickly with a regex.
+expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+\s*,\s*){10,}\s*[0-9a-zA-Z_]+\s*")
+expr_list_fast.setParseAction(lambda t: [expression.parseString(i, parseAll=True)[0] for i in t[0].split(",")])
+
+# Parse general expression lists more completely but more slowly.
+expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
+
 # WARNING: This may break parsing in function calls when the 1st argument is skipped.
 #expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
-expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
+expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
 function_call <<= CaselessKeyword("nothing") | \
                   (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + \
-                   Suppress(Optional('$') + Optional('#') + Optional('!')) + \
+                   Suppress(Optional('$') + Optional('#') + Optional('!') + Optional('%') + Optional('@')) + \
                    Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | \
                    Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
 function_call.setParseAction(Function_Call)
 
 function_call_limited <<= CaselessKeyword("nothing") | \
                           (NotAny(reserved_keywords) + lex_identifier('name') + \
-                           Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + \
+                           Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + Suppress(Optional('%')) + Suppress(Optional('@')) + \
                            ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
                             # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
                             # parsed as function_call_limited "foo .bar". The real way this should be
@@ -894,7 +1184,7 @@ class Function_Call_Array_Access(VBA_Object):
         # Evaluate the value of the function returing the array.
         array_val = eval_arg(self.array, context=context)
         # Evaluate the index to read.
-        array_index = eval_arg(self.index, context=context)
+        array_index = coerce_to_int(eval_arg(self.index, context=context))
 
         # Do we have a list to read from?
         if (not isinstance(array_val, list)):
@@ -1078,8 +1368,12 @@ class BoolExprItem(VBA_Object):
                 pass
                 
         # Evaluate the expression.
-        if ((self.op == "=") or (self.op.lower() == "is")):
-            if ((lhs == "**MATCH ANY**") or (rhs == "**MATCH ANY**")):
+        if ((self.op.lower() == "=") or
+            (self.op.lower() == "like") or
+            (self.op.lower() == "is")):
+            rhs_str = str(rhs)
+            lhs_str = str(lhs)
+            if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
                 return True
             return lhs == rhs
         elif (self.op == ">"):
@@ -1093,19 +1387,17 @@ class BoolExprItem(VBA_Object):
         elif (self.op == "<>"):
             return lhs != rhs
         elif (self.op.lower() == "like"):
-            
+
             # Try as a Python regex.
+            rhs = str(rhs)
+            lhs = str(lhs)
             try:
-                rhs = str(rhs)
-                lhs = str(lhs)
                 r = (re.match(rhs, lhs) is not None)
                 log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
                 return r
             except Exception as e:
 
                 # Not a valid Pyhton regex. Just check string equality.
-                rhs = str(rhs)
-                lhs = str(lhs)
                 return (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)

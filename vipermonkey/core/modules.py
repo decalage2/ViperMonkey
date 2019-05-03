@@ -84,12 +84,6 @@ class Module(VBA_Object):
                 for n in token.external_functions.keys():
                     log.debug("saving external func decl: %r" % n)
                     self.external_functions[n] = token.external_functions[n]
-            if isinstance(token, Sub):
-                log.debug("saving sub decl: %r" % token.name)
-                self.subs[token.name] = token
-            #if isinstance(token, Function):
-            #    log.debug("saving func decl: %r" % token.name)
-            #    self.functions[token.name] = token
             if isinstance(token, External_Function):
                 log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
@@ -129,6 +123,7 @@ class Module(VBA_Object):
 
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
+        done_emulation = False
         for block in self.loose_lines:
             if (isinstance(block, Sub) or
                 isinstance(block, Function) or
@@ -138,6 +133,10 @@ class Module(VBA_Object):
             context.global_scope = True
             block.eval(context, params)
             context.global_scope = False
+            done_emulation = True
+
+        # Return if we ran anything.
+        return done_emulation
 
     def load_context(self, context):
         """
@@ -187,7 +186,8 @@ module_header = ZeroOrMore(header_statements_line)
 # TODO: 5.2.3 Module Declarations
 
 loose_lines = Forward()
-declaration_statement = external_function | loose_lines | option_statement | dim_statement | global_variable_declaration | rem_statement
+#declaration_statement = external_function | global_variable_declaration | loose_lines | option_statement | dim_statement | rem_statement
+declaration_statement = external_function | loose_lines | global_variable_declaration | option_statement | dim_statement | rem_statement
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 

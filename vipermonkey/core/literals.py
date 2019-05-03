@@ -118,6 +118,8 @@ class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]
+        if (self.value.startswith('"') and self.value.endswith('"')):
+            self.value = self.value[1:-1]
         # Replace Python control characters.
         """
         self.value = self.value.\
@@ -159,8 +161,9 @@ class String(VBA_Object):
         log.debug("String.eval: return " + r)
         return r
 
-quoted_string = QuotedString('"', escQuote='""')('value')
-#quoted_string.setParseAction(lambda t: str(t[0]).replace("\n", "\\n").replace("\t", "\\t"))
+#quoted_string = QuotedString('"', escQuote='""')('value')
+# Speed up string parsing with a regex.
+quoted_string = Regex('"(?:[^"]|"")*"')('value')
 quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)

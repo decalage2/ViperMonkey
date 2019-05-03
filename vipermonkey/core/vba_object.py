@@ -54,6 +54,7 @@ __version__ = '0.02'
 import base64
 from logger import log
 import re
+from curses.ascii import isprint
 
 from inspect import getouterframes, currentframe
 import sys
@@ -121,6 +122,7 @@ class VBA_Object(object):
         self.location = location
         self.tokens = tokens
         self._children = None
+        self.is_useless = False
         
     def eval(self, context, params=None):
         """
@@ -184,6 +186,7 @@ def _read_from_excel(arg, context):
     # Try handling reading value from an Excel spreadsheet cell.
     arg_str = str(arg)
     if (("thisworkbook." in arg_str.lower()) and
+        ('("thisworkbook.' not in arg_str.lower()) and
         ("sheets(" in arg_str.lower()) and
         ("range(" in arg_str.lower())):
         
@@ -193,12 +196,12 @@ def _read_from_excel(arg, context):
         tmp_arg_str = arg_str.lower()
         start = tmp_arg_str.index("sheets(") + len("sheets(")
         end = start + tmp_arg_str[start:].index(")")
-        sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         
         # Pull out the cell index.
         start = tmp_arg_str.index("range(") + len("range(")
         end = start + tmp_arg_str[start:].index(")")
-        cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "")
+        cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
         
         try:
@@ -355,10 +358,10 @@ def eval_arg(arg, context, treat_as_var_name=False):
             poss_shape_txt = str(r)
         except:
             pass
-        if (poss_shape_txt.startswith("Shapes(")):
+        if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
             return eval_arg(r, context)
-
+        
         # Regular VBA object.
         return r
 
@@ -395,6 +398,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # It looks like maybe this magically does base64 decode? Try that.
                     try:
                         log.debug("eval_arg: Try base64 decode of '" + val + "'...")
+                        base64_str = filter(isprint, str(base64_str).strip())
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
                         log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
                         return val_decode
@@ -564,7 +568,20 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # We did not resolve the variable. Treat it as unitialized.
             log.debug("eval_arg: return 'NULL'")
             return "NULL"
-                
+
+        # Are we referring to a form element that we cannot find?
+        if ((str(arg).lower().endswith(".tag")) or
+            (str(arg).lower().endswith(".boundvalue")) or
+            (str(arg).lower().endswith(".column")) or
+            (str(arg).lower().endswith(".caption")) or
+            (str(arg).lower().endswith(".groupname")) or
+            (str(arg).lower().endswith(".seltext")) or
+            (str(arg).lower().endswith(".controltiptext")) or
+            (str(arg).lower().endswith(".passwordchar")) or
+            (str(arg).lower().endswith(".controlsource")) or
+            (str(arg).lower().endswith(".value"))):
+            return ""
+        
         # The .text hack did not work.
         log.debug("eval_arg: return " + str(arg))
         return arg
@@ -624,7 +641,12 @@ def coerce_to_int(obj):
         # Do we have a null byte string?
         if (obj.count('\x00') == len(obj)):
             return 0
-            
+
+        # Hex string?
+        if ((obj.startswith("&H")) and (len(obj) <= 4)):
+            return int(obj.replace("&H", "0x"), 16)
+
+    # Try regular int.
     return int(obj)
 
 def coerce_args_to_int(args):
@@ -634,10 +656,12 @@ def coerce_args_to_int(args):
     """
     return [coerce_to_int(arg) for arg in args]
 
-def coerce_args(orig_args):
+def coerce_args(orig_args, preferred_type=None):
     """
     Coerce all of the arguments to either str or int based on the most
     common arg type.
+
+    preferred_type = Preferred type to coerce things if possible.
     """
 
     # Sanity check.
@@ -656,6 +680,7 @@ def coerce_args(orig_args):
     first_type = None
     have_other_type = False
     all_null = True
+    all_types = set()
     for arg in args:
 
         # Skip NULL values since they can be int or str based on context.
@@ -663,10 +688,12 @@ def coerce_args(orig_args):
             continue
         all_null = False
         if (isinstance(arg, str)):
+            all_types.add("str")
             if (first_type is None):
                 first_type = "str"
             continue
         elif (isinstance(arg, int)):
+            all_types.add("int")
             if (first_type is None):
                 first_type = "int"
             continue
@@ -685,6 +712,11 @@ def coerce_args(orig_args):
     # Leave things alone if we cannot figure out the type to which to coerce.
     if (first_type is None):
         return args
+
+    # If we have more than 1 possible type and one of these types is the
+    # preferred type, use that type.
+    if (preferred_type in all_types):
+        first_type = preferred_type
     
     # Do conversion based on type of 1st arg in the list.
     if (first_type == "str"):
