@@ -225,11 +225,10 @@ def collapse_macro_if_blocks(vba_code):
 
     # Return the stripped VBA.
     return r
-    
-def strip_useless_code(vba_code, local_funcs):
+
+def fix_vba_code(vba_code):
     """
-    Strip statements that have no usefull effect from the given VB. The
-    stripped statements are commented out.
+    Fix up some substrings that ViperMonkey has problems parsing.
     """
 
     # Clear out lines broken up on multiple lines.
@@ -240,10 +239,25 @@ def strip_useless_code(vba_code, local_funcs):
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
-
+    
     # Fix function calls with a skipped 1st argument.
     vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
+
+    # Fix invalid string assignments.
+    vba_code = re.sub(r"(\w+)\s*=\s*\"\r?\n", r'\1 = ""\n', vba_code)
+    vba_code = re.sub(r"(\w+\s*=\s*\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
     
+    return vba_code
+    
+def strip_useless_code(vba_code, local_funcs):
+    """
+    Strip statements that have no usefull effect from the given VB. The
+    stripped statements are commented out.
+    """
+
+    # Preprocess the code to make it easier to parse.
+    vba_code = fix_vba_code(vba_code)
+        
     # Track data change callback function names.
     change_callbacks = set()    
     

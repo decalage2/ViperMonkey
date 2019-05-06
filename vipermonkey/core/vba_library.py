@@ -67,7 +67,7 @@ from vba_object import excel_col_letter_to_index
 import expressions
 import meta
 import modules
-from strip_lines import strip_useless_code
+import strip_lines
 
 from logger import log
 
@@ -499,7 +499,10 @@ class Execute(VbaLibraryFunc):
         command += "\n"
 
         # Strip useless lines and fix up the code to emulate.
-        #command = strip_useless_code(command, [])
+        #command = strip_lines.strip_useless_code(command, [])
+
+        # Fix invalid string assignments.
+        command = strip_lines.fix_vba_code(command)
         
         # Parse it.
         obj = None
@@ -889,7 +892,7 @@ class Split(VbaLibraryFunc):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = str(params[0])
-        sep = ","
+        sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
             (len(params[1]) > 0)):
