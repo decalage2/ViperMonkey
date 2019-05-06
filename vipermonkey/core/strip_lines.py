@@ -244,8 +244,8 @@ def fix_vba_code(vba_code):
     vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
 
     # Fix invalid string assignments.
-    vba_code = re.sub(r"(\w+)\s*=\s*\"\r?\n", r'\1 = ""\n', vba_code)
-    vba_code = re.sub(r"(\w+\s*=\s*\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
     
     return vba_code
     
