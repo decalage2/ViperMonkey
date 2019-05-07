@@ -2075,12 +2075,15 @@ class Close(VbaLibraryFunc):
             if ((context.open_files is None) or (len(context.open_files) == 0)):
                 log.error("Cannot process Close(). No open files.")
                 return
+            file_id = None
             if (len(context.open_files) > 1):
-                log.error("Cannot process Close(). Too many open files.")
-                return
+                log.warning("More than 1 file is open. Closing an arbitrary file.")
+                file_id = context.get_interesting_fileid()
+                log.warning("Closing '" + str(file_id) + "' .")
+            else:
 
-            # Get the ID of the file.
-            file_id = context.open_files.keys()[0]
+                # Get the ID of the file.
+                file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
         context.dump_file(file_id)
@@ -2145,12 +2148,15 @@ class WriteLine(VbaLibraryFunc):
         if ((context.open_files is None) or (len(context.open_files) == 0)):
             log.error("Cannot process WriteLine(). No open files.")
             return
+        file_id = None
         if (len(context.open_files) > 1):
-            log.error("Cannot process WriteLine(). Too many open files.")
-            return
-        
-        # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+            log.warning("More than 1 file is open. Writing to an arbitrary file.")
+            file_id = context.get_interesting_fileid()
+            log.warning("Writing to '" + str(file_id) + "' .")
+        else:        
+
+            # Get the ID of the file.
+            file_id = context.open_files.keys()[0]
         
         # TODO: Handle writing at a given file position.
 

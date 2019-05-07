@@ -3048,7 +3048,32 @@ class Context(object):
             del self.globals[name]
 
         return self
-            
+
+    def get_interesting_fileid(self):
+        """
+        Pick an 'interesting' looking open file and return its ID.
+        """
+
+        # Look for the longest file name and any files name on the C: drive.
+        longest = ""
+        cdrive = None
+        for file_id in self.open_files.keys():
+            if (str(file_id).lower().startswith("c:")):
+                cdrive = file_id
+            if (len(str(file_id)) > len(longest)):
+                longest = file_id
+
+        # Favor files on the C: drive.
+        if (cdrive is not None):
+            return cdrive
+
+        # Fall back to longest.
+        if (len(longest) > 0):
+            return longest
+
+        # Punt.
+        return None
+        
     def open_file(self, fname):
         """
         Simulate opening a file.

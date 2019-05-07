@@ -226,6 +226,31 @@ def collapse_macro_if_blocks(vba_code):
     # Return the stripped VBA.
     return r
 
+def fix_unbalanced_quotes(vba_code):
+    """
+    Fix lines with missing double quotes.
+    """
+
+    # Fix invalid string assignments.
+    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    vba_code = re.sub(r"([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    
+    # See if we have lines with unbalanced double quotes.
+    r = ""
+    for line in vba_code.split("\n"):
+        num_quotes = 0
+        for c in line:
+            if (c == '"'):
+                num_quotes += 1
+        if ((num_quotes % 2) != 0):
+            last_quote = line.rindex('"')
+            line = line[:last_quote] + '"' + line[last_quote:]
+        r += line + "\n"
+
+    # Return the balanced code.
+    return r
+
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
@@ -243,9 +268,8 @@ def fix_vba_code(vba_code):
     # Fix function calls with a skipped 1st argument.
     vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
 
-    # Fix invalid string assignments.
-    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
-    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    # Fix lines with missing double quotes.
+    vba_code = fix_unbalanced_quotes(vba_code)
     
     return vba_code
     
