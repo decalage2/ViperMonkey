@@ -237,7 +237,10 @@ class Not(VBA_Object):
         # return the and of all the arguments:
         try:
             log.debug("Compute not " + str(self.arg))
-            return (~ int(self.arg))
+            val = self.arg
+            if (isinstance(val, VBA_Object)):
+                val = val.eval(context)
+            return (~ int(val))
         except Exception as e:
             log.error("Cannot compute Not " + str(self.arg) + ". " + str(e))
             return "NULL"

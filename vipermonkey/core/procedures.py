@@ -108,6 +108,10 @@ class Sub(VBA_Object):
                 if ((param_value == 0) and (self.params[i].my_type == "String")):
                     param_value = ""
 
+                # Coerce parameters to String if needed.
+                if (self.params[i].my_type == "String"):
+                    param_value = str(param_value)
+                    
                 # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 call_info[param_name] = param_value
@@ -364,6 +368,10 @@ class Function(VBA_Object):
                 if ((param_value == 0) and (self.params[i].my_type == "String")):
                     param_value = ""
 
+                # Coerce parameters to String if needed.
+                if (self.params[i].my_type == "String"):
+                    param_value = str(param_value)
+                    
                 # Add the parameter value to the local function context.
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 call_info[param_name] = param_value
