@@ -220,6 +220,30 @@ class Or(VBA_Object):
 
     def __repr__(self):
         return ' | '.join(map(repr, self.arg))
+
+# --- NOT --------------------------------------------------------
+
+class Not(VBA_Object):
+    """
+    VBA binary Not operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Not, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][1]
+        log.debug('parsed %r as binary Not' % self)
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            log.debug("Compute not " + str(self.arg))
+            return (~ int(self.arg))
+        except Exception as e:
+            log.error("Cannot compute Not " + str(self.arg) + ". " + str(e))
+            return "NULL"
+
+    def __repr__(self):
+        return "Not " + str(self.arg)
     
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
