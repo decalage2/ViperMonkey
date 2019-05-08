@@ -592,6 +592,7 @@ dim_statement.setParseAction(Dim_Statement)
 
 # --- Global_Var_Statement statement ----------------------------------------------------------
 
+# TODO: Support multiple variables set (e.g. 'name = "bob", age = 20\n')
 class Global_Var_Statement(Dim_Statement):
     pass
 
@@ -962,13 +963,26 @@ class Let_Statement(VBA_Object):
 # Mid(zLGzE1gWt, MbgQPcQzy, 1)
 string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_list('params') + Optional(Suppress(')'))
 
-let_statement = Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress() + \
-                Optional(Suppress(CaselessKeyword('Const'))) + Optional(".") + \
-                ((TODO_identifier_or_object_attrib('name') + \
-                  Optional(Suppress('(') + Optional(expression('index')) + Optional("," + expression('index1')) + Suppress(')'))) ^ \
-                 member_access_expression('name') ^ string_modification('name')) + \
-                 (Literal('=') | Literal('+=') | Literal('-='))('op') + \
-                 (expression('expression') ^ boolean_expression('expression'))
+let_statement = (
+    Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress()
+    + Optional(Suppress(CaselessKeyword('Const')))
+    + Optional(".")
+    + (
+        (
+            TODO_identifier_or_object_attrib('name')
+            + Optional(
+                Suppress('(')
+                + Optional(expression('index'))
+                + Optional(',' + expression('index1'))
+                + Suppress(')')
+            )
+        )
+        ^ member_access_expression('name')
+        ^ string_modification('name')
+    )
+    + (Literal('=') | Literal('+=') | Literal('-='))('op')
+    + (expression('expression') ^ boolean_expression('expression'))
+)
 let_statement.setParseAction(Let_Statement)
 
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
@@ -989,9 +1003,14 @@ class Prop_Assign_Statement(VBA_Object):
         if (context.exit_func):
             return
 
-prop_assign_statement = (Optional(Suppress(".")) + (member_access_expression("prop") ^ lex_identifier("prop"))+ \
-                         lex_identifier('param') + Suppress(':=') + expression('value') + \
-                         ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value')))
+prop_assign_statement = (
+    Optional(Suppress("."))
+    + (member_access_expression("prop") ^ lex_identifier("prop"))
+    + lex_identifier('param')
+    + Suppress(':=')
+    + expression('value')
+    + ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value'))
+)
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
@@ -2449,12 +2468,16 @@ class Call_Statement(VBA_Object):
             self.name = dll_func_name
 
         # Are we calling a member access expression?
-        if (isinstance(self.name, MemberAccessExpression)):
-
+        if isinstance(self.name, MemberAccessExpression):
+            # If we have parameters, then we must have an error
+            # because the MemberAccessExpression is going to ignore them.
+            assert not self.params, 'Unexpected parameters. Parsing has failed.'
             # Just evaluate the expression as the call.
             log.debug("Call of member access expression " + str(self.name))
             return self.name.eval(context, self.params)
-            
+
+        # TODO: The following should share the same code as MemberAccessExpression and Function_Call?
+
         # Get argument values.
         log.debug("Call: eval params: " + str(self.params))
         call_params = eval_args(self.params, context=context)
@@ -2469,19 +2492,15 @@ class Call_Statement(VBA_Object):
 
         # Log functions of interest.
         log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
-        save = False
-        for func in Function_Call.log_funcs:
-            if (str(self.name).lower().endswith(func.lower())):
-                save = True
-                break
-        if (save):
+        if self.name.lower() in context._log_funcs \
+                or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
         
         # Handle VBA functions:
         func_name = str(self.name)
         if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
-            context.report_action('Display Message', repr(call_params[0]), 'MsgBox', strip_null_bytes=True)
+            context.report_action('Display Message', call_params, 'MsgBox', strip_null_bytes=True)
             # vbOK = 1
             return 1
         elif '.' in func_name:
@@ -2505,13 +2524,14 @@ class Call_Statement(VBA_Object):
             if (s is None):
                 raise KeyError("func not found")
             if (hasattr(s, "eval")):
-                s.eval(context=context, params=call_params)
+                ret = s.eval(context=context, params=call_params)
 
                 # Set the values of the arguments passed as ByRef parameters.
-                if (hasattr(s, "byref_params")):
+                if (hasattr(s, "byref_params") and s.byref_params):
                     for byref_param_info in s.byref_params.keys():
                         arg_var_name = str(self.params[byref_param_info[1]])
                         context.set(arg_var_name, s.byref_params[byref_param_info])
+                return ret
             
         except KeyError:
             try:
@@ -2542,8 +2562,7 @@ class Call_Statement(VBA_Object):
                     log.debug("Try indirect run of function '" + new_func + "'")
                     try:
                         s = context.get(new_func)
-                        s.eval(context=context, params=new_params)
-                        return
+                        return s.eval(context=context, params=new_params)
                     except KeyError:
                         pass
                 log.error('Procedure %r not found' % func_name)
@@ -2551,11 +2570,14 @@ class Call_Statement(VBA_Object):
                 traceback.print_exc(file=sys.stdout)
                 log.debug("General error: " + str(e))
                 return
-                
+
 # 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
 # call statement params may be surrounded by parentheses or not
-call_params = (Suppress('(') + Optional(expr_list('params')) + Suppress(')')) ^ expr_list('params')
+call_params = (
+    (Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+    ^ (White(" \t") + expr_list('params'))
+)
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
                   (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
@@ -2885,25 +2907,47 @@ class File_Open(VBA_Object):
         except AssertionError:
             pass
 
-        # Also save by file ID with '#' prefix.
+        # Store file id variable in context.
+        if self.file_id:
+            file_id = str(self.file_id)
+            if not file_id.startswith('#'):
+                file_id = '#' + file_id
+            context.set(file_id, name)
+
+        # Save that the file is opened.
         context.report_action("OPEN", str(name), 'Open File', strip_null_bytes=True)
-        tmp_id = str(self.file_id)
-        if (not tmp_id.startswith('#')):
-            tmp_id = '#' + tmp_id
-        context.open_files[tmp_id] = {}
-        context.open_files[tmp_id]["name"] = name
-        context.open_files[tmp_id]["contents"] = []
-        log.debug("Opened file '" + str(name) + "' with ID '" + str(tmp_id) + "'")
+        context.open_file(name)
 
-file_type = Suppress(CaselessKeyword("For")) + \
-            (CaselessKeyword("Append") | CaselessKeyword("Binary") | CaselessKeyword("Input") | CaselessKeyword("Output") | CaselessKeyword("Random"))("mode") + \
-            Suppress(Optional(CaselessKeyword("Lock"))) + \
-            Optional(Optional(Suppress(CaselessKeyword("Access"))) + \
-                     (CaselessKeyword("Read Write") ^ CaselessKeyword("Read") ^ CaselessKeyword("Write"))("access"))
 
-file_open_statement = Suppress(CaselessKeyword("Open")) + expression("file_name") + \
-                      Optional(file_type("type") + Suppress(CaselessKeyword("As")) + \
-                               (file_pointer("file_id") | TODO_identifier_or_object_attrib("file_id")))
+file_type = (
+    Suppress(CaselessKeyword("For"))
+    + (
+        CaselessKeyword("Append")
+        | CaselessKeyword("Binary")
+        | CaselessKeyword("Input")
+        | CaselessKeyword("Output")
+        | CaselessKeyword("Random")
+    )("mode")
+    + Suppress(Optional(CaselessKeyword("Lock")))
+    + Optional(
+        Suppress(CaselessKeyword("Access"))
+        + (
+            CaselessKeyword("Read Write")
+            ^ CaselessKeyword("Read")
+            ^ CaselessKeyword("Write")
+        )("access")
+    )
+)
+
+file_open_statement = (
+    Suppress(CaselessKeyword("Open"))
+    + expression("file_name")
+    + Optional(
+        file_type("type")
+        + Suppress(CaselessKeyword("As"))
+        + (file_pointer("file_id") | TODO_identifier_or_object_attrib("file_id"))
+    )
+)
 file_open_statement.setParseAction(File_Open)
 
 # --- PRINT -------------------------------------------------------------
@@ -2929,23 +2973,20 @@ class Print_Statement(VBA_Object):
         
         # Get the ID of the file.
         file_id = eval_arg(self.file_id, context=context)
+        try:
+            # Could be a variable.
+            file_id = context.get(self.file_id)
+        except KeyError:
+            pass
+        except AssertionError:
+            pass
 
         # Get the data.
         data = eval_arg(self.value, context=context)
-        
-        # Are we writing a string?
-        if (isinstance(data, str)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(ord(c))
 
-        # Are we writing a list?
-        elif (isinstance(data, list)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(c)
+        context.write_file(file_id, data)
+        context.write_file(file_id, '\r\n')
 
-        # Unhandled.
-        else:
-            log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
 
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
                   ZeroOrMore(Suppress(Literal(';')) + expression)("more_values") + Suppress(Optional("," + lex_identifier))
@@ -2961,15 +3002,39 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 #simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
 #                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
 #                   rem_statement | print_statement | resume_statement
-simple_statement = NotAny(Regex(r"End\s+Sub")) + \
-                   (print_statement | dim_statement | option_statement | (prop_assign_statement ^ (let_statement | call_statement) ^ expression) | exit_loop_statement | \
-                    exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-                    rem_statement | resume_statement)
-simple_statements_line <<= (simple_statement + OneOrMore(Suppress(':') + simple_statement)) ^ \
-                           simple_statement
+simple_statement = (
+    NotAny(Regex(r"End\s+Sub"))
+    + (
+        print_statement
+        | dim_statement
+        | option_statement
+        | (
+            prop_assign_statement
+            ^ (let_statement | call_statement)
+            ^ label_statement
+            ^ expression
+        )
+        | exit_loop_statement
+        | exit_func_statement
+        | redim_statement
+        | goto_statement
+        | on_error_statement
+        | file_open_statement
+        | doevents_statement
+        | rem_statement
+        | resume_statement
+    )
+)
 
-statements_line = tagged_block ^ \
-                  (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
+simple_statements_line <<= (
+   (simple_statement + OneOrMore(Suppress(':') + simple_statement))
+   ^ simple_statement
+)
+
+statements_line = (
+    tagged_block
+    ^ (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
+)
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
 
@@ -2990,11 +3055,8 @@ class External_Function(VBA_Object):
             fname = "#SOME_FILE_" + str(External_Function.file_count)
 
         # Save that the file is opened.
-        context.open_files[fname] = {}
-        context.open_files[fname]["name"] = fname
-        context.open_files[fname]["contents"] = []
-        log.info("Created file " + fname)
-        
+        context.open_file(fname)
+
         # Return the name of the "file".
         return fname
 
@@ -3013,14 +3075,14 @@ class External_Function(VBA_Object):
         if (not isinstance(data, int)):
             log.error("Cannot WriteFile() data that is not int.")
             return 0
-        context.open_files[file_id]["contents"].append(data)
+        context.write_file(file_id, chr(data))
         return 0
 
     def _closehandle(self, params, context):
 
         # Simulate the file close.
         file_id = params[0]
-        context.dump_file(file_id)
+        context.close_file(file_id)
         return 0
     
     def __init__(self, original_str, location, tokens):

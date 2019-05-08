@@ -72,18 +72,17 @@ class Module(VBA_Object):
         self.global_vars = {}
         self.loose_lines = []
 
-        # Save all function/sub definitions.
-        visitor = function_defn_visitor()
-        self.accept(visitor)
-        for f in visitor.func_objects:
-            log.debug("saving func decl: %r" % f.name)
-            self.functions[f.name] = f
-        
         for token in tokens:
             if isinstance(token, If_Statement_Macro):
                 for n in token.external_functions.keys():
                     log.debug("saving external func decl: %r" % n)
                     self.external_functions[n] = token.external_functions[n]
+            if isinstance(token, Sub):
+                log.debug("saving sub decl: %r" % token.name)
+                self.subs[token.name] = token
+            if isinstance(token, Function):
+               log.debug("saving func decl: %r" % token.name)
+               self.functions[token.name] = token
             if isinstance(token, External_Function):
                 log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
@@ -106,8 +105,6 @@ class Module(VBA_Object):
                 self.loose_lines.append(token)
                     
         self.name = self.attributes.get('VB_Name', None)
-        # TODO: should not use print
-        print(self)
 
     def __repr__(self):
         r = 'Module %r\n' % self.name
@@ -253,7 +250,14 @@ loose_lines <<= OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('bl
 loose_lines.setParseAction(LooseLines)
 
 # TODO: add optional empty lines after each sub/function?
-module_code = ZeroOrMore(option_statement | sub | function | Suppress(empty_line) | simple_if_statement_macro | loose_lines)
+module_code = ZeroOrMore(
+    option_statement
+    | sub
+    | function
+    | Suppress(empty_line)
+    | simple_if_statement_macro
+    | loose_lines
+)
 
 module_body = module_declaration + module_code
 
@@ -263,13 +267,19 @@ module.setParseAction(Module)
 # === LINE PARSER ============================================================
 
 # Parser matching any line of VBA code:
-vba_line = declaration_statements_line \
-        | sub_start_line \
-        | sub_end \
-        | function_start \
-        | function_end \
-        | for_start \
-        | for_end \
-        | header_statements_line \
-        | simple_statements_line \
-        | empty_line
+vba_line = (
+    sub_start_line
+    | sub_end
+    | function_start
+    | function_end
+    | for_start
+    | for_end
+    | header_statements_line
+    # check if we have a basic literal before checking simple_statement_line
+    # otherwise we will get things like "Chr(36)" being reported as a Call_Statement
+    | (expr_const + EOL.suppress())
+    | simple_statements_line
+    | declaration_statements_line
+    | empty_line
+    | (expression + EOL.suppress())
+)

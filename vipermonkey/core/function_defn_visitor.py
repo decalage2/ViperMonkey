@@ -38,7 +38,7 @@ https://github.com/decalage2/ViperMonkey
 
 from visitor import *
 #from procedures import *
-from core import *
+from vipermonkey.core import *
 
 class function_defn_visitor(visitor):
     """

@@ -12,7 +12,8 @@ for real-life examples of malware deobfucation with ViperMonkey.
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
 [Contact the Author](http://decalage.info/contact) -
 [Repository](https://github.com/decalage2/ViperMonkey) -
-[Updates on Twitter](https://twitter.com/decalage2)
+[Updates on Twitter](https://twitter.com/decalage2) -
+[API Tutorial](docs/APITutorial.md)
 
 
 **DISCLAIMER**:
@@ -138,6 +139,17 @@ are comma seperated and must appear in a double quoted string).
 [//]: # (Home page http://www.decalage.info/vipermonkey)
 [//]: # (Documentation https://github.com/decalage2/ViperMonkey/wiki)
 [//]: # (Download/Install https://github.com/decalage2/ViperMonkey/wiki/Install)
+
+
+API Interface:
+--------------
+
+ViperMonkey also includes a Python API interface that can be used for
+ finer control emulation of your sample or for integration 
+ into an existing project.
+
+Please see the [API Tutorial](docs/APITutorial.md) for more information.
+
 
 News
 ----

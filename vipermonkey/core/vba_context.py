@@ -41,7 +41,6 @@ __version__ = '0.08'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-import array
 import os
 from hashlib import sha256
 from datetime import datetime
@@ -72,9 +71,8 @@ def is_procedure(vba_object):
 VBA_LIBRARY = {}
 
 # Output directory to save dropped artifacts.
-out_dir = None
-# Count of files dropped.
-file_count = 0
+out_dir = None  # type: str
+
 
 class Context(object):
     """
@@ -90,7 +88,9 @@ class Context(object):
                  doc_vars=None,
                  loaded_excel=None,
                  filename=None,
-                 copy_globals=False):
+                 copy_globals=False,
+                 log_funcs=None,
+                 expand_env_vars=True):
 
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
@@ -100,6 +100,15 @@ class Context(object):
         # breaking out (infinite loop) due to no vars in the loop guard being
         # modified.
         self.max_static_iters = 2
+
+        # Allow user to provide extra function names to be reported on.
+        if log_funcs:
+            self._log_funcs = [func_name.lower() for func_name in log_funcs]
+        else:
+            self._log_funcs = []
+
+        # Allow user to determine whether to expand environment variables.
+        self.expand_env_vars = expand_env_vars
         
         # Track callback functions that should not be called. This is to handle
         # recusive change handler calls caused by modifying the element handled
@@ -135,7 +144,7 @@ class Context(object):
 
         # Track whether variables by default should go in the global scope.
         self.global_scope = False
-        
+
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -155,6 +164,7 @@ class Context(object):
             self.filename = context.filename
             self.skip_handlers = context.skip_handlers
             self.call_stack = context.call_stack
+            self.expand_env_vars = context.expand_env_vars
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -201,8 +211,8 @@ class Context(object):
         # Fake up a user name.
         rand_name = ''.join(random.choice(string.ascii_uppercase + string.digits + " ") for _ in range(random.randint(10, 50)))
         self.globals["Application.UserName".lower()] = rand_name
-        
-        # Add some attributes we are handling as global variables.
+
+        # region Add some attributes we are handling as global variables.
 
         # Keyboard keys and things in the key namespaces
         self.add_key_macro("vbDirectory","vbDirectory")
@@ -491,6 +501,8 @@ class Context(object):
         self.add_multiple_macro(["","VBA.vbIMEStatus"],"vbIMEOff", 2)
         self.add_multiple_macro(["","VBA.vbIMEStatus"],"vbIMEOn", 1)
 
+        self.globals["Null".lower()] = None
+
         # Excel error codes.
         self.globals["xlErrDiv0".lower()] = 2007  #DIV/0!
         self.globals["xlErrNA".lower()] = 2042    #N/A
@@ -611,7 +623,8 @@ class Context(object):
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
-        self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
+        if self.filename:
+            self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
@@ -2931,6 +2944,8 @@ class Context(object):
         self.globals["xlYesterday".lower()] = 1
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
+
+        # endregion
         
     def __eq__(self, other):
         if isinstance(other, Context):
@@ -2944,7 +2959,7 @@ class Context(object):
         if result is NotImplemented:
             return result
         return not result
-        
+
     def add_key_macro(self,key,value):
         namespaces = ['', 'VBA', 'KeyCodeConstants', 'VBA.KeyCodeConstants', 'VBA.vbStrConv', 'vbStrConv']
         self.add_multiple_macro(namespaces,key,value)
@@ -3080,93 +3095,105 @@ class Context(object):
 
         fname - The name of the file.
         """
-
         # Save that the file is opened.
-        self.open_files[fname] = {}
-        self.open_files[fname]["name"] = fname
-        self.open_files[fname]["contents"] = []
+        self.open_files[fname] = b''
+        log.info("Opened file " + fname)
+
+    def write_file(self, fname, data):
+        # Make sure the "file" exists.
+        if fname not in self.open_files:
+            log.error('File {} not open. Cannot write new data.'.format(fname))
+            return False
+
+        # Are we writing a string?
+        if isinstance(data, str):
+
+            # Hex string?
+            if re.match('&H[0-9A-F]{2}', data, re.IGNORECASE):
+                data = chr(int(data[-2:], 16))
+
+            self.open_files[fname] += data
+            return True
+
+        # Are we writing a list?
+        elif isinstance(data, list):
+            self.open_files[fname] += ''.join(map(chr, data))
+            return True
+
+        # Unhandled.
+        else:
+            log.error("Unhandled data type to write. " + str(type(data)) + ".")
+            return False
 
     def dump_all_files(self):
         for fname in self.open_files.keys():
             self.dump_file(fname)
-        
-    def dump_file(self, file_id):
-        """
-        Save the contents of a file dumped by the VBA to disk.
 
-        file_id - The name of the file.
+    def close_file(self, fname):
         """
+        Simulate closing a file.
 
+        fname - The name of the file.
+
+        Returns boolean indicating success.
+        """
         global file_count
         
         # Make sure the "file" exists.
-        file_id = str(file_id)
-        if (file_id not in self.open_files):
-            log.error("File " + file_id + " not open. Cannot save.")
+        if fname not in self.open_files:
+            log.error('File {} not open. Cannot close.'.format(fname))
             return
-        
-        # Get the name of the file being closed.
-        name = str(self.open_files[file_id]["name"]).replace("#", "")
-        log.info("Closing file " + name)
-        
+
+        log.info("Closing file " + fname)
+
         # Get the data written to the file and track it.
-        data = self.open_files[file_id]["contents"]
-        self.closed_files[name] = data
+        data = self.open_files[fname]
+        self.closed_files[fname] = data
 
         # Clear the file out of the open files.
-        del self.open_files[file_id]
+        del self.open_files[fname]
 
-        # Save the hash of the written file.
-        raw_data = ''
-        try:
-            raw_data = array.array('B', data).tostring()
-        except Exception as e:
-            log.error("Computing raw file data failed. " + str(e))
-        h = sha256()
-        h.update(raw_data)
-        file_hash = h.hexdigest()
-        self.report_action("Dropped File Hash", file_hash, 'File Name: ' + name)
+        if out_dir:
+            self.dump_file(fname)
+
+    # FIXME: This function is too closely coupled to the CLI.
+    #   Context should not contain business logic.
+    def dump_file(self, fname):
+        """
+        Save the contents of a file dumped by the VBA to disk.
+
+        fname - The name of the file.
+        """
+        if fname not in self.closed_files:
+            log.error('File {} not closed. Cannot save.'.format(fname))
+            return
+
+        raw_data = self.closed_files[fname]
+        file_hash = sha256(raw_data).hexdigest()
+        self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
 
         # TODO: Set a flag to control whether to dump file contents.
 
-        # Dump out the file.
-        if (out_dir is not None):
+        # Make the dropped file directory if needed.
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
 
-            # Make the dropped file directory if needed.
-            if (not os.path.isdir(out_dir)):
-                os.makedirs(out_dir)
+        # Dump the file.
+        try:
+            # Get a unique name for the file.
+            file_path = os.path.join(out_dir, os.path.basename(fname))
+            orig_file_path = file_path
+            count = 0
+            while os.path.exists(file_path):
+                count += 1
+                file_path = '{} ({})'.format(orig_file_path, count)
 
-            # Dump the file.
-            try:
-
-                # Get a unique name for the file.
-                short_name = name
-                start = 0
-                if ('\\' in short_name):
-                    start = short_name.rindex('\\') + 1
-                if ('/' in short_name):
-                    start = short_name.rindex('/') + 1
-                short_name = out_dir + short_name[start:].strip()
-                try:
-                    f = open(short_name, 'r')
-                    # Already exists. Get a unique name.
-                    f.close()
-                    file_count += 1
-                    short_name += " (" + str(file_count) + ")"
-                except Exception as e:
-                    pass
-                    
-                # Write out the dropped file.
-                f = open(short_name, 'wb')
+            # Write out the dropped file.
+            with open(file_path, 'wb') as f:
                 f.write(raw_data)
-                f.close()
-                log.info("Wrote dumped file (hash " + file_hash + ") to " + short_name + " .")
-                
-            except Exception as e:
-                log.error("Writing file " + short_name + " failed. " + str(e))
-
-        else:
-            log.warning("File not dumped. Output dir is None.")
+            log.info("Wrote dumped file (hash {}) to {}.".format(file_hash, file_path))
+        except Exception as e:
+            log.error("Writing file {} failed with error: {}".format(fname, e))
 
     def get_lib_func(self, name):
 
@@ -3182,7 +3209,7 @@ class Context(object):
         # Unknown symbol.
         else:            
             raise KeyError('Library function %r not found' % name)
-            
+
     def _get(self, name):
 
         if (not isinstance(name, basestring)):

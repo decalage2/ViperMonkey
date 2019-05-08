@@ -36,6 +36,7 @@ https://github.com/decalage2/ViperMonkey
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import operator
 
 __version__ = '0.03'
 
@@ -392,6 +393,65 @@ class Division(VBA_Object):
     def __repr__(self):
         return debug_repr("/", self.arg)
         return ' / '.join(map(repr, self.arg))
+
+
+class MultiOp(VBA_Object):
+    """
+    Defines multiple operators that work within the same level of order or operations.
+    """
+    operator_map = {}
+
+    def __init__(self, original_str, location, tokens):
+        super(MultiOp, self).__init__(original_str, location, tokens)
+        # extract argument from the tokens:
+        # expected to be a tuple containing a list (e.g. [a,'*',b,'/',c,...])
+        self.arg = tokens[0][::2]  # Keep as helper  (kept singular to keep backwards compatibility)
+        self.operators = tokens[0][1::2]
+
+    def eval(self, context, params=None):
+        evaluated_args = eval_args(self.arg, context)
+        try:
+            args = coerce_args(evaluated_args)
+            ret = args[0]
+            for operator, arg in zip(self.operators, args[1:]):
+                ret = self.operator_map[operator](ret, arg)
+            return ret
+        except (TypeError, ValueError):
+            # Try converting strings to ints.
+            # TODO: Need to handle floats in strings.
+            try:
+                args = map(int, evaluated_args)
+                ret = args[0]
+                for operator, arg in zip(self.operators, args[1:]):
+                    ret = self.operator_map[operator](ret, arg)
+                return ret
+            except Exception as e:
+                log.error('Impossible to operate on arguments of different types. ' + str(e))
+                return 0
+        except ZeroDivisionError:
+            log.error("Division by 0 error. Returning ''.")
+            return ''
+
+    def __repr__(self):
+        ret = [str(self.arg[0])]
+        for operator, arg in zip(self.operators, self.arg[1:]):
+            ret.append(' {} {!s}'.format(operator, arg))
+        return '({})'.format(''.join(ret))
+
+
+class MultiDiv(MultiOp):
+    """
+    VBA Multiplication/Division (used for performance)
+    """
+    operator_map = {'*': operator.mul, '/': operator.truediv}
+
+
+class AddSub(MultiOp):
+    """
+    VBA Addition/Subtraction (used for performance)
+    """
+    operator_map = {'+': operator.add, '-': operator.sub}
+
 
 # --- FLOOR DIVISION: \ OPERATOR ------------------------------------------------
 

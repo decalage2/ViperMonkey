@@ -232,8 +232,6 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Full function call?
-        func_name = None
-        func_args = None
         if (isinstance(self.rhs[0].params[0], Function_Call)):
             func_name = self.rhs[0].params[0].name
             func_args = self.rhs[0].params[0].params
@@ -308,7 +306,7 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
-        # Is this an Application.Run() instance?
+        # Is this an ActiveDocument.BuiltInDocumentProperties() instance?
         if (not str(self).startswith("ActiveDocument.BuiltInDocumentProperties(")):
             return None
 
@@ -352,10 +350,12 @@ class MemberAccessExpression(VBA_Object):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
 
-        # Fix the file name for emulation if needed.
-        if (read_file.startswith("C:\\")):
-            read_file = read_file.replace("C:\\", "./")
-        
+        # NOTE: Disabled this because it creates inconsistencies in results.
+        # # Fix the file name for emulation if needed.
+        # if (read_file.startswith("C:\\")):
+        #     read_file = read_file.replace("C:\\", "./")
+
+        # TODO: Should we be actually reading files from the system?
         # Read the file contents.
         try:
             f = open(read_file, 'r')
@@ -583,6 +583,8 @@ class MemberAccessExpression(VBA_Object):
         except KeyError:
             return False
 
+        # TODO: Use context.open_file()/write_file()/close_file()
+
         # Make the dropped file directory if needed.
         out_dir = vba_context.out_dir
         if (not os.path.isdir(out_dir)):
@@ -707,6 +709,7 @@ class MemberAccessExpression(VBA_Object):
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
         if (isinstance(rhs, Function_Call)):
+            log.debug('rhs {!r} is a Function_Call'.format(rhs))
 
             # Skip local functions that have a name collision with VBA built in functions.
             if (context.contains_user_defined(rhs.name)):
@@ -798,23 +801,56 @@ l_expression = Forward()
 function_call_limited = Forward()
 func_call_array_access_limited = Forward()
 function_call = Forward()
-member_object = (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]")) + \
-                 NotAny("(") + NotAny("#") + NotAny("$") + Optional(Suppress("!"))) ^ \
-                (func_call_array_access_limited ^ function_call_limited)
-                
-member_access_expression = Group( Group( Suppress(ZeroOrMore(" ")) + member_object("lhs") + \
-                                         OneOrMore( NotAny(White()) + Suppress(".") + member_object("rhs") ) ) + Suppress(ZeroOrMore(" ")) ).leaveWhitespace()
+
+member_object_limited = (
+    (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]")))
+    + NotAny("(")
+    + NotAny("#")
+    + NotAny("$")
+    + NotAny("!")
+)
+# If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
+member_object = (func_call_array_access_limited ^ function_call_limited) | member_object_limited
+
+
+# TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
+member_access_expression = Group(Group(member_object("lhs") + OneOrMore(Suppress(".") + member_object("rhs"))))
 member_access_expression.setParseAction(MemberAccessExpression)
 
+
 # Whitespace allowed before the "."
-member_access_expression_loose = Group( Group( Suppress(ZeroOrMore(" ")) + member_object("lhs") + \
-                                               OneOrMore( Suppress(".") + member_object("rhs") ) ) + Suppress(ZeroOrMore(" ")) )
+member_access_expression_loose = Group(
+    Group(
+        Suppress(ZeroOrMore(" "))
+        + member_object("lhs")
+        + OneOrMore(Suppress(".") + member_object("rhs"))
+    )
+    + Suppress(ZeroOrMore(" "))
+)
 member_access_expression_loose.setParseAction(MemberAccessExpression)
 
+
 # TODO: Figure out how to have unlimited member accesses.
-member_object_limited = Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]"))
-member_access_expression_limited = Group( Group( (member_object("lhs") + NotAny(White()) + Suppress(".") + NotAny(White()) + member_object_limited("rhs") + \
-                                                 Optional(NotAny(White()) + Suppress(".") + NotAny(White()) + member_object_limited("rhs1")) ).leaveWhitespace() ) )
+member_object_limited = (
+    Suppress(Optional("["))
+    + unrestricted_name
+    + Suppress(Optional("]"))
+)
+member_access_expression_limited = Group(
+    Group((
+        member_object("lhs")
+        + NotAny(White())
+        + Suppress(".")
+        + NotAny(White())
+        + member_object_limited("rhs")
+        + Optional(
+              NotAny(White())
+              + Suppress(".")
+              + NotAny(White())
+              + member_object_limited("rhs1")
+        )
+    ).leaveWhitespace())
+)
 member_access_expression_limited.setParseAction(MemberAccessExpression)
 
 # --- ARGUMENT LISTS ---------------------------------------------------------
@@ -991,12 +1027,8 @@ class Function_Call(VBA_Object):
         
         # Actually emulate the function call.
         log.info('calling Function: %s(%s)' % (self.name, str_params))
-        save = False
-        for func in Function_Call.log_funcs:
-            if (self.name.lower().endswith(func.lower())):
-                save = True
-                break
-        if (save):
+        if self.name.lower() in context._log_funcs \
+                or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
 
@@ -1090,11 +1122,6 @@ class Function_Call(VBA_Object):
                         # Return result.
                         log.error("Array access %r[%r] failed." % (f, params[0]))
                         return 0
-                    else:
-
-                        # Return result.
-                        log.error("Improper type for function.")
-                        return None
             else:
 
                 # Return result.
@@ -1130,9 +1157,13 @@ class Function_Call(VBA_Object):
 
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
+expr_item = Forward()
 expr_list_item = expression ^ boolean_expression ^ member_access_expression_loose
+# NOTE: This helps to speed up parsing and prevent recursion loops.
+expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 
 # Parse large array expressions quickly with a regex.
+# language=PythonRegExp
 expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+\s*,\s*){10,}\s*[0-9a-zA-Z_]+\s*")
 expr_list_fast.setParseAction(lambda t: [expression.parseString(i, parseAll=True)[0] for i in t[0].split(",")])
 
@@ -1141,26 +1172,55 @@ expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
 
 # WARNING: This may break parsing in function calls when the 1st argument is skipped.
 #expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
-expr_list = expr_list_item + NotAny(':=') + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+expr_list = (
+    expr_list_item
+    + NotAny(':=')
+    + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+)
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
-function_call <<= CaselessKeyword("nothing") | \
-                  (NotAny(reserved_keywords) + (member_access_expression_limited('name') ^ lex_identifier('name')) + \
-                   Suppress(Optional('$') + Optional('#') + Optional('!') + Optional('%') + Optional('@')) + \
-                   Suppress('(') + Optional(expr_list('params')) + Suppress(')')) | \
-                   Suppress('[') + CaselessKeyword("Shell")('name') + Suppress(']') + expr_list('params')
+function_call <<= (
+    CaselessKeyword("nothing")
+    | (
+        NotAny(reserved_keywords)
+        + (member_access_expression('name') ^ lex_identifier('name'))
+        + Suppress(
+            Optional('$')
+            + Optional('#')
+            + Optional('!')
+            + Optional('%')
+            + Optional('@')
+        )
+        + Suppress('(') + Optional(expr_list('params')) + Suppress(')')
+    )
+    | (
+        Suppress('[')
+        + CaselessKeyword("Shell")('name')
+        + Suppress(']')
+        + expr_list('params')
+    )
+)
 function_call.setParseAction(Function_Call)
 
-function_call_limited <<= CaselessKeyword("nothing") | \
-                          (NotAny(reserved_keywords) + lex_identifier('name') + \
-                           Suppress(Optional('$')) + Suppress(Optional('#')) + Suppress(Optional('!')) + Suppress(Optional('%')) + Suppress(Optional('@')) + \
-                           ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
-                            # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
-                            # parsed as function_call_limited "foo .bar". The real way this should be
-                            # parsed is to require at least 1 space between the function name and the
-                            # 1st argument, then "foo.bar" will not match.
-                            (Suppress(Optional('$')) + NotAny(".") + expr_list('params')))
-                          )
+function_call_limited <<= (
+    CaselessKeyword("nothing")
+    | (
+        NotAny(reserved_keywords)
+        + lex_identifier('name')
+        + Suppress(Optional('$'))
+        + Suppress(Optional('#'))
+        + Suppress(Optional('!'))
+        + Suppress(Optional('%'))
+        + Suppress(Optional('@'))
+        + (
+            (Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+            # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
+            # parsed as function_call_limited "foo .bar". The real way this should be
+            # parsed is to require at least 1 space between the function name and the
+            # 1st argument, then "foo.bar" will not match.
+            | (Suppress(Optional('$')) + NotAny(".") + expr_list('params')))
+    )
+)
 function_call_limited.setParseAction(Function_Call)
 
 # --- ARRAY ACCESS OF FUNCTION CALL --------------------------------------------------------
@@ -1217,9 +1277,21 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 # - then identifiers
 # - finally literals (strings, integers, etc)
 
-expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
-            ( float_literal | named_argument | l_expression | (chr_ ^ function_call ^ func_call_array_access) | \
-              simple_name_expression | asc | strReverse | literal | file_pointer | placeholder)
+expr_item <<= (
+    Optional(CaselessKeyword("ByVal").suppress())
+    + (
+        float_literal
+        | named_argument
+        | l_expression
+        | (chr_ ^ function_call ^ func_call_array_access)
+        | simple_name_expression
+        | asc
+        | strReverse
+        | literal
+        | file_pointer
+        | placeholder
+    )
+)
 
 # --- OPERATOR EXPRESSION ----------------------------------------------------
 
@@ -1236,18 +1308,17 @@ expr_item = Optional(CaselessKeyword("ByVal").suppress()) + \
 expression <<= (infixNotation(expr_item,
                                   [
                                       (CaselessKeyword("not"), 1, opAssoc.RIGHT, Not),
-                                      ("^", 2, opAssoc.RIGHT, Power),
-                                      ("*", 2, opAssoc.LEFT, Multiplication),
-                                      ("/", 2, opAssoc.LEFT, Division),
+                                      # FIXME: Disabling exponentiation because it's causing recursion errors.
+                                      # ("^", 2, opAssoc.RIGHT, Power),
+                                      (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                      (CaselessKeyword("mod"), 2, opAssoc.LEFT, Mod),
-                                      ("-", 2, opAssoc.LEFT, Subtraction),
-                                      ("+", 2, opAssoc.LEFT, Sum),
+                                      (Regex(re.compile("mod", re.IGNORECASE)), 2, opAssoc.LEFT, Mod),
+                                      (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
                                       ("&", 2, opAssoc.LEFT, Concatenation),
-                                      (CaselessKeyword("and"), 2, opAssoc.LEFT, And),
-                                      (CaselessKeyword("or"), 2, opAssoc.LEFT, Or),
-                                      (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
-                                      (CaselessKeyword("eqv"), 2, opAssoc.LEFT, Eqv),
+                                      (Regex(re.compile("and", re.IGNORECASE)), 2, opAssoc.LEFT, And),
+                                      (Regex(re.compile("or", re.IGNORECASE)), 2, opAssoc.LEFT, Or),
+                                      (Regex(re.compile("xor", re.IGNORECASE)), 2, opAssoc.LEFT, Xor),
+                                      (Regex(re.compile("eqv", re.IGNORECASE)), 2, opAssoc.LEFT, Eqv),
                                   ]))
 expression.setParseAction(lambda t: t[0])
 
@@ -1256,12 +1327,10 @@ limited_expression = (infixNotation(expr_item,
                                     [
                                         # ("^", 2, opAssoc.RIGHT), # Exponentiation
                                         # ("-", 1, opAssoc.LEFT), # Unary negation
-                                        ("*", 2, opAssoc.LEFT, Multiplication),
-                                        ("/", 2, opAssoc.LEFT, Division),
+                                        (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                         ("\\", 2, opAssoc.LEFT, FloorDivision),
                                         (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
-                                        ("-", 2, opAssoc.LEFT, Subtraction),
-                                        ("+", 2, opAssoc.LEFT, Sum),
+                                        (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
                                         ("&", 2, opAssoc.LEFT, Concatenation),
                                         (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                     ]))
