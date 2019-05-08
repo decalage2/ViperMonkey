@@ -3084,7 +3084,7 @@ class External_Function(VBA_Object):
         log.warning('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
         return 0
 
-function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
+function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type')("return_type") \
                  + Optional(Literal('(') + Literal(')')).suppress()
 
 public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Global')).suppress() + \

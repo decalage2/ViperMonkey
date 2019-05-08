@@ -300,8 +300,12 @@ sub_start_line.setParseAction(Sub)
 # TODO: Function should inherit from Sub, or use only one class for both
 
 class Function(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(Function, self).__init__(original_str, location, tokens)
+        self.return_type = None
+        if (hasattr(tokens, "return_type")):
+            self.return_type = tokens.return_type[0]
         self.name = tokens.function_name
         self.params = tokens.params
         self.statements = tokens.statements
@@ -449,21 +453,25 @@ class Function(VBA_Object):
             # Get the return value.
             return_value = context.get(self.name)
             if ((return_value is None) or (isinstance(return_value, Function))):
-                #context.set(self.name, '')
                 return_value = ''
             log.debug('Function %s: return value = %r' % (self.name, return_value))
+
+            # Convert the return value to a String if needed.
+            if ((self.return_type == "String") and (not isinstance(return_value, str))):
+                return_value = coerce_to_string(return_value)
+            
             return return_value
+
         except KeyError:
             
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
-            #context.set(self.name, '')
             return ''
 
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
                  CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
-                 Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+                 Optional(params_list_paren) + Optional(function_type2)("return_type") + EOS.suppress()
 function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
