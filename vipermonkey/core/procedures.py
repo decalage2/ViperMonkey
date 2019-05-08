@@ -305,7 +305,7 @@ class Function(VBA_Object):
         super(Function, self).__init__(original_str, location, tokens)
         self.return_type = None
         if (hasattr(tokens, "return_type")):
-            self.return_type = tokens.return_type[0]
+            self.return_type = tokens.return_type
         self.name = tokens.function_name
         self.params = tokens.params
         self.statements = tokens.statements
@@ -471,7 +471,7 @@ class Function(VBA_Object):
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
                  CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
-                 Optional(params_list_paren) + Optional(function_type2)("return_type") + EOS.suppress()
+                 Optional(params_list_paren) + Optional(function_type2("return_type")) + EOS.suppress()
 function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
