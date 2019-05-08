@@ -494,12 +494,10 @@ class Execute(VbaLibraryFunc):
 
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
-        command = command.replace('""', '"')
+        # Why am I doing this?
+        #command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
-
-        # Strip useless lines and fix up the code to emulate.
-        #command = strip_lines.strip_useless_code(command, [])
 
         # Fix invalid string assignments.
         command = strip_lines.fix_vba_code(command)
