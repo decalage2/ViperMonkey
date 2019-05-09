@@ -227,7 +227,7 @@ def _read_from_excel(arg, context):
             
             # Return the cell value.
             log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
-            log.debug("Cell value = '" + val + "'")
+            log.debug("Cell value = '" + str(val) + "'")
             return val
         
         except Exception as e:

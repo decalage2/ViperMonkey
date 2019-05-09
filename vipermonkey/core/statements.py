@@ -2627,14 +2627,21 @@ exit_func_statement.setParseAction(Exit_Function_Statement)
 class Redim_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
-        self.item = tokens.item
+        self.item = str(tokens.item)
         log.debug('parsed %r' % self)
 
     def __repr__(self):
         return 'ReDim ' + str(self.item)
 
     def eval(self, context, params=None):
-        # Currently stubbed out.
+
+        # Is this a Variant type?
+        if (str(context.get_type(self.item)) == "Variant"):
+
+            # Variant types cannot hold string values, so assume that the variable
+            # should hold an array.
+            context.set(self.item, [])
+            
         return
 
 # Array redim statement

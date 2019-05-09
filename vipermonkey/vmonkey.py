@@ -974,21 +974,43 @@ def read_sheet_from_csv(filename):
     # Open the CVS file.
     f = None
     try:
-        f = open(filename, 'r')
-    except:
+        f = open(filename, 'r')        
+    except Exception as e:
+        log.error("Cannot open CSV file. " + str(e))
         return None
 
     # Read in all the cells. Note that this only works for a single sheet.
     row = 0
     r = {}
     for line in f:
+
+        # Escape ',' in cell values so the split works correctly.
         line = line.strip()
+        in_str = False
+        tmp = ""
+        for c in line:
+            if (c == '"'):
+                in_str = not in_str
+            if (in_str and (c == ',')):
+                tmp += "#A_COMMA!!#"
+            else:
+                tmp += c
+        line = tmp
+
+        # Break out the individual cell values.
         cells = line.split(",")
         col = 0
         for cell in cells:
+
+            # Add back in escaped ','.
+            cell = cell.replace("#A_COMMA!!#", ",")
+
+            # Strip " from start and end of value.
             dat = str(cell)
             if (dat.startswith('"')):
                 dat = dat[1:]
+            if (dat.endswith('"')):
+                dat = dat[:-1]
             r[(col, row)] = dat
             col += 1
         row += 1
@@ -1036,6 +1058,7 @@ def load_excel_libreoffice(data):
         tfile.close()
 
         # Try to convert the file to a CSV file.
+        log.warning("Converting spreadsheet to CSV...")
         try:
             rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
                                  stdout=out, stderr=out)
@@ -1356,7 +1379,6 @@ def process_file_scanexpr (container, filename, data):
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         vba = VBA_Parser(filename, data, relaxed=True)
-        print 'Type:', vba.type
         if vba.detect_vba_macros():
 
             # Read in document metadata.
