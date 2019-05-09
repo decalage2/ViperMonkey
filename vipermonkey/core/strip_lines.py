@@ -270,8 +270,46 @@ def fix_vba_code(vba_code):
 
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
+
+    # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
+    r = ""
+    for line in vba_code.split("\n"):
+        
+        # Do we have an "if+..."?
+        if ("if+" not in line.lower()):
+            
+            # No. No change.
+            r += line + "\n"
+            continue
+
+        # Yes we do. Figure out if it is in a string.
+        in_str = False
+        window = "   "
+        new_line = ""
+        for c in line:
+
+            # Start/End of string?
+            if (c == '"'):
+                in_str = not in_str
+
+            # Have we seen an if+ ?
+            if ((not in_str) and (c == "+") and (window.lower() == " if")):
+
+                # Replace the '+' with a ' '.
+                new_line += " "
+
+            # No if+ .
+            else:
+                new_line += c
+                
+            # Advance the viewing window.
+            window = window[1:] + c
+
+        # Save the updated line.
+        r += new_line + "\n"
     
-    return vba_code
+    # Return the updated code.
+    return r
     
 def strip_useless_code(vba_code, local_funcs):
     """
