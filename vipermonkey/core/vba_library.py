@@ -2116,8 +2116,16 @@ class Put(VbaLibraryFunc):
             
         # Are we writing a string?
         if (isinstance(data, str)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(ord(c))
+
+            # Hex string?
+            tmp = data.upper()
+            if ((tmp.startswith("&H")) and (len(tmp) == 4)):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+                context.open_files[file_id]["contents"].append(tmp)
+            else:
+                for c in data:
+                    context.open_files[file_id]["contents"].append(ord(c))
 
         # Are we writing a list?
         elif (isinstance(data, list)):
