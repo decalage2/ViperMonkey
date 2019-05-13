@@ -251,6 +251,26 @@ def fix_unbalanced_quotes(vba_code):
     # Return the balanced code.
     return r
 
+def fix_multiple_assignments(line):
+
+    # Pull out multiple assignments and the final assignment value.
+    pat = r"((?:\w+\s*=\s*){2,})(.+)"
+    items = re.findall(pat, line)
+    if (len(items) == 0):
+        return line
+    items = items[0]
+    assigns = items[0].replace(" ", "").split("=")
+    val = items[1]
+
+    # Break out each assignment into multiple lines.
+    r = ""
+    for var in assigns:
+        var = var.strip()
+        if (len(var) == 0):
+            continue
+        r += var + " = " + val + "\n"
+    return r
+
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
@@ -274,6 +294,9 @@ def fix_vba_code(vba_code):
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
     r = ""
     for line in vba_code.split("\n"):
+
+        # Fix up assignments like 'cat = dog = frog = 12'.
+        line = fix_multiple_assignments(line)
         
         # Do we have an "if+..."?
         if ("if+" not in line.lower()):
@@ -307,7 +330,7 @@ def fix_vba_code(vba_code):
 
         # Save the updated line.
         r += new_line + "\n"
-    
+        
     # Return the updated code.
     return r
     

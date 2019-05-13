@@ -539,6 +539,12 @@ class AddCode(Execute):
     """
     pass
 
+class AddFromString(Execute):
+    """
+    Office programmatic macro editing method..
+    """
+    pass
+
 class Add(VbaLibraryFunc):
     """
     Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
@@ -3016,7 +3022,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
-               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo):
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
+               AddFromString):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
