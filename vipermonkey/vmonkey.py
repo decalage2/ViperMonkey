@@ -188,7 +188,7 @@ def _read_doc_text_libreoffice(data):
         r = []
         f = None
         try:
-            f = open(filename + ".txt")
+            f = open(filename + ".txt", 'rb')
         except IOError as e:
             log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
             return None

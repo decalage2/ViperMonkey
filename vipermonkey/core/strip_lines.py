@@ -71,6 +71,7 @@ import sys
 import re
 from logger import log
 import vba_context
+from random import randint
 
 def is_useless_dim(line):
     """
@@ -271,6 +272,59 @@ def fix_multiple_assignments(line):
         r += var + " = " + val + "\n"
     return r
 
+def fix_skipped_1st_arg(vba_code):
+    """
+    Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
+    """
+
+    # We don't want to replace things like this in string literals. Temporarily
+    # pull out the string literals from the line.
+
+    # Find all the string literals and make up replacement names.
+    strings = {}
+    in_str = False
+    curr_str = None
+    for c in vba_code:
+
+        # Start/end of string?
+        if (c == '"'):
+
+            # Start of string?
+            if (not in_str):
+                curr_str = ""
+                in_str = True
+
+            # End of string.
+            else:
+
+                # Map a temporary name to the current string.
+                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                while (str_name in strings):
+                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                curr_str += c
+                strings[str_name] = curr_str
+                in_str = False
+                curr_str = None
+
+        # Save the character if we are in a string.
+        if (in_str):
+            curr_str += c
+
+    # Temporarily replace the string literals.
+    tmp_code = vba_code
+    for str_name in strings.keys():
+        tmp_code = tmp_code.replace(strings[str_name], str_name)
+            
+    # Replace the skipped 1st arguments in calls.
+    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
+
+    # Put the string literals back.
+    for str_name in strings.keys():
+        vba_code = vba_code.replace(str_name, strings[str_name])
+
+    # Return the modified code.
+    return vba_code
+    
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
@@ -286,7 +340,7 @@ def fix_vba_code(vba_code):
     #vba_code = vba_code.replace('\x88', '')
     
     # Fix function calls with a skipped 1st argument.
-    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
+    vba_code = fix_skipped_1st_arg(vba_code)
 
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
