@@ -3106,7 +3106,7 @@ class Context(object):
             return
         
         # Get the name of the file being closed.
-        name = self.open_files[file_id]["name"].replace("#", "")
+        name = str(self.open_files[file_id]["name"]).replace("#", "")
         log.info("Closing file " + name)
         
         # Get the data written to the file and track it.
