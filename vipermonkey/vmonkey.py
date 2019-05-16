@@ -398,6 +398,9 @@ def _get_ole_textbox_values(obj, stream):
         # Pull out the current form data chunk.
         chunk = data[index : end]        
         strs = re.findall(pat, chunk)
+        #print "\n\n-----------------------------"
+        #print chunk
+        #print str(strs).replace("\\x00", "")
         
         # Pull out the variable name (and maybe part of the text). 
         curr_pos = 0
@@ -461,7 +464,7 @@ def _get_ole_textbox_values(obj, stream):
             text = strs[name_pos + 1]
         
         # Break out the (possible additional) value.
-        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00\x02\x18"
+        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
             poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
@@ -483,6 +486,19 @@ def _get_ole_textbox_values(obj, stream):
                 text += poss_val
             i += 1
 
+        # Pull out the size of the text.
+        size_pat = r"\x48\x80\x2c(.{2})"
+        tmp = re.findall(size_pat, chunk)
+        if (len(tmp) > 0):
+            size_bytes = tmp[0]
+            size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+            #print "ORIG:"
+            #print text
+            #print len(text)
+            #print size
+            if (len(text) > size):
+                text = text[:size]
+            
         # Save the form name and text value.
         r.append((name, text))
 
@@ -490,6 +506,7 @@ def _get_ole_textbox_values(obj, stream):
         index = end
 
     # Return the OLE form textbox information.
+    #print r
     #sys.exit(0)
     return r
         
