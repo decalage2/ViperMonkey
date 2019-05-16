@@ -374,30 +374,116 @@ def _get_ole_textbox_values(obj, stream):
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
     index = 0
     r = []
-    while ("Microsoft Forms 2.0 TextBox" in data[index:]):
-
+    form_str = "Microsoft Forms 2.0 TextBox"
+    while (form_str in data[index:]):
+        
         # Break out the data for an embedded OLE textbox form.
-        index = data.index("Microsoft Forms 2.0 TextBox")
-        end = index + 5000
-        if (end > len(data)):
-            end = len(data) - 1
-        chunk = data[index : end]
+        index = data[index:].index(form_str) + index
+        start = index + len(form_str)
+
+        # More textbox forms?
+        if (form_str in data[start:]):
+
+            # Just look at the current form chunk.
+            end = data[start:].index(form_str) + start
+
+        # No more textbox forms.
+        else:            
+
+            # Jump an arbitrary amount ahead.
+            end = index + 5000
+            if (end > len(data)):
+                end = len(data) - 1
+
+        # Pull out the current form data chunk.
+        chunk = data[index : end]        
         strs = re.findall(pat, chunk)
-    
-        # 3rd string looks like the name of the ole form object.
-        if (len(strs) < 5):
+        
+        # Pull out the variable name (and maybe part of the text). 
+        curr_pos = 0
+        name_pos = 0
+        name = None
+        for field in strs:
+
+            # It might come after the 'Forms.TextBox.1' tag.
+            if (field == 'Forms.TextBox.1'):
+
+                # If the next field does not look something like '_1619423091' the
+                # next field is the name.
+                poss_name = strs[curr_pos + 1].replace("\x00", "")
+                if ((not poss_name.startswith("_")) or
+                    (not poss_name[1:].isdigit())):
+
+                    # We have found the name.
+                    name = poss_name
+                    name_pos = curr_pos + 1
+
+                # Seems like there is only 1 'Forms.TextBox.1', so we are
+                # done with this loop.
+                break
+
+            # Move to the next field.
+            curr_pos += 1
+
+        # Did we find the name with the 1st method?
+        if (name is None):
+
+            # No. The name comes after an 'OCXNAME' field.
+            curr_pos = 0
+            for field in strs:
+                
+                # It might come after the 'OCXNAME' tag.
+                if (field.replace("\x00", "") == 'OCXNAME'):
+
+                    # If the next field does not look something like '_1619423091' the
+                    # next field is the name.
+                    poss_name = strs[curr_pos + 1].replace("\x00", "")
+                    if ((not poss_name.startswith("_")) or
+                        (not poss_name[1:].isdigit())):
+                        
+                        # We have found the name.
+                        name = poss_name
+                        name_pos = curr_pos + 1
+                        break
+
+                # Move to the next field.
+                curr_pos += 1
+
+        # Move to the next chunk if we cannot find a name.
+        if (name is None):
+            index = end
             continue
-        name = strs[3].replace("\x00", "")
 
-        # Item after that looks like start of text of the object.
-        text = strs[4].replace("\x00", "")
-
+        # Get a text value after the name if it looks like the following field
+        # is not a font.
+        text = ""
+        if ("Calibri" not in strs[name_pos + 1]):
+            text = strs[name_pos + 1]
+        
+        # Break out the (possible additional) value.
+        #  foo  
+        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00\x02\x18"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+            if (poss_val != text):
+                text += poss_val
+        #  -  
+        # \x00-\x00\x0c\x02\x00\x02\x18
+        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00[^\x00]{2}\x00\x02\x18"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+            if (poss_val != text):
+                text += poss_val
+        
         # Looks like more text comes after the "SummaryInformation" tag.
         i = 4
         for s in strs[4:]:
             if ((s.replace("\x00", "").strip() == "SummaryInformation") and
                 (i < len(strs))):
-                text += strs[i + 1].replace("\x00", "")
+                poss_val = re.findall(r"[\x20-\x7e]+", strs[i + 1])[0]
+                text += poss_val
             i += 1
 
         # Save the form name and text value.
@@ -407,6 +493,7 @@ def _get_ole_textbox_values(obj, stream):
         index = end
 
     # Return the OLE form textbox information.
+    #sys.exit(0)
     return r
         
 def _get_shapes_text_values(fname, stream):
