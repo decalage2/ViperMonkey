@@ -461,15 +461,12 @@ def _get_ole_textbox_values(obj, stream):
             text = strs[name_pos + 1]
         
         # Break out the (possible additional) value.
-        #  foo  
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
             poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
             if (poss_val != text):
                 text += poss_val
-        #  -  
-        # \x00-\x00\x0c\x02\x00\x02\x18
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00[^\x00]{2}\x00\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
