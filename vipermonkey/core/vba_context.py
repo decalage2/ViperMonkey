@@ -3472,6 +3472,16 @@ class Context(object):
             params = self._strip_null_bytes(params)
             description = self._strip_null_bytes(description)
 
+        # Hack to clean up some reporting.
+        new_params = None
+        if (isinstance(params, list)):
+            new_params = []
+            for p in params:
+                new_params.append(str(p).replace("powiershell", "powershell").replace(" enc", " -enc"))
+        else:
+            new_params = str(params).replace("powiershell", "powershell").replace(" enc", " -enc")
+        params = new_params
+            
         # Save the action for reporting.
         self.engine.report_action(action, params, description)
 
