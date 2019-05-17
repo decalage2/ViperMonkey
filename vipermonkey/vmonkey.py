@@ -412,10 +412,11 @@ def _get_ole_textbox_values(obj, stream):
             if (field == 'Forms.TextBox.1'):
 
                 # If the next field does not look something like '_1619423091' the
-                # next field is the name.
-                poss_name = strs[curr_pos + 1].replace("\x00", "")
-                if ((not poss_name.startswith("_")) or
-                    (not poss_name[1:].isdigit())):
+                # next field is the name. CompObj does not count either.
+                poss_name = strs[curr_pos + 1].replace("\x00", "").strip()
+                if (((not poss_name.startswith("_")) or
+                     (not poss_name[1:].isdigit())) and
+                    (poss_name != "CompObj")):
 
                     # We have found the name.
                     name = poss_name
@@ -439,14 +440,20 @@ def _get_ole_textbox_values(obj, stream):
                 if (field.replace("\x00", "") == 'OCXNAME'):
 
                     # If the next field does not look something like '_1619423091' the
-                    # next field is the name.
+                    # next field might be the name.
                     poss_name = strs[curr_pos + 1].replace("\x00", "")
                     if ((not poss_name.startswith("_")) or
                         (not poss_name[1:].isdigit())):
-                        
+
+                        # If the string after 'OCXNAME' is 'contents' the actual name comes
+                        # after 'contents'
+                        name_pos = curr_pos + 1
+                        if (poss_name == 'contents'):
+                            poss_name = strs[curr_pos + 2].replace("\x00", "")
+                            name_pos = curr_pos + 2
+                            
                         # We have found the name.
                         name = poss_name
-                        name_pos = curr_pos + 1
                         break
 
                 # Move to the next field.
@@ -476,15 +483,6 @@ def _get_ole_textbox_values(obj, stream):
             poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
             if (poss_val != text):
                 text += poss_val
-        
-        # Looks like more text comes after the "SummaryInformation" tag.
-        i = 4
-        for s in strs[4:]:
-            if ((s.replace("\x00", "").strip() == "SummaryInformation") and
-                (i < len(strs))):
-                poss_val = re.findall(r"[\x20-\x7e]+", strs[i + 1])[0]
-                text += poss_val
-            i += 1
 
         # Pull out the size of the text.
         size_pat = r"\x48\x80\x2c(.{2})"
