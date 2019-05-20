@@ -2942,6 +2942,18 @@ class InternetGetConnectedState(VbaLibraryFunc):
         # Always connected.
         return True
 
+class Not(VbaLibraryFunc):
+    """
+    Boolean Not() called as a function.
+    """
+
+    def eval(self, context, params=None):
+
+        if ((len(params) == 0) or (not isinstance(params[0], bool))):
+            log.warning("Cannot compute Not(" + str(params) + ").")
+            return "NULL"
+        return (not params[0])
+                
 class InternetOpenA(VbaLibraryFunc):
     """
     InternetOpenA() function from wininet.dll.
@@ -3031,7 +3043,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString):
+               AddFromString, Not):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -1310,6 +1310,10 @@ class For_Statement(VBA_Object):
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
+            # Handle assigning the loop index variable to a constant value
+            # in the loop body. This can cause infinite loops.
+            last_index = context.get(self.name)
+            
             # Is the loop body a simple series of atomic statements and has
             # nothing changed in the program state since the last iteration?
             if (self._no_state_change(prev_context, context)):
@@ -1366,8 +1370,18 @@ class For_Statement(VBA_Object):
                 step = int(step)
             except Exception as e:
                 log.error("Cannot update loop counter. Breaking loop. " + str(e))
-                break                
-            context.set(self.name, val + step)
+                break
+            new_index = val + step
+            context.set(self.name, new_index)
+
+            # Are we manually setting the loop index variable to a constant value
+            # in the loop body? This can cause infinite loops.
+            if (((new_index < start) and (step > 0)) or
+                ((new_index > start) and (step < 0))):
+
+                # Infinite loop. Break out.
+                log.warn("Possible infinite For loop detected. Exiting loop.")
+                break
         
         # Remove tracking of this loop.
         context.loop_stack.pop()

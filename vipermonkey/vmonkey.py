@@ -468,6 +468,7 @@ def _get_ole_textbox_values(obj, stream):
         # is not a font.
         text = ""
         if ("Calibri" not in strs[name_pos + 1]):
+            #print "Value: 1"
             text = strs[name_pos + 1]
         
         # Break out the (possible additional) value.
@@ -476,13 +477,19 @@ def _get_ole_textbox_values(obj, stream):
         if (len(vals) > 0):
             poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
             if (poss_val != text):
+                #print "Value: 2"
                 text += poss_val
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00.{2,5}\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
-            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
-            if (poss_val != text):
-                text += poss_val
+
+            # Skip empty value fields.
+            empty_pat = r"\x00#\x00\x00\x00\x00\x02\x18"
+            if (len(re.findall(empty_pat, vals[0])) == 0):
+                poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+                if (poss_val != text):
+                    #print "Value: 3"
+                    text += poss_val
 
         # Pull out the size of the text.
         size_pat = r"\x48\x80\x2c(.{2})"
@@ -491,6 +498,7 @@ def _get_ole_textbox_values(obj, stream):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
             #print "ORIG:"
+            #print name
             #print text
             #print len(text)
             #print size
