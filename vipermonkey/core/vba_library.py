@@ -64,6 +64,7 @@ from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
+from vba_object import strip_nonvb_chars
 import expressions
 import meta
 import modules
@@ -76,17 +77,6 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 # TODO: Excel
 # TODO: other MS Office apps?
-
-def strip_nonvb_chars(s):
-    """
-    Strip invalid VB characters from a string.
-    """
-
-    r = ""
-    for c in s:
-        if ((ord(c) > 8) and (ord(c) < 127)):
-            r += c
-    return r
 
 class WeekDay(VbaLibraryFunc):
     """

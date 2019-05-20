@@ -54,6 +54,7 @@ from operators import *
 import procedures
 from vba_object import eval_arg
 from vba_object import coerce_to_int
+from vba_object import strip_nonvb_chars
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
 import vba_context
@@ -1371,6 +1372,8 @@ class BoolExprItem(VBA_Object):
         if ((self.op.lower() == "=") or
             (self.op.lower() == "like") or
             (self.op.lower() == "is")):
+            rhs = strip_nonvb_chars(rhs)
+            lhs = strip_nonvb_chars(lhs)
             rhs_str = str(rhs)
             lhs_str = str(lhs)
             if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):

@@ -793,3 +793,14 @@ def str_convert(arg):
     if (arg == "NULL"):
         return ''
     return str(arg)
+
+def strip_nonvb_chars(s):
+    """
+    Strip invalid VB characters from a string.
+    """
+
+    r = ""
+    for c in s:
+        if ((ord(c) > 8) and (ord(c) < 127)):
+            r += c
+    return r
