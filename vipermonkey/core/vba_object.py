@@ -799,6 +799,11 @@ def strip_nonvb_chars(s):
     Strip invalid VB characters from a string.
     """
 
+    # Sanity check.
+    if (not isinstance(s, str)):
+        return s
+
+    # Strip non-ascii printable characters.
     r = ""
     for c in s:
         if ((ord(c) > 8) and (ord(c) < 127)):

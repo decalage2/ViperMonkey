@@ -1118,7 +1118,7 @@ def read_sheet_from_csv(filename):
                 dat = dat[1:]
             if (dat.endswith('"')):
                 dat = dat[:-1]
-            r[(col, row)] = dat
+            r[(row, col)] = dat
             col += 1
         row += 1
 
