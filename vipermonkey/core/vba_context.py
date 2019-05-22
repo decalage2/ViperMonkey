@@ -3466,21 +3466,19 @@ class Context(object):
                     
     def report_action(self, action, params=None, description=None, strip_null_bytes=False):
 
-        # Strip out \x00 characters if needed.
+        # Strip out bad characters if needed.
         if (strip_null_bytes):
-            action = self._strip_null_bytes(action)
-            params = self._strip_null_bytes(params)
-            description = self._strip_null_bytes(description)
 
-        # Hack to clean up some reporting.
-        new_params = None
-        if (isinstance(params, list)):
-            new_params = []
-            for p in params:
-                new_params.append(str(p).replace("powiershell", "powershell").replace(" enc", " -enc"))
-        else:
-            new_params = str(params).replace("powiershell", "powershell").replace(" enc", " -enc")
-        params = new_params
+            from vba_object import strip_nonvb_chars
+
+            action = strip_nonvb_chars(action)
+            new_params = strip_nonvb_chars(params)
+            if (isinstance(params, list)):
+                new_params = []
+                for p in params:
+                    new_params.append(strip_nonvb_chars(p))
+            params = new_params
+            description = strip_nonvb_chars(description)
             
         # Save the action for reporting.
         self.engine.report_action(action, params, description)
