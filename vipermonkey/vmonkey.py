@@ -371,12 +371,29 @@ def _get_ole_textbox_values(obj, stream):
         except:
             data = obj
 
+    # Figure out which type of embedded object we have. This hopes and
+    # assumes that only 1 embedded object type is used.
+    if (data is None):
+        return []
+    form_str = None
+    field_marker = None
+    form_markers = ["Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox"]
+    form_strs = ['Forms.TextBox.1', 'Forms.ComboBox.1']
+    pos = 0
+    for a in form_markers:
+        if a in data:
+            form_str = a
+            field_marker = form_strs[pos]
+            break
+        pos += 1
+    if (form_str is None):
+        return []
+            
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
     index = 0
     r = []
-    form_str = "Microsoft Forms 2.0 TextBox"
     while (form_str in data[index:]):
-        
+                
         # Break out the data for an embedded OLE textbox form.
         index = data[index:].index(form_str) + index
         start = index + len(form_str)
@@ -409,14 +426,15 @@ def _get_ole_textbox_values(obj, stream):
         for field in strs:
 
             # It might come after the 'Forms.TextBox.1' tag.
-            if (field == 'Forms.TextBox.1'):
+            if (field == field_marker):
 
                 # If the next field does not look something like '_1619423091' the
                 # next field is the name. CompObj does not count either.
                 poss_name = strs[curr_pos + 1].replace("\x00", "").strip()
                 if (((not poss_name.startswith("_")) or
                      (not poss_name[1:].isdigit())) and
-                    (poss_name != "CompObj")):
+                    (poss_name != "CompObj") and
+                    (poss_name != "ObjInfo")):
 
                     # We have found the name.
                     name = poss_name
@@ -450,11 +468,19 @@ def _get_ole_textbox_values(obj, stream):
                         name_pos = curr_pos + 1
                         if (poss_name == 'contents'):
                             poss_name = strs[curr_pos + 2].replace("\x00", "")
-                            name_pos = curr_pos + 2
-                            
-                        # We have found the name.
-                        name = poss_name
-                        break
+                            if ((not poss_name.startswith("_")) or
+                                (not poss_name[1:].isdigit())):
+
+                                # We have found the name.
+                                name = poss_name
+                                name_pos = curr_pos + 2
+                                break
+
+                        else:
+
+                            # We have found the name.
+                            name = poss_name
+                            break
 
                 # Move to the next field.
                 curr_pos += 1
@@ -467,7 +493,8 @@ def _get_ole_textbox_values(obj, stream):
         # Get a text value after the name if it looks like the following field
         # is not a font.
         text = ""
-        if ("Calibri" not in strs[name_pos + 1]):
+        if (("Calibri" not in strs[name_pos + 1]) and
+            ("OCXNAME" not in strs[name_pos + 1].replace("\x00", ""))):
             #print "Value: 1"
             text = strs[name_pos + 1]
         
@@ -479,21 +506,24 @@ def _get_ole_textbox_values(obj, stream):
             if (poss_val != text):
                 #print "Value: 2"
                 text += poss_val
-        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00.{1,5}\x02\x18"
+        #val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00.{1,5}\x02\x18"
+        val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
-
-            # Skip empty value fields.
-            empty_pat = r"\x00#\x00\x00\x00\x00\x02\x18"
-            if (len(re.findall(empty_pat, vals[0])) == 0):
-                poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
-                if (poss_val != text):
-                    #print "Value: 3"
-                    text += poss_val
+            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])[0]
+            if (poss_val != text):
+                #print "Value: 3"
+                #print poss_val
+                text += poss_val
 
         # Pull out the size of the text.
-        size_pat = r"\x48\x80\x2c(.{2})"
+        # Try version 1.
+        size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
         tmp = re.findall(size_pat, chunk)
+        if (len(tmp) == 0):
+            # Try version 2.
+            size_pat = r"\x48\x80\x2c(.{2})"
+            tmp = re.findall(size_pat, chunk)
         if (len(tmp) > 0):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
@@ -512,6 +542,7 @@ def _get_ole_textbox_values(obj, stream):
         index = end
 
     # Return the OLE form textbox information.
+    #print ""
     #print r
     #sys.exit(0)
     return r

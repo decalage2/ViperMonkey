@@ -2012,7 +2012,7 @@ class CallByName(VbaLibraryFunc):
         assert (len(params) >= 3)
 
         # Report interesting external commands run.
-        cmd = params[1]
+        cmd = str(params[1])
         obj = str(params[0])
         args = ''
         if (len(params) >= 4):
