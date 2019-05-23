@@ -502,10 +502,11 @@ def _get_ole_textbox_values(obj, stream):
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
-            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
-            if (poss_val != text):
-                #print "Value: 2"
-                text += poss_val.replace("\x00", "")
+            empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
+            if (len(re.findall(empty_pat, vals[0])) == 0):
+                poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+                if (poss_val != text):
+                    text += poss_val.replace("\x00", "")
         #val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
         val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
         vals = re.findall(val_pat, chunk)
