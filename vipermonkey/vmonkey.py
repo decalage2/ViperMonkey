@@ -499,22 +499,24 @@ def _get_ole_textbox_values(obj, stream):
             text = strs[name_pos + 1]
         
         # Break out the (possible additional) value.
-        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00\x02\x18"
+        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
             poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
             if (poss_val != text):
                 #print "Value: 2"
-                text += poss_val
-        #val_pat = r"(?:\x00|\xff)[\x20-\x7e]+\x00.{1,5}\x02\x18"
-        val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
+                text += poss_val.replace("\x00", "")
+        #val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
+        val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
-            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])[0]
-            if (poss_val != text):
-                #print "Value: 3"
-                #print poss_val
-                text += poss_val
+            tmp_text = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])
+            if (len(tmp_text) > 0):
+                poss_val = tmp_text[0]
+                if (poss_val != text):
+                    #print "Value: 3"
+                    #print poss_val
+                    text += poss_val
 
         # Pull out the size of the text.
         # Try version 1.
