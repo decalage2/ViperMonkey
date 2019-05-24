@@ -1336,14 +1336,14 @@ class BoolExprItem(VBA_Object):
 
         # Handle unitialized variables. Grrr. Base their conversion on
         # the type of the initialized expression.
-        if (rhs == "NULL"):
+        if ((rhs == "NULL") or (rhs is None)):
             if (isinstance(lhs, str)):
                 rhs = ''
             else:
                 rhs = 0
             context.set(self.rhs, rhs)
             log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
-        if (lhs == "NULL"):
+        if ((lhs == "NULL") or (lhs is None)):
             if (isinstance(rhs, str)):
                 lhs = ''
             else:
@@ -1367,7 +1367,15 @@ class BoolExprItem(VBA_Object):
                 rhs = int(rhs)
             except:
                 pass
-                
+
+        # Handle unexpected types.
+        if (((not isinstance(rhs, int)) and (not isinstance(rhs, str))) or
+            ((not isinstance(lhs, int)) and (not isinstance(lhs, str)))):
+
+            # Punt and compare everything as strings.
+            lhs = str(lhs)
+            rhs = str(rhs)
+            
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
             (self.op.lower() == "like") or

@@ -95,7 +95,7 @@ class Sub(VBA_Object):
 
         # Set given parameter values.
         self.byref_params = {}
-        if params is not None:
+        if ((params is not None) and (len(params) == len(self.params))):
 
             # TODO: handle named parameters
             for i in range(len(params)):

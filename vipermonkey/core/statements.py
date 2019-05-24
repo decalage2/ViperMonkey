@@ -2211,7 +2211,8 @@ case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() +
                       (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
-case_clause = CaselessKeyword("Case").suppress() + case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
+case_clause = CaselessKeyword("Case").suppress() + Suppress(Optional(CaselessKeyword("Is") + Literal('='))) + \
+              case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
 simple_statements_line = Forward()

@@ -81,7 +81,7 @@ rem_keyword = CaselessKeyword("Rem")
 marker_keyword = caselessKeywordsList(
     ("Any", "As", "ByRef", "ByVal ", "Case", "Each", "Else", "In", "New",
      "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
-     "Tab", "Then", "To"))
+     "Tab", "Then"))
 
 # An <operator-identifier> is a <reserved-identifier> that is used
 # as an operator within expressions.

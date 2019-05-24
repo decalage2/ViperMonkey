@@ -651,6 +651,7 @@ def strip_useless_code(vba_code, local_funcs):
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
         if ((line.endswith("End Function")) and
+            (not line.strip().startswith("'")) and
             (len(line) > len("End Function"))):
             r += line.replace("End Function", "") + "\n"
             r += "End Function\n"
