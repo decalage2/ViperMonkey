@@ -333,6 +333,14 @@ class Left(VbaLibraryFunc):
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
+class PrivateProfileString(VbaLibraryFunc):
+    """
+    PrivateProfileString method.
+    """
+
+    def eval(self, context, params=None):
+        return "**MATCH ANY**"
+    
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -3039,7 +3047,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString, Not):
+               AddFromString, Not, PrivateProfileString):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -2912,6 +2912,8 @@ class Print_Statement(VBA_Object):
         super(Print_Statement, self).__init__(original_str, location, tokens)
         self.file_id = tokens.file_id
         self.value = tokens.value
+        # TODO: Actually write the ';' values to the file.
+        self.more_values = tokens.more_values
         log.debug('parsed %r as Print_Statement' % self)
 
     def __repr__(self):
@@ -2929,7 +2931,7 @@ class Print_Statement(VBA_Object):
 
         # Get the data.
         data = eval_arg(self.value, context=context)
-
+        
         # Are we writing a string?
         if (isinstance(data, str)):
             for c in data:
@@ -2945,7 +2947,7 @@ class Print_Statement(VBA_Object):
             log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
 
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
-                  Suppress(Optional("," + lex_identifier))
+                  ZeroOrMore(Suppress(Literal(';')) + expression)("more_values") + Suppress(Optional("," + lex_identifier))
 print_statement.setParseAction(Print_Statement)
 
 # --- DOEVENTS STATEMENT -------------------------------------------------------------
