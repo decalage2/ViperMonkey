@@ -467,6 +467,11 @@ class Eval(VbaLibraryFunc):
         if (len(params) < 1):
             return 0
         expr = strip_nonvb_chars(str(params[0]))
+
+        # We are executing a string, so any "" in the string are really '"' when
+        # we execute the string.
+        expr = expr.replace('""', '"')
+        
         try:
 
             # Parse it. Assume this is an expression.
@@ -505,16 +510,27 @@ class Execute(VbaLibraryFunc):
 
         # Fix invalid string assignments.
         command = strip_lines.fix_vba_code(command)
+
+        # We are executing a string, so any "" in the string are really '"' when
+        # we execute the string.
+        orig_command = command
+        command = command.replace('""', '"')
         
         # Parse it.
         obj = None
         try:
             obj = modules.module.parseString(command, parseAll=True)[0]
         except ParseException:
-            if (len(command) > 50):
-                command = command[:50] + " ..."
-            log.error("Parse error. Cannot evaluate '" + command + "'")
-            return "NULL"
+
+            # Maybe replacing the '""' with '"' was a bad idea. Try the original
+            # command.
+            try:
+                obj = modules.module.parseString(orig_command, parseAll=True)[0]
+            except ParseException:
+                if (len(orig_command) > 50):
+                    orig_command = orig_command[:50] + " ..."
+                log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                return "NULL"
             
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?

@@ -1045,33 +1045,33 @@ class For_Statement(VBA_Object):
                 all_static_assigns = False
                 break
 
-            # Does the loop body do the same thing repeatedly?
-            if (not all_static_assigns):
-                return False
+        # Does the loop body do the same thing repeatedly?
+        if (not all_static_assigns):
+            return False
 
-            # Emulate the loop body once.
-            log.info("Short circuited loop. " + str(self))
-            for s in self.statements:
+        # The loop body has all static assignments. Emulate the loop body once.
+        log.info("Short circuited loop. " + str(self))
+        for s in self.statements:
 
-                # Emulate the statement.
-                log.debug('FOR loop eval statement: %r' % s)
-                if (not isinstance(s, VBA_Object)):
-                    continue
-                s.eval(context=context)
+            # Emulate the statement.
+            log.debug('FOR loop eval statement: %r' % s)
+            if (not isinstance(s, VBA_Object)):
+                continue
+            s.eval(context=context)
                 
-                # Was there an error that will make us jump to an error handler?
-                if (context.must_handle_error()):
-                    break
-                context.clear_error()
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            context.clear_error()
 
-            # Run the error handler if we have one and we broke out of the statement
-            # loop with an error.
-            context.handle_error(params)
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
 
-            # Set the loop index.
-            context.set(self.name, end + step)
+        # Set the loop index.
+        context.set(self.name, end + step)
                      
-            return True
+        return True
                 
     def _handle_simple_loop(self, context, start, end, step):
 
