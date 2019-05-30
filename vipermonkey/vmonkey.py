@@ -389,7 +389,7 @@ def _get_ole_textbox_values(obj, stream):
     if (form_str is None):
         return []
             
-    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
+    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
     index = 0
     r = []
     while (form_str in data[index:]):
@@ -430,7 +430,7 @@ def _get_ole_textbox_values(obj, stream):
 
                 # If the next field does not look something like '_1619423091' the
                 # next field is the name. CompObj does not count either.
-                poss_name = strs[curr_pos + 1].replace("\x00", "").strip()
+                poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
                 if (((not poss_name.startswith("_")) or
                      (not poss_name[1:].isdigit())) and
                     (poss_name != "CompObj") and
@@ -1481,7 +1481,7 @@ def _process_file (filename, data,
                 log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
             # print table of all recorded actions
-            print('Recorded Actions:')
+            print('\nRecorded Actions:')
             print(vm.dump_actions())
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
