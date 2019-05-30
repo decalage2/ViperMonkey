@@ -398,6 +398,8 @@ class ViperMonkey(object):
 
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ActiveDocument.Content.Start".lower()] = 0
+        context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
         
         # reset the actions list, in case it is called several times
