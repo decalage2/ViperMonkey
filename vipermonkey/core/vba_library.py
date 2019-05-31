@@ -1987,6 +1987,8 @@ class Navigate(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) >= 1)
         url = str(params[0])
+        if (url.startswith("tp://")):
+            url = "ht" + url
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
         
 class IIf(VbaLibraryFunc):
@@ -2046,7 +2048,10 @@ class CallByName(VbaLibraryFunc):
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
             ((len(params) > 5) and (params[3].lower() == "get"))):
-            context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
+            url = str(params[4])
+            if (url.startswith("tp://")):
+                url = "ht" + url
+            context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
             context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
@@ -2872,7 +2877,10 @@ class Open(CreateTextFile):
 
         # Is this a HTTP GET?
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
-            context.report_action("GET", str(params[1]), 'Interesting Function Call', strip_null_bytes=True)
+            url = str(params[1])
+            if (url.startswith("tp://")):
+                url = "ht" + url
+            context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
 
         # It is a regular file open.
         else:
