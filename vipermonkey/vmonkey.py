@@ -50,7 +50,7 @@ from __future__ import print_function
 # 2018-08-17 v0.07 KS: - lots of bug fixes and additions by Kirk Sayre (PR #34)
 #                  PL: - added ASCII art banner
 
-__version__ = '0.07'
+__version__ = '0.08'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -117,20 +117,12 @@ _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 if not _thismodule_dir in sys.path:
     sys.path.insert(0, _thismodule_dir)
 
-# The version of pyparsing in the thirdparty directory of oletools is not
-# compatible with the version of pyparsing used in ViperMonkey. Make sure
-# the oletools thirdparty directory is not in the import path.
-item = None
-for p in sys.path:
-    if (p.endswith("oletools/thirdparty")):
-        item = p
-        break
-if (item is not None):
-    sys.path.remove(item)
-    
 # relative import of core ViperMonkey modules:
 from core import *
 import core.excel as excel
+
+# for logging
+from core.logger import log
 
 # === MAIN (for tests) ===============================================================================================
 
@@ -1354,6 +1346,9 @@ def process_file_scanexpr (container, filename, data):
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
+        import oletools
+        oletools.olevba.enable_logging()
+        log.debug('opening {}'.format(filename))
         vba = VBA_Parser(filename, data, relaxed=True)
         print('Type:', vba.type)
         if vba.detect_vba_macros():

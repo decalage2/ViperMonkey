@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -44,7 +44,7 @@ https://github.com/decalage2/ViperMonkey
 # 2015-2016        PL: - many updates
 # 2016-06-11 v0.02 PL: - split vipermonkey into several modules
 
-__version__ = '0.02'
+__version__ = '0.08'
 
 # ------------------------------------------------------------------------------
 # TODO:
@@ -64,18 +64,6 @@ class DuplicateFilter(logging.Filter):
             self.last_log = current_log
             return True
         return False
-
-class NullHandler(logging.Handler):
-    """
-    Log Handler without output, to avoid printing messages if logging is not
-    configured by the main application.
-    Python 2.7 has logging.NullHandler, but this is necessary for 2.6:
-    see https://docs.python.org/2.6/library/logging.html#configuring-logging-for-a-library
-    """
-
-    def emit(self, record):
-        pass
-
 
 def get_logger(name, level=logging.NOTSET):
     """
@@ -100,7 +88,7 @@ def get_logger(name, level=logging.NOTSET):
     logger = logging.getLogger(name)
     # only add a NullHandler for this logger, it is up to the application
     # to configure its own logging:
-    logger.addHandler(NullHandler())
+    logger.addHandler(logging.NullHandler())
     logger.setLevel(level)
     # Skip duplicate log messages.
     logger.addFilter(DuplicateFilter()) 
