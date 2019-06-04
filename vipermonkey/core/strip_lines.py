@@ -71,6 +71,7 @@ import sys
 import re
 from logger import log
 import vba_context
+from random import randint
 
 def is_useless_dim(line):
     """
@@ -225,11 +226,108 @@ def collapse_macro_if_blocks(vba_code):
 
     # Return the stripped VBA.
     return r
-    
-def strip_useless_code(vba_code, local_funcs):
+
+def fix_unbalanced_quotes(vba_code):
     """
-    Strip statements that have no usefull effect from the given VB. The
-    stripped statements are commented out.
+    Fix lines with missing double quotes.
+    """
+
+    # Fix invalid string assignments.
+    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    vba_code = re.sub(r"([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    
+    # See if we have lines with unbalanced double quotes.
+    r = ""
+    for line in vba_code.split("\n"):
+        num_quotes = 0
+        for c in line:
+            if (c == '"'):
+                num_quotes += 1
+        if ((num_quotes % 2) != 0):
+            last_quote = line.rindex('"')
+            line = line[:last_quote] + '"' + line[last_quote:]
+        r += line + "\n"
+
+    # Return the balanced code.
+    return r
+
+def fix_multiple_assignments(line):
+
+    # Pull out multiple assignments and the final assignment value.
+    pat = r"((?:\w+\s*=\s*){2,})(.+)"
+    items = re.findall(pat, line)
+    if (len(items) == 0):
+        return line
+    items = items[0]
+    assigns = items[0].replace(" ", "").split("=")
+    val = items[1]
+
+    # Break out each assignment into multiple lines.
+    r = ""
+    for var in assigns:
+        var = var.strip()
+        if (len(var) == 0):
+            continue
+        r += var + " = " + val + "\n"
+    return r
+
+def fix_skipped_1st_arg(vba_code):
+    """
+    Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
+    """
+
+    # We don't want to replace things like this in string literals. Temporarily
+    # pull out the string literals from the line.
+
+    # Find all the string literals and make up replacement names.
+    strings = {}
+    in_str = False
+    curr_str = None
+    for c in vba_code:
+
+        # Start/end of string?
+        if (c == '"'):
+
+            # Start of string?
+            if (not in_str):
+                curr_str = ""
+                in_str = True
+
+            # End of string.
+            else:
+
+                # Map a temporary name to the current string.
+                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                while (str_name in strings):
+                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                curr_str += c
+                strings[str_name] = curr_str
+                in_str = False
+                curr_str = None
+
+        # Save the character if we are in a string.
+        if (in_str):
+            curr_str += c
+
+    # Temporarily replace the string literals.
+    tmp_code = vba_code
+    for str_name in strings.keys():
+        tmp_code = tmp_code.replace(strings[str_name], str_name)
+            
+    # Replace the skipped 1st arguments in calls.
+    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
+
+    # Put the string literals back.
+    for str_name in strings.keys():
+        vba_code = vba_code.replace(str_name, strings[str_name])
+
+    # Return the modified code.
+    return vba_code
+    
+def fix_vba_code(vba_code):
+    """
+    Fix up some substrings that ViperMonkey has problems parsing.
     """
 
     # Clear out lines broken up on multiple lines.
@@ -240,10 +338,65 @@ def strip_useless_code(vba_code, local_funcs):
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
-
-    # Fix function calls with a skipped 1st argument.
-    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", vba_code)
     
+    # Fix function calls with a skipped 1st argument.
+    vba_code = fix_skipped_1st_arg(vba_code)
+
+    # Fix lines with missing double quotes.
+    vba_code = fix_unbalanced_quotes(vba_code)
+
+    # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
+    r = ""
+    for line in vba_code.split("\n"):
+
+        # Fix up assignments like 'cat = dog = frog = 12'.
+        line = fix_multiple_assignments(line)
+        
+        # Do we have an "if+..."?
+        if ("if+" not in line.lower()):
+            
+            # No. No change.
+            r += line + "\n"
+            continue
+
+        # Yes we do. Figure out if it is in a string.
+        in_str = False
+        window = "   "
+        new_line = ""
+        for c in line:
+
+            # Start/End of string?
+            if (c == '"'):
+                in_str = not in_str
+
+            # Have we seen an if+ ?
+            if ((not in_str) and (c == "+") and (window.lower() == " if")):
+
+                # Replace the '+' with a ' '.
+                new_line += " "
+
+            # No if+ .
+            else:
+                new_line += c
+                
+            # Advance the viewing window.
+            window = window[1:] + c
+
+        # Save the updated line.
+        r += new_line + "\n"
+        
+    # Return the updated code.
+    return r
+    
+def strip_useless_code(vba_code, local_funcs):
+    """
+    Strip statements that have no usefull effect from the given VB. The
+    stripped statements are commented out.
+    """
+
+    # Preprocess the code to make it easier to parse.
+    vba_code = fix_vba_code(vba_code)
+        
     # Track data change callback function names.
     change_callbacks = set()    
     
@@ -498,6 +651,7 @@ def strip_useless_code(vba_code, local_funcs):
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
         if ((line.endswith("End Function")) and
+            (not line.strip().startswith("'")) and
             (len(line) > len("End Function"))):
             r += line.replace("End Function", "") + "\n"
             r += "End Function\n"

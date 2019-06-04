@@ -71,7 +71,7 @@ statement_keyword = caselessKeywordsList(
      "Enum", "Event", "Exit", "For", "Friend", "Function",
      "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
-     "Resume", "RSet", "Seek", "Select", "Set", "Static", "Stop", "Sub",
+     "Resume", "RSet", "Select", "Set", "Static", "Stop", "Sub",
      "Unlock", "Wend", "While", "With", "Write"))
 
 rem_keyword = CaselessKeyword("Rem")
@@ -81,7 +81,7 @@ rem_keyword = CaselessKeyword("Rem")
 marker_keyword = caselessKeywordsList(
     ("Any", "As", "ByRef", "ByVal ", "Case", "Each", "Else", "In", "New",
      "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
-     "Tab", "Then", "To"))
+     "Tab", "Then"))
 
 # An <operator-identifier> is a <reserved-identifier> that is used
 # as an operator within expressions.
@@ -94,13 +94,13 @@ operator_identifier = caselessKeywordsList(
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
     "Asc", "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr",
-    "DoEvents", "Fix", "Int", "Len", "LenB", "PSet", "Scale", "Sgn", "String"))
+    "DoEvents", "Fix", "Int", "Len", "LenB", "PSet", "Sgn", "String"))
 
 # A <special-form> is a <reserved-identifier> that is used in an expression as
 # if it was a program defined procedure name but which has special syntactic rules for
 # its argument.
 special_form = caselessKeywordsList((
-    "Array", "Circle", "InputB", "LBound", "Scale", "UBound"))
+    "Array", "Circle", "InputB", "LBound", "UBound"))
 
 # A <reserved-type-identifier> is used within a declaration to identify the specific
 # declared type (section 2.2) of an entity.

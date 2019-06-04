@@ -227,7 +227,7 @@ def _read_from_excel(arg, context):
             
             # Return the cell value.
             log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
-            log.debug("Cell value = '" + val + "'")
+            log.debug("Cell value = '" + str(val) + "'")
             return val
         
         except Exception as e:
@@ -603,7 +603,33 @@ def coerce_to_str(obj):
     # in VBA, Null/None is equivalent to an empty string
     if ((obj is None) or (obj == "NULL")):
         return ''
+
+    # Not NULL. We have data.
     else:
+
+        # Do we have a list of byte values? If so convert the bytes to chars.
+        if (isinstance(obj, list)):
+            r = ""
+            bad = False
+            for c in obj:
+
+                # Skip null bytes.
+                if (c == 0):
+                    continue
+                try:
+                    r += chr(c)
+                except:
+
+                    # Invalid character value. Don't do string
+                    # conversion of array.
+                    bad = True
+                    break
+
+            # Return the byte array as a string if it makes sense.
+            if (not bad):
+                return r
+
+        # Not a character byte array. Punt.
         try:
             return str(obj)
         except:
@@ -767,3 +793,19 @@ def str_convert(arg):
     if (arg == "NULL"):
         return ''
     return str(arg)
+
+def strip_nonvb_chars(s):
+    """
+    Strip invalid VB characters from a string.
+    """
+
+    # Sanity check.
+    if (not isinstance(s, str)):
+        return s
+
+    # Strip non-ascii printable characters.
+    r = ""
+    for c in s:
+        if ((ord(c) > 8) and (ord(c) < 127)):
+            r += c
+    return r

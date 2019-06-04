@@ -181,7 +181,7 @@ def _read_doc_text_libreoffice(data):
         r = []
         f = None
         try:
-            f = open(filename + ".txt")
+            f = open(filename + ".txt", 'rb')
         except IOError as e:
             log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
             return None
@@ -364,34 +364,172 @@ def _get_ole_textbox_values(obj, stream):
         except:
             data = obj
 
-    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:\x00[\x20-\x7e]){5,})"
+    # Figure out which type of embedded object we have. This hopes and
+    # assumes that only 1 embedded object type is used.
+    if (data is None):
+        return []
+    form_str = None
+    field_marker = None
+    form_markers = ["Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox"]
+    form_strs = ['Forms.TextBox.1', 'Forms.ComboBox.1']
+    pos = 0
+    for a in form_markers:
+        if a in data:
+            form_str = a
+            field_marker = form_strs[pos]
+            break
+        pos += 1
+    if (form_str is None):
+        return []
+
+    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
     index = 0
     r = []
-    while ("Microsoft Forms 2.0 TextBox" in data[index:]):
+    while (form_str in data[index:]):
 
         # Break out the data for an embedded OLE textbox form.
-        index = data.index("Microsoft Forms 2.0 TextBox")
-        end = index + 5000
-        if (end > len(data)):
-            end = len(data) - 1
+        index = data[index:].index(form_str) + index
+        start = index + len(form_str)
+
+        # More textbox forms?
+        if (form_str in data[start:]):
+
+            # Just look at the current form chunk.
+            end = data[start:].index(form_str) + start
+
+        # No more textbox forms.
+        else:
+
+            # Jump an arbitrary amount ahead.
+            end = index + 5000
+            if (end > len(data)):
+                end = len(data) - 1
+
+        # Pull out the current form data chunk.
         chunk = data[index : end]
         strs = re.findall(pat, chunk)
-    
-        # 3rd string looks like the name of the ole form object.
-        if (len(strs) < 5):
+        #print "\n\n-----------------------------"
+        #print chunk
+        #print str(strs).replace("\\x00", "")
+
+        # Pull out the variable name (and maybe part of the text).
+        curr_pos = 0
+        name_pos = 0
+        name = None
+        for field in strs:
+
+            # It might come after the 'Forms.TextBox.1' tag.
+            if (field == field_marker):
+
+                # If the next field does not look something like '_1619423091' the
+                # next field is the name. CompObj does not count either.
+                poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
+                if (((not poss_name.startswith("_")) or
+                     (not poss_name[1:].isdigit())) and
+                    (poss_name != "CompObj") and
+                    (poss_name != "ObjInfo")):
+
+                    # We have found the name.
+                    name = poss_name
+                    name_pos = curr_pos + 1
+
+                # Seems like there is only 1 'Forms.TextBox.1', so we are
+                # done with this loop.
+                break
+
+            # Move to the next field.
+            curr_pos += 1
+
+        # Did we find the name with the 1st method?
+        if (name is None):
+
+            # No. The name comes after an 'OCXNAME' field.
+            curr_pos = 0
+            for field in strs:
+
+                # It might come after the 'OCXNAME' tag.
+                if (field.replace("\x00", "") == 'OCXNAME'):
+
+                    # If the next field does not look something like '_1619423091' the
+                    # next field might be the name.
+                    poss_name = strs[curr_pos + 1].replace("\x00", "")
+                    if ((not poss_name.startswith("_")) or
+                        (not poss_name[1:].isdigit())):
+
+                        # If the string after 'OCXNAME' is 'contents' the actual name comes
+                        # after 'contents'
+                        name_pos = curr_pos + 1
+                        if (poss_name == 'contents'):
+                            poss_name = strs[curr_pos + 2].replace("\x00", "")
+                            if ((not poss_name.startswith("_")) or
+                                (not poss_name[1:].isdigit())):
+
+                                # We have found the name.
+                                name = poss_name
+                                name_pos = curr_pos + 2
+                                break
+
+                        else:
+
+                            # We have found the name.
+                            name = poss_name
+                            break
+
+                # Move to the next field.
+                curr_pos += 1
+
+        # Move to the next chunk if we cannot find a name.
+        if (name is None):
+            index = end
             continue
-        name = strs[3].replace("\x00", "")
 
-        # Item after that looks like start of text of the object.
-        text = strs[4].replace("\x00", "")
+        # Get a text value after the name if it looks like the following field
+        # is not a font.
+        text = ""
+        if (("Calibri" not in strs[name_pos + 1]) and
+            ("OCXNAME" not in strs[name_pos + 1].replace("\x00", ""))):
+            #print "Value: 1"
+            text = strs[name_pos + 1]
 
-        # Looks like more text comes after the "SummaryInformation" tag.
-        i = 4
-        for s in strs[4:]:
-            if ((s.replace("\x00", "").strip() == "SummaryInformation") and
-                (i < len(strs))):
-                text += strs[i + 1].replace("\x00", "")
-            i += 1
+        # Break out the (possible additional) value.
+        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
+            if (len(re.findall(empty_pat, vals[0])) == 0):
+                poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+                if (poss_val != text):
+                    text += poss_val.replace("\x00", "")
+        #val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
+        val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            tmp_text = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])
+            if (len(tmp_text) > 0):
+                poss_val = tmp_text[0]
+                if (poss_val != text):
+                    #print "Value: 3"
+                    #print poss_val
+                    text += poss_val
+
+        # Pull out the size of the text.
+        # Try version 1.
+        size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+        tmp = re.findall(size_pat, chunk)
+        if (len(tmp) == 0):
+            # Try version 2.
+            size_pat = r"\x48\x80\x2c(.{2})"
+            tmp = re.findall(size_pat, chunk)
+        if (len(tmp) > 0):
+            size_bytes = tmp[0]
+            size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+            #print "ORIG:"
+            #print name
+            #print text
+            #print len(text)
+            #print size
+            if (len(text) > size):
+                text = text[:size]
 
         # Save the form name and text value.
         r.append((name, text))
@@ -400,6 +538,9 @@ def _get_ole_textbox_values(obj, stream):
         index = end
 
     # Return the OLE form textbox information.
+    #print ""
+    #print r
+    #sys.exit(0)
     return r
         
 def _get_shapes_text_values(fname, stream):
@@ -966,21 +1107,43 @@ def read_sheet_from_csv(filename):
     f = None
     try:
         f = open(filename, 'r')
-    except:
+    except Exception as e:
+        log.error("Cannot open CSV file. " + str(e))
         return None
 
     # Read in all the cells. Note that this only works for a single sheet.
     row = 0
     r = {}
     for line in f:
+
+        # Escape ',' in cell values so the split works correctly.
         line = line.strip()
+        in_str = False
+        tmp = ""
+        for c in line:
+            if (c == '"'):
+                in_str = not in_str
+            if (in_str and (c == ',')):
+                tmp += "#A_COMMA!!#"
+            else:
+                tmp += c
+        line = tmp
+
+        # Break out the individual cell values.
         cells = line.split(",")
         col = 0
         for cell in cells:
+
+            # Add back in escaped ','.
+            cell = cell.replace("#A_COMMA!!#", ",")
+
+            # Strip " from start and end of value.
             dat = str(cell)
             if (dat.startswith('"')):
                 dat = dat[1:]
-            r[(col, row)] = dat
+            if (dat.endswith('"')):
+                dat = dat[:-1]
+            r[(row, col)] = dat
             col += 1
         row += 1
 
@@ -1027,6 +1190,7 @@ def load_excel_libreoffice(data):
         tfile.close()
 
         # Try to convert the file to a CSV file.
+        log.warning("Converting spreadsheet to CSV...")
         try:
             rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
                                  stdout=out, stderr=out)
@@ -1308,7 +1472,7 @@ def _process_file (filename, data,
                 log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
             # print table of all recorded actions
-            print('Recorded Actions:')
+            print('\nRecorded Actions:')
             print(vm.dump_actions())
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
@@ -1350,7 +1514,6 @@ def process_file_scanexpr (container, filename, data):
         oletools.olevba.enable_logging()
         log.debug('opening {}'.format(filename))
         vba = VBA_Parser(filename, data, relaxed=True)
-        print('Type:', vba.type)
         if vba.detect_vba_macros():
 
             # Read in document metadata.

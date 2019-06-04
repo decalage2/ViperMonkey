@@ -46,8 +46,8 @@ class ExcelSheet(object):
         self.cells = cells
 
     def cell(self, row, col):
-        if ((col, row) in self.cells):
-            return self.cells[(col, row)]
+        if ((row, col) in self.cells):
+            return self.cells[(row, col)]
         raise KeyError("Cell (" + str(row) + ", " + str(col) + ") not found.")
 
     def cell_value(self, row, col):

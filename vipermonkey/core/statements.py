@@ -198,7 +198,7 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 # --- TYPE DECLARATIONS -------------------------------------------------------
 
-type_declaration_composite = (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
+type_declaration_composite = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
                              OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + \
                                        Suppress(Optional("*" + (decimal_literal | lex_identifier))) + Suppress(EOS)) + \
@@ -1045,33 +1045,33 @@ class For_Statement(VBA_Object):
                 all_static_assigns = False
                 break
 
-            # Does the loop body do the same thing repeatedly?
-            if (not all_static_assigns):
-                return False
+        # Does the loop body do the same thing repeatedly?
+        if (not all_static_assigns):
+            return False
 
-            # Emulate the loop body once.
-            log.info("Short circuited loop. " + str(self))
-            for s in self.statements:
+        # The loop body has all static assignments. Emulate the loop body once.
+        log.info("Short circuited loop. " + str(self))
+        for s in self.statements:
 
-                # Emulate the statement.
-                log.debug('FOR loop eval statement: %r' % s)
-                if (not isinstance(s, VBA_Object)):
-                    continue
-                s.eval(context=context)
+            # Emulate the statement.
+            log.debug('FOR loop eval statement: %r' % s)
+            if (not isinstance(s, VBA_Object)):
+                continue
+            s.eval(context=context)
                 
-                # Was there an error that will make us jump to an error handler?
-                if (context.must_handle_error()):
-                    break
-                context.clear_error()
+            # Was there an error that will make us jump to an error handler?
+            if (context.must_handle_error()):
+                break
+            context.clear_error()
 
-            # Run the error handler if we have one and we broke out of the statement
-            # loop with an error.
-            context.handle_error(params)
+        # Run the error handler if we have one and we broke out of the statement
+        # loop with an error.
+        context.handle_error(params)
 
-            # Set the loop index.
-            context.set(self.name, end + step)
+        # Set the loop index.
+        context.set(self.name, end + step)
                      
-            return True
+        return True
                 
     def _handle_simple_loop(self, context, start, end, step):
 
@@ -1310,6 +1310,10 @@ class For_Statement(VBA_Object):
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
+            # Handle assigning the loop index variable to a constant value
+            # in the loop body. This can cause infinite loops.
+            last_index = context.get(self.name)
+            
             # Is the loop body a simple series of atomic statements and has
             # nothing changed in the program state since the last iteration?
             if (self._no_state_change(prev_context, context)):
@@ -1366,8 +1370,18 @@ class For_Statement(VBA_Object):
                 step = int(step)
             except Exception as e:
                 log.error("Cannot update loop counter. Breaking loop. " + str(e))
-                break                
-            context.set(self.name, val + step)
+                break
+            new_index = val + step
+            context.set(self.name, new_index)
+
+            # Are we manually setting the loop index variable to a constant value
+            # in the loop body? This can cause infinite loops.
+            if (((new_index < start) and (step > 0)) or
+                ((new_index > start) and (step < 0))):
+
+                # Infinite loop. Break out.
+                log.warn("Possible infinite For loop detected. Exiting loop.")
+                break
         
         # Remove tracking of this loop.
         context.loop_stack.pop()
@@ -2197,7 +2211,8 @@ case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() +
                       (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
-case_clause = CaselessKeyword("Case").suppress() + case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
+case_clause = CaselessKeyword("Case").suppress() + Suppress(Optional(CaselessKeyword("Is") + Literal('='))) + \
+              case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
 simple_statements_line = Forward()
@@ -2627,14 +2642,21 @@ exit_func_statement.setParseAction(Exit_Function_Statement)
 class Redim_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
-        self.item = tokens.item
+        self.item = str(tokens.item)
         log.debug('parsed %r' % self)
 
     def __repr__(self):
         return 'ReDim ' + str(self.item)
 
     def eval(self, context, params=None):
-        # Currently stubbed out.
+
+        # Is this a Variant type?
+        if (str(context.get_type(self.item)) == "Variant"):
+
+            # Variant types cannot hold string values, so assume that the variable
+            # should hold an array.
+            context.set(self.item, [])
+            
         return
 
 # Array redim statement
@@ -2891,6 +2913,8 @@ class Print_Statement(VBA_Object):
         super(Print_Statement, self).__init__(original_str, location, tokens)
         self.file_id = tokens.file_id
         self.value = tokens.value
+        # TODO: Actually write the ';' values to the file.
+        self.more_values = tokens.more_values
         log.debug('parsed %r as Print_Statement' % self)
 
     def __repr__(self):
@@ -2908,7 +2932,7 @@ class Print_Statement(VBA_Object):
 
         # Get the data.
         data = eval_arg(self.value, context=context)
-
+        
         # Are we writing a string?
         if (isinstance(data, str)):
             for c in data:
@@ -2924,7 +2948,7 @@ class Print_Statement(VBA_Object):
             log.error("Unhandled Put() data type to Print. " + str(type(data)) + ".")
 
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
-                  Suppress(Optional("," + lex_identifier))
+                  ZeroOrMore(Suppress(Literal(';')) + expression)("more_values") + Suppress(Optional("," + lex_identifier))
 print_statement.setParseAction(Print_Statement)
 
 # --- DOEVENTS STATEMENT -------------------------------------------------------------

@@ -64,10 +64,11 @@ from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
+from vba_object import strip_nonvb_chars
 import expressions
 import meta
 import modules
-from strip_lines import strip_useless_code
+import strip_lines
 
 from logger import log
 
@@ -76,17 +77,6 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 # TODO: Excel
 # TODO: other MS Office apps?
-
-def strip_nonvb_chars(s):
-    """
-    Strip invalid VB characters from a string.
-    """
-
-    r = ""
-    for c in s:
-        if ((ord(c) > 8) and (ord(c) < 127)):
-            r += c
-    return r
 
 class WeekDay(VbaLibraryFunc):
     """
@@ -343,6 +333,14 @@ class Left(VbaLibraryFunc):
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
+class PrivateProfileString(VbaLibraryFunc):
+    """
+    PrivateProfileString method.
+    """
+
+    def eval(self, context, params=None):
+        return "**MATCH ANY**"
+    
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -470,6 +468,10 @@ class Eval(VbaLibraryFunc):
             return 0
         expr = strip_nonvb_chars(str(params[0]))
 
+        # We are executing a string, so any "" in the string are really '"' when
+        # we execute the string.
+        expr = expr.replace('""', '"')
+        
         try:
 
             # Parse it. Assume this is an expression.
@@ -493,23 +495,42 @@ class Execute(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if ((len(params) == 0) or
+            (isinstance(params[0], VBA_Object)) or
+            (isinstance(params[0], VbaLibraryFunc))):
+            return "NULL"
+        
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
+        # Why am I doing this?
+        #command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
-        # Strip useless lines and fix up the code to emulate.
-        command = strip_useless_code(command, [])
+        # Fix invalid string assignments.
+        command = strip_lines.fix_vba_code(command)
+
+        # We are executing a string, so any "" in the string are really '"' when
+        # we execute the string.
+        orig_command = command
+        command = command.replace('""', '"')
         
         # Parse it.
         obj = None
         try:
             obj = modules.module.parseString(command, parseAll=True)[0]
         except ParseException:
-            if (len(command) > 50):
-                command = command[:50] + " ..."
-            log.error("Parse error. Cannot evaluate '" + command + "'")
-            return "NULL"
+
+            # Maybe replacing the '""' with '"' was a bad idea. Try the original
+            # command.
+            try:
+                obj = modules.module.parseString(orig_command, parseAll=True)[0]
+            except ParseException:
+                if (len(orig_command) > 50):
+                    orig_command = orig_command[:50] + " ..."
+                log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                return "NULL"
             
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?
@@ -535,6 +556,12 @@ class ExecuteGlobal(Execute):
 class AddCode(Execute):
     """
     Visual Basic script control AddCode() method..
+    """
+    pass
+
+class AddFromString(Execute):
+    """
+    Office programmatic macro editing method..
     """
     pass
 
@@ -889,7 +916,7 @@ class Split(VbaLibraryFunc):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string = str(params[0])
-        sep = ","
+        sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
             (len(params[1]) > 0)):
@@ -918,8 +945,8 @@ class Int(VbaLibraryFunc):
         # TODO: Actually implement this properly.
         val = params[0]
         try:
-            if (isinstance(val, str) and (val.startswith("&H"))):
-                val = val.replace("&H", "0x")
+            if (isinstance(val, str) and (val.lower().startswith("&h"))):
+                val = "0x" + val[2:]
                 r = int(val, 16)
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
@@ -1960,6 +1987,8 @@ class Navigate(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) >= 1)
         url = str(params[0])
+        if (url.startswith("tp://")):
+            url = "ht" + url
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
         
 class IIf(VbaLibraryFunc):
@@ -2009,7 +2038,7 @@ class CallByName(VbaLibraryFunc):
         assert (len(params) >= 3)
 
         # Report interesting external commands run.
-        cmd = params[1]
+        cmd = str(params[1])
         obj = str(params[0])
         args = ''
         if (len(params) >= 4):
@@ -2019,7 +2048,10 @@ class CallByName(VbaLibraryFunc):
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
             ((len(params) > 5) and (params[3].lower() == "get"))):
-            context.report_action("GET", params[4], 'Interesting Function Call', strip_null_bytes=True)
+            url = str(params[4])
+            if (url.startswith("tp://")):
+                url = "ht" + url
+            context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
             context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
@@ -2072,12 +2104,15 @@ class Close(VbaLibraryFunc):
             if ((context.open_files is None) or (len(context.open_files) == 0)):
                 log.error("Cannot process Close(). No open files.")
                 return
+            file_id = None
             if (len(context.open_files) > 1):
-                log.error("Cannot process Close(). Too many open files.")
-                return
+                log.warning("More than 1 file is open. Closing an arbitrary file.")
+                file_id = context.get_interesting_fileid()
+                log.warning("Closing '" + str(file_id) + "' .")
+            else:
 
-            # Get the ID of the file.
-            file_id = context.open_files.keys()[0]
+                # Get the ID of the file.
+                file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
         context.dump_file(file_id)
@@ -2106,8 +2141,16 @@ class Put(VbaLibraryFunc):
             
         # Are we writing a string?
         if (isinstance(data, str)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(ord(c))
+
+            # Hex string?
+            tmp = data.upper()
+            if ((tmp.startswith("&H")) and (len(tmp) == 4)):
+                tmp = tmp.replace("&H", "0x")
+                tmp = int(tmp, 16)
+                context.open_files[file_id]["contents"].append(tmp)
+            else:
+                for c in data:
+                    context.open_files[file_id]["contents"].append(ord(c))
 
         # Are we writing a list?
         elif (isinstance(data, list)):
@@ -2142,12 +2185,15 @@ class WriteLine(VbaLibraryFunc):
         if ((context.open_files is None) or (len(context.open_files) == 0)):
             log.error("Cannot process WriteLine(). No open files.")
             return
+        file_id = None
         if (len(context.open_files) > 1):
-            log.error("Cannot process WriteLine(). Too many open files.")
-            return
-        
-        # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+            log.warning("More than 1 file is open. Writing to an arbitrary file.")
+            file_id = context.get_interesting_fileid()
+            log.warning("Writing to '" + str(file_id) + "' .")
+        else:        
+
+            # Get the ID of the file.
+            file_id = context.open_files.keys()[0]
         
         # TODO: Handle writing at a given file position.
 
@@ -2582,7 +2628,7 @@ class Cells(VbaLibraryFunc):
 
             # Return the cell contents.
             try:
-                r = str(sheet.cell(col, row)).replace("text:", "").replace("'", "")
+                r = str(sheet.cell(row, col)).replace("text:", "").replace("'", "")
                 if (r.startswith('u')):
                     r = r[1:]
                 log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
@@ -2831,7 +2877,10 @@ class Open(CreateTextFile):
 
         # Is this a HTTP GET?
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
-            context.report_action("GET", str(params[1]), 'Interesting Function Call', strip_null_bytes=True)
+            url = str(params[1])
+            if (url.startswith("tp://")):
+                url = "ht" + url
+            context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
 
         # It is a regular file open.
         else:
@@ -2921,6 +2970,18 @@ class InternetGetConnectedState(VbaLibraryFunc):
         # Always connected.
         return True
 
+class Not(VbaLibraryFunc):
+    """
+    Boolean Not() called as a function.
+    """
+
+    def eval(self, context, params=None):
+
+        if ((len(params) == 0) or (not isinstance(params[0], bool))):
+            log.warning("Cannot compute Not(" + str(params) + ").")
+            return "NULL"
+        return (not params[0])
+                
 class InternetOpenA(VbaLibraryFunc):
     """
     InternetOpenA() function from wininet.dll.
@@ -3009,7 +3070,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Unescape, FolderExists, IsArray, FileExists, Debug, GetExtensionName,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
-               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo):
+               FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
+               AddFromString, Not, PrivateProfileString):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -3048,7 +3048,32 @@ class Context(object):
             del self.globals[name]
 
         return self
-            
+
+    def get_interesting_fileid(self):
+        """
+        Pick an 'interesting' looking open file and return its ID.
+        """
+
+        # Look for the longest file name and any files name on the C: drive.
+        longest = ""
+        cdrive = None
+        for file_id in self.open_files.keys():
+            if (str(file_id).lower().startswith("c:")):
+                cdrive = file_id
+            if (len(str(file_id)) > len(longest)):
+                longest = file_id
+
+        # Favor files on the C: drive.
+        if (cdrive is not None):
+            return cdrive
+
+        # Fall back to longest.
+        if (len(longest) > 0):
+            return longest
+
+        # Punt.
+        return None
+        
     def open_file(self, fname):
         """
         Simulate opening a file.
@@ -3081,7 +3106,7 @@ class Context(object):
             return
         
         # Get the name of the file being closed.
-        name = self.open_files[file_id]["name"].replace("#", "")
+        name = str(self.open_files[file_id]["name"]).replace("#", "")
         log.info("Closing file " + name)
         
         # Get the data written to the file and track it.
@@ -3441,12 +3466,20 @@ class Context(object):
                     
     def report_action(self, action, params=None, description=None, strip_null_bytes=False):
 
-        # Strip out \x00 characters if needed.
+        # Strip out bad characters if needed.
         if (strip_null_bytes):
-            action = self._strip_null_bytes(action)
-            params = self._strip_null_bytes(params)
-            description = self._strip_null_bytes(description)
 
+            from vba_object import strip_nonvb_chars
+
+            action = strip_nonvb_chars(action)
+            new_params = strip_nonvb_chars(params)
+            if (isinstance(params, list)):
+                new_params = []
+                for p in params:
+                    new_params.append(strip_nonvb_chars(p))
+            params = new_params
+            description = strip_nonvb_chars(description)
+            
         # Save the action for reporting.
         self.engine.report_action(action, params, description)
 
