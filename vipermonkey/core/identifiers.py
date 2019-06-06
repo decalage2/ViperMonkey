@@ -36,6 +36,7 @@ https://github.com/decalage2/ViperMonkey
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import re
 
 __version__ = '0.02'
 
@@ -120,18 +121,20 @@ unrestricted_name = entity_name | reserved_identifier
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
 # TODO: reduce this list when corresponding statements are implemented
-reserved_keywords = (CaselessKeyword('Chr') | CaselessKeyword('ChrB') | CaselessKeyword('ChrW')
-                     | CaselessKeyword('Asc') | CaselessKeyword('Case')
-                     | CaselessKeyword('On') | CaselessKeyword('Sub')
-                     | CaselessKeyword('If') | CaselessKeyword('Kill') | CaselessKeyword('For') | CaselessKeyword('Next')
-                     | CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Declare')
-                     | CaselessKeyword('Function'))
+reserved_keywords = Regex(re.compile(
+    'Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function', re.IGNORECASE))
 
-TODO_identifier_or_object_attrib = Combine(NotAny(reserved_keywords) + \
-                                           Combine(Literal('.') + lex_identifier) | \
-                                           Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                           Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))
+TODO_identifier_or_object_attrib = Combine(
+    NotAny(reserved_keywords)
+    + Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
+    + Optional(CaselessLiteral('$'))
+    + Optional(CaselessLiteral('#'))
+    + Optional(CaselessLiteral('%'))
+)
 
-TODO_identifier_or_object_attrib_loose = Combine(Combine(Literal('.') + lex_identifier) | \
-                                                 Combine(entity_name + Optional(Literal('.') + lex_identifier)) + \
-                                                 Optional(CaselessLiteral('$')) + Optional(CaselessLiteral('#')) + Optional(CaselessLiteral('%')))
+TODO_identifier_or_object_attrib_loose = Combine(
+    Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
+    + Optional(CaselessLiteral('$'))
+    + Optional(CaselessLiteral('#'))
+    + Optional(CaselessLiteral('%'))
+)

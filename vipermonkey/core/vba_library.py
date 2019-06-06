@@ -1952,12 +1952,13 @@ class Environ(VbaLibraryFunc):
         env_vars["VSSDK140Install".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VSSDK\\'
         env_vars["windir".lower()] = 'C:\\WINDOWS'
 
+        var_name = str(params[0]).strip('%')
         # Is this an environment variable we know?
-        r = "%" + str(params[0]).upper() + "%"
-        var_name = str(params[0]).lower().replace("%", "")
-        if (var_name in env_vars):
-            r = env_vars[var_name]
-        
+        if context.expand_env_vars and var_name.lower() in env_vars:
+            r = env_vars[var_name.lower()]
+        else:
+            r = "%{}%".format(var_name.upper())
+
         # Done.
         log.debug("Environ: %r returns %r" % (self, r))
         return r
@@ -2093,7 +2094,10 @@ class Close(VbaLibraryFunc):
             (params[0].startswith('#'))):
 
             # Get the ID of the file being closed.
-            file_id = params[0]
+            try:
+                file_id = context.get(params[0])
+            except KeyError:
+                file_id = str(params[0])
 
         # Close() object method call?
         else:
@@ -2101,22 +2105,21 @@ class Close(VbaLibraryFunc):
             # TODO: Currently the object on which Close() is being called is not
             # being tracked. We will only handle the Close() if there is only 1
             # current open file.
-            if ((context.open_files is None) or (len(context.open_files) == 0)):
+            if not context.open_files:
                 log.error("Cannot process Close(). No open files.")
                 return
-            file_id = None
-            if (len(context.open_files) > 1):
+
+            if len(context.open_files) > 1:
                 log.warning("More than 1 file is open. Closing an arbitrary file.")
                 file_id = context.get_interesting_fileid()
-                log.warning("Closing '" + str(file_id) + "' .")
             else:
-
                 # Get the ID of the file.
                 file_id = context.open_files.keys()[0]
 
         # We are actually closing a file.
-        context.dump_file(file_id)
-        
+        context.close_file(file_id)
+
+
 class Put(VbaLibraryFunc):
     """
     File Put statement.
@@ -2138,28 +2141,9 @@ class Put(VbaLibraryFunc):
         # Has the file been opened?
         if (file_id not in context.open_files):
             context.open_file(file_id)
-            
-        # Are we writing a string?
-        if (isinstance(data, str)):
 
-            # Hex string?
-            tmp = data.upper()
-            if ((tmp.startswith("&H")) and (len(tmp) == 4)):
-                tmp = tmp.replace("&H", "0x")
-                tmp = int(tmp, 16)
-                context.open_files[file_id]["contents"].append(tmp)
-            else:
-                for c in data:
-                    context.open_files[file_id]["contents"].append(ord(c))
+        context.write_file(file_id, data)
 
-        # Are we writing a list?
-        elif (isinstance(data, list)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(c)
-
-        # Unhandled.
-        else:
-            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
 class WriteLine(VbaLibraryFunc):
     """
@@ -2197,21 +2181,9 @@ class WriteLine(VbaLibraryFunc):
         
         # TODO: Handle writing at a given file position.
 
-        # Are we writing a string?
-        if (isinstance(data, str)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(ord(c))
-            context.open_files[file_id]["contents"].append(ord("\n"))
+        context.write_file(file_id, data)
+        context.write_file(file_id, b'\n')
 
-        # Are we writing a list?
-        elif (isinstance(data, list)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(c)
-            context.open_files[file_id]["contents"].append(ord("\n"))
-                
-        # Unhandled.
-        else:
-            log.error("Unhandled Put() data type to write. " + str(type(data)) + ".")
 
 class CurDir(VbaLibraryFunc):
     """
@@ -2384,7 +2356,7 @@ class KeyString(VbaLibraryFunc):
         if (v2 is not None):
             r += ","
             if (v2 in key_vals):
-                key_vals[v2]
+                r += key_vals[v2]
 
         log.debug("KeyString: args = " + str(params) + ", return " + r)
         return r
@@ -2490,10 +2462,10 @@ class ReadText(VbaLibraryFunc):
         # TODO: Currently the stream object on which ReadText() is
         # being called is not being tracked. We will only handle the
         # ReadText() if there is only 1 current open file.
-        if ((context.open_files is None) or (len(context.open_files) == 0)):
+        if not context.open_files:
             log.error("Cannot process ReadText(). No open streams.")
             return
-        if (len(context.open_files) > 1):
+        if len(context.open_files) > 1:
             log.error("Cannot process ReadText(). Too many open streams.")
             return
 
@@ -2502,9 +2474,10 @@ class ReadText(VbaLibraryFunc):
         # Get the ID of the file.
         file_id = context.open_files.keys()[0]
 
+        # TODO: This function takes a parameter that specifies the number of bytes to read!!
+
         # Get the data to read.
-        data = context.open_files[file_id]["contents"]
-        raw_data = array.array('B', data).tostring()
+        raw_data = context.open_files[file_id]
 
         # Return the data.
         return raw_data
@@ -2856,11 +2829,14 @@ class CreateTextFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
+        if not params:
             return "NULL"
 
         # Get the name of the file being opened.
-        fname = str(params[0])
+        try:
+            fname = context.get(params[0])
+        except KeyError:
+            fname = str(params[0])
 
         # Save that the file is opened.
         context.open_file(fname)
@@ -3009,23 +2985,22 @@ class Write(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        assert params and len(params) >= 1
 
-        # Get the data being written.
-        dat = str(params[0])
+        # Get the data.
+        data = params[0]
 
         # Save writes that look like they are writing URLs.
-        data_str = str(dat)
-        if (("http:" in data_str) or ("https:" in data_str)):
-            context.report_action('Write URL', data_str, 'File Write', strip_null_bytes=True)
-        
+        if (("http:" in data) or ("https:" in data)):
+            context.report_action('Write URL', data, 'File Write', strip_null_bytes=True)
+
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
         # current open file.
-        if ((context.open_files is None) or (len(context.open_files) == 0)):
+        if not context.open_files:
             log.error("Cannot process Write(). No open files.")
             return
-        if (len(context.open_files) > 1):
+        if len(context.open_files) > 1:
             log.error("Cannot process Write(). Too many open files.")
             return
 
@@ -3035,22 +3010,8 @@ class Write(VbaLibraryFunc):
         file_id = context.open_files.keys()[0]
         log.info("Writing data to " + str(file_id) + " .")
 
-        # Get the data.
-        data = params[0]
+        context.write_file(file_id, data)
 
-        # Are we writing a string?
-        if (isinstance(data, str)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(ord(c))
-
-        # Are we writing a list?
-        elif (isinstance(data, list)):
-            for c in data:
-                context.open_files[file_id]["contents"].append(c)
-
-        # Unhandled.
-        else:
-            log.error("Unhandled Write() data type to write. " + str(type(data)) + ".")
 
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -3061,7 +3022,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Environ, IIf, CleanString, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
                LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
-               Exec, CDbl, Print, CreateTextFile, Write, Minute, Second, WinExec,
+               Exec, CDbl, Print, OpenTextFile, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,
                URLDownloadToFile, FollowHyperlink, Join, VarType, DriveExists, Navigate,
                KeyString, CVar, IsNumeric, Assert, Sleep, Cells, Shapes,

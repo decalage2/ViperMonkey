@@ -41,6 +41,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import re
+
 from pyparsing import *
 
 from logger import log
@@ -48,7 +50,7 @@ from vba_object import VBA_Object
 
 # --- BOOLEAN ------------------------------------------------------------
 
-boolean_literal = CaselessKeyword('True') | CaselessKeyword('False')
+boolean_literal = Regex(re.compile('(True|False)', re.IGNORECASE))
 boolean_literal.setParseAction(lambda t: bool(t[0].lower() == 'true'))
 
 # --- NUMBER TOKENS ----------------------------------------------------------
@@ -65,17 +67,14 @@ boolean_literal.setParseAction(lambda t: bool(t[0].lower() == 'true'))
 # MS-GRAMMAR: hex-digit = decimal-digit / %x0041-0046 / %x0061-0066 ;A-F / a-f
 
 # here Combine() is required to avoid spaces between elements:
-decimal_literal = Combine(pyparsing_common.signed_integer + Suppress(Optional(Word('%&^', exact=1)))) + \
-                  Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
-decimal_literal.setParseAction(lambda t: int(t[0]))
+decimal_literal = Regex(re.compile('(?P<value>[+\-]?\d+)[%&^]?[!#@]?'))
+decimal_literal.setParseAction(lambda t: int(t.value))
 
-octal_literal = Combine(Suppress(Literal('&') + Optional((CaselessLiteral('o')))) + Word(srange('[0-7]'))
-                        + Suppress(Optional(Word('%&^', exact=1))))
-octal_literal.setParseAction(lambda t: int(t[0], base=8))
+octal_literal = Regex(re.compile('&o?(?P<value>[0-7]+)[%&^]?', re.IGNORECASE))
+octal_literal.setParseAction(lambda t: int(t.value, base=8))
 
-hex_literal = Combine(Suppress(CaselessLiteral('&h')) + Word(srange('[0-9a-fA-F]'))
-                      + Suppress(Optional(Word('%&^', exact=1))))
-hex_literal.setParseAction(lambda t: int(t[0], base=16))
+hex_literal = Regex(re.compile('&h(?P<value>[0-9a-f]+)[%&^]?', re.IGNORECASE))
+hex_literal.setParseAction(lambda t: int(t.value, base=16))
 
 integer = decimal_literal | octal_literal | hex_literal
 
@@ -95,17 +94,8 @@ integer = decimal_literal | octal_literal | hex_literal
 # MS-GRAMMAR: exponent-letter = %x0044 / %x0045 / %x0064 / %x0065
 # MS-GRAMMAR: floating-point-type-suffix = "!" / "#" / "@"
 
-float_literal_no_exp = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
-                       Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
-float_literal_no_exp.setParseAction(lambda t: float(str(t[0]) + "." + str(t[1])))
-
-float_literal_exp = decimal_literal + Suppress(CaselessLiteral('.')) + decimal_literal + \
-                    Suppress(CaselessLiteral('E')) + (CaselessLiteral('+') | CaselessLiteral('-')) + decimal_literal + \
-                    Suppress(Optional(CaselessLiteral('!') | CaselessLiteral('#') | CaselessLiteral('@')))
-float_literal_exp.setParseAction( lambda t: float(str(t[0]) + "." + str(t[1])) * pow(10,int(str(t[2]) + str(t[3])) ))
-
-float_literal = float_literal_exp ^ float_literal_no_exp
-
+float_literal = Regex(re.compile('(?P<value>[+\-]?\d+\.\d*([eE][+\-]?\d+)?)[!#@]?'))
+float_literal.setParseAction(lambda t: float(t.value))
 # --- QUOTED STRINGS ---------------------------------------------------------
 
 # 3.3.4 String Tokens
@@ -161,9 +151,8 @@ class String(VBA_Object):
         log.debug("String.eval: return " + r)
         return r
 
-#quoted_string = QuotedString('"', escQuote='""')('value')
-# Speed up string parsing with a regex.
-quoted_string = Regex('"(?:[^"]|"")*"')('value')
+# NOTE: QuotedString creates a regex, so speed should not be an issue.
+quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
 quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)

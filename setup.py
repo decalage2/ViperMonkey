@@ -56,9 +56,11 @@ setup(
         "pyparsing==2.3.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58)
         "unidecode",
         "xlrd",
+        "regex",
     ],
     packages=["vipermonkey", "vipermonkey.core"],
-    #scripts=["vipermonkey/vmonkey.py", "vipermonkey/vbashell.py"],
+    setup_requires=["pytest-runner"],
+    tests_require=["pytest"],
     entry_points=entry_points,
     author="Philippe Lagadec",
     url="https://github.com/decalage2/ViperMonkey",

@@ -122,10 +122,12 @@ class Chr(VBA_Object):
         return 'Chr(%s)' % repr(self.arg)
 
 # Chr, Chr$, ChrB, ChrW()
-chr_ = Suppress(Combine(( CaselessKeyword('Chr$') | CaselessKeyword('Chr') | \
-                          CaselessKeyword('ChrB$') | CaselessKeyword('ChrB') | \
-                          CaselessKeyword('ChrW$') | CaselessKeyword('ChrW')))) + \
-       Suppress('(') + expression + Suppress(')')
+chr_ = (
+    Suppress(Regex(re.compile('Chr[BW]?\$?', re.IGNORECASE)))
+    + Suppress('(')
+    + expression
+    + Suppress(')')
+)
 chr_.setParseAction(Chr)
 
 # --- ASC --------------------------------------------------------------------
