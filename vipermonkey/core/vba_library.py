@@ -177,6 +177,8 @@ class FileExists(VbaLibraryFunc):
         fname = str(params[0])
         if ("powershell" in fname.lower()):
             return True
+        if ("cmd.exe" in fname.lower()):
+            return True
         return False
         
 class Switch(VbaLibraryFunc):
@@ -1023,13 +1025,13 @@ class Replace(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert len(params) >= 3
         # TODO: Handle start, count, and compare parameters.
-        string = params[0]
+        string = str(params[0])
         if (string is None):
             string = ''
-        pat = params[1]
+        pat = str(params[1])
         if (pat is None):
             pat = ''
-        rep = params[2]
+        rep = str(params[2])
         if ((rep is None) or (rep == 0)):
             rep = ''
 

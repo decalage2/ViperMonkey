@@ -186,8 +186,7 @@ def collapse_macro_if_blocks(vba_code):
         # If we get here we are tracking an #if statement.
 
         # Is this the start of another block in the #if?
-        if ((strip_line.startswith("#Else")) or
-            (strip_line.startswith("Else"))):
+        if (strip_line.startswith("#Else")):
 
             # Save the current block.
             curr_blocks.append(curr_block)

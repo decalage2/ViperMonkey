@@ -172,7 +172,11 @@ class Sub(VBA_Object):
             
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
-            self.bogus_if.eval(context=context)
+            if (isinstance(self.bogus_if, VBA_Object)):
+                self.bogus_if.eval(context=context)
+            elif (isinstance(self.bogus_if, list)):
+                for cmd in self.bogus_if:
+                    cmd.eval(context=context)
 
         # Save the values of the ByRef parameters.
         for byref_param in self.byref_params.keys():
