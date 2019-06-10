@@ -945,7 +945,12 @@ def get_vb_contents(vba_code):
     # Did we find any VB code in a script block?
     #print code
     if (len(code) == 0):
-        return vba_code
+
+        # Try a different sort of tag.
+        pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
+        code = re.findall(pat, vba_code, re.DOTALL)
+        if (len(code) == 0):
+            return vba_code
 
     # We have script block VB code.    
     
