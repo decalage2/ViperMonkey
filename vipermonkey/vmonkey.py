@@ -1078,7 +1078,8 @@ def parse_streams(vba, strip_useless=False):
         return parse_streams_serial(vba, strip_useless)
 
 # === Top level Programatic Interface ================================================================================    
-def process_file (container,
+
+def process_file(container,
                   filename,
                   data,
                   altparser=False,
@@ -1087,11 +1088,11 @@ def process_file (container,
                   time_limit=None,
                   verbose=False):
 
-    if (verbose):
+    if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
     
     if not data:
-        #TODO: replace print by writing to a provided output file (sys.stdout by default)
+        # TODO: replace print by writing to a provided output file (sys.stdout by default)
         if container:
             display_filename = '%s in %s' % (filename, container)
         else:
@@ -1100,14 +1101,14 @@ def process_file (container,
         print('FILE:', display_filename)
         # FIXME: the code below only works if the file is on disk and not in a zip archive
         # TODO: merge process_file and _process_file
-        f=open(filename,'rb')
-        data=f.read()
-        f.close()
-    return _process_file(filename,data,altparser=altparser,strip_useless=strip_useless,entry_points=entry_points,time_limit=time_limit)
+        with open(filename,'rb') as input_file:
+            data = input_file.read()
+    return _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
+                         entry_points=entry_points, time_limit=time_limit)
+
 
 def read_sheet_from_csv(filename):
-
-    # Open the CVS file.
+    # Open the CSV file.
     f = None
     try:
         f = open(filename, 'r')
