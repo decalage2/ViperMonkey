@@ -443,12 +443,19 @@ def _get_ole_textbox_values(obj, stream):
         # Did we find the name with the 1st method?
         if (name is None):
 
-            # No. The name comes after an 'OCXNAME' field.
+            # No. The name comes after an 'OCXNAME' or 'OCXPROPS' field. Figure out
+            # which one.
+            name_marker = "OCXNAME"
+            for field in strs:
+                if (field.replace("\x00", "") == 'OCXPROPS'):
+                    name_marker = "OCXPROPS"
+
+            # Now look for the name after the name marker.
             curr_pos = 0
             for field in strs:
-
-                # It might come after the 'OCXNAME' tag.
-                if (field.replace("\x00", "") == 'OCXNAME'):
+                
+                # It might come after the name marker tag.
+                if (field.replace("\x00", "") == name_marker):
 
                     # If the next field does not look something like '_1619423091' the
                     # next field might be the name.
@@ -536,6 +543,45 @@ def _get_ole_textbox_values(obj, stream):
 
         # Move to next chunk.
         index = end
+
+    # The results are approximate. Fix some obvious errors.
+
+    # Fix variable names that are the same as previously seen variable values.
+    last_val = None
+    tmp = []
+    for dat in r:
+
+        # Skip this var/value pair if the current variable name is the same as
+        # the previous variable value.
+        if (dat[0].strip() != last_val):
+            tmp.append(dat)
+        last_val = dat[1].strip()
+    r = tmp
+
+    # Fix data that is showing up as a variable name.
+    tmp = []
+    last_var = None
+    last_val = None
+    for dat in r:
+
+        # Does the current variable name look like it is probably data?
+        if (len(dat[0]) > 50):
+
+            # Try this out as the data for the previous variable.
+            last_val = dat[0]
+
+        # Add the previous variable to the results.
+        if (last_var is not None):
+            tmp.append((last_var, last_val))
+
+        # Save the current variable and value.
+        last_var = dat[0]
+        last_val = dat[1]
+
+    # Add in the final result.
+    if (len(last_var) < 50):
+        tmp.append((last_var, last_val))
+    r = tmp
 
     # Return the OLE form textbox information.
     #print ""
@@ -937,7 +983,12 @@ def get_vb_contents(vba_code):
     # Did we find any VB code in a script block?
     #print code
     if (len(code) == 0):
-        return vba_code
+
+        # Try a different sort of tag.
+        pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
+        code = re.findall(pat, vba_code, re.DOTALL)
+        if (len(code) == 0):
+            return vba_code
 
     # We have script block VB code.    
     

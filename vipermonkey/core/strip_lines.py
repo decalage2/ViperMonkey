@@ -186,8 +186,7 @@ def collapse_macro_if_blocks(vba_code):
         # If we get here we are tracking an #if statement.
 
         # Is this the start of another block in the #if?
-        if ((strip_line.startswith("#Else")) or
-            (strip_line.startswith("Else"))):
+        if (strip_line.startswith("#Else")):
 
             # Save the current block.
             curr_blocks.append(curr_block)
@@ -387,7 +386,20 @@ def fix_vba_code(vba_code):
         
     # Return the updated code.
     return r
-    
+
+def strip_line_nums(line):
+    """
+    Strip line numbers from the start of a line.
+    """
+
+    # Find the end of a number at the start of the line, if there is one.
+    pos = 0
+    for c in line:
+        if (not c.isdigit()):
+            break
+        pos += 1
+    return line[pos:]
+
 def strip_useless_code(vba_code, local_funcs):
     """
     Strip statements that have no usefull effect from the given VB. The
@@ -590,6 +602,9 @@ def strip_useless_code(vba_code, local_funcs):
     in_func = False
     for line in vba_code.split("\n"):
 
+        # Strip line numbers from starts of lines.
+        line = strip_line_nums(line)
+        
         # Are we in a function?
         if (("End Sub" in line) or ("End Function" in line)):
             in_func = False
