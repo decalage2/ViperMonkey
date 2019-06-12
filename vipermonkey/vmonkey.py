@@ -665,6 +665,7 @@ def _get_inlineshapes_text_values(data):
 
         # See if we can read Shapes() info from an XML file.
         if ("not an OLE2 structured storage file" in str(e)):
+            # FIXME: here fname is undefined
             r = _get_shapes_text_values_xml(fname)
 
     return r
@@ -956,6 +957,7 @@ def parse_stream(subfilename,
                  local_funcs=[]):
 
     # Check for timeouts.
+    # TODO: where does vba_object come from?
     vba_object.limits_exceeded(throw_error=True)
     
     # Are the arguments all in a single tuple?
@@ -1096,7 +1098,9 @@ def process_file (container,
             display_filename = filename
         print('='*79)
         print('FILE:', display_filename)
-        f=open(filename,'r')
+        # FIXME: the code below only works if the file is on disk and not in a zip archive
+        # TODO: merge process_file and _process_file
+        f=open(filename,'rb')
         data=f.read()
         f.close()
     return _process_file(filename,data,altparser=altparser,strip_useless=strip_useless,entry_points=entry_points,time_limit=time_limit)
