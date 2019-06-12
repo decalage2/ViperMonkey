@@ -2627,8 +2627,14 @@ class Range(VbaLibraryFunc):
 
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
-            log.warning("Cannot process Range() call. No Excel file loaded.")
-            return "NULL"
+
+            # It can be the case that we have Range object in Word macro 
+            if len(params) == 2 and isinstance(params[0], int) and isinstance(params[1], int):
+                return context.globals["activedocument.content.text"][params[0]:params[1]]
+
+            else:
+                log.warning("Cannot process Range() call. No Excel file loaded.")
+                return "NULL"
         
         # Currently only handles Range(x) calls.
         if (len(params) != 1):

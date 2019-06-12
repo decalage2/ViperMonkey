@@ -134,8 +134,12 @@ def _read_doc_text_libreoffice(data):
     # Is LibreOffice installed?
     try:
         rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
+    except OSError:
+        rc = -1
+    try:
         if (rc != 0):
-
+            rc = subprocess.call(["soffice", "--headless", "-h"], stdout=out, stderr=out)
+        if (rc != 0):
             # Not installed.
             log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
             out.close()
@@ -161,8 +165,14 @@ def _read_doc_text_libreoffice(data):
 
         # Try to convert the file to a text file.
         try:
-            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", "/tmp/", filename],
+            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", tempfile.gettempdir(), filename],
                                  stdout=out, stderr=out)
+        except OSError as e:
+            rc = -1
+        try:
+            if (rc != 0):
+                rc = subprocess.call(["soffice", "--headless", "--convert-to", "txt:Text", "--outdir", tempfile.gettempdir(), filename],
+                                     stdout=out, stderr=out)
             if (rc != 0):
 
                 # Conversion failed.
@@ -189,6 +199,14 @@ def _read_doc_text_libreoffice(data):
             if (line.endswith("\n")):
                 line = line[:-1]
             r.append(line)
+
+        # Delete the temporary files.
+        try:
+            os.remove(filename + ".txt")
+        except:
+            pass
+        # Cleanup.
+        out.close()
 
         # Return the paragraph text.
         return r
@@ -234,7 +252,7 @@ def _read_doc_text(fname, data=None):
     # Read in the file.
     if data == None:
         try:
-            f = open(fname, 'r')
+            f = open(fname, 'rb')
             data = f.read()
             f.close()
         except Exception as e:
@@ -453,7 +471,7 @@ def _get_ole_textbox_values(obj, stream):
             # Now look for the name after the name marker.
             curr_pos = 0
             for field in strs:
-                
+
                 # It might come after the name marker tag.
                 if (field.replace("\x00", "") == name_marker):
 
@@ -1220,6 +1238,11 @@ def load_excel_libreoffice(data):
     # Is LibreOffice installed?
     try:
         rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
+    except OSError:
+        rc = -1
+    try:
+        if (rc != 0):
+            rc = subprocess.call(["soffice", "--headless", "-h"], stdout=out, stderr=out)
         if (rc != 0):
 
             # Not installed.
@@ -1250,6 +1273,12 @@ def load_excel_libreoffice(data):
         try:
             rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
                                  stdout=out, stderr=out)
+        except OSError:
+            rc = -1
+        try:
+            if (rc != 0):
+                rc = subprocess.call(["soffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
+                                     stdout=out, stderr=out)
             if (rc != 0):
 
                 # Conversion failed.
