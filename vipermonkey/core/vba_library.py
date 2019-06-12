@@ -78,6 +78,9 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+# Track the unresolved arguments to the current call.
+var_names = None
+
 class WeekDay(VbaLibraryFunc):
     """
     VBA WeekDay function
@@ -838,6 +841,21 @@ class InlineShapes(VbaLibraryFunc):
         # vba_object._read_from_object_text()
         return "InlineShapes('" + str(params[0]) + "')"
 
+class GetCursorPos(VbaLibraryFunc):
+    """
+    Faked GetCursorPos() function. Returns random location.
+    """
+
+    def eval(self, context, params=None):
+        if ((var_names is None) or (len(var_names) == 0)):
+            return 1
+
+        # Set the given parameter to a random position.
+        var_name = str(var_names[0])
+        context.set(var_name + ".*", random.randint(100, 10000), force_global=True)
+        
+        return 0
+    
 class GetByteCount_2(VbaLibraryFunc):
     """
     String encoder object method.
@@ -3040,7 +3058,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString, Not, PrivateProfileString):
+               AddFromString, Not, PrivateProfileString, GetCursorPos):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
