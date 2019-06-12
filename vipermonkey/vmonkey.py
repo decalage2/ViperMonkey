@@ -1271,13 +1271,13 @@ def load_excel_libreoffice(data):
         # Try to convert the file to a CSV file.
         log.warning("Converting spreadsheet to CSV...")
         try:
-            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
+            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", tempfile.gettempdir(), filename],
                                  stdout=out, stderr=out)
         except OSError:
             rc = -1
         try:
             if (rc != 0):
-                rc = subprocess.call(["soffice", "--headless", "--convert-to", "csv", "--outdir", "/tmp/", filename],
+                rc = subprocess.call(["soffice", "--headless", "--convert-to", "csv", "--outdir", tempfile.gettempdir(), filename],
                                      stdout=out, stderr=out)
             if (rc != 0):
 
