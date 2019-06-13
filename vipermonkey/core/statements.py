@@ -2461,6 +2461,10 @@ class Call_Statement(VBA_Object):
         if (context.exit_func):
             return
 
+        # Save the unresolved argument values.
+        import vba_library
+        vba_library.var_names = self.params
+        
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
         dll_func_name = context.get_true_name(self.name)

@@ -3266,9 +3266,20 @@ class Context(object):
 
         # Are we referencing a field in an object?
         if ("." in name):
+
+            # Look for faked object field.
             new_name = "me." + name[name.index(".")+1:]
             try:
                 return self._get(str(new_name))
+            except KeyError:
+                pass
+
+            # Look for wild carded field value.
+            new_name = name[:name.index(".")] + ".*"
+            try:
+                r = self._get(str(new_name))
+                log.debug("Found wildcarded field value " + new_name + " = " + str(r))
+                return r
             except KeyError:
                 pass
             

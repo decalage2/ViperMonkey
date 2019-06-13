@@ -1001,6 +1001,10 @@ class Function_Call(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Save the unresolved argument values.
+        import vba_library
+        vba_library.var_names = self.params
+        
         log.debug("Function_Call: eval params: " + str(self.params))
 
         # Reset the called function name if this is an alias for an imported external

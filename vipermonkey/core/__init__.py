@@ -203,16 +203,16 @@ class ViperMonkey(object):
             return
         self.modules.append(m)
         for name, _sub in m.subs.items():
-            log.debug('storing sub "%s" in globals' % name)
+            log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
         for name, _function in m.functions.items():
-            log.debug('storing function "%s" in globals' % name)
+            log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _function in m.external_functions.items():
-            log.debug('storing external function "%s" in globals' % name)
+            log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+            log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 self.globals[name.lower()] = _var
             if (isinstance(name, list)):
@@ -303,16 +303,16 @@ class ViperMonkey(object):
         self.modules.append(m)
         # # TODO: add all subs/functions and global variables to self.globals
         for name, _sub in m.subs.items():
-            log.debug('storing sub "%s" in globals' % name)
+            log.debug('(2) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
         for name, _function in m.functions.items():
-            log.debug('storing function "%s" in globals' % name)
+            log.debug('(2) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _function in m.external_functions.items():
-            log.debug('storing external function "%s" in globals' % name)
+            log.debug('(2) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
         for name, _var in m.global_vars.items():
-                log.debug('storing global var "%s" in globals (2)' % name)
+                log.debug('(2) storing global var "%s" in globals (2)' % name)
             
     def parse_next_line(self):
         # extract next line
