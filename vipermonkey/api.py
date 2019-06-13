@@ -422,16 +422,16 @@ class Module(CodeBlock):
         #   are set to locals instead of globals.
         context = context or Context()
         for name, _sub in self.obj.subs.items():
-            log.debug('storing sub "%s" in globals' % name)
+            log.debug('(3) storing sub "%s" in globals' % name)
             context.globals[name.lower()] = _sub
         for name, _function in self.obj.functions.items():
-            log.debug('storing function "%s" in globals' % name)
+            log.debug('(3) storing function "%s" in globals' % name)
             context.globals[name.lower()] = _function
         for name, _function in self.obj.external_functions.items():
-            log.debug('storing external function "%s" in globals' % name)
+            log.debug('(3) storing external function "%s" in globals' % name)
             context.globals[name.lower()] = _function
         for name, _var in self.obj.global_vars.items():
-            log.debug('storing global var "%s" in globals' % name)
+            log.debug('(3) storing global var "%s" in globals' % name)
             if isinstance(name, str):
                 context.globals[name.lower()] = _var
             if isinstance(name, list):
