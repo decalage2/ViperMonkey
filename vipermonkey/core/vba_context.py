@@ -3379,7 +3379,6 @@ class Context(object):
             force_global=False):
 
         # Does the name make sense?
-        print("HERE: -2")
         orig_name = name
         if (not isinstance(name, basestring)):
             log.warning("context.set() " + str(name) + " is improper type. " + str(type(name)))
@@ -3441,13 +3440,9 @@ class Context(object):
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
 
         # Handle base64 conversion with VBA objects.
-        print("HERE: -1")
-        print(name)
-        print(name.endswith(".text"))
         if (name.endswith(".text")):
 
             # Is this a base64 object?
-            print("HERE: 0")
             do_b64 = False
             try:
 
@@ -3472,7 +3467,6 @@ class Context(object):
                 else:
                     node_type = str(node_type).lower().replace(".text", "")
                 val = vba_object.eval_arg(node_type, self)
-                print("HERE 1: " + val)
                 if (val == "Microsoft.XMLDOM"):
                     do_b64 = True
 
@@ -3480,7 +3474,6 @@ class Context(object):
                 pass
             
             # Handle doing conversions on the data.
-            print(do_b64)
             if (do_b64):
 
                 # Try converting the text from base64.

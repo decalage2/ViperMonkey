@@ -466,7 +466,8 @@ class Function(VBA_Object):
 
             # Save the values of the ByRef parameters.
             for byref_param in self.byref_params.keys():
-                self.byref_params[byref_param] = context.get(byref_param[0].lower())
+                if (context.contains(byref_param[0].lower())):
+                    self.byref_params[byref_param] = context.get(byref_param[0].lower())a
 
             # Get the return value.
             return_value = context.get(self.name)
@@ -504,7 +505,7 @@ class Function(VBA_Object):
                 # Function does not return array.
                 else:
                     log.warn(str(self) + " does not return an array. Not doing array access.")
-                
+
             return return_value
 
         except KeyError:

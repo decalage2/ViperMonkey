@@ -1096,13 +1096,14 @@ class Function_Call(VBA_Object):
                     try:
 
                         # Call function.
-                        r = f.eval(context=context, params=params)
+                        r = f.eval(context=context, params=params)                        
                         
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
                             for byref_param_info in f.byref_params.keys():
                                 arg_var_name = str(self.params[byref_param_info[1]])
-                                context.set(arg_var_name, f.byref_params[byref_param_info])
+                                if (context.contains(arg_var_name)):
+                                    context.set(arg_var_name, f.byref_params[byref_param_info])
 
                         # Return result.
                         return r
