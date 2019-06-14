@@ -467,7 +467,7 @@ class Function(VBA_Object):
             # Save the values of the ByRef parameters.
             for byref_param in self.byref_params.keys():
                 if (context.contains(byref_param[0].lower())):
-                    self.byref_params[byref_param] = context.get(byref_param[0].lower())a
+                    self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
             # Get the return value.
             return_value = context.get(self.name)
