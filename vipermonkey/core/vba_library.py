@@ -3005,6 +3005,16 @@ class FreeFile(VbaLibraryFunc):
         v = len(context.open_files) + 1
         return v
 
+class CreateElement(VbaLibraryFunc):
+    """
+    Faked emulation of things like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+    """
+
+    def eval(self, context, params=None):
+
+        # Assume that this is something like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+        return "Microsoft.XMLDOM"
+    
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -3014,7 +3024,7 @@ class Write(VbaLibraryFunc):
         assert params and len(params) >= 1
 
         # Get the data.
-        data = params[0]
+        data = str(params[0])
 
         # Save writes that look like they are writing URLs.
         if (("http:" in data) or ("https:" in data)):
@@ -3058,7 +3068,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString, Not, PrivateProfileString, GetCursorPos):
+               AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

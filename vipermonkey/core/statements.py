@@ -889,9 +889,11 @@ class Let_Statement(VBA_Object):
 
             # Evaluate the index expression(s).
             index = int_convert(eval_arg(self.index, context=context))
+            index1 = None
             if (self.index1 is not None):
-                log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, index, index1, value))
-                return
+                index1 = int_convert(eval_arg(self.index1, context=context))
+                #log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, self.index, self.index1, value))
+                #return
                 
             # Is array variable being set already represented as a list?
             # Or a string?
@@ -908,13 +910,23 @@ class Let_Statement(VBA_Object):
             # Handle lists
             if (isinstance(arr_var, list)):
             
-                # Do we need to extend the length of the list to include the index?
+                # Do we need to extend the length of the list to include the indices?
                 if (index >= len(arr_var)):
-                    arr_var.extend([0] * (index - len(arr_var)))
+                    arr_var.extend([0] * (index - len(arr_var) + 1))
+                if (index1 is not None):
+                    if (not isinstance(arr_var[index], list)):
+                        arr_var[index] = []
+                    if (index1 >= len(arr_var[index])):
+                        arr_var[index].extend([0] * (index1 - len(arr_var[index])))
                 
                 # We now have a list with the proper # of elements. Set the
                 # array element to the proper value.
-                arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                if (index1 is None):
+                    arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                else:
+                    new_arr = arr_var[index]
+                    new_arr = new_arr[:index1] + [value] + new_arr[(index1 + 1):]
+                    arr_var[index] = new_arr
 
             # Handle strings.
             if ((isinstance(arr_var, str)) or (isinstance(arr_var, unicode))):

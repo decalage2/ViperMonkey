@@ -3379,6 +3379,8 @@ class Context(object):
             force_global=False):
 
         # Does the name make sense?
+        print("HERE: -2")
+        orig_name = name
         if (not isinstance(name, basestring)):
             log.warning("context.set() " + str(name) + " is improper type. " + str(type(name)))
             name = str(name)
@@ -3439,32 +3441,61 @@ class Context(object):
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
 
         # Handle base64 conversion with VBA objects.
+        print("HERE: -1")
+        print(name)
+        print(name.endswith(".text"))
         if (name.endswith(".text")):
 
-            # Handle doing conversions on the data.
-            node_type = name.replace(".text", ".datatype")
+            # Is this a base64 object?
+            print("HERE: 0")
+            do_b64 = False
             try:
 
                 # Is the root object something set to the "bin.base64" data type?
+                node_type = name.replace(".text", ".datatype")
                 val = str(self.get(node_type)).strip()
                 if (val == "bin.base64"):
+                    do_b64 = True
 
-                    # Try converting the text from base64.
-                    try:
-
-                        # Set the typed vale of the node to the decoded value.
-                        tmp_str = filter(isascii, str(value).strip())
-                        missing_padding = len(tmp_str) % 4
-                        if missing_padding:
-                            tmp_str += b'='* (4 - missing_padding)
-                        conv_val = base64.b64decode(tmp_str)
-                        val_name = name.replace(".text", ".nodetypedvalue")
-                        self.set(val_name, conv_val)
-                    except Exception as e:
-                        log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
-                        
             except KeyError:
                 pass
+
+            # Is this a general XML object?
+            try:
+
+                # Is this a Microsoft.XMLDOM object?
+                import expressions
+                import vba_object
+                node_type = orig_name
+                if (isinstance(orig_name, expressions.MemberAccessExpression)):
+                    node_type = orig_name.lhs
+                else:
+                    node_type = str(node_type).lower().replace(".text", "")
+                val = vba_object.eval_arg(node_type, self)
+                print("HERE 1: " + val)
+                if (val == "Microsoft.XMLDOM"):
+                    do_b64 = True
+
+            except KeyError:
+                pass
+            
+            # Handle doing conversions on the data.
+            print(do_b64)
+            if (do_b64):
+
+                # Try converting the text from base64.
+                try:
+                    
+                    # Set the typed vale of the node to the decoded value.
+                    tmp_str = filter(isascii, str(value).strip())
+                    missing_padding = len(tmp_str) % 4
+                    if missing_padding:
+                        tmp_str += b'='* (4 - missing_padding)
+                    conv_val = base64.b64decode(tmp_str)
+                    val_name = name.replace(".text", ".nodetypedvalue")
+                    self.set(val_name, conv_val)
+                except Exception as e:
+                    log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
 
         # Handle hex conversion with VBA objects.
         if (name.endswith(".nodetypedvalue")):

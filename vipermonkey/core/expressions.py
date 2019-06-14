@@ -495,7 +495,7 @@ class MemberAccessExpression(VBA_Object):
                 lhs_orig += "." + str(field)
 
         # Are we referencing a stream contained in a variable?        
-        if (not context.contains(str(lhs_orig))):
+        if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
             return False
         
         # Pull out the text to write to the text stream.
@@ -1061,18 +1061,24 @@ class Function_Call(VBA_Object):
                     # TODO: Revisit this.
                     #if ((len(f) == 1) and (isinstance(f[0], str))):
                     #    tmp = f[0]
-                    log.debug('Array Access: %r[%r]' % (tmp, params[0]))
+                    log.debug('Array Access: %r[%r]' % (tmp, str(params)))
                     index = int_convert(params[0])
+                    index1 = None
+                    if (len(params) > 1):
+                        index1 = int_convert(params[1])
                     try:
 
                         # Return function result.
-                        r = tmp[index]
+                        if (index1 is None):
+                            r = tmp[index]
+                        else:
+                            r = tmp[index][index1]
                         log.debug('Returning: %r' % r)
                         return r
                     except:
 
                         # Return function result.
-                        log.error('Array Access Failed: %r[%r]' % (tmp, params[0]))
+                        log.error('Array Access Failed: %r[%r]' % (tmp, str(params)))
                         context.got_error = True
                         return 0
 
