@@ -622,9 +622,11 @@ class MemberAccessExpression(VBA_Object):
         """
         See if this is accessing the Path field of a file/folder object.
         """
-        if (str(self.rhs).lower() == "path"):
+        tmp = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
+        if (tmp == "path"):
 
             # Fake a path.
+            print "GOT"
             return "C:\\Users\\admin\\"
     
     def eval(self, context, params=None):
@@ -1193,8 +1195,8 @@ expr_list = (
 function_call <<= (
     CaselessKeyword("nothing")
     | (
-        NotAny(reserved_keywords)
-        + (member_access_expression('name') ^ lex_identifier('name'))
+        #NotAny(reserved_keywords) +
+        (member_access_expression('name') ^ lex_identifier('name'))
         + Suppress(
             Optional('$')
             + Optional('#')

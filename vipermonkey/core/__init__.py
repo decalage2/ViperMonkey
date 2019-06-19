@@ -414,6 +414,7 @@ class ViperMonkey(object):
         done_emulation = False
         for m in self.modules:
             if (m.eval(context=context)):
+                context.dump_all_files(autoclose=True)
                 done_emulation = True
         
         # Look for hardcoded entry functions.
@@ -423,7 +424,7 @@ class ViperMonkey(object):
             if entry_point in self.globals:
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
-                context.dump_all_files()
+                context.dump_all_files(autoclose=True)
                 done_emulation = True
 
         # Look for callback functions that can act as entry points.
@@ -442,7 +443,7 @@ class ViperMonkey(object):
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
                         item.eval(context=context)
-                        context.dump_all_files()
+                        context.dump_all_files(autoclose=True)
                         done_emulation = True
 
         # Did we find an entry point?
@@ -463,7 +464,7 @@ class ViperMonkey(object):
             if (sub_count == 1):
                 context.report_action('Found Entry Point', str(sub_name), '')
                 only_sub.eval(context=context)
-                context.dump_all_files()
+                context.dump_all_files(autoclose=True)
                 
     def eval(self, expr):
         """

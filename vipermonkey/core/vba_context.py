@@ -52,6 +52,16 @@ import string
 import codecs
 from curses_ascii import isascii
 
+def to_hex(s):
+    """
+    Convert a string to a VBA hex string.
+    """
+
+    r = ""
+    for c in str(s):
+        r += hex(ord(c)).replace("0x", "")
+    return r
+
 def is_procedure(vba_object):
     """
     Check if a VBA object is a procedure, e.g. a Sub or a Function.
@@ -3125,9 +3135,9 @@ class Context(object):
             log.error("Unhandled data type to write. " + str(type(data)) + ".")
             return False
 
-    def dump_all_files(self):
+    def dump_all_files(self, autoclose=False):
         for fname in self.open_files.keys():
-            self.dump_file(fname)
+            self.dump_file(fname, autoclose=autoclose)
 
     def close_file(self, fname):
         """
@@ -3158,16 +3168,20 @@ class Context(object):
 
     # FIXME: This function is too closely coupled to the CLI.
     #   Context should not contain business logic.
-    def dump_file(self, fname):
+    def dump_file(self, fname, autoclose=False):
         """
         Save the contents of a file dumped by the VBA to disk.
 
         fname - The name of the file.
         """
         if fname not in self.closed_files:
-            log.error('File {} not closed. Cannot save.'.format(fname))
-            return
-
+            if (not autoclose):
+                log.error('File {} not closed. Cannot save.'.format(fname))
+                return
+            else:
+                log.warning('File {} not closed. Closing file.'.format(fname))
+                self.close_file(fname)
+                
         raw_data = self.closed_files[fname]
         file_hash = sha256(raw_data).hexdigest()
         self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
@@ -3376,7 +3390,8 @@ class Context(object):
             var_type=None,
             do_with_prefix=True,
             force_local=False,
-            force_global=False):
+            force_global=False,
+            no_conversion=False):
 
         # Does the name make sense?
         orig_name = name
@@ -3439,6 +3454,10 @@ class Context(object):
             tmp_name = str(self.with_prefix) + "." + str(name)
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
 
+        # Skip automatic data conversion if needed.
+        if (no_conversion):
+            return
+            
         # Handle base64 conversion with VBA objects.
         if (name.endswith(".text")):
 
@@ -3449,7 +3468,7 @@ class Context(object):
                 # Is the root object something set to the "bin.base64" data type?
                 node_type = name.replace(".text", ".datatype")
                 val = str(self.get(node_type)).strip()
-                if (val == "bin.base64"):
+                if (val.lower() == "bin.base64"):
                     do_b64 = True
 
             except KeyError:
@@ -3479,14 +3498,14 @@ class Context(object):
                 # Try converting the text from base64.
                 try:
                     
-                    # Set the typed vale of the node to the decoded value.
+                    # Set the typed value of the node to the decoded value.
                     tmp_str = filter(isascii, str(value).strip())
                     missing_padding = len(tmp_str) % 4
                     if missing_padding:
                         tmp_str += b'='* (4 - missing_padding)
                     conv_val = base64.b64decode(tmp_str)
                     val_name = name.replace(".text", ".nodetypedvalue")
-                    self.set(val_name, conv_val)
+                    self.set(val_name, conv_val, no_conversion=True)
                 except Exception as e:
                     log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
 
@@ -3499,20 +3518,65 @@ class Context(object):
 
                 # Something set to type "bin.hex"?
                 val = str(self.get(node_type)).strip()
-                if (val == "bin.hex"):
+                print "HERE"
+                print val
+                if (val.lower() == "bin.hex"):
 
                     # Try converting from hex.
                     try:
 
-                        # Set the typed vale of the node to the decoded value.
+                        # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(str(value).strip(), "hex")
-                        self.set(name, conv_val)
+                        self.set(name, conv_val, no_conversion=True)
                     except Exception as e:
-                        log.error("hex conversion of '" + str(value) + "' failed. " + str(e))
+                        log.warning("hex conversion of '" + str(value) + "' FROM hex failed. Converting TO hex. " + str(e))
+                        conv_val = to_hex(str(value).strip())
+                        self.set(name, conv_val, no_conversion=True)
                         
             except KeyError:
                 pass
 
+        # Handle after the fact data conversion with VBA objects.
+        if (name.endswith(".datatype")):
+
+            # Handle doing conversions on the existing data.
+            node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            try:
+
+                # Do we have data to convert from type "bin.hex"?
+                node_value = self.get(node_value_name)
+                if (value.lower() == "bin.hex"):
+
+                    # Try converting from hex.
+                    try:
+
+                        # Set the typed value of the node to the decoded value.
+                        conv_val = codecs.decode(str(node_value).strip(), "hex")
+                        self.set(node_value_name, conv_val, no_conversion=True)
+                    except Exception as e:
+                        log.warning("hex conversion of '" + str(node_value) + "' FROM hex failed. Converting TO hex. " + str(e))
+                        conv_val = to_hex(str(node_value).strip())
+                        self.set(node_value_name, conv_val, no_conversion=True)
+
+                # Do we have data to convert from type "bin.base64"?
+                if (value.lower() == "bin.base64"):
+
+                    # Try converting the text from base64.
+                    try:
+                    
+                        # Set the typed value of the node to the decoded value.
+                        tmp_str = filter(isascii, str(node_value).strip())
+                        missing_padding = len(tmp_str) % 4
+                        if missing_padding:
+                            tmp_str += b'='* (4 - missing_padding)
+                        conv_val = base64.b64decode(tmp_str)
+                        self.set(node_value_name, conv_val, no_conversion=True)
+                    except Exception as e:
+                        log.error("base64 conversion of '" + str(node_value) + "' failed. " + str(e))
+                        
+            except KeyError:
+                pass
+            
     def _strip_null_bytes(self, item):
         r = item
         if (isinstance(item, str)):

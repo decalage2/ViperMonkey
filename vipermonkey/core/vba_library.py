@@ -345,7 +345,7 @@ class PrivateProfileString(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return "**MATCH ANY**"
-    
+
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -569,6 +569,16 @@ class AddFromString(Execute):
     Office programmatic macro editing method..
     """
     pass
+
+class IsObject(VbaLibraryFunc):
+    """
+    IsObject() function. Currently stubbed to always return True.
+    """
+
+    def eval(self, context, params=None):
+
+        # Say everything is an object.
+        return True
 
 class Add(VbaLibraryFunc):
     """
@@ -2848,7 +2858,29 @@ class GetExtensionName(VbaLibraryFunc):
             if ("." in fname):
                 r = fname[fname.rindex("."):]
         return r
-                
+
+class NumPut(VbaLibraryFunc):
+    """
+    DynamicWrapperX.NumPut() method. This simulates the NumPut() byte writing actions
+    by writing the byte values to a DOM_NumPut.dat file.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we need to open the simulated file?
+        if ("DOM_NumPut.dat" not in context.open_files):
+            context.open_file("DOM_NumPut.dat")
+
+        # Get the byte to write.
+        if (len(params) < 3):
+            return
+        val = params[0]
+        pos = params[2]
+
+        # Write the byte.
+        # TODO: Use the position parameter to write the byte to the proper position.
+        context.write_file("DOM_NumPut.dat", chr(val))
+    
 class CreateTextFile(VbaLibraryFunc):
     """
     CreateTextFile() method.
@@ -3068,7 +3100,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement):
+               AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
+               IsObject, NumPut):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
