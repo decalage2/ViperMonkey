@@ -1171,7 +1171,11 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_item = Forward()
-expr_list_item = expression ^ boolean_expression ^ member_access_expression_loose
+# The 'ByVal' or 'ByRef' keyword can be given when the expr_list_item appears as an
+# expression given as a function call parameter. Allowing these keywords for all expressions is
+# not strictly correct (invalid VB could be parsed and treated as valid), but we assume that
+# ViperMonkey is working with valid VB to begin with so this should not be a problem.
+expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression ^ member_access_expression_loose
 # NOTE: This helps to speed up parsing and prevent recursion loops.
 expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 

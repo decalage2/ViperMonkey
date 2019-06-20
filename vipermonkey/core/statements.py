@@ -3184,7 +3184,9 @@ class External_Function(VBA_Object):
         
         # TODO: return result according to the known DLLs and functions
         log.warning('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
-        return 0
+
+        # Assume that returning 0 means the call failed, return 1 to (hopefully) indicate success.
+        return 1
 
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
                  + Optional(Literal('(') + Literal(')')).suppress()
