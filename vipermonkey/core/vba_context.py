@@ -83,6 +83,8 @@ VBA_LIBRARY = {}
 # Output directory to save dropped artifacts.
 out_dir = None  # type: str
 
+# Track intermediate IOC values stored in variables during emulation.
+intermediate_iocs = set()
 
 class Context(object):
     """
@@ -3382,8 +3384,27 @@ class Context(object):
         log.debug("Found doc var " + var + " = " + str(r))
         return r
             
-    # TODO: set_global?
+    def save_intermediate_iocs(self, value):
+        """
+        Save variable values that appear to contain base64 encoded or URL IOCs.
+        """
 
+        # Is there a URL in the data?
+        URL_REGEX = r'.*(http[s]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
+        value = str(value)
+        if (re.match(URL_REGEX, value) is not None):
+            if (value not in intermediate_iocs):
+                log.info("Found intermediate IOC (URL): '" + value + "'")
+                intermediate_iocs.add(value)
+
+        # Is there base64 in the data?
+        B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+        b64_strs = re.findall(B64_REGEX, value)
+        for curr_value in b64_strs:
+            if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
+                log.info("Found intermediate IOC (base64): '" + value + "'")
+                intermediate_iocs.add(value)
+        
     def set(self,
             name,
             value,
@@ -3403,6 +3424,9 @@ class Context(object):
         if (value is None):
             log.debug("context.set() " + str(name) + " failed. Value is None.")
             return
+
+        # Save IOCs from intermediate values if needed.
+        self.save_intermediate_iocs(value)
         
         # convert to lowercase
         name = name.lower()

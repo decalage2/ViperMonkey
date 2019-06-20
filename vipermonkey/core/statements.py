@@ -200,11 +200,12 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 type_declaration_composite = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
-                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + \
+                             OneOrMore(lex_identifier + Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + \
+                                       CaselessKeyword('As') + reserved_type_identifier + \
                                        Suppress(Optional("*" + (decimal_literal | lex_identifier))) + Suppress(EOS)) + \
                              CaselessKeyword('End') + CaselessKeyword('Type') + \
                              ZeroOrMore( Literal(':') + (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
-                                         lex_identifier + Suppress(EOS) + \
+                                         lex_identifier + Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + Suppress(EOS) + \
                                          OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
                                          CaselessKeyword('End') + CaselessKeyword('Type') )
 
@@ -2445,7 +2446,7 @@ simple_if_statement_macro.setParseAction(If_Statement_Macro)
 class Call_Statement(VBA_Object):
 
     # List of interesting functions to log calls to.
-    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+    log_funcs = ["CreateProcessA", "CreateProcessW", "CreateProcess", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
@@ -2471,6 +2472,7 @@ class Call_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exit function previously called. Not evaluating '" + str(self) + "'")
             return
 
         # Save the unresolved argument values.
@@ -2490,7 +2492,8 @@ class Call_Statement(VBA_Object):
             assert not self.params, 'Unexpected parameters. Parsing has failed.'
             # Just evaluate the expression as the call.
             log.debug("Call of member access expression " + str(self.name))
-            return self.name.eval(context, self.params)
+            r = self.name.eval(context, self.params)
+            return r
 
         # TODO: The following should share the same code as MemberAccessExpression and Function_Call?
 
@@ -2547,6 +2550,12 @@ class Call_Statement(VBA_Object):
                     for byref_param_info in s.byref_params.keys():
                         arg_var_name = str(self.params[byref_param_info[1]])
                         context.set(arg_var_name, s.byref_params[byref_param_info])
+
+                # We are out of the called function, so if we exited the called function early
+                # it does not apply to the current function.
+                context.exit_func = False
+
+                # Return function result.
                 return ret
             
         except KeyError:
@@ -2577,8 +2586,17 @@ class Call_Statement(VBA_Object):
                     # See if we can run the other function.
                     log.debug("Try indirect run of function '" + new_func + "'")
                     try:
+
+                        # Emulate the function.
                         s = context.get(new_func)
-                        return s.eval(context=context, params=new_params)
+                        r = s.eval(context=context, params=new_params)
+                        
+                        # We are out of the called function, so if we exited the called function early
+                        # it does not apply to the current function.
+                        context.exit_func = False
+
+                        # Return the function result.
+                        return r
                     except KeyError:
                         pass
                 log.error('Procedure %r not found' % func_name)
@@ -2666,6 +2684,7 @@ class Exit_Function_Statement(VBA_Object):
 
     def eval(self, context, params=None):
         # Mark that we should return from the current function.
+        log.info("Explicit exit function invoked")
         context.exit_func = True
 
 # Return from a function.

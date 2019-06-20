@@ -968,7 +968,7 @@ class Function_Call(VBA_Object):
     """
 
     # List of interesting functions to log calls to.
-    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+    log_funcs = ["CreateProcessA", "CreateProcessW", "CreateProcess", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
@@ -1070,7 +1070,7 @@ class Function_Call(VBA_Object):
                         index1 = int_convert(params[1])
                     try:
 
-                        # Return function result.
+                        # Return array access result.
                         if (index1 is None):
                             r = tmp[index]
                         else:
@@ -1079,7 +1079,7 @@ class Function_Call(VBA_Object):
                         return r
                     except:
 
-                        # Return function result.
+                        # Return error array access result.
                         log.error('Array Access Failed: %r[%r]' % (tmp, str(params)))
                         context.got_error = True
                         return 0
@@ -1087,7 +1087,7 @@ class Function_Call(VBA_Object):
                 # Looks like we want the whole array (ex. foo()).
                 else:
 
-                    # Return function result.
+                    # Return whole array result.
                     return f
                     
             log.debug('Calling: %r' % f)
@@ -1107,6 +1107,10 @@ class Function_Call(VBA_Object):
                                 if (context.contains(arg_var_name)):
                                     context.set(arg_var_name, f.byref_params[byref_param_info])
 
+                        # We are out of the called function, so if we exited the called function early
+                        # it does not apply to the current function.
+                        context.exit_func = False
+                                    
                         # Return result.
                         return r
 

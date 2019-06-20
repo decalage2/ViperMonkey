@@ -712,6 +712,9 @@ class AscW(VbaLibraryFunc):
 class AscB(AscW):
     pass
 
+class Asc(AscW):
+    pass
+
 class International(VbaLibraryFunc):
     """
     application.international() Function.
@@ -3088,7 +3091,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, CleanString, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
+               LCase, RTrim, LTrim, AscW, AscB, Asc, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, OpenTextFile, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,

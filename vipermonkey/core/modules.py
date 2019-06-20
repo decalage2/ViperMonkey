@@ -196,7 +196,8 @@ module_header = ZeroOrMore(header_statements_line)
 
 loose_lines = Forward()
 #declaration_statement = external_function | global_variable_declaration | loose_lines | option_statement | dim_statement | rem_statement
-declaration_statement = external_function | loose_lines | global_variable_declaration | option_statement | dim_statement | rem_statement
+declaration_statement = external_function | loose_lines | global_variable_declaration | \
+                        option_statement | dim_statement | rem_statement | type_declaration
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -269,11 +270,23 @@ module_code = ZeroOrMore(
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
+    | type_declaration
 )
 
 module_body = module_declaration + module_code
 
-module = module_header + module_body
+#module = module_header + module_body
+module = ZeroOrMore(
+    option_statement
+    | sub
+    | function
+    | Suppress(empty_line)
+    | simple_if_statement_macro
+    | loose_lines
+    | type_declaration
+    | declaration_statements_line
+    | header_statements_line
+)
 module.setParseAction(Module)
 
 # === LINE PARSER ============================================================

@@ -1338,6 +1338,25 @@ def load_excel(data):
     # That failed. Fall back to LibreOffice.
     return load_excel_libreoffice(data)
 
+def _remove_duplicate_iocs(iocs):
+    """
+    Remove IOC strings that are substrings of other IOCs.
+    """
+
+    # Track whether to keep an IOC string.
+    r = set()
+    for ioc1 in iocs:
+        keep_curr = True
+        for ioc2 in iocs:
+            if ((ioc1 != ioc2) and (ioc1 in ioc2)):
+                keep_curr = False
+                break
+        if (keep_curr):
+            r.add(ioc1)
+
+    # Return stripped IOC set.
+    return r
+
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename, data,
@@ -1559,6 +1578,15 @@ def _process_file (filename, data,
             # print table of all recorded actions
             print('\nRecorded Actions:')
             print(vm.dump_actions())
+            print('')
+            if (len(vba_context.intermediate_iocs) > 0):
+                tmp_iocs = _remove_duplicate_iocs(vba_context.intermediate_iocs)
+                print('Intermediate IOCs:')
+                print('')
+                for ioc in tmp_iocs:
+                    print("+---------------------------------------------------------+")
+                    print(ioc)
+                print("+---------------------------------------------------------+")
             print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
