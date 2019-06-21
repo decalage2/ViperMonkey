@@ -388,6 +388,10 @@ class ViperMonkey(object):
         return r
         
     def trace(self, entrypoint='*auto'):
+
+        # Clear out any intermediate IOCs from a previous run.
+        vba_context.intermediate_iocs = set()
+
         # TODO: use the provided entrypoint
         # Create the global context for the engine
         context = Context(_globals=self.globals,
