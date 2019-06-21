@@ -1149,13 +1149,14 @@ def parse_streams(vba, strip_useless=False):
 # === Top level Programatic Interface ================================================================================    
 
 def process_file(container,
-                  filename,
-                  data,
-                  altparser=False,
-                  strip_useless=False,
-                  entry_points=None,
-                  time_limit=None,
-                  verbose=False):
+                 filename,
+                 data,
+                 altparser=False,
+                 strip_useless=False,
+                 entry_points=None,
+                 time_limit=None,
+                 verbose=False,
+                 display_int_iocs=False):
 
     if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
@@ -1173,7 +1174,7 @@ def process_file(container,
         with open(filename,'rb') as input_file:
             data = input_file.read()
     return _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
-                         entry_points=entry_points, time_limit=time_limit)
+                         entry_points=entry_points, time_limit=time_limit, display_int_iocs=display_int_iocs)
 
 
 def read_sheet_from_csv(filename):
@@ -1363,7 +1364,8 @@ def _process_file (filename, data,
                    altparser=False,
                    strip_useless=False,
                    entry_points=None,
-                   time_limit=None):
+                   time_limit=None,
+                   display_int_iocs=False):
     """
     Process a single file
 
@@ -1579,25 +1581,27 @@ def _process_file (filename, data,
             print('\nRecorded Actions:')
             print(vm.dump_actions())
             print('')
+            tmp_iocs = []
             if (len(vba_context.intermediate_iocs) > 0):
                 tmp_iocs = _remove_duplicate_iocs(vba_context.intermediate_iocs)
-                print('Intermediate IOCs:')
-                print('')
-                for ioc in tmp_iocs:
+                if (display_int_iocs):
+                    print('Intermediate IOCs:')
+                    print('')
+                    for ioc in tmp_iocs:
+                        print("+---------------------------------------------------------+")
+                        print(ioc)
                     print("+---------------------------------------------------------+")
-                    print(ioc)
-                print("+---------------------------------------------------------+")
-            print('')
+                    print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
             print('Finished analyzing ' + str(orig_filename) + " .\n")
-            return (vm.actions, vm.external_funcs)
+            return (vm.actions, vm.external_funcs, tmp_iocs)
 
         else:
             print('Finished analyzing ' + str(orig_filename) + " .\n")
             print('No VBA macros found.')
             print('')
-            return ([], [])
+            return ([], [], [])
     except Exception as e:
         if (("SystemExit" not in str(e)) and (". Aborting analysis." not in str(e))):
             traceback.print_exc()
@@ -1718,25 +1722,27 @@ def main():
     usage = 'usage: %prog [options] <filename> [filename2 ...]'
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-r", action="store_true", dest="recursive",
-        help='find files recursively in subdirectories.')
+                      help='find files recursively in subdirectories.')
     parser.add_option("-z", "--zip", dest='zip_password', type='str', default=None,
-        help='if the file is a zip archive, open first file from it, using the provided password (requires Python 2.6+)')
+                      help='if the file is a zip archive, open first file from it, using the provided password (requires Python 2.6+)')
     parser.add_option("-f", "--zipfname", dest='zip_fname', type='str', default='*',
-        help='if the file is a zip archive, file(s) to be opened within the zip. Wildcards * and ? are supported. (default:*)')
+                      help='if the file is a zip archive, file(s) to be opened within the zip. Wildcards * and ? are supported. (default:*)')
     parser.add_option("-e", action="store_true", dest="scan_expressions",
-        help='Extract and evaluate/deobfuscate constant expressions')
+                      help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
                       help="logging level debug/info/warning/error/critical (default=%default)")
     parser.add_option("-a", action="store_true", dest="altparser",
-        help='Use the alternate line parser (experimental)')
+                      help='Use the alternate line parser (experimental)')
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
-        help='Strip useless VB code from macros prior to parsing.')
+                      help='Strip useless VB code from macros prior to parsing.')
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
                       help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
     parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
                       type='int', help="Time limit (in minutes) for emulation.")
+    parser.add_option("-c", '--iocs', action="store_true", dest="display_int_iocs",
+                      help='Display potential IOCs stored in intermediate VBA variables assigned during emulation (URLs and base64).')
     parser.add_option("-v", '--version', action="store_true", dest="print_version",
-        help='Print version information of packages used by ViperMonkey.')
+                      help='Print version information of packages used by ViperMonkey.')
     
     (options, args) = parser.parse_args()
 
@@ -1774,7 +1780,8 @@ def main():
                          altparser=options.altparser,
                          strip_useless=options.strip_useless_code,
                          entry_points=entry_points,
-                         time_limit=options.time_limit)
+                         time_limit=options.time_limit,
+                         display_int_iocs=options.display_int_iocs)
 
 if __name__ == '__main__':
     main()
