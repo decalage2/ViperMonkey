@@ -725,6 +725,16 @@ class International(VbaLibraryFunc):
         # Match anything compared to this result.
         return "**MATCH ANY**"
 
+class GetLocale(VbaLibraryFunc):
+    """
+    GetLocale() Function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Match anything compared to this result.
+        return "**MATCH ANY**"
+
 class StrComp(VbaLibraryFunc):
     """
     StrComp() string function.
@@ -3104,7 +3114,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
-               IsObject, NumPut):
+               IsObject, NumPut, GetLocale):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
