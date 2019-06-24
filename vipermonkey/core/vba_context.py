@@ -3392,9 +3392,12 @@ class Context(object):
         # Is there a URL in the data?
         URL_REGEX = r'.*(http[s]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
         value = str(value)
+        tmp_value = value
+        if (len(tmp_value) > 100):
+            tmp_value = tmp_value[:100] + " ..."
         if (re.match(URL_REGEX, value) is not None):
             if (value not in intermediate_iocs):
-                log.info("Found intermediate IOC (URL): '" + value + "'")
+                log.info("Found intermediate IOC (URL): '" + tmp_value + "'")
                 intermediate_iocs.add(value)
 
         # Is there base64 in the data?
@@ -3402,7 +3405,7 @@ class Context(object):
         b64_strs = re.findall(B64_REGEX, value)
         for curr_value in b64_strs:
             if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
-                log.info("Found intermediate IOC (base64): '" + value + "'")
+                log.info("Found intermediate IOC (base64): '" + tmp_value + "'")
                 intermediate_iocs.add(value)
         
     def set(self,
