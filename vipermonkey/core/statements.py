@@ -610,6 +610,15 @@ class Let_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Let_Statement, self).__init__(original_str, location, tokens)
+
+        # Are we just making an empty Let_Statement object?
+        self.string_op = None
+        self.index = None
+        self.index1 = None
+        if (original_str is None):
+            return
+
+        # We are making a Let_Statement from parse results.
         self.name = tokens.name
         string_ops = set(["mid"])
         self.string_op = None
@@ -671,6 +680,35 @@ class Let_Statement(VBA_Object):
             # No callback.
             pass
 
+    def _make_let_statement(self, the_str_var, mod_str):
+        """
+        Make a Let_Statement object to assign the results of a Mid() assignment to the
+        proper variable. This handles assigning to items in an array if needed.
+        """
+
+        # Make an empty Let statement.
+        tmp_let = Let_Statement(None, None, None)
+
+        # Do we have an array item assignment?
+        tmp_let.name = the_str_var
+        if (isinstance(the_str_var, Function_Call)):
+
+            # Pull out the name of the 'function'. This is the array var name.
+            tmp_let.name = the_str_var.name
+
+            # The array indices are the 'function' args.
+            if (len(the_str_var.params) > 0):
+                tmp_let.index = the_str_var.params[0]
+            if (len(the_str_var.params) > 1):
+                tmp_let.index1 = the_str_var.params[1]
+
+        # Set the value to assign.
+        tmp_let.expression = mod_str
+        tmp_let.op = "="
+
+        # Done.
+        return tmp_let
+        
     def _handle_string_mod(self, context, rhs):
         """
         Handle assignments like Mid(a_string, start_pos, len) = "..."
@@ -707,7 +745,9 @@ class Let_Statement(VBA_Object):
             mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
 
             # Set the string in the context.
-            context.set(str(the_str_var), mod_str)
+            #context.set(str(the_str_var), mod_str)
+            tmp_let = self._make_let_statement(the_str_var, mod_str)
+            tmp_let.eval(context)
             return True
 
         # No string modification.
