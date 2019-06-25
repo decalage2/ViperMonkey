@@ -817,7 +817,7 @@ member_object = (func_call_array_access_limited ^ function_call_limited) | membe
 
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
-member_access_expression = Group(Group(member_object("lhs") + OneOrMore(Suppress(".") + member_object("rhs"))))
+member_access_expression = Group(Group(member_object("lhs") + OneOrMore((Suppress(".") | Suppress("!")) + member_object("rhs"))))
 member_access_expression.setParseAction(MemberAccessExpression)
 
 

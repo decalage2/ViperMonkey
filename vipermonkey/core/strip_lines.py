@@ -328,21 +328,35 @@ def fix_non_ascii_names(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
     is the ordinal value.
+
+    Also change things like "a!b!.c" to "a.b.c".
     """
 
     # Replace bad characters unless they appear in a string.
     in_str = False
+    prev_char = ""
     r = ""
     for c in vba_code:
+
+        # Handle entering/leaving strings.
         if (c == '"'):
             in_str = not in_str
         if in_str:
             r += c
+            prev_char = c
             continue
+
+        # Need to change "!" member access to "."?
+        if ((prev_char == "!") and (c.isalpha())):
+            r = r[:len(r)-1] + "."
+        
+        # Non-ASCII character that is not in a string?
         if (ord(c) > 128):
             r += "d" + str(ord(c))
+            prev_char = "d"
         else:
             r += c
+            prev_char = c
 
     return r
             
