@@ -323,7 +323,29 @@ def fix_skipped_1st_arg(vba_code):
 
     # Return the modified code.
     return vba_code
-    
+
+def fix_non_ascii_names(vba_code):
+    """
+    Replace characters whose ordinal value is > 128 with dNNN, where NNN
+    is the ordinal value.
+    """
+
+    # Replace bad characters unless they appear in a string.
+    in_str = False
+    r = ""
+    for c in vba_code:
+        if (c == '"'):
+            in_str = not in_str
+        if in_str:
+            r += c
+            continue
+        if (ord(c) > 128):
+            r += "d" + str(ord(c))
+        else:
+            r += c
+
+    return r
+            
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
@@ -337,6 +359,11 @@ def fix_vba_code(vba_code):
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
+
+    # It looks like VBA supports variable and function names containing
+    # non-ASCII characters. Parsing these with pyparsing would be difficult
+    # (or impossible), so convert the non-ASCII names to ASCII.
+    vba_code = fix_non_ascii_names(vba_code)
     
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)

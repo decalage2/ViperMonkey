@@ -805,7 +805,8 @@ func_call_array_access_limited = Forward()
 function_call = Forward()
 
 member_object_limited = (
-    (Suppress(Optional("[")) + unrestricted_name + Suppress(Optional("]")))
+    ((Suppress("[") + unrestricted_name + Suppress("]")) |
+     unrestricted_name)
     + NotAny("(")
     + NotAny("#")
     + NotAny("$")
@@ -1212,7 +1213,8 @@ function_call <<= (
             + Optional('%')
             + Optional('@')
         )
-        + Suppress('(') + Optional(expr_list('params')) + Suppress(')')
+        + ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
+           (Suppress('[') + Optional(expr_list('params')) + Suppress(']')))
     )
     | (
         Suppress('[')
@@ -1226,8 +1228,8 @@ function_call.setParseAction(Function_Call)
 function_call_limited <<= (
     CaselessKeyword("nothing")
     | (
-        NotAny(reserved_keywords)
-        + lex_identifier('name')
+        #NotAny(reserved_keywords)
+        lex_identifier('name')
         + Suppress(Optional('$'))
         + Suppress(Optional('#'))
         + Suppress(Optional('!'))
@@ -1235,6 +1237,7 @@ function_call_limited <<= (
         + Suppress(Optional('@'))
         + (
             (Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
+            | (Suppress('[') + Optional(expr_list('params')) + Suppress(']'))
             # TODO: The NotAny(".") is a temporary fix to get "foo.bar" to not be
             # parsed as function_call_limited "foo .bar". The real way this should be
             # parsed is to require at least 1 space between the function name and the

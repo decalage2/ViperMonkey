@@ -81,6 +81,24 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class URLDownloadToFile(VbaLibraryFunc):
+    """
+    URLDownloadToFile() external function
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 3)):
+            return
+        context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        return 1
+    
+class URLDownloadToFileA(URLDownloadToFile):
+    pass
+
+class URLDownloadToFileW(URLDownloadToFile):
+    pass
+        
 class WeekDay(VbaLibraryFunc):
     """
     VBA WeekDay function
@@ -3114,7 +3132,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
-               IsObject, NumPut, GetLocale):
+               IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA, URLDownloadToFileW):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
