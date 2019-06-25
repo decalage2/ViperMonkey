@@ -65,7 +65,7 @@ general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '
 # MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
 # MS-GRAMMAR: Korean-identifier / simplified-Chinese-identifier / traditional-Chinese-identifier
 # TODO: add other identifier types
-lex_identifier = general_identifier | Regex(r"%\w+%")
+lex_identifier = general_identifier | Regex(r"%\w+%") | "..."
 
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # IDENTIFIER = <any lex-identifier that is not a reserved-identifier>
