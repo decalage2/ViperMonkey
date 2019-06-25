@@ -1204,7 +1204,7 @@ expr_list = (
 function_call <<= (
     CaselessKeyword("nothing")
     | (
-        #NotAny(reserved_keywords) +
+        ~(reserved_keywords + Literal("(")) + 
         (member_access_expression('name') ^ lex_identifier('name'))
         + Suppress(
             Optional('$')
@@ -1228,8 +1228,8 @@ function_call.setParseAction(Function_Call)
 function_call_limited <<= (
     CaselessKeyword("nothing")
     | (
-        #NotAny(reserved_keywords)
-        lex_identifier('name')
+        ~(reserved_keywords + Literal("("))
+        + lex_identifier('name')
         + Suppress(Optional('$'))
         + Suppress(Optional('#'))
         + Suppress(Optional('!'))
