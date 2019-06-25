@@ -2127,6 +2127,27 @@ class CallByName(VbaLibraryFunc):
             except KeyError:
                 pass
 
+        # Opening a file?
+        if (cmd.lower() == "createtextfile"):
+
+            # Open the file.
+            opener = CreateTextFile()
+            opener.eval(context, [args])
+
+        # Writing to a file?
+        if (cmd.lower() == "writeline"):
+
+            # Write to the file.
+            writer = WriteLine()
+            writer.eval(context, [args])
+
+        # Closing a file?
+        if (cmd.lower() == "close"):
+
+            # Close the file.
+            closer = Close()
+            closer.eval(context, [args])
+            
         # Do nothing.
         return None
 

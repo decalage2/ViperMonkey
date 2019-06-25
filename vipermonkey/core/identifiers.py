@@ -125,6 +125,9 @@ unrestricted_name = entity_name | reserved_identifier
 reserved_keywords = Regex(re.compile(
     'Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function', re.IGNORECASE))
 
+strict_reserved_keywords = reserved_keywords | \
+                           Regex(re.compile('Open', re.IGNORECASE))
+
 TODO_identifier_or_object_attrib = Combine(
     NotAny(reserved_keywords)
     + Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))

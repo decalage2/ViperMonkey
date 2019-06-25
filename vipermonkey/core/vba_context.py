@@ -3108,11 +3108,14 @@ class Context(object):
         fname - The name of the file.
         """
         # Save that the file is opened.
+        fname = fname.replace(".\\", "").replace("\\", "/")
         self.open_files[fname] = b''
         log.info("Opened file " + fname)
 
     def write_file(self, fname, data):
+
         # Make sure the "file" exists.
+        fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot write new data.'.format(fname))
             return False
@@ -3152,6 +3155,7 @@ class Context(object):
         global file_count
         
         # Make sure the "file" exists.
+        fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot close.'.format(fname))
             return
@@ -3545,8 +3549,6 @@ class Context(object):
 
                 # Something set to type "bin.hex"?
                 val = str(self.get(node_type)).strip()
-                print "HERE"
-                print val
                 if (val.lower() == "bin.hex"):
 
                     # Try converting from hex.
