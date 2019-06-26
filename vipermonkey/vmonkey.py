@@ -266,7 +266,8 @@ def _read_doc_text(fname, data=None):
 
     # LibreOffice might not be installed or this is not a Word doc. Punt and
     # just pull strings from the file.
-    return _read_doc_text_strings(data)
+    r = _read_doc_text_strings(data)
+    return r
 
 def _get_shapes_text_values_xml(fname):
     """
