@@ -115,6 +115,9 @@ class Module(VBA_Object):
                     if isinstance(curr_statement, Function):
                         log.debug("saving func decl: %r" % curr_statement.name)
                         self.functions[curr_statement.name] = curr_statement
+                    if isinstance(curr_statement, External_Function):
+                        log.debug("saving external func decl: %r" % curr_statement.name)
+                        self.external_functions[curr_statement.name] = curr_statement
                     
         self.name = self.attributes.get('VB_Name', None)
 

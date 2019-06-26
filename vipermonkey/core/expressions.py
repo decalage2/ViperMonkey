@@ -626,7 +626,6 @@ class MemberAccessExpression(VBA_Object):
         if (tmp == "path"):
 
             # Fake a path.
-            print "GOT"
             return "C:\\Users\\admin\\"
     
     def eval(self, context, params=None):

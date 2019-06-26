@@ -144,6 +144,7 @@ class ViperMonkey(object):
         self.modules = []
         self.modules_code = []
         self.globals = {}
+        self.externals = {}
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
@@ -211,6 +212,7 @@ class ViperMonkey(object):
         for name, _function in m.external_functions.items():
             log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
+            self.externals[name.lower()] = _function
         for name, _var in m.global_vars.items():
             log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
@@ -311,6 +313,7 @@ class ViperMonkey(object):
         for name, _function in m.external_functions.items():
             log.debug('(2) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
+            self.externals[name.lower()] = _function
         for name, _var in m.global_vars.items():
                 log.debug('(2) storing global var "%s" in globals (2)' % name)
             
@@ -400,6 +403,11 @@ class ViperMonkey(object):
                           loaded_excel=self.loaded_excel,
                           filename=self.filename)
 
+        # Save the true names of imported external functions.
+        for func_name in self.externals.keys():
+            func = self.externals[func_name]
+            context.dll_func_true_names[func.name] = func.alias_name
+        
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
