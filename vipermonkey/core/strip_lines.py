@@ -707,10 +707,11 @@ def strip_useless_code(vba_code, local_funcs):
         # At least 1 maldoc builder is not putting a newline before the
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
-        if ((line.endswith("End Function")) and
+        if ((line.lower().endswith("end function")) and
             (not line.strip().startswith("'")) and
             (len(line) > len("End Function"))):
-            r += line.replace("End Function", "") + "\n"
+            tmp_line = line[:-len("End Function")]
+            r += tmp_line + "\n"
             r += "End Function\n"
             continue
 

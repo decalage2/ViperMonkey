@@ -350,11 +350,6 @@ class MemberAccessExpression(VBA_Object):
             return None
         read_file = str(eval_arg(read_call.params[0], context))
 
-        # NOTE: Disabled this because it creates inconsistencies in results.
-        # # Fix the file name for emulation if needed.
-        # if (read_file.startswith("C:\\")):
-        #     read_file = read_file.replace("C:\\", "./")
-
         # TODO: Should we be actually reading files from the system?
         # Read the file contents.
         try:
@@ -363,8 +358,20 @@ class MemberAccessExpression(VBA_Object):
             f.close()
             return r
         except Exception as e:
-            log.error("ReadAll('" + read_file + "') failed. " + str(e))
-            return None
+
+            # Fix the file name for emulation if needed.
+            if (read_file.startswith("C:\\")):
+                read_file = read_file.replace("C:\\", "./")
+
+            try:
+                f = open(read_file, 'r')
+                r = f.read()
+                f.close()
+                return r
+            except Exception as e:
+                
+                log.error("ReadAll('" + read_file + "') failed. " + str(e))
+                return None
 
     def _handle_docvar_value(self, lhs, rhs):
         """
