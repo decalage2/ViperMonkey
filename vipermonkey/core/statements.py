@@ -2524,7 +2524,7 @@ class Call_Statement(VBA_Object):
         dll_func_name = context.get_true_name(self.name)
         if (dll_func_name is not None):
             self.name = dll_func_name
-            context.report_action('External Call', str(this), str(dll_func_name))
+            #context.report_action('External Call', str(self), str(dll_func_name))
 
         # Are we calling a member access expression?
         if isinstance(self.name, MemberAccessExpression):
