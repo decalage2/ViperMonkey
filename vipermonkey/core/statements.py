@@ -2522,9 +2522,10 @@ class Call_Statement(VBA_Object):
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
         dll_func_name = context.get_true_name(self.name)
+        is_external = False
         if (dll_func_name is not None):
+            is_external = True
             self.name = dll_func_name
-            #context.report_action('External Call', str(self), str(dll_func_name))
 
         # Are we calling a member access expression?
         if isinstance(self.name, MemberAccessExpression):
@@ -2552,6 +2553,8 @@ class Call_Statement(VBA_Object):
 
         # Log functions of interest.
         log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+        if (is_external):
+            context.report_action("External Call", self.name + "(" + str(call_params) + ")", self.name, strip_null_bytes=True)
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
