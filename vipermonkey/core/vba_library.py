@@ -135,7 +135,16 @@ class Format(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+
+        # Fake up a date if needed.
+        # TODO: Currently this fake date is specific to a campaign targeting Italy.
         r = params[0]
+        if (len(params) > 1):
+            typ = str(params[1])
+            if (typ.lower() == "long date"):
+                r = "giovedì 27 giugno 2019"
+
+        # Done.
         log.debug("Format(%r): return %r" % (self, r))
         return r
 

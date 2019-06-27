@@ -1313,7 +1313,8 @@ def load_excel_libreoffice(data):
 def load_excel_xlrd(data):
     try:
         log.debug("Trying to load with xlrd...")
-        return xlrd.open_workbook(file_contents=data)
+        r = xlrd.open_workbook(file_contents=data)
+        return r
     except Exception as e:
         log.error("Reading in file as Excel with xlrd failed. " + str(e))
         return None

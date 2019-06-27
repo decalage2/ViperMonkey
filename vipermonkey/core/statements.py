@@ -1367,8 +1367,16 @@ class For_Statement(VBA_Object):
 
         # Set end to valid values.
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
-            end = VBA_Object.loop_upper_bound
-            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+
+            # Fix the loop upper bound if it is ridiculously huge. We are assuming that a
+            # really huge loop is just there to foil emulation.
+            if (end > 100000000):
+                end = 10
+            else:
+
+                # Might be legitimate. Set to a smaller but still large value.
+                end = VBA_Object.loop_upper_bound
+            log.warn("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -3104,10 +3112,32 @@ simple_statement = (
         | resume_statement
     )
 )
+simple_statement_restricted = (
+    NotAny(Regex(r"End\s+Sub"))
+    + (
+        print_statement
+        | dim_statement
+        | option_statement
+        | (
+            prop_assign_statement
+            ^ (let_statement | call_statement)
+            ^ expression
+        )
+        | exit_loop_statement
+        | exit_func_statement
+        | redim_statement
+        | goto_statement
+        | on_error_statement
+        | file_open_statement
+        | doevents_statement
+        | rem_statement
+        | resume_statement
+    )
+)
 
 simple_statements_line <<= (
-   (simple_statement + OneOrMore(Suppress(':') + simple_statement))
-   ^ simple_statement
+   (simple_statement_restricted + OneOrMore(Suppress(':') + simple_statement_restricted))
+   ^ simple_statement_restricted
 )
 
 statements_line = (

@@ -524,6 +524,11 @@ def strip_useless_code(vba_code, local_funcs):
                 log.debug("SKIP: Continuation line. Keep it.")
                 continue
 
+            # Skip lines that are a macro line.
+            if (line.strip().startswith("#")):
+                log.debug("SKIP: macro line. Keep it.")
+                continue
+
             # Skip function definitions.
             if (("sub " in line.lower()) or ("function " in line.lower())):
                 log.debug("SKIP: Function definition. Keep it.")
