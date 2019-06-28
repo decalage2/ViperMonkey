@@ -194,7 +194,6 @@ def _read_doc_text_libreoffice(data):
             f = open(filename + ".txt", 'rb')
         except IOError as e:
             log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
-            sys.exit(0)
             return None
         for line in f:
             if (line.endswith("\n")):
@@ -1753,7 +1752,7 @@ def main():
     if len(args) == 0:
         print(__doc__)
         parser.print_help()
-        sys.exit()
+        sys.exit(0)
         
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
