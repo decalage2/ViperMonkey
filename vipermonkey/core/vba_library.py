@@ -2537,7 +2537,10 @@ class Exec(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return 1
 
         # Get the command to run.
         cmd = str(params[0])
