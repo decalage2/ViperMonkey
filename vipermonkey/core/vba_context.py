@@ -2958,6 +2958,36 @@ class Context(object):
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
 
+        # WdSaveFormat enumeration (Word)
+        self.globals["wdFormatDocument".lower()] = 0
+        self.globals["wdFormatDOSText".lower()] = 4
+        self.globals["wdFormatDOSTextLineBreaks".lower()] = 5
+        self.globals["wdFormatEncodedText".lower()] = 7
+        self.globals["wdFormatFilteredHTML".lower()] = 10
+        self.globals["wdFormatFlatXML".lower()] = 19
+        self.globals["wdFormatFlatXMLMacroEnabled".lower()] = 20
+        self.globals["wdFormatFlatXMLTemplate".lower()] = 21
+        self.globals["wdFormatFlatXMLTemplateMacroEnabled".lower()] = 22
+        self.globals["wdFormatOpenDocumentText".lower()] = 23
+        self.globals["wdFormatHTML".lower()] = 8
+        self.globals["wdFormatRTF".lower()] = 6
+        self.globals["wdFormatStrictOpenXMLDocument".lower()] = 24
+        self.globals["wdFormatTemplate".lower()] = 1
+        self.globals["wdFormatText".lower()] = 2
+        self.globals["wdFormatTextLineBreaks".lower()] = 3
+        self.globals["wdFormatUnicodeText".lower()] = 7
+        self.globals["wdFormatWebArchive".lower()] = 9
+        self.globals["wdFormatXML".lower()] = 11
+        self.globals["wdFormatDocument97".lower()] = 0
+        self.globals["wdFormatDocumentDefault".lower()] = 16
+        self.globals["wdFormatPDF".lower()] = 17
+        self.globals["wdFormatTemplate97".lower()] = 1
+        self.globals["wdFormatXMLDocument".lower()] = 12
+        self.globals["wdFormatXMLDocumentMacroEnabled".lower()] = 13
+        self.globals["wdFormatXMLTemplate".lower()] = 14
+        self.globals["wdFormatXMLTemplateMacroEnabled".lower()] = 15
+        self.globals["wdFormatXPS".lower()] = 18
+        
         # endregion
         
     def __eq__(self, other):

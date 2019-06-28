@@ -1136,7 +1136,58 @@ class SaveToFile(VbaLibraryFunc):
         # Just return the file name. This is used in
         # expressions.MemberAccessExpression._handle_savetofile().
         return str(params[0])
-    
+
+class SaveAs(VbaLibraryFunc):
+    """
+    ActiveDocument.SaveAs() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) < 4):
+            return 0
+
+        # Pull out the name of the file to save to and the format
+        # for saving.
+        print params
+        new_fname = str(params[1])
+        fmt = params[3]
+        try:
+            fmt = int(fmt)
+        except:
+            return 0
+
+        # Handle saving as text.
+        # wdFormatText = 2
+        if (fmt != 2):
+            return 0
+
+        # Get the doc text.
+        doc_text = None
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+            doc_text = ""
+            for p in paragraphs:
+                doc_text += p + "\n"
+        except KeyError:
+            return 0
+
+        # Open the saveas file.
+        opener = CreateTextFile()
+        opener.eval(context, [new_fname])
+
+        # Write the data.
+        writer = WriteLine()
+        writer.eval(context, [doc_text])
+
+        # Close the file.
+        closer = Close()
+        closer.eval(context, [])
+
+        # Done.
+        return 1
+            
 class LoadXML(VbaLibraryFunc):
     """
     LoadXML() MSXML2.DOMDocument.3.0 method.
@@ -3162,7 +3213,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
-               IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA, URLDownloadToFileW):
+               IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
+               URLDownloadToFileW, SaveAs):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

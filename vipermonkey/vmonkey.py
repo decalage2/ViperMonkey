@@ -159,7 +159,7 @@ def _read_doc_text_libreoffice(data):
     try:
         
         # Save the possible Word document to a temporary file.
-        tfile = os.fdopen(fd, "wb")
+        tfile = open(filename, "wb")
         tfile.write(data)
         tfile.close()
 
@@ -194,17 +194,13 @@ def _read_doc_text_libreoffice(data):
             f = open(filename + ".txt", 'rb')
         except IOError as e:
             log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
+            sys.exit(0)
             return None
         for line in f:
             if (line.endswith("\n")):
                 line = line[:-1]
             r.append(line)
 
-        # Delete the temporary files.
-        try:
-            os.remove(filename + ".txt")
-        except:
-            pass
         # Cleanup.
         out.close()
 
