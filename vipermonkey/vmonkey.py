@@ -112,6 +112,8 @@ from oletools.olevba import VBA_Parser, filter_vba
 import olefile
 import xlrd
 
+import core.meta
+
 # add the vipermonkey folder to sys.path (absolute+normalized path):
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 if not _thismodule_dir in sys.path:
