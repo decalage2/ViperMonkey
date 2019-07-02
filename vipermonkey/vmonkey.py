@@ -122,6 +122,7 @@ if not _thismodule_dir in sys.path:
 # relative import of core ViperMonkey modules:
 from core import *
 import core.excel as excel
+import core.read_ole_fields as read_ole_fields
 
 # for logging
 from core.logger import log
@@ -266,102 +267,6 @@ def _read_doc_text(fname, data=None):
     r = _read_doc_text_strings(data)
     return r
 
-def _get_shapes_text_values_xml(fname):
-    """
-    Read in the text associated with Shape objects in a document saved
-    as Flat OPC XML files.
-
-    NOTE: This currently is a hack.
-    """
-
-    contents = None
-    if fname.startswith("<?xml"):
-        contents=fname
-    else:
-
-        # it's probably a filename, not a blob of data..
-        # Read in the file contents.
-        try:
-            f = open(fname, "r")
-            contents = f.read().strip()
-            f.close()
-        except:
-            contents = fname
-
-    # Is this an XML file?
-    if ((not contents.startswith("<?xml")) or
-        ("<w:txbxContent>" not in contents)):
-        return []
-
-    # It is an XML file.
-    log.warning("Looking for Shapes() strings in Flat OPC XML file...")
-
-    # Pull out the text surrounded by <w:txbxContent> ... </w:txbxContent>.
-    # These big blocks hold the XML for each piece of Shapes() text.
-    blocks = []
-    start = contents.index("<w:txbxContent>") + len("<w:txbxContent>")
-    end = contents.index("</w:txbxContent>")
-    while (start is not None):
-        blocks.append(contents[start:end])
-        if ("<w:txbxContent>" in contents[end:]):
-            start = end + contents[end:].index("<w:txbxContent>") + len("<w:txbxContent>")
-            end = end + len("</w:txbxContent>") + contents[end + len("</w:txbxContent>"):].index("</w:txbxContent>")
-        else:
-            start = None
-            end = None
-            break
-    cmd_strs = []
-    for block in blocks:
-
-        # Get all strings surrounded by <w:t> ... </w:t> tags in the block.
-        pat = r"\<w\:t[^\>]*\>([^\<]+)\</w\:t\>"
-        strs = re.findall(pat, block)
-
-        # These could be broken up with many <w:t> ... </w:t> tags. See if we need to
-        # reassemble strings.
-        if (len(strs) > 1):
-
-            # Reassemble command string.
-            curr_str = ""
-            for s in strs:
-
-                # Save current part of command string.
-                curr_str += s
-
-            # Use this as the Shape() strings.
-            strs = [curr_str]
-
-        # Save the string from this block.
-        cmd_strs.append(strs[0])
-            
-    # Hope that the Shape() object indexing follows the same order as the strings
-    # we found.
-    r = []
-    pos = 1
-    for shape_text in cmd_strs:
-
-        # Skip strings that are too short.
-        if (len(shape_text) < 100):
-            continue
-        
-        # Access value with .TextFrame.TextRange.Text accessor.
-        shape_text = shape_text.replace("&amp;", "&")
-        var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
-        r.append((var, shape_text))
-        
-        # Access value with .TextFrame.ContainingRange accessor.
-        var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
-        r.append((var, shape_text))
-
-        # Access value with .AlternativeText accessor.
-        var = "Shapes('" + str(pos) + "').AlternativeText"
-        r.append((var, shape_text))
-        
-        # Move to next shape.
-        pos += 1
-
-    return r
-
 def _get_ole_textbox_values(obj, stream):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -383,6 +288,7 @@ def _get_ole_textbox_values(obj, stream):
     # Figure out which type of embedded object we have. This hopes and
     # assumes that only 1 embedded object type is used.
     if (data is None):
+        #print("NO DATA")
         return []
     form_str = None
     field_marker = None
@@ -396,6 +302,7 @@ def _get_ole_textbox_values(obj, stream):
             break
         pos += 1
     if (form_str is None):
+        #print("NO FORMS")
         return []
 
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
@@ -424,9 +331,9 @@ def _get_ole_textbox_values(obj, stream):
         # Pull out the current form data chunk.
         chunk = data[index : end]
         strs = re.findall(pat, chunk)
-        #print "\n\n-----------------------------"
-        #print chunk
-        #print str(strs).replace("\\x00", "")
+        #print("\n\n-----------------------------")
+        #print(chunk)
+        #print(str(strs).replace("\\x00", ""))
 
         # Pull out the variable name (and maybe part of the text).
         curr_pos = 0
@@ -511,7 +418,7 @@ def _get_ole_textbox_values(obj, stream):
         text = ""
         if (("Calibri" not in strs[name_pos + 1]) and
             ("OCXNAME" not in strs[name_pos + 1].replace("\x00", ""))):
-            #print "Value: 1"
+            #print("Value: 1")
             text = strs[name_pos + 1]
 
         # Break out the (possible additional) value.
@@ -531,8 +438,8 @@ def _get_ole_textbox_values(obj, stream):
             if (len(tmp_text) > 0):
                 poss_val = tmp_text[0]
                 if (poss_val != text):
-                    #print "Value: 3"
-                    #print poss_val
+                    #print("Value: 3")
+                    #print(poss_val)
                     text += poss_val
 
         # Pull out the size of the text.
@@ -546,11 +453,11 @@ def _get_ole_textbox_values(obj, stream):
         if (len(tmp) > 0):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
-            #print "ORIG:"
-            #print name
-            #print text
-            #print len(text)
-            #print size
+            #print("ORIG:")
+            #print(name)
+            #print(text)
+            #print(len(text))
+            #print(size)
             if (len(text) > size):
                 text = text[:size]
 
@@ -600,89 +507,9 @@ def _get_ole_textbox_values(obj, stream):
     r = tmp
 
     # Return the OLE form textbox information.
-    #print ""
-    #print r
+    #print("")
+    #print(r)
     #sys.exit(0)
-    return r
-        
-def _get_shapes_text_values(fname, stream):
-    """
-    Read in the text associated with Shape objects in the document.
-    NOTE: This currently is a hack.
-    """
-
-    r = []
-    try:
-        # Read the WordDocument stream.
-        ole = olefile.OleFileIO(fname, write_mode=False)
-        if (not ole.exists(stream)):
-            return []
-        data = ole.openstream(stream).read()
-        
-        # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
-        # 0x0D bytes. We will look for that.
-        pat = r"\x0d[\x20-\x7e]{100,}\x0d"
-        strs = re.findall(pat, data)
-        #print "STREAM: " + str(stream)
-        #print data
-        
-        # Hope that the Shape() object indexing follows the same order as the strings
-        # we found.
-        pos = 1
-        for shape_text in strs:
-
-            # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text[1:-1]
-            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
-            r.append((var, shape_text))
-            
-            # Access value with .TextFrame.ContainingRange accessor.
-            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
-            r.append((var, shape_text))
-
-            # Access value with .AlternativeText accessor.
-            var = "Shapes('" + str(pos) + "').AlternativeText"
-            r.append((var, shape_text))
-            
-            # Move to next shape.
-            pos += 1
-
-        # It looks like maybe(?) the shapes text appears as wide char blocks bounded by
-        # 0x0D bytes. We will look for that.
-        #pat = r"\x0d(?:\x00[\x20-\x7e]){10,}\x00?\x0d"
-        pat = r"(?:\x00[\x20-\x7e]){100,}"
-        strs = re.findall(pat, data)
-        
-        # Hope that the Shape() object indexing follows the same order as the strings
-        # we found.
-        pos = 1
-        for shape_text in strs:
-
-            # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text[1:-1].replace("\x00", "")
-            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
-            r.append((var, shape_text))
-            
-            # Access value with .TextFrame.ContainingRange accessor.
-            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
-            r.append((var, shape_text))
-
-            # Access value with .AlternativeText accessor.
-            var = "Shapes('" + str(pos) + "').AlternativeText"
-            r.append((var, shape_text))
-            
-            # Move to next shape.
-            pos += 1
-            
-    except Exception as e:
-
-        # Report the error.
-        log.error("Cannot read associated Shapes text. " + str(e))
-
-        # See if we can read Shapes() info from an XML file.
-        if ("not an OLE2 structured storage file" in str(e)):
-            r = _get_shapes_text_values_xml(fname)
-
     return r
 
 def _get_inlineshapes_text_values(data):
@@ -1432,12 +1259,19 @@ def _process_file (filename, data,
                 
             # Pull text associated with Shapes() objects.
             got_it = False
-            for (var_name, var_val) in _get_shapes_text_values(data, 'worddocument'):
+            shape_text = read_ole_fields._get_shapes_text_values(data, 'worddocument')
+            for (var_name, var_val) in shape_text:
                 got_it = True
-                vm.doc_vars[var_name.lower()] = var_val
+                var_name = var_name.lower()
+                vm.doc_vars[var_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+                vm.doc_vars["thisdocument."+var_name] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name, var_val))
+                vm.doc_vars["activedocument."+var_name] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name, var_val))
             if (not got_it):
-                for (var_name, var_val) in _get_shapes_text_values(data, '1table'):
+                shape_text = read_ole_fields._get_shapes_text_values(data, '1table')
+                for (var_name, var_val) in shape_text:
                     vm.doc_vars[var_name.lower()] = var_val
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
 
@@ -1570,6 +1404,7 @@ def _process_file (filename, data,
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
                 
+            print("")
             print('-'*79)
             print('TRACING VBA CODE (entrypoint = Auto*):')
             if (entry_points is not None):

@@ -173,6 +173,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.doc_vars = context.doc_vars
             self.open_files = context.open_files
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
@@ -3312,6 +3313,7 @@ class Context(object):
             return VBA_LIBRARY[name]
         # Is it a doc var?
         elif name in self.doc_vars:
+            log.debug('Found %r in VBA document variables' % name)
             return self.doc_vars[name]
         # Unknown symbol.
         else:
