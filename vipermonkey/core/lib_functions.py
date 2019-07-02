@@ -103,10 +103,10 @@ class Chr(VBA_Object):
             
         # Figure out whether to create a unicode or ascii character.
         converter = chr
-        if (param > 255):
-            converter = unichr
         if (param < 0):
             param = param * -1
+        if (param > 255):
+            converter = unichr
             
         # Do the conversion.
         try:

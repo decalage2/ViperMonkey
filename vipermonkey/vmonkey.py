@@ -1398,11 +1398,10 @@ def _process_file (filename, data,
             # Read in document metadata.
             try:
                 ole = olefile.OleFileIO(data)
-                meta.metadata = ole.get_metadata()
-                vba_object.meta = meta.metadata
+                vm.set_metadata(ole.get_metadata())
             except Exception as e:
                 log.warning("Reading in metadata failed. Trying fallback. " + str(e))
-                meta.metadata = meta.get_metadata_exif(orig_filename)
+                vm.set_metadata(meta.get_metadata_exif(orig_filename))
 
             # If this is an Excel spreadsheet, read it in.
             vm.loaded_excel = load_excel(data)
@@ -1632,7 +1631,11 @@ def process_file_scanexpr (container, filename, data):
 
             # Read in document metadata.
             ole = olefile.OleFileIO(filename)
-            meta.metadata = ole.get_metadata()
+            try:
+                vm.set_metadata(ole.get_metadata())
+            except Exception as e:
+                log.warning("Reading in metadata failed. Trying fallback. " + str(e))
+                vm.set_metadata(meta.get_metadata_exif(orig_filename))
             
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():

@@ -66,7 +66,6 @@ from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 from vba_object import strip_nonvb_chars
 import expressions
-import meta
 import modules
 import strip_lines
 
@@ -424,7 +423,7 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
         # Get the property we are looking for.
         prop = params[0]
-        return meta.read_metadata_item(prop)
+        return context.read_metadata_item(prop)
 
 class Item(BuiltInDocumentProperties):
     """

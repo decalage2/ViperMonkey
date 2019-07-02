@@ -102,7 +102,8 @@ class Context(object):
                  filename=None,
                  copy_globals=False,
                  log_funcs=None,
-                 expand_env_vars=True):
+                 expand_env_vars=True,
+                 metadata=None):
 
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
@@ -154,6 +155,9 @@ class Context(object):
         # Track the final contents of written files.
         self.closed_files = {}
 
+        # Track document metadata.
+        self.metadata = metadata
+        
         # Track whether variables by default should go in the global scope.
         self.global_scope = False
 
@@ -177,6 +181,7 @@ class Context(object):
             self.skip_handlers = context.skip_handlers
             self.call_stack = context.call_stack
             self.expand_env_vars = context.expand_env_vars
+            self.metadata = context.metadata
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -3020,6 +3025,28 @@ class Context(object):
             glbl = (namespace+key).lower()
             self.globals[ glbl ] = value
 
+    def read_metadata_item(self, var):
+
+        # Make sure we read in the metadata.
+        if (self.metadata is None):
+            log.error("BuiltInDocumentProperties: Metadata not read.")
+            return ""
+    
+        # Normalize the variable name.
+        var = var.lower().replace(" ", "_")
+        if ("." in var):
+            var = var[:var.index(".")]
+    
+        # See if we can find the metadata attribute.
+        if (not hasattr(self.metadata, var)):
+            log.error("BuiltInDocumentProperties: Metadata field '" + var + "' not found.")
+            return ""
+
+        # We have the attribute. Return it.
+        r = getattr(self.metadata, var)
+        log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
+        return r
+            
     def get_error_handler(self):
         """
         Get the onerror goto error handler.

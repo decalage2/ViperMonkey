@@ -140,6 +140,7 @@ class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
     def __init__(self, filename):
+        self.metadata = None
         self.filename = filename
         self.modules = []
         self.modules_code = []
@@ -196,6 +197,9 @@ class ViperMonkey(object):
                                   '_Click',
                                   '_BeforeClose']
                                   
+    def set_metadata(self, dat):
+        self.metadata = dat
+        
     def add_compiled_module(self, m):
         """
         Add an already parsed and processed module.
@@ -401,7 +405,8 @@ class ViperMonkey(object):
                           engine=self,
                           doc_vars=self.doc_vars,
                           loaded_excel=self.loaded_excel,
-                          filename=self.filename)
+                          filename=self.filename,
+                          metadata=self.metadata)
 
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():

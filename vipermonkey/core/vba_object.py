@@ -61,7 +61,6 @@ import sys
 from datetime import datetime
 import pyparsing
 
-from meta import read_metadata_item
 import expressions
 
 max_emulation_time = None
@@ -509,7 +508,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         return val
 
                     # Try getting from meta data.
-                    val = read_metadata_item(var)
+                    val = context.read_metadata_item(var)
                     if (val is not None):
                         return val
                     

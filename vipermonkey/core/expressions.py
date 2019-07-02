@@ -306,17 +306,24 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
+        # ThisDocument.BuiltInDocumentProperties('Manager').Value
         # Is this an ActiveDocument.BuiltInDocumentProperties() instance?
-        if (not str(self).startswith("ActiveDocument.BuiltInDocumentProperties(")):
+        if ((not str(self).startswith("ActiveDocument.BuiltInDocumentProperties(")) and
+            (not str(self).startswith("ThisDocument.BuiltInDocumentProperties("))):
             return None
 
         # Pull out the name of the property to read.
         if (len(self.rhs[0].params) == 0):
             return None
         field_name = eval_arg(self.rhs[0].params[0], context)
-        
+
         # Try to pull the result from the document data.
-        return context.get_doc_var(field_name)
+        r = context.get_doc_var(field_name)
+        if (r is not None):
+            return r
+
+        # Maybe this is metadata?
+        return context.read_metadata_item(field_name)
 
     def _handle_docvars_read(self, context):
         """
