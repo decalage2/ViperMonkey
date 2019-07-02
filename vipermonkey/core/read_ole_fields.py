@@ -161,11 +161,16 @@ def _get_shapes_text_values_2007(fname):
         delete_file = True
 
     # Is this a ZIP file?
-    if (not zipfile.is_zipfile(fname)):
+    try:
+        if (not zipfile.is_zipfile(fname)):
+            if (delete_file):
+                os.remove(fname)
+            return []
+    except:
         if (delete_file):
             os.remove(fname)
         return []
-
+        
     # This is a 2007+ Office file. Unzip it.
     unzipped_data = zipfile.ZipFile(fname, 'r')
 
