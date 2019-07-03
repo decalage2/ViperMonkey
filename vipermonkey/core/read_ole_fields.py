@@ -40,6 +40,7 @@ import zipfile
 import re
 import random
 import os
+import sys
 
 from core.logger import log
 
@@ -234,12 +235,34 @@ def _get_shapes_text_values_2007(fname):
         # Pull out the text associated with the object.
         if ("#" not in data):
             continue
-        start = data.rindex("#") + 4
+        start = data.rindex("   #") + len("   #") + 3
         pat = r"([\x20-\x7e]+)"
         text = re.findall(pat, data[start:])
         if (len(text) == 0):
             continue
         text = text[0]
+
+        # Pull out the size of the text.
+        # Try version 1.
+        size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+        tmp = re.findall(size_pat, data)
+        if (len(tmp) == 0):
+            # Try version 2.
+            size_pat = r"\x48\x80\x2c(.{2})"
+            tmp = re.findall(size_pat, data)
+        if (len(tmp) > 0):
+            size_bytes = tmp[0]
+            size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+            if (len(text) > size):
+                text = text[:size]
+        
+        # Debug.
+        #print "---------"
+        #print shape
+        #print "^^^^^^^"
+        #print data
+        #print "^^^^^^^"
+        #print text
 
         # Save the text associated with the variable name.
         r.append((id_name_map[shape], text))
@@ -335,5 +358,8 @@ def _get_shapes_text_values(fname, stream):
 
     return r
 
-
-#print _get_shapes_text_values("06381402a47893e3c9eb5f3ba80f52d6d81ec639deed8b1f47b53a509c88b9ef", "worddocument")
+###########################################################################
+## Main Program
+###########################################################################
+if __name__ == '__main__':
+    print _get_shapes_text_values(sys.argv[1], "worddocument")
