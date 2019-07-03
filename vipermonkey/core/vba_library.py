@@ -619,7 +619,7 @@ class Add(VbaLibraryFunc):
         """
 
         # Sanity check.
-        if (len(params) != 3):
+        if ((params is None) or (len(params) < 3)):
             return
 
         # Get the object (dict), key, and value.
