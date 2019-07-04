@@ -176,14 +176,17 @@ def _get_shapes_text_values_2007(fname):
     unzipped_data = zipfile.ZipFile(fname, 'r')
 
     # Shapes with internal IDs are in word/document.xml. Does that file exist?
-    if ('word/document.xml' not in unzipped_data.namelist()):
-        if (delete_file):
-            os.remove(fname)
-        return []
+    zip_subfile = 'word/document.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        zip_subfile = 'word\\document.xml'
+        if (zip_subfile not in unzipped_data.namelist()):
+            if (delete_file):
+                os.remove(fname)
+            return []
 
     # Read the contents of document.xml.
     r = []
-    f1 = unzipped_data.open('word/document.xml')
+    f1 = unzipped_data.open(zip_subfile)
     data = f1.read()
     f1.close()
 
@@ -197,14 +200,17 @@ def _get_shapes_text_values_2007(fname):
     #print id_name_map
 
     # Get the ID to active X object mapping. This is in word/_rels/document.xml.rels.
-    if ('word/_rels/document.xml.rels' not in unzipped_data.namelist()):
-        if (delete_file):
-            os.remove(fname)
-        return []
+    zip_subfile = 'word/_rels/document.xml.rels'
+    if (zip_subfile not in unzipped_data.namelist()):
+        zip_subfile = 'word\\_rels\\document.xml.rels'
+        if (zip_subfile not in unzipped_data.namelist()):
+            if (delete_file):
+                os.remove(fname)
+            return []
 
     # Read the contents of document.xml.rels.
     r = []
-    f1 = unzipped_data.open('word/_rels/document.xml.rels')
+    f1 = unzipped_data.open(zip_subfile)
     data = f1.read()
     f1.close()
 
@@ -225,7 +231,9 @@ def _get_shapes_text_values_2007(fname):
         # Do we have this object file?
         path = "word/" + id_activex_map[shape]
         if (path not in unzipped_data.namelist()):
-            continue
+            path = "word\\" + id_activex_map[shape].replace("/", "\\")
+            if (path not in unzipped_data.namelist()):
+                continue
 
         # Read in the activeX data.
         f1 = unzipped_data.open(path)
