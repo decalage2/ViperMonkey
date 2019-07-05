@@ -550,12 +550,12 @@ def _get_inlineshapes_text_values(data):
     except Exception as e:
 
         # Report the error.
-        log.error("Cannot read associated Shapes text. " + str(e))
+        log.error("Cannot read associated InlineShapes text. " + str(e))
 
         # See if we can read Shapes() info from an XML file.
         if ("not an OLE2 structured storage file" in str(e)):
             # FIXME: here fname is undefined
-            r = _get_shapes_text_values_xml(fname)
+            r = read_ole_fields._get_shapes_text_values_xml(fname)
 
     return r
 
@@ -573,7 +573,7 @@ def _get_embedded_object_values(fname):
 
         # Open the OLE file.
         ole = olefile.OleFileIO(fname, write_mode=False)
-
+        
         # Scan every stream.
         ole_dirs = ole.listdir()
         for dir_info in ole_dirs:

@@ -42,6 +42,8 @@ import random
 import os
 import sys
 
+import olefile
+
 from core.logger import log
 
 def _get_shapes_text_values_xml(fname):
@@ -306,6 +308,8 @@ def _get_shapes_text_values(fname, stream):
         strs = re.findall(pat, data)
         #print "STREAM: " + str(stream)
         #print data
+        #print "^^^^^^^^^^^"
+        #print strs
         
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
@@ -371,3 +375,4 @@ def _get_shapes_text_values(fname, stream):
 ###########################################################################
 if __name__ == '__main__':
     print _get_shapes_text_values(sys.argv[1], "worddocument")
+    print _get_shapes_text_values(sys.argv[1], '1table')
