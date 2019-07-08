@@ -51,12 +51,12 @@ class function_call_visitor(visitor):
     
     def visit(self, item):
 
-        from statements import *
+        import statements
 
         if (item in self.visited):
             return False
         self.visited.add(item)
-        if (isinstance(item, Call_Statement)):
+        if (isinstance(item, statements.Call_Statement)):
             if (not isinstance(item.name, MemberAccessExpression)):
                 self.called_funcs.add(str(item.name))
         if (isinstance(item, Function_Call)):
