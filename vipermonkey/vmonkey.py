@@ -1421,6 +1421,26 @@ def _process_file (filename, data,
                         log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
+
+            # Save the form strings.
+
+            # First group the form strings for each stream in order.
+            tmp_form_strings = read_ole_fields._read_form_strings(vba)
+            stream_form_map = {}
+            for string_info in tmp_form_strings:
+                stream_name = string_info[0]
+                if (stream_name not in stream_form_map):
+                    stream_form_map[stream_name] = []
+                curr_form_string = string_info[1]
+                stream_form_map[stream_name].append(curr_form_string)
+
+            # Now add the form strings as a list for each stream to the global
+            # variables.
+            for stream_name in stream_form_map.keys():
+                tmp_name = (stream_name + ".Controls").lower()
+                form_strings = stream_form_map[stream_name]
+                vm.globals[tmp_name] = form_strings
+                log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
                 
             print("")
             print('-'*79)

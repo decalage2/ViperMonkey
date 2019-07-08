@@ -325,6 +325,38 @@ class MemberAccessExpression(VBA_Object):
         # Maybe this is metadata?
         return context.read_metadata_item(field_name)
 
+    def _handle_control_read(self, context):
+        """
+        Handle data reads with StreamName.Controls(...).Value.
+        """
+
+        # Something like banrcboyjdipc.Controls(1).Value ?
+        pat = r".+\.Controls\(\s*'(\d+)'\s*\)(?:\.Value)?"
+        my_text = str(self)
+        if (re.match(pat, str(self)) is None):
+            return None
+
+        # Pull out the Controls text value list.
+        list_name = my_text.replace(".Value", "")
+        list_name = list_name[:list_name.rindex("(")]
+        list_vals = None
+        try:
+            list_vals = context.get(list_name)
+        except KeyError:
+            return None
+
+        # Pull out the field value.
+        index = re.findall(pat, my_text)[0]
+        try:
+            index = int(index)
+        except:
+            return None
+
+        # Return the control text value.
+        if (index < len(list_vals)):
+            return list_vals[index]
+        return None
+
     def _handle_docvars_read(self, context):
         """
         Handle data reads from a document variable.
@@ -645,6 +677,11 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
+
+        # See if this is reading form text by index.
+        call_retval = self._handle_control_read(context)
+        if (call_retval is not None):
+            return call_retval        
         
         # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)

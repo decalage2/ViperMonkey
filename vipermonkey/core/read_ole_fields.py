@@ -46,6 +46,38 @@ import olefile
 
 from core.logger import log
 
+def _read_form_strings(vba):
+    """
+    Read in the form strings in order as a lists of tuples like (stream name, form string).
+    """
+
+    try:
+        r = []
+        skip_strings = ["Tahoma", "Tahomaz"]
+        for (subfilename, stream_path, form_string) in vba.extract_form_strings():
+
+            # Skip default strings.
+            if (form_string in skip_strings):
+                continue
+            # Skip unprintable strings.
+            if (not all((ord(c) > 31 and ord(c) < 127) for c in form_string)):
+                continue
+
+            # Save the stream name.
+            stream_name = stream_path.replace("Macros/", "")
+            if ("/" in stream_name):
+                stream_name = stream_name[:stream_name.index("/")]
+
+            # Save the stream name and form string.
+            r.append((stream_name, form_string))
+
+        # Done.
+        return r
+
+    except Exception as e:
+        log.error("Cannot read form strings. " + str(e))
+        return []
+    
 def _get_shapes_text_values_xml(fname):
     """
     Read in the text associated with Shape objects in a document saved
