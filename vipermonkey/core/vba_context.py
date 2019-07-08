@@ -105,6 +105,9 @@ class Context(object):
                  expand_env_vars=True,
                  metadata=None):
 
+        # Track all external functions called by the program.
+        self.external_funcs = []
+        
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
         self.call_stack = []
@@ -183,6 +186,7 @@ class Context(object):
             self.call_stack = context.call_stack
             self.expand_env_vars = context.expand_env_vars
             self.metadata = context.metadata
+            self.external_funcs = context.external_funcs
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -2995,6 +2999,14 @@ class Context(object):
         self.globals["wdFormatXPS".lower()] = 18
         
         # endregion
+
+    def __repr__(self):
+        r = ""
+        r += "Locals:\n"
+        r += str(self.locals) + "\n\n"
+        #r += "Globals:\n"
+        #r += str(self.globals) + "\n"
+        return r
         
     def __eq__(self, other):
         if isinstance(other, Context):
@@ -3191,7 +3203,11 @@ class Context(object):
 
         # Are we writing a list?
         elif isinstance(data, list):
-            self.open_files[fname] += ''.join(map(chr, data))
+            for d in data:
+                if (isinstance(d, int)):
+                    self.open_files[fname] += chr(d)
+                else:
+                    self.open_files[fname] += str(d)
             return True
 
         # Unhandled.
@@ -3455,7 +3471,10 @@ class Context(object):
 
         # Is there a URL in the data?
         URL_REGEX = r'.*(http[s]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
-        value = str(value)
+        try:
+            value = str(value)
+        except:
+            return
         tmp_value = value
         if (len(tmp_value) > 100):
             tmp_value = tmp_value[:100] + " ..."

@@ -55,6 +55,7 @@ import base64
 from logger import log
 import re
 from curses_ascii import isprint
+import traceback
 
 from inspect import getouterframes, currentframe
 import sys
@@ -455,9 +456,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = func
-                    if (isinstance(func, Function) or isinstance(func, Sub)):
+                    import procedures
+                    if (isinstance(func, procedures.Function) or
+                        isinstance(func, procedures.Sub) or
+                        ('vipermonkey.core.vba_library.' in str(type(func)))):
                         r = eval_arg(func, context, treat_as_var_name=True)
-
+                        
                     # Did the function resolve to a value?
                     if (r != func):
 
@@ -473,6 +477,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                 except Exception as e:
                     log.debug("eval_arg: Failed. Not a function. " + str(e))
+                    traceback.print_exc()
 
                 # Are we trying to load some document meta data?
                 tmp = arg.lower().strip()

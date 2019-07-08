@@ -37,7 +37,6 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from statements import *
 from expressions import *
 from lib_functions import *
 
@@ -51,6 +50,9 @@ class function_call_visitor(visitor):
         self.visited = set()
     
     def visit(self, item):
+
+        from statements import *
+
         if (item in self.visited):
             return False
         self.visited.add(item)

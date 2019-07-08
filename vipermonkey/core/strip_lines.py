@@ -330,6 +330,8 @@ def fix_non_ascii_names(vba_code):
     is the ordinal value.
 
     Also change things like "a!b!.c" to "a.b.c".
+
+    Also break up multiple statements seperated with '::' onto different lines.
     """
 
     # Replace bad characters unless they appear in a string.
@@ -355,7 +357,13 @@ def fix_non_ascii_names(vba_code):
             r += "d" + str(ord(c))
             prev_char = "d"
         else:
-            r += c
+
+            # Replace a '::' with a line break?
+            if ((c == ':') and (prev_char == ':')):
+                r = r[:-1]
+                r += "\n"
+            else:
+                r += c
             prev_char = c
 
     return r

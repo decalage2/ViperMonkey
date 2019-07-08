@@ -425,6 +425,7 @@ class ViperMonkey(object):
 
         # Track the external functions called.
         self.external_funcs = self._get_external_funcs()
+        context.external_funcs = self.external_funcs
 
         # First emulate any Visual Basic that appears outside of subs/funcs.
         log.info("Emulating loose statements...")

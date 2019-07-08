@@ -156,6 +156,15 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class Quit(VbaLibraryFunc):
+    """
+    Wscript.Quit(). Just keeps going.
+    """
+
+    def eval(self, context, params=None):
+        log.warning("Ignoring Wscript.Quit() call. Execution is continuing...")
+        return 1
+
 class QBColor(VbaLibraryFunc):
     """
     QBColor() color lookup function.
@@ -3216,7 +3225,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs):
+               URLDownloadToFileW, SaveAs, Quit):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

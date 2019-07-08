@@ -133,6 +133,18 @@ class Module(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Perform all of the const assignments first.
+        for block in self.loose_lines:
+            if (isinstance(block, Sub) or
+                isinstance(block, Function) or
+                isinstance(block, External_Function)):
+                log.debug("Skip loose line const eval of " + str(block))
+                continue
+            if (isinstance(block, LooseLines)):
+                context.global_scope = True
+                do_const_assignments(block.block, context)
+                context.global_scope = False
+        
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
         done_emulation = False
@@ -236,6 +248,9 @@ class LooseLines(VBA_Object):
         #if (context.exit_func):
         #    return
 
+        # Assign all const variables first.
+        do_const_assignments(self.block, context)
+        
         # Emulate the statements in the block.
         log.info("Emulating " + str(self) + " ...")
         context.global_scope = True

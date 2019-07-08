@@ -132,6 +132,9 @@ class Sub(VBA_Object):
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Set the parameter values in the current context.
         for param_name in call_info.keys():
             context.set(param_name, call_info[param_name], force_local=True)
@@ -414,6 +417,9 @@ class Function(VBA_Object):
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Set the parameter values in the current context.
         for param_name in call_info.keys():
             context.set(param_name, call_info[param_name], force_local=True)
