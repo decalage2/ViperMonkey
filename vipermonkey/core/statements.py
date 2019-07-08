@@ -441,7 +441,6 @@ class Dim_Statement(VBA_Object):
         # Track each variable being declared.
         self.variables = []
         for var in tokens:
-            print var
 
             # Is this an array?
             is_array = False
