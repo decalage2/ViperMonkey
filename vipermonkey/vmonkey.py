@@ -1269,6 +1269,9 @@ def _process_file (filename, data,
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name, var_val))
                 vm.doc_vars["activedocument."+var_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name, var_val))
+                tmp_name = "shapes('" + var_name + "').textframe.textrange.text"
+                vm.doc_vars[tmp_name] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
             if (not got_it):
                 shape_text = read_ole_fields._get_shapes_text_values(data, '1table')
                 for (var_name, var_val) in shape_text:

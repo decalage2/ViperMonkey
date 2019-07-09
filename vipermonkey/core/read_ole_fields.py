@@ -174,6 +174,14 @@ def _get_shapes_text_values_xml(fname):
 
     return r
 
+def _get_shapes_text_values_direct_2007(data):
+    """
+    Read in shapes name/value mappings directly from word/document.xml from an 
+    unzipped Word 2007+ file.
+    """
+    pat1 = r'<v:shape\s+id="(\w+)".+<w:txbxContent>.+<w:t>(.+)</w:t>'
+    return re.findall(pat1, data)
+
 def _get_shapes_text_values_2007(fname):
     """
     Read in the text associated with Shape objects in a document saved
@@ -224,6 +232,11 @@ def _get_shapes_text_values_2007(fname):
     data = f1.read()
     f1.close()
 
+    # First see if the shapes text is stored directly in document.xml.
+    r = _get_shapes_text_values_direct_2007(data)
+    if (len(r) > 0):
+        return r
+    
     # Pull out any shape name to internal ID mappings.
     # <w:control r:id="rId10" w:name="ziPOVJ5" w:shapeid="_x0000_i1028"/>
     pat = r'<w\:control[^>]+r\:id="(\w+)"[^>]+w\:name="(\w+)"'
