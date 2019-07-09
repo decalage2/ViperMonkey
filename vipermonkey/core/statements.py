@@ -3138,7 +3138,7 @@ file_type = (
     )("mode")
     + Suppress(Optional(CaselessKeyword("Lock")))
     + Optional(
-        Suppress(CaselessKeyword("Access"))
+        Optional(Suppress(CaselessKeyword("Access")))
         + (
             CaselessKeyword("Read Write")
             ^ CaselessKeyword("Read")
