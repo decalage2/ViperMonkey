@@ -199,7 +199,8 @@ def _get_shapes_text_values_direct_2007(data):
     val = ""
     for v in vals:
         val += v
-
+    val = val.replace("&amp", "&")
+        
     # Return the Shape name and text value.
     r = [(name, val)]
     return r

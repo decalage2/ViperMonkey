@@ -1260,6 +1260,7 @@ def _process_file (filename, data,
             # Pull text associated with Shapes() objects.
             got_it = False
             shape_text = read_ole_fields._get_shapes_text_values(data, 'worddocument')
+            pos = 1
             for (var_name, var_val) in shape_text:
                 got_it = True
                 var_name = var_name.lower()
@@ -1272,6 +1273,10 @@ def _process_file (filename, data,
                 tmp_name = "shapes('" + var_name + "').textframe.textrange.text"
                 vm.doc_vars[tmp_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+                tmp_name = "shapes('" + str(pos) + "').textframe.textrange.text"
+                vm.doc_vars[tmp_name] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+                pos += 1
             if (not got_it):
                 shape_text = read_ole_fields._get_shapes_text_values(data, '1table')
                 for (var_name, var_val) in shape_text:
