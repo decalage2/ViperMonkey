@@ -179,8 +179,30 @@ def _get_shapes_text_values_direct_2007(data):
     Read in shapes name/value mappings directly from word/document.xml from an 
     unzipped Word 2007+ file.
     """
-    pat1 = r'<v:shape\s+id="(\w+)".+<w:txbxContent>.+<w:t>(.+)</w:t>'
-    return re.findall(pat1, data)
+
+    # TODO: This only handles a single Shapes object.
+    
+    # Get the name of the Shape element.
+    pat1 = r'<v:shape\s+id="(\w+)".+<w:txbxContent>'
+    name = re.findall(pat1, data)
+    if (len(name) == 0):
+        return []
+    name = name[0]
+
+    # Get the text value(s) for the Shape.
+    pat2 = r'<w:t>([^<]+)</w:t>'
+    vals = re.findall(pat2, data)
+    if (len(vals) == 0):
+        return []
+
+    # Reassemble the values.
+    val = ""
+    for v in vals:
+        val += v
+
+    # Return the Shape name and text value.
+    r = [(name, val)]
+    return r
 
 def _get_shapes_text_values_2007(fname):
     """

@@ -885,6 +885,8 @@ class Shapes(VbaLibraryFunc):
 
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
+        if ((params is None) or (len(params) == 0)):
+            return ""
         return "Shapes('" + str(params[0]) + "')"
 
 class InlineShapes(VbaLibraryFunc):
@@ -896,6 +898,8 @@ class InlineShapes(VbaLibraryFunc):
 
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
+        if ((params is None) or (len(params) == 0)):
+            return ""
         return "InlineShapes('" + str(params[0]) + "')"
 
 class GetCursorPos(VbaLibraryFunc):
