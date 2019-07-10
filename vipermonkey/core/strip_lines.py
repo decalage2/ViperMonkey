@@ -276,6 +276,10 @@ def fix_skipped_1st_arg(vba_code):
     Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
     """
 
+    # Skipped this if unneeded.
+    if (re.match(r".*([0-9a-zA-Z_])\(\s*,.*", vba_code, re.DOTALL) is None):
+        return vba_code
+    
     # We don't want to replace things like this in string literals. Temporarily
     # pull out the string literals from the line.
 
@@ -334,6 +338,12 @@ def fix_non_ascii_names(vba_code):
     Also break up multiple statements seperated with '::' onto different lines.
     """
 
+    # Skip this if it is not needed.
+    if (("!" not in vba_code) and
+        ("::" not in vba_code) and
+        (re.match(r".*[\x81-\xff].*", vba_code, re.DOTALL) is None)):
+        return vba_code
+    
     # Replace bad characters unless they appear in a string.
     in_str = False
     prev_char = ""
@@ -393,6 +403,13 @@ def fix_vba_code(vba_code):
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # Skip the next part if unnneeded.
+    if ((" if+" not in vba_code) and
+        (" If+" not in vba_code) and
+        ("\nif+" not in vba_code) and
+        ("\nIf+" not in vba_code)):
+        return vba_code
+    
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
     r = ""
     for line in vba_code.split("\n"):
