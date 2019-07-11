@@ -190,7 +190,7 @@ def _get_shapes_text_values_direct_2007(data):
     name = name[0]
 
     # Get the text value(s) for the Shape.
-    pat2 = r'<w:t>([^<]+)</w:t>'
+    pat2 = r'<w:t[^<]*>([^<]+)</w:t[^<]*>'
     vals = re.findall(pat2, data)
     if (len(vals) == 0):
         return []
