@@ -613,7 +613,8 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = (CaselessKeyword("Dim") | CaselessKeyword("Static") | CaselessKeyword("Const")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = (CaselessKeyword("Dim") | CaselessKeyword("Static") | (Suppress(Optional(Literal("#"))) + CaselessKeyword("Const"))) + \
+                             Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
 dim_statement.setParseAction(Dim_Statement)

@@ -331,7 +331,8 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Something like banrcboyjdipc.Controls(1).Value ?
-        pat = r".+\.Controls\(\s*'(\d+)'\s*\)(?:\.Value)?"
+        #pat = r".+\.Controls\(\s*'(\d+)'\s*\)(?:\.Value)?"
+        pat = r".+\.Controls\(\s*'([^']+)'\s*\)(?:\.Value)?"
         my_text = str(self)
         if (re.match(pat, str(self)) is None):
             return None
@@ -340,6 +341,8 @@ class MemberAccessExpression(VBA_Object):
         list_name = my_text.replace(".Value", "")
         list_name = list_name[:list_name.rindex("(")]
         list_vals = None
+        if (list_name.endswith("('")):
+            list_name = list_name[:-2]
         try:
             list_vals = context.get(list_name)
         except KeyError:
@@ -347,8 +350,22 @@ class MemberAccessExpression(VBA_Object):
 
         # Pull out the field value.
         index = re.findall(pat, my_text)[0]
+
+        # Evaluate the field value.
         try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            index = obj
+            if (isinstance(index, VBA_Object)):
+                index = index.eval(context)
             index = int(index)
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + index + "'")
+            return None
         except:
             return None
 
