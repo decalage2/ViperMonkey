@@ -644,6 +644,7 @@ class Context(object):
         
         # Misc.
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
+        self.globals["ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         if self.filename:
             self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename

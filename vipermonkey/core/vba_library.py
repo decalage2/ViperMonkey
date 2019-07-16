@@ -527,6 +527,14 @@ class Eval(VbaLibraryFunc):
             log.error("Parse error. Cannot evaluate '" + expr + "'")
             return "NULL"
 
+class Exists(VbaLibraryFunc):
+    """
+    Document Exists() method. Defaults to false.
+    """
+
+    def eval(self, context, params=None):
+        return False
+        
 class Execute(VbaLibraryFunc):
     """
     WScript Execute() function.
@@ -2171,6 +2179,7 @@ class CallByName(VbaLibraryFunc):
         assert (len(params) >= 3)
 
         # Report interesting external commands run.
+        print params
         cmd = str(params[1])
         obj = str(params[0])
         args = ''
@@ -2178,6 +2187,9 @@ class CallByName(VbaLibraryFunc):
             args = params[3]
         if (("Run" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
+        for pos in range(0, len(params)):
+            if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
+                context.report_action("Run", params[pos + 1], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
             ((len(params) > 5) and (params[3].lower() == "get"))):
@@ -3228,7 +3240,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit):
+               URLDownloadToFileW, SaveAs, Quit, Exists):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
