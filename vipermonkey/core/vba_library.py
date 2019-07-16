@@ -2179,7 +2179,6 @@ class CallByName(VbaLibraryFunc):
         assert (len(params) >= 3)
 
         # Report interesting external commands run.
-        print params
         cmd = str(params[1])
         obj = str(params[0])
         args = ''

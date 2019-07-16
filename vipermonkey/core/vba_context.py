@@ -641,8 +641,14 @@ class Context(object):
         self.globals["xlDays".lower()] = 0
         self.globals["xlMonths".lower()] = 1
         self.globals["xlYears".lower()] = 2
+
+        # WdOrientation enumeration (Word)
+        self.globals["wdOrientLandscape".lower()] = 1
+        self.globals["wdOrientPortrait".lower()] = 0
         
         # Misc.
+        self.globals["ActiveDocument.PageSetup.PageWidth".lower()] = 10
+        self.globals["ActiveDocument.PageSetup.Orientation".lower()] = 1
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
