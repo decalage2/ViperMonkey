@@ -533,6 +533,10 @@ class Dim_Statement(VBA_Object):
             # Handle untyped arrays.
             elif (var[1]):
                 curr_init_val = []
+
+            # Handle uninitialized global variables.
+            if ((context.global_scope) and (curr_init_val is None)):
+                curr_init_val = "NULL"
                 
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
