@@ -530,6 +530,10 @@ class Dim_Statement(VBA_Object):
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = [''] * var[3]
 
+            # Handle untyped arrays.
+            elif (var[1]):
+                curr_init_val = []
+                
             # Set the initial value of the declared variable.
             context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
             log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
@@ -2346,7 +2350,7 @@ class Case_Clause_Atomic(VBA_Object):
 
         # We just have a regular test.
         expected_val = eval_arg(self.case_val[0], context)
-        return (test_val == expected_val)
+        return (str(test_val) == str(expected_val))
 
 class Case_Clause(VBA_Object):
 
