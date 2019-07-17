@@ -251,11 +251,11 @@ def fix_unbalanced_quotes(vba_code):
     # Return the balanced code.
     return r
 
+MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"
 def fix_multiple_assignments(line):
 
     # Pull out multiple assignments and the final assignment value.
-    pat = r"((?:\w+\s*=\s*){2,})(.+)"
-    items = re.findall(pat, line)
+    items = re.findall(MULT_ASSIGN_RE, line)
     if (len(items) == 0):
         return line
     items = items[0]
@@ -407,7 +407,8 @@ def fix_vba_code(vba_code):
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
         ("\nif+" not in vba_code) and
-        ("\nIf+" not in vba_code)):
+        ("\nIf+" not in vba_code) and
+        (len(re.findall(MULT_ASSIGN_RE, vba_code)) == 0)):
         return vba_code
     
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".

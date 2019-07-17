@@ -106,8 +106,7 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # @ Currency
 # $ String
 # Don't parse 'c&' in 'c& d& e' as a typed_name. It's a string concat.
-#type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny((Optional(White()) + Word(alphanums)) | '"')
+type_suffix = Word(r"%&^!#@$", exact=1) + NotAny((Optional(' ') + Word(alphanums)) | '"')
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
