@@ -1432,8 +1432,7 @@ expr_item <<= (
 expression <<= (infixNotation(expr_item,
                                   [
                                       (CaselessKeyword("not"), 1, opAssoc.RIGHT, Not),
-                                      # FIXME: Disabling exponentiation because it's causing recursion errors.
-                                      # ("^", 2, opAssoc.RIGHT, Power),
+                                      ("^", 2, opAssoc.RIGHT, Power),
                                       (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
                                       (Regex(re.compile("mod", re.IGNORECASE)), 2, opAssoc.LEFT, Mod),
