@@ -171,6 +171,11 @@ class Context(object):
                 self.globals = dict(_globals)
             else:
                 self.globals = _globals
+
+            # Save intermediate IOCs if any appear.
+            for var in _globals.keys():
+                self.save_intermediate_iocs(_globals[var])
+                
         elif context is not None:
             if (copy_globals):
                 self.globals = dict(context.globals)
@@ -207,8 +212,14 @@ class Context(object):
             
         # Track data saved in document variables.
         if doc_vars is not None:
+
             # direct copy of the pointer to globals:
             self.doc_vars = doc_vars
+
+            # Save intermediate IOCs if any appear.
+            for var in doc_vars.keys():
+                self.save_intermediate_iocs(doc_vars[var])
+
         elif context is not None:
             self.doc_vars = context.doc_vars
         else:
@@ -655,6 +666,8 @@ class Context(object):
         self.globals["ThisDocument.Scripts.Count".lower()] = 0
         self.globals["ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
         self.globals["ThisDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
+        self.globals["ActiveDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
+        self.globals["ThisDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         if self.filename:
             self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
@@ -662,6 +675,7 @@ class Context(object):
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
         self.globals["msoFontAlignTop".lower()] = 1
+        self.globals["msoTextBox".lower()] = "**MATCH ANY**"
 
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
