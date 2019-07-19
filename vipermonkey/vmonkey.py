@@ -92,6 +92,7 @@ pyparsing.ParserElement.enablePackrat(cache_size_limit=100000)
 
 import tempfile
 import struct
+import string
 import multiprocessing
 import optparse
 import sys
@@ -206,6 +207,25 @@ def _read_doc_text_libreoffice(data):
         # Cleanup.
         out.close()
 
+        # Fix a missing '/' at the start of the text. '/' is inserted if there is an embedded image
+        # in the text, but LibreOffice does not return that.
+        if (len(r) > 0):
+
+            # Clear unprintable characters from the start of the string.
+            first_line = r[0]
+            good_pos = 0
+            while ((good_pos < 10) and (good_pos < len(first_line))):
+                if (first_line[good_pos] in string.printable):
+                    break
+                good_pos += 1
+            first_line = first_line[good_pos:]
+                
+            # NOTE: This is specific to fixing an unbalanced C-style comment in the 1st line.
+            pat = r'^\*.*\*\/'
+            if (re.match(pat, first_line) is not None):
+                first_line = "/" + first_line
+                r = [first_line] + r[1:]
+                
         # Return the paragraph text.
         return r
 
