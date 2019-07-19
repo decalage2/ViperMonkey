@@ -676,6 +676,7 @@ class Context(object):
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
         self.globals["msoFontAlignTop".lower()] = 1
         self.globals["msoTextBox".lower()] = "**MATCH ANY**"
+        self.globals["Application.MouseAvailable".lower()] = True
 
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541

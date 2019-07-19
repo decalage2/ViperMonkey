@@ -3478,6 +3478,34 @@ try_catch = Suppress(CaselessKeyword('Try')) + Suppress(EOS) + statement_block('
             Suppress(EOS) + statement_block('catch_block') + Suppress(CaselessKeyword('End')) + Suppress(CaselessKeyword('Try'))
 try_catch.setParseAction(TryCatch)
 
+# --- TRY/CATCH STATEMENT ------------------------------------------------------
+
+class NameStatement(VBA_Object):
+    """
+    File renaming Name statement.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(NameStatement, self).__init__(original_str, location, tokens)
+        self.old_name = tokens.old_name
+        self.new_name = tokens.new_name
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return "Name " + str(self.old_name) + " As " + str(self.new_name)
+
+    def eval(self, context, params=None):
+
+        # Resolve names.
+        old_name = eval_arg(self.old_name, context=context)
+        new_name = eval_arg(self.new_name, context=context)
+
+        # Report file rename.
+        context.report_action("File Rename", "Rename '" + old_name + "' to '" + new_name + "'", "File Rename", strip_null_bytes=True)
+        
+name_statement = CaselessKeyword('Name') + expression("old_name") + CaselessKeyword('As') + expression("new_name")
+name_statement.setParseAction(NameStatement)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -3495,8 +3523,8 @@ def extend_statement_grammar():
 
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
                   simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub
+                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement
     statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
-                             simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+                             simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub
 
