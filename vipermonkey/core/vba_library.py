@@ -1254,7 +1254,7 @@ class Join(VbaLibraryFunc):
         r = ""
         if (isinstance(strings, list)):
             for s in strings:
-                r += s + sep
+                r += str(s) + sep
         else:
             r = str(strings)
         log.debug("Join: return %r" % r)
