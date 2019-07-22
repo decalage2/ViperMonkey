@@ -2245,7 +2245,12 @@ class Select_Statement(VBA_Object):
 class Select_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
-        self.select_val = tokens.select_val[0]
+        print tokens.select_val
+        self.select_val = tokens.select_val
+        try:
+            self.select_val = tokens.select_val[0]
+        except TypeError:
+            pass
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -2410,7 +2415,7 @@ class Select_Case(VBA_Object):
             return
     
 select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").suppress() \
-                + expression("select_val")
+                + (expression("select_val") ^ boolean_expression("select_val"))
 select_clause.setParseAction(Select_Clause)
 
 case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
