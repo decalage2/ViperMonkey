@@ -108,8 +108,11 @@ class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]
-        if (self.value.startswith('"') and self.value.endswith('"')):
-            self.value = self.value[1:-1]
+
+        # TODO: Why are starting " being stripped?
+        #if (self.value.startswith('"') and self.value.endswith('"')):
+        #    self.value = self.value[1:-1]
+
         # Replace Python control characters.
         """
         self.value = self.value.\
