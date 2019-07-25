@@ -1451,6 +1451,7 @@ def _process_file (filename, data,
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 
             # Save the form strings.
+            #sys.exit(0)
 
             # First group the form strings for each stream in order.
             tmp_form_strings = read_ole_fields._read_form_strings(vba)

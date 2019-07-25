@@ -1239,7 +1239,27 @@ class LoadXML(VbaLibraryFunc):
 
         # Return the XML or base64 string.
         return xml
-        
+
+class RegRead(VbaLibraryFunc):
+    """
+    RegRead() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 1)):
+            return ""
+
+        # Fake some registry reads.
+        key = str(params[0])
+        context.report_action('Read Registry', key, 'RegRead', strip_null_bytes=True)
+        if (key == 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\PROCESSOR_ARCHITECTURE'):
+            return "x86"
+
+        # Not faked.
+        return ""
+    
 class Join(VbaLibraryFunc):
     """
     Join() string function.
@@ -3239,7 +3259,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit, Exists):
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

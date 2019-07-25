@@ -234,7 +234,7 @@ def fix_unbalanced_quotes(vba_code):
     # Fix invalid string assignments.
     vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
     vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
-    vba_code = re.sub(r"([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
     
     # See if we have lines with unbalanced double quotes.
     r = ""
