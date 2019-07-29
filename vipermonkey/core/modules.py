@@ -102,7 +102,19 @@ class Module(VBA_Object):
                 self.loose_lines.append(token)
 
             elif isinstance(token, LooseLines):
+
+                # Save the loose lines block itself.
                 self.loose_lines.append(token)
+
+                # Function and Sub definitions could be in the loose lines block.
+                # Save those also.
+                for curr_statement in token.block:
+                    if isinstance(curr_statement, Sub):
+                        log.debug("saving sub decl: %r" % curr_statement.name)
+                        self.subs[curr_statement.name] = curr_statement
+                    if isinstance(curr_statement, Function):
+                        log.debug("saving func decl: %r" % curr_statement.name)
+                        self.functions[curr_statement.name] = curr_statement
                     
         self.name = self.attributes.get('VB_Name', None)
 
@@ -142,16 +154,16 @@ class Module(VBA_Object):
         """
         
         for name, _sub in self.subs.items():
-            log.debug('storing sub "%s" in globals' % name)
+            log.debug('(1) storing sub "%s" in globals' % name)
             context.set(name, _sub)
         for name, _function in self.functions.items():
-            log.debug('storing function "%s" in globals' % name)
+            log.debug('(1) storing function "%s" in globals' % name)
             context.set(name, _function)
         for name, _function in self.external_functions.items():
-            log.debug('storing external function "%s" in globals' % name)
+            log.debug('(1) storing external function "%s" in globals' % name)
             context.set(name, _function)
         for name, _var in self.global_vars.items():
-            log.debug('storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+            log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 context.set(name, _var)
             if (isinstance(name, list)):
