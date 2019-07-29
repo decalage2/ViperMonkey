@@ -48,7 +48,11 @@ setup(
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
     install_requires=[
-        "oletools",
+        # TODO: oletools 0.54.2 requires cryptography, which is not compatible with PyPy (oletools issue #473)
+        # => on PyPy, pin to oletools 0.54.1:
+        'oletools==0.54.1; platform_python_implementation=="PyPy"',
+        # => Otherwise, use the latest oletools:
+        'oletools; platform_python_implementation!="PyPy"',
         "olefile",
         "prettytable",
         "colorlog",
