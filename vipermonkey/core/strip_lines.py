@@ -258,6 +258,26 @@ def fix_multiple_assignments(line):
     items = re.findall(MULT_ASSIGN_RE, line)
     if (len(items) == 0):
         return line
+
+    # Don't count '=' that show up in strings.
+    in_str = False
+    new_line = ""
+    for c in line:
+
+        # Move in or out of strings.
+        if (c == '"'):
+            in_str = not in_str
+
+        # Temporarily replace '=' in strings with 'IN_STR_EQUAL'.
+        if ((c == '=') and (in_str)):
+            new_line += 'IN_STR_EQUAL'
+        else:
+            new_line += c
+            
+    # Split into multiple assignments.
+    items = re.findall(MULT_ASSIGN_RE, new_line)
+    if (len(items) == 0):
+        return line
     items = items[0]
     assigns = items[0].replace(" ", "").split("=")
     val = items[1]
@@ -269,6 +289,9 @@ def fix_multiple_assignments(line):
         if (len(var) == 0):
             continue
         r += var + " = " + val + "\n"
+
+    # Put back in the '=' that show up in strings.
+    r.replace('IN_STR_EQUAL', '=')
     return r
 
 def fix_skipped_1st_arg(vba_code):
