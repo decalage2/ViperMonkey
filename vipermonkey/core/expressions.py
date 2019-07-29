@@ -1560,9 +1560,15 @@ class BoolExprItem(VBA_Object):
             except:
                 pass
 
+        # Blah. Handle float autoconversion.
+        if (isinstance(lhs, float) and isinstance(rhs, int)):
+            rhs = rhs + 0.0
+        if (isinstance(rhs, float) and isinstance(lhs, int)):
+            lhs = lhs + 0.0
+            
         # Handle unexpected types.
-        if (((not isinstance(rhs, int)) and (not isinstance(rhs, str))) or
-            ((not isinstance(lhs, int)) and (not isinstance(lhs, str)))):
+        if (((not isinstance(rhs, int)) and (not isinstance(rhs, str)) and (not isinstance(rhs, float))) or
+            ((not isinstance(lhs, int)) and (not isinstance(lhs, str)) and (not isinstance(lhs, float)))):
 
             # Punt and compare everything as strings.
             lhs = str(lhs)

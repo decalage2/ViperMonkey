@@ -1419,6 +1419,8 @@ def _process_file (filename, data,
                     skip_strings = ["Tahoma", "Tahomaz"]
                     for (subfilename, stream_path, form_string) in vba.extract_form_strings():
                         # Skip default strings.
+                        if (form_string.startswith("\x80")):
+                            form_string = form_string[1:]
                         if (form_string in skip_strings):
                             continue
                         # Skip unprintable strings.
