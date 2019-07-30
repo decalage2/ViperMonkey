@@ -419,6 +419,11 @@ class ViperMonkey(object):
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ThisDocument.Content.Start".lower()] = 0
+        context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
         
         # reset the actions list, in case it is called several times
         self.actions = []
