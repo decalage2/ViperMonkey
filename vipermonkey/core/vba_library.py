@@ -727,7 +727,8 @@ class LTrim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return ""
         r = None
         if (isinstance(params[0], int)):
             r = str(params[0])
