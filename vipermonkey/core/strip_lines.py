@@ -364,7 +364,7 @@ def fix_non_ascii_names(vba_code):
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         ("::" not in vba_code) and
-        (re.match(r".*[\x81-\xff].*", vba_code, re.DOTALL) is None)):
+        (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None)):
         return vba_code
     
     # Replace bad characters unless they appear in a string.
@@ -386,7 +386,7 @@ def fix_non_ascii_names(vba_code):
             r = r[:len(r)-1] + "."
         
         # Non-ASCII character that is not in a string?
-        if (ord(c) > 128):
+        if (ord(c) > 127):
             r += "d" + str(ord(c))
             prev_char = "d"
         else:
