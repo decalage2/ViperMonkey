@@ -3236,6 +3236,11 @@ class Context(object):
                     self.open_files[fname] += str(d)
             return True
 
+        # Are we writing a byte?
+        elif isinstance(data, int):
+            self.open_files[fname] += chr(data)
+            return True
+        
         # Unhandled.
         else:
             log.error("Unhandled data type to write. " + str(type(data)) + ".")
