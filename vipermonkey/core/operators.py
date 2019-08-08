@@ -150,8 +150,8 @@ class Xor(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) ^ int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to xor arguments of different types.')
+            except Exception as e:
+                log.error('Impossible to xor arguments of different types. Arg list = ' + str(self.arg) + ". " + str(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval xor: %r" % self.arg)

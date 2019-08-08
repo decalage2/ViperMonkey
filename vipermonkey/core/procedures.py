@@ -109,7 +109,7 @@ class Sub(VBA_Object):
                     param_value = ""
 
                 # Coerce parameters to String if needed.
-                if (self.params[i].my_type == "String"):
+                if ((self.params[i].my_type == "String") and (not self.params[i].is_array)):
                     param_value = str(param_value)
                     
                 # Add the parameter value to the local function context.

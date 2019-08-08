@@ -697,8 +697,19 @@ def _read_doc_vars_zip(fname):
     pat = r'<w\:docVar w\:name="(\w+)" w:val="([^"]*)"'
     var_info = re.findall(pat, data)
 
+    # Unescape XML escaping in variable values.
+    r = []
+    for i in var_info:
+        val = i[1]
+        # &quot; &amp; &lt; &gt;
+        val = val.replace("&quot;", '"')
+        val = val.replace("&amp;", '&')
+        val = val.replace("&lt;", '<')
+        val = val.replace("&gt;", '>')
+        r.append((i[0], val))
+    
     # Return the doc vars.
-    return var_info
+    return r
     
 def _read_doc_vars_ole(fname):
     """
@@ -765,15 +776,16 @@ def _read_doc_vars(data, fname):
         # if we have a filename, we'll defer to using that...
         obj = fname
     # Pull doc vars based on the file type.
+    r = []
     if olefile.isOleFile(obj):
         # OLE file
-        return _read_doc_vars_ole(obj)
+        r = _read_doc_vars_ole(obj)
     elif zipfile.is_zipfile(obj):
         # assuming it's an OpenXML (zip) file:
-        return _read_doc_vars_zip(obj)
+        r = _read_doc_vars_zip(obj)
     # else, it might be XML or text, can't read doc vars yet
     # TODO: implement read_doc_vars for those formats
-    return []
+    return r
 
 def _read_custom_doc_props(fname):
     """

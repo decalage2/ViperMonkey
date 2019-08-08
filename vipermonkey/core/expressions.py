@@ -758,24 +758,20 @@ class MemberAccessExpression(VBA_Object):
         # Handle simple 0-argument function calls.
         call_retval = self._handle_0_arg_call(context, rhs)
         if (call_retval is not None):
-            #print "HERE: 1"
             return call_retval
         
         # Handle reading the contents of a text file.
         call_retval = self._handle_text_file_read(context)
         if (call_retval is not None):
-            #print "HERE: 2"
             return call_retval
 
         # Handle writes of text to ADODB.Stream variables.
         if (self._handle_adodb_writes(self.lhs, tmp_lhs, rhs, context)):
-            #print "HERE: 3"
             return "NULL"
 
         # See if this is accessing the Path field of a file/folder object.
         call_retval = self._handle_path_access()
         if (call_retval is not None):
-            #print "HERE: 4"
             return call_retval
         
         # If the final element in the member expression is a function call,
@@ -788,25 +784,21 @@ class MemberAccessExpression(VBA_Object):
             if (context.contains_user_defined(rhs.name)):
                 for func in Function_Call.log_funcs:
                     if (rhs.name.lower() == func.lower()):
-                        #print "HERE: 5"
                         return str(self)
 
             # Handle things like foo.Replace(bar, baz).
             call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
-                #print "HERE: 6"
                 return call_retval
 
             # Handle things like foo.Add(bar, baz).
             call_retval = self._handle_add(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
-                #print "HERE: 7"
                 return call_retval
 
             # Handle Excel cells() references.
             call_retval = self._handle_excel_read(context, self.rhs)
             if (call_retval is not None):
-                #print "HERE: 8"
                 return call_retval
                     
             # This is not a builtin. Evaluate it
@@ -814,16 +806,13 @@ class MemberAccessExpression(VBA_Object):
 
             # Was this a call to LoadXML()?
             if (self._handle_loadxml(context, tmp_rhs)):
-                #print "HERE: 9"
                 return "NULL"
 
             # Was this a call to SaveToFile()?
             if (self._handle_savetofile(context, tmp_rhs)):
-                #print "HERE: 10"
                 return "NULL"
 
             # It was a regular call.
-            #print "HERE: 11"
             return tmp_rhs
 
         # Did the lhs resolve to something new?
@@ -838,19 +827,16 @@ class MemberAccessExpression(VBA_Object):
                 (not "Close" in str(self.rhs))):
 
                 # Just work with the returned string value.
-                #print "HERE: 12"
                 return tmp_lhs
 
             # See if this is reading a doc var name or item.
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
             if (call_retval is not None):
-                #print "HERE: 13"
                 return call_retval
 
             # See if this is closing a file.
             call_retval = self._handle_file_close(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
-                #print "HERE: 14"
                 return call_retval
 
             # Is the LHS a 0 argument function?
@@ -860,7 +846,6 @@ class MemberAccessExpression(VBA_Object):
                 # The LHS is actually a function call. Emulate the function
                 # in the current context.
                 r = tmp_lhs.eval(context)
-                #print "HERE: 15"
                 return r
             
             # Construct a new partially resolved member access object.
@@ -870,7 +855,6 @@ class MemberAccessExpression(VBA_Object):
             call_retval = r._handle_docvars_read(context)
             if (call_retval is not None):
                 log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
-                #print "HERE: 16"
                 return call_retval
 
             # Do we know what the RHS variable evaluates to?
@@ -878,18 +862,15 @@ class MemberAccessExpression(VBA_Object):
             if ((tmp_rhs != rhs) and
                 (tmp_lhs == "NULL") and
                 (tmp_rhs != "NULL")):
-                #print "HERE: 19"
                 log.debug("Resolved member access variable.")
                 return tmp_rhs
             
             # Cannot resolve directly. Return the member access object.
             log.debug("MemberAccess: Return new access object " + str(r))
-            #print "HERE: 17"
             return r
 
         # Punt and just try to eval this as a string.
         else:
-            #print "HERE: 18"
             return eval_arg(self.__repr__(), context)
         
 # need to use Forward(), because the definition of l-expression is recursive:

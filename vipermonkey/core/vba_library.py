@@ -1170,7 +1170,6 @@ class SaveAs(VbaLibraryFunc):
 
         # Pull out the name of the file to save to and the format
         # for saving.
-        print params
         new_fname = str(params[1])
         fmt = params[3]
         try:
@@ -2205,14 +2204,14 @@ class CallByName(VbaLibraryFunc):
         args = ''
         if (len(params) >= 4):
             args = params[3]
-        if (("Run" in cmd) or ("WScript.Shell" in obj)):
+        if (("Run" in cmd) or ("Create" in cmd) or ("WScript.Shell" in obj)):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         for pos in range(0, len(params)):
             if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
                 context.report_action("Run", params[pos + 1], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
-            ((len(params) > 5) and (params[3].lower() == "get"))):
+            ((len(params) > 5) and (str(params[3]).lower() == "get"))):
             url = str(params[4])
             if (url.startswith("tp://")):
                 url = "ht" + url

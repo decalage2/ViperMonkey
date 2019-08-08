@@ -234,11 +234,13 @@ class Parameter(VBA_Object):
         self.name = tokens.name
         self.my_type = tokens.type
         self.init_val = tokens.init_val
+        self.is_array = False
         self.mechanism = str(tokens.mechanism)
         # Is this an array parameter?
         if (('(' in str(tokens)) and (')' in str(tokens))):
             # Arrays are always passed by reference.
             self.mechanism = 'ByRef'
+            self.is_array = True
         # The default parameter passing mechanism is ByRef.
         # See https://www.bettersolutions.com/vba/macros/byval-or-byref.htm
         if (len(self.mechanism) == 0):
@@ -768,7 +770,7 @@ class Let_Statement(VBA_Object):
             the_str_var = args[0]
             start = eval_arg(args[1], context)
             size = eval_arg(args[2], context)
-
+            
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
                 log.error("Assigning " + str(self.name) + " failed. " + str(the_str_var) + " not str or list.")
@@ -2247,7 +2249,6 @@ class Select_Statement(VBA_Object):
 class Select_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
-        print tokens.select_val
         self.select_val = tokens.select_val
         try:
             self.select_val = tokens.select_val[0]
@@ -2362,6 +2363,10 @@ class Case_Clause_Atomic(VBA_Object):
 
         # We just have a regular test.
         expected_val = eval_arg(self.case_val[0], context)
+        if (isinstance(test_val, int) and isinstance(expected_val, float)):
+            test_val = 0.0 + test_val
+        if (isinstance(test_val, float) and isinstance(expected_val, int)):
+            expected_val = 0.0 + expected_val
         return (str(test_val) == str(expected_val))
 
 class Case_Clause(VBA_Object):
