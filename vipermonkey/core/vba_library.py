@@ -2810,6 +2810,11 @@ class Range(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if (params is None):
+            log.warning("Range() called with no parameters.")
+            return "NULL"
+        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
 
