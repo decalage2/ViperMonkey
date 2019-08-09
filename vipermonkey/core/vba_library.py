@@ -2204,7 +2204,7 @@ class CallByName(VbaLibraryFunc):
         args = ''
         if (len(params) >= 4):
             args = params[3]
-        if (("Run" in cmd) or ("Create" in cmd) or ("WScript.Shell" in obj)):
+        if (("run" in cmd.lower()) or ("create" in cmd.lower()) or ("wscript.shell" in obj.lower())):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
         for pos in range(0, len(params)):
             if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
