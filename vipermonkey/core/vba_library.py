@@ -430,7 +430,9 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
             return "NULL"
 
         # Get the property we are looking for.
-        prop = params[0]
+        prop = str(params[0])
+        if (not context.contains(prop)):
+            return "NULL"
         return context.read_metadata_item(prop)
 
 class Item(BuiltInDocumentProperties):

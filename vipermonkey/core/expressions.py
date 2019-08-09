@@ -209,6 +209,20 @@ class MemberAccessExpression(VBA_Object):
         """
         if (str(self).lower().endswith(".paragraphs")):
             return context.get("ActiveDocument.Paragraphs".lower())
+
+    def _handle_comments(self, context):
+        """
+        Handle references to the .Comments field of the current doc.
+        """
+        if (str(self).lower().endswith(".comments")):
+            return context.get("ActiveDocument.Comments".lower())
+
+    def _handle_count(self, context, curr_item):
+        """
+        Handle references to the .Count field of the current item.
+        """
+        if (isinstance(curr_item, list)):
+            return len(curr_item)
     
     def _handle_oslanguage(self, context):
         """
@@ -709,6 +723,11 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_paragraphs(context)
         if (call_retval is not None):
             return call_retval
+
+        # See if this is reading the doc comments.
+        call_retval = self._handle_comments(context)
+        if (call_retval is not None):
+            return call_retval
         
         # See if this is a function call like Application.Run("foo", 12, 13).
         call_retval = self._handle_application_run(context)
@@ -743,6 +762,11 @@ class MemberAccessExpression(VBA_Object):
             # This is something like ".foo.bar" in a With statement. The LHS
             # is the With context item.
             tmp_lhs = eval_arg(context.with_prefix, context)
+
+        # Handle getting the .Count of a data collection..
+        call_retval = self._handle_count(context, tmp_lhs)
+        if (call_retval is not None):
+            return call_retval
             
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
@@ -861,9 +885,10 @@ class MemberAccessExpression(VBA_Object):
             tmp_rhs = eval_arg(rhs, context)
             if ((tmp_rhs != rhs) and
                 (tmp_lhs == "NULL") and
-                (tmp_rhs != "NULL")):
+                (tmp_rhs != "NULL") and
+                ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 log.debug("Resolved member access variable.")
-                return tmp_rhs
+                return tmp_rhs        
             
             # Cannot resolve directly. Return the member access object.
             log.debug("MemberAccess: Return new access object " + str(r))
