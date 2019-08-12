@@ -156,6 +156,26 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+class Kill(VbaLibraryFunc):
+    """
+    Kill statement.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is not None) and (len(params) > 0)):
+            context.report_action('Delete File', params[0], 'Kill', strip_null_bytes=True)
+        return ""
+
+class RmDir(VbaLibraryFunc):
+    """
+    RmDir statement.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is not None) and (len(params) > 0)):
+            context.report_action('Delete Directory', params[0], 'RmDir', strip_null_bytes=True)
+        return ""  # vbOK
+
 class Quit(VbaLibraryFunc):
     """
     Wscript.Quit(). Just keeps going.
@@ -3266,7 +3286,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead):
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
