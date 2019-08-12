@@ -928,7 +928,7 @@ def parse_stream(subfilename,
             print(err.line)
             print(" "*(err.column-1) + "^")
             print(err)
-            print("Parse Error. Processing Aborted.")
+            log.error("Parse Error. Processing Aborted.")
             return None
 
     # Check for timeouts.
@@ -1013,11 +1013,14 @@ def process_file(container,
                  entry_points=None,
                  time_limit=None,
                  verbose=False,
-                 display_int_iocs=False):
+                 display_int_iocs=False,
+                 set_log=False):
 
     if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
-    
+    elif set_log:
+        colorlog.basicConfig(level=logging.INFO, format='%(log_color)s%(levelname)-8s %(message)s')
+        
     if not data:
         # TODO: replace print by writing to a provided output file (sys.stdout by default)
         if container:
@@ -1244,6 +1247,7 @@ def _process_file (filename, data,
         vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
 
     # Create the emulator.
+    log.info("Starting emulation...")
     vm = ViperMonkey(filename)
     orig_filename = filename
     if (entry_points is not None):
@@ -1258,6 +1262,7 @@ def _process_file (filename, data,
 
             # Read in document metadata.
             try:
+                log.info("Reading document metadata...")
                 ole = olefile.OleFileIO(data)
                 vm.set_metadata(ole.get_metadata())
             except Exception as e:
@@ -1275,6 +1280,7 @@ def _process_file (filename, data,
             del filename # We already have this in memory, we don't need to read it again.
                 
             # Parse the VBA streams.
+            log.info("Parsing VB...")
             comp_modules = parse_streams(vba, strip_useless)
             if (comp_modules is None):
                 return None
@@ -1283,6 +1289,7 @@ def _process_file (filename, data,
                     vm.add_compiled_module(m)
 
             # Pull out document variables.
+            log.info("Reading document variables...")
             for (var_name, var_val) in _read_doc_vars(data, orig_filename):
                 vm.doc_vars[var_name] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
@@ -1290,6 +1297,7 @@ def _process_file (filename, data,
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
                 
             # Pull text associated with Shapes() objects.
+            log.info("Reading Shapes object text fields...")
             got_it = False
             shape_text = read_ole_fields._get_shapes_text_values(data, 'worddocument')
             pos = 1
@@ -1316,6 +1324,7 @@ def _process_file (filename, data,
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull text associated with InlineShapes() objects.
+            log.info("Reading InlineShapes object text fields...")
             got_it = False
             for (var_name, var_val) in _get_inlineshapes_text_values(data):
                 got_it = True
@@ -1327,6 +1336,7 @@ def _process_file (filename, data,
                     log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
                     
             # Pull out embedded OLE form textbox text.
+            log.info("Reading TextBox object text fields...")
             for (var_name, var_val) in _get_ole_textbox_values(data, 'worddocument'):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
@@ -1338,11 +1348,13 @@ def _process_file (filename, data,
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
                     
             # Pull out custom document properties.
+            log.info("Reading custom document properties...")
             for (var_name, var_val) in _read_custom_doc_props(data):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
 
             # Pull text associated with embedded objects.
+            log.info("Reading embedded object text fields...")
             for (var_name, caption_val, tag_val) in _get_embedded_object_values(data):
                 tag_name = var_name.lower() + ".tag"
                 vm.doc_vars[tag_name] = tag_val
@@ -1352,9 +1364,11 @@ def _process_file (filename, data,
                 log.debug("Added potential VBA object caption text %r = %r to doc_vars." % (caption_name, caption_val))
                 
             # Pull out the document text.
+            log.info("Reading document text...")
             vm.doc_text = _read_doc_text('', data=data)
             #print "\n\nDOC TEXT:\n" + str(vm.doc_text)
 
+            log.info("Reading form variables...")
             try:
                 # Pull out form variables.
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
