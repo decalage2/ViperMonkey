@@ -781,6 +781,12 @@ class Let_Statement(VBA_Object):
             if (((start-1 + size) > len(the_str)) or (start < 1)):
                 log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
                 return False
+
+            # Fix the length of the new data if needed.
+            if (len(rhs) > size):
+                rhs = rhs[:size]
+            if (len(rhs) < size):
+                size = len(rhs)
             
             # Modify the string.
             mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
