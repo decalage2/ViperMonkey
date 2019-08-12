@@ -1033,9 +1033,14 @@ def process_file(container,
         # TODO: merge process_file and _process_file
         with open(filename,'rb') as input_file:
             data = input_file.read()
-    return _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
-                         entry_points=entry_points, time_limit=time_limit, display_int_iocs=display_int_iocs)
+    r = _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
+                      entry_points=entry_points, time_limit=time_limit, display_int_iocs=display_int_iocs)
 
+    # Reset logging.
+    colorlog.basicConfig(level=logging.ERROR, format='%(log_color)s%(levelname)-8s %(message)s')
+
+    # Done.
+    return r
 
 def read_sheet_from_csv(filename):
     # Open the CSV file.
