@@ -792,7 +792,6 @@ class Let_Statement(VBA_Object):
             mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
 
             # Set the string in the context.
-            #context.set(str(the_str_var), mod_str)
             tmp_let = self._make_let_statement(the_str_var, mod_str)
             tmp_let.eval(context)
             return True

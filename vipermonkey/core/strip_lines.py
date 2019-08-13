@@ -362,12 +362,15 @@ def fix_non_ascii_names(vba_code):
     Also change things like "a!b!.c" to "a.b.c".
 
     Also break up multiple statements seperated with '::' onto different lines.
+
+    Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         ("::" not in vba_code) and
-        (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None)):
+        (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
+        (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
     
     # Replace bad characters unless they appear in a string.
@@ -387,7 +390,13 @@ def fix_non_ascii_names(vba_code):
         # Need to change "!" member access to "."?
         if ((prev_char == "!") and (c.isalpha())):
             r = r[:len(r)-1] + "."
-        
+
+        # Need to eliminate bogus =+ assignments.
+        if ((c == "+") and (prev_char == "=")):
+
+            # Skip the '+'.
+            continue
+            
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
             r += "d" + str(ord(c))
