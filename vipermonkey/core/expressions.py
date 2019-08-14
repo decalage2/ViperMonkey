@@ -399,7 +399,9 @@ class MemberAccessExpression(VBA_Object):
             return eval_arg(self.__repr__(), context)
 
         # Now widen this up to more general data that can be read from the
-        # doc.        
+        # doc.
+        if ("(" in tmp):
+            tmp = tmp[:tmp.rindex("(")]
         return context.get_doc_var(tmp)
 
     def _handle_text_file_read(self, context):
