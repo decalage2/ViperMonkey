@@ -224,6 +224,8 @@ def _read_doc_text_libreoffice(data):
             pat = r'^\*.*\*\/'
             if (re.match(pat, first_line) is not None):
                 first_line = "/" + first_line
+            if (first_line.startswith("[]*")):
+                first_line = "/*" + first_line
             r = [first_line] + r[1:]
                 
         # Return the paragraph text.
