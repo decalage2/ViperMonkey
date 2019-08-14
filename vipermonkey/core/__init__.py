@@ -416,11 +416,13 @@ class ViperMonkey(object):
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
         context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["ThisDocument.Range".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Start".lower()] = 0
         context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
