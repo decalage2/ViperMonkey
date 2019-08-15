@@ -673,8 +673,8 @@ def coerce_to_int(obj):
             return 0
 
         # Hex string?
-        if ((obj.startswith("&H")) and (len(obj) <= 4)):
-            return int(obj.replace("&H", "0x"), 16)
+        if ((obj.lower().startswith("&h")) and (len(obj) <= 4)):
+            return int(obj.lower().replace("&h", "0x"), 16)
 
     # Try regular int.
     return int(obj)

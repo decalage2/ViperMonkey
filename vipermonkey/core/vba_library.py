@@ -1546,8 +1546,8 @@ class CByte(VbaLibraryFunc):
         r = ''
         try:
             tmp = params[0].upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
             num = int(round(float(tmp)))
             r = num
@@ -1569,7 +1569,7 @@ class CLng(VbaLibraryFunc):
         # Handle abstracted pointers to memory.
         val = params[0]
         if (isinstance(val, str) and
-            (not val.startswith("&H")) and
+            (not val.lower().startswith("&h")) and
             (val.startswith("&"))):
             return val
 
@@ -1579,8 +1579,8 @@ class CLng(VbaLibraryFunc):
             tmp = val
             if (isinstance(tmp, str)):
                 tmp = val.upper()
-                if (tmp.startswith("&H")):
-                    tmp = tmp.replace("&H", "0x")
+                if (tmp.lower().startswith("&h")):
+                    tmp = tmp.lower().replace("&h", "0x")
                     tmp = int(tmp, 16)
                 elif (len(tmp) == 1):
                     tmp = ord(tmp)
@@ -1638,8 +1638,8 @@ class CSng(VbaLibraryFunc):
         r = ''
         try:
             tmp = params[0].upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
             r = float(tmp)
         except:
@@ -2971,8 +2971,8 @@ class CDbl(VbaLibraryFunc):
         try:
             # Handle hex.
             tmp = str(params[0]).upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.replace("&h", "0x")
                 tmp = int(tmp, 16)
 
             # VBA rounds the significant digits.
