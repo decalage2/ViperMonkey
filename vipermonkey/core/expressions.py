@@ -706,11 +706,72 @@ class MemberAccessExpression(VBA_Object):
 
             # Fake a path.
             return "C:\\Users\\admin\\"
-    
+
+    def _handle_indexed_form_access(self, context):
+        """
+        See if this is accessing a control in a form by index.
+        """
+
+        # ex. form1.Controls('0').ControlTipText
+        self_str = str(self)
+        if (".Controls(" not in self_str):
+            return None
+
+        # Do we have a list of information about the controls in this form?
+        controls_str = (self_str[:self_str.index(".Controls(")] + ".Controls").lower()
+        control_vals = None
+        try:
+            control_vals = context.get(controls_str)
+        except KeyError:
+
+            # Don't have any control values for the form.
+            return None
+
+        # We have control values for the form. Get the index being accessed.
+        pat = r".+\.Controls\(\s*'([^']+)'\s*\)"
+        index = re.findall(pat, self_str)[0]
+
+        # Evaluate the index.
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            index = obj
+            if (isinstance(index, VBA_Object)):
+                index = index.eval(context)
+            index = int(index)
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + index + "'")
+            return None
+        except:
+            return None
+
+        # Is the control index in bounds?
+        if (index >= len(control_vals)):
+            return None
+
+        # In bounds. Get the control field value of interest.
+        control_val = control_vals[index]
+        if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
+            return None
+        field = str(self.rhs[1]).lower()
+        if (field not in control_val):
+            return None
+        r = control_val[field]
+        return r
+            
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
 
+        # Handle accessing control values from a form by index..
+        call_retval = self._handle_indexed_form_access(context)
+        if (call_retval is not None):
+            return call_retval
+        
         # See if this is reading form text by index.
         call_retval = self._handle_control_read(context)
         if (call_retval is not None):
@@ -755,7 +816,7 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_get_clipboard(context)
         if (call_retval is not None):
             return call_retval
-
+        
         # Pull out the left hand side of the member access.
         tmp_lhs = None
         if (self.lhs is not None):

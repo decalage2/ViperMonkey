@@ -1425,6 +1425,27 @@ def _process_file (filename, data,
                         vm.globals[name + ".text"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
 
+                        # Save control in a list so it can be accessed by index.
+                        if ("." in name):
+
+                            # Initialize the control list for this form if it does not exist.
+                            control_name = name[:name.index(".")] + ".controls"
+                            if (control_name not in vm.globals):
+                                vm.globals[control_name] = []
+
+                            # Create a dict representing the various data items for the current control.
+                            control_data = {}
+                            control_data["value"] = val
+                            control_data["tag"] = val
+                            control_data["caption"] = caption
+                            control_data["controltiptext"] = control_tip_text
+                            control_data["text"] = val
+
+                            # Assuming we are getting these for controls in order, append the current
+                            # control information to the list for the form.
+                            log.debug("Added index VBA form control data " + control_name + "(" + str(len(vm.globals[control_name])) + ") = " + str(control_data))
+                            vm.globals[control_name].append(control_data)
+                        
                         # Save short form variable names.
                         short_name = global_var_name.lower()
                         if ("." in short_name):
