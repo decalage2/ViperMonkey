@@ -94,7 +94,8 @@ integer = decimal_literal | octal_literal | hex_literal
 # MS-GRAMMAR: exponent-letter = %x0044 / %x0045 / %x0064 / %x0065
 # MS-GRAMMAR: floating-point-type-suffix = "!" / "#" / "@"
 
-float_literal = Regex(re.compile('(?P<value>[+\-]?\d+\.\d*([eE][+\-]?\d+)?)[!#@]?'))
+float_literal = Regex(re.compile('(?P<value>[+\-]?\d+\.\d*([eE][+\-]?\d+)?)[!#@]?')) | \
+                Regex(re.compile('(?P<value>[+\-]?\d+[eE][+\-]?\d+)[!#@]?'))
 float_literal.setParseAction(lambda t: float(t.value))
 # --- QUOTED STRINGS ---------------------------------------------------------
 
