@@ -784,7 +784,7 @@ class Let_Statement(VBA_Object):
                 return False
 
             # Convert to a VB string to handle mixed ASCII/wide char weirdness.
-            vb_rhs = vb_str.VbStr(rhs)
+            vb_rhs = vb_str.VbStr(rhs, context.is_vbscript)
             
             # Fix the length of the new data if needed.
             if (vb_rhs.len() > size):
@@ -795,7 +795,7 @@ class Let_Statement(VBA_Object):
                 size = vb_rhs.len()
                 
             # Modify the string.
-            vb_the_str = vb_str.VbStr(the_str)
+            vb_the_str = vb_str.VbStr(the_str, context.is_vbscript)
             #mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
             mod_str = vb_the_str.update_chunk(start - 1, start - 2 + size, vb_rhs).to_python_str()
 

@@ -95,6 +95,8 @@ import prettytable
 import unidecode
 import string
 
+import subprocess
+
 from logger import log
 from procedures import Function
 from procedures import Sub
@@ -149,6 +151,15 @@ class ViperMonkey(object):
         # list of actions (stored as tuples by report_action)
         self.actions = []
 
+        # Figure out whether this is VBScript or VBA.
+        file_info = subprocess.check_output(["file", self.filename]).strip()
+        if (("Microsoft" in file_info) or ("Composite" in file_info) or ("Zip" in file_info)):
+            self.is_vbscript = False
+            log.info("Emulating an Office (VBA) file.")
+        else:
+            self.is_vbscript = True
+            log.info("Emulating a VBScript file.")
+            
         # Track the loaded Excel spreadsheet (xlrd).
         self.loaded_excel = None
         
@@ -407,6 +418,7 @@ class ViperMonkey(object):
                           loaded_excel=self.loaded_excel,
                           filename=self.filename,
                           metadata=self.metadata)
+        context.is_vbscript = self.is_vbscript
 
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():

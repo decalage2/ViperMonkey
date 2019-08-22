@@ -117,6 +117,9 @@ class Context(object):
         # modified.
         self.max_static_iters = 2
 
+        # Track whether VBScript or VBA is being analyzed.
+        self.is_vbscript = False
+        
         # Allow user to provide extra function names to be reported on.
         if log_funcs:
             self._log_funcs = [func_name.lower() for func_name in log_funcs]
@@ -181,6 +184,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
             self.open_files = context.open_files
             self.closed_files = context.closed_files

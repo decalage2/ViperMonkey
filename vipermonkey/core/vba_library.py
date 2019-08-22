@@ -278,7 +278,7 @@ class Len(VbaLibraryFunc):
             if (isinstance(val, str)):
 
                 # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-                vb_val = vb_str.VbStr(val)
+                vb_val = vb_str.VbStr(val, context.is_vbscript)
                 return vb_val.len()
 
             # Something with a length that is not a string.
@@ -336,7 +336,7 @@ class Mid(VbaLibraryFunc):
             pass
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-        vb_s = vb_str.VbStr(s)
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
         
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
@@ -407,7 +407,7 @@ class Left(VbaLibraryFunc):
             pass
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-        vb_s = vb_str.VbStr(s)
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
         
         # "If Start is greater than the number of characters in String,
         # Left returns the whole string.
@@ -459,7 +459,7 @@ class Right(VbaLibraryFunc):
             pass
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-        vb_s = vb_str.VbStr(s)
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
         
         # "If Start is greater than the number of characters in String,
         # Right returns the whole string.
