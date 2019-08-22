@@ -57,6 +57,7 @@ from curses_ascii import isprint
 
 from pyparsing import *
 
+import vb_str
 from vba_context import VBA_LIBRARY
 from vba_object import str_convert
 from vba_object import int_convert
@@ -272,7 +273,17 @@ class Len(VbaLibraryFunc):
             return 2
         val = str_convert(params[0])
         if (hasattr(params[0], '__len__')):
-            return len(val)
+
+            # Is this a string?            
+            if (isinstance(val, str)):
+
+                # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+                vb_val = vb_str.VbStr(val)
+                return vb_val.len()
+
+            # Something with a length that is not a string.
+            else:
+                return len(val)
         else:
             log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
             return 0
@@ -323,16 +334,22 @@ class Mid(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s)
+        
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Mid: start>len(s) => return ""')
             return ''
+
         # What to do when start<=0 is not specified:
-        if start<=0:
+        if (start <= 0):
             start = 1
+
         # If length not specified, return up to the end of the string:
-        if len(params) == 2:
+        if (len(params) == 2):
             log.debug('Mid: no length specified, return s[%d:]=%r' % (start-1, s[start-1:]))
             return s[start-1:]
         length = 0
@@ -340,17 +357,26 @@ class Mid(VbaLibraryFunc):
             length = int_convert(params[2])
         except:
             pass
+
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
-        if start+length-1 > len(s):
+        if start+length-1 > vb_s.len():
             log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
-            return s[start-1:]
+            #return s[start-1:]
+            return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
+
         # What to do when length<=0 is not specified:
         if length <= 0:
             return ''
-        log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
-        return s[start - 1:start-1+length]
+
+        # Regular Mid().
+        #r = s[start - 1:start-1+length]
+        r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
+
+        # Done.
+        log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
+        return r
 
 class MidB(Mid):
     pass
@@ -379,17 +405,23 @@ class Left(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s)
+        
         # "If Start is greater than the number of characters in String,
         # Left returns the whole string.
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Left: start>len(s) => return s')
             return s
+
         # Return empty string if start <= 0.
-        if start<=0:
+        if (start <= 0):
             return ""
 
         # Return characters from start of string.
-        r = s[:start]
+        #r = s[:start]
+        r = vb_s.get_chunk(0, start).to_python_str()
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
@@ -425,17 +457,23 @@ class Right(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s)
+        
         # "If Start is greater than the number of characters in String,
         # Right returns the whole string.
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Right: start>len(s) => return s')
             return s
+
         # Return empty string if start <= 0.
-        if start<=0:
+        if (start <= 0):
             return ""
 
         # Return characters from end of string.
-        r = s[(len(s) - start):]
+        #r = s[(len(s) - start):]
+        r = vb_s.get_chunk(vb_s.len() - start, vb_s.len()).to_python_str()
         log.debug('Right: return s[%d:]=%r' % (start, r))
         return r
 
@@ -775,9 +813,6 @@ class AscW(VbaLibraryFunc):
         return r
 
 class AscB(AscW):
-    pass
-
-class Asc(AscW):
     pass
 
 class International(VbaLibraryFunc):
@@ -3272,7 +3307,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Dir, RGB, Log, Cos, Exp, Sin, Str, Val, CInt, Pmt, Day, Round,
                UCase, Randomize, CBool, CDate, CStr, CSng, Tan, Rnd, Oct,
                Environ, IIf, CleanString, Base64DecodeString, CLng, Close, Put, Run, InStrRev,
-               LCase, RTrim, LTrim, AscW, AscB, Asc, CurDir, LenB, CreateObject,
+               LCase, RTrim, LTrim, AscW, AscB, CurDir, LenB, CreateObject,
                CheckSpelling, Specialfolders, StrComp, Space, Year, Variable,
                Exec, CDbl, Print, OpenTextFile, CreateTextFile, Write, Minute, Second, WinExec,
                CallByName, ReadText, Variables, Timer, Open, CVErr, WriteLine,

@@ -57,6 +57,7 @@ from vba_object import int_convert
 import procedures
 from var_in_expr_visitor import *
 from function_call_visitor import *
+import vb_str
 
 import traceback
 import string
@@ -782,14 +783,21 @@ class Let_Statement(VBA_Object):
                 log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
                 return False
 
-            # Fix the length of the new data if needed.
-            if (len(rhs) > size):
-                rhs = rhs[:size]
-            if (len(rhs) < size):
-                size = len(rhs)
+            # Convert to a VB string to handle mixed ASCII/wide char weirdness.
+            vb_rhs = vb_str.VbStr(rhs)
             
+            # Fix the length of the new data if needed.
+            if (vb_rhs.len() > size):
+                #rhs = rhs[:size]
+                vb_rhs = vb_rhs.get_chunk(0, size)
+            if (vb_rhs.len() < size):
+                #size = len(rhs)
+                size = vb_rhs.len()
+                
             # Modify the string.
-            mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
+            vb_the_str = vb_str.VbStr(the_str)
+            #mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
+            mod_str = vb_the_str.update_chunk(start - 1, start - 2 + size, vb_rhs).to_python_str()
 
             # Set the string in the context.
             tmp_let = self._make_let_statement(the_str_var, mod_str)
