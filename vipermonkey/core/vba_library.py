@@ -223,7 +223,15 @@ class FolderExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        return False
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return False
+
+        # Is this a directory that is expected to exist?
+        expected_dirs = set(["c:\\users"])
+        curr_dir = str(params[0]).lower()
+        return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 
 class FileExists(VbaLibraryFunc):
     """
