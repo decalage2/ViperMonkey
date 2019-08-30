@@ -559,7 +559,8 @@ class MemberAccessExpression(VBA_Object):
         # Is this a .Write() call?
         log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
         rhs_str = str(rhs).strip()
-        if ("write(" not in rhs_str.lower()):
+        if (("write(" not in rhs_str.lower()) and ("writetext(" not in rhs_str.lower())):
+            log.debug("Not a Write() call.")
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
@@ -573,9 +574,9 @@ class MemberAccessExpression(VBA_Object):
             for field in self.rhs[:-1]:
                 lhs_orig += "." + str(field)
 
-        # Are we referencing a stream contained in a variable?        
-        if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
-            return False
+            # Are we referencing a stream contained in a variable?        
+            if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
+                return False
         
         # Pull out the text to write to the text stream.
         txt = str(eval_arg(rhs.params[0], context))
@@ -650,12 +651,14 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this a call to SaveToFile()?
+        log.debug("_handle_savetofile(): filename = " + str(filename) + ", self = " + str(self))
         memb_str = str(self)
         if (".savetofile(" not in memb_str.lower()):
             return False
 
         # We have a call to SaveToFile(). Get the value to save from .ReadText
-        var_name = memb_str[:memb_str.index(".")] + ".ReadText"
+        var_name = memb_str[:memb_str.lower().index(".savetofile")] + ".ReadText"
+        log.debug("var_name = " + var_name)
         val = None
         try:
             val = context.get(var_name)

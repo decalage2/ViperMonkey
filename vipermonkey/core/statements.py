@@ -2669,6 +2669,34 @@ class Call_Statement(VBA_Object):
     def __repr__(self):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
+    def _handle_with_calls(self, context):
+
+        # Is this a call like '.WriteText "foo"'?
+        func_name = str(self.name).strip()
+        if (not func_name.startswith(".")):
+            return None
+
+        # We have a call to a function whose name starts with '.'. Are
+        # we in a With block?
+        if (len(context.with_prefix) == 0):
+            return None
+
+        # We have a method call of the With object. Make a member
+        # access expression representing the method call of the
+        # With object.
+        print self
+        print func_name
+        print context.with_prefix
+        call_obj = Function_Call(None, None, None, old_call=self)
+        call_obj.name = func_name[1:] # Get rid of initial '.'
+        full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
+
+        # Evaluate the fully qualified object method call.
+        print full_expr
+        r = eval_arg(full_expr, context)
+        print r
+        return r
+        
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -2719,9 +2747,14 @@ class Call_Statement(VBA_Object):
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
+
+        # Handle method calls inside a With statement.
+        r = self._handle_with_calls(context)
+        if (r is not None):
+            return r
         
         # Handle VBA functions:
-        func_name = str(self.name)
+        func_name = str(self.name).strip()
         if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
             context.report_action('Display Message', call_params, 'MsgBox', strip_null_bytes=True)
