@@ -94,12 +94,14 @@ class VbStr(object):
     # (https://bettersolutions.com/vba/strings-characters/ascii-characters.htm). These
     # are seen by ViperMonkey as multi-byte characters. To handle this we have a map that
     # maps from the "special" VBA ASCII code for a character to the byte arrays representing
-    # the unicode representation of the character that the rest of the worl uses.
+    # the unicode representation of the character that the rest of the world uses.
     ascii_map = {
         128: [226, 130, 172],
-        129: [239, 191, 189],
+        #129: [239, 191, 189],
+        129: [208, 131],
         130: [226, 128, 154],
-        131: [198, 146],
+        #131: [198, 146],
+        131: [209, 147],
         132: [226, 128, 158],
         133: [226, 128, 166],
         134: [226, 128, 160],
