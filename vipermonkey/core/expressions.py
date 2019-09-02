@@ -1504,6 +1504,7 @@ expr_item <<= (
 expression <<= (infixNotation(expr_item,
                                   [
                                       (CaselessKeyword("not"), 1, opAssoc.RIGHT, Not),
+                                      ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
                                       ("^", 2, opAssoc.RIGHT, Power),
                                       (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
@@ -1521,7 +1522,7 @@ expression.setParseAction(lambda t: t[0])
 limited_expression = (infixNotation(expr_item,
                                     [
                                         # ("^", 2, opAssoc.RIGHT), # Exponentiation
-                                        # ("-", 1, opAssoc.LEFT), # Unary negation
+                                        ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
                                         (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                         ("\\", 2, opAssoc.LEFT, FloorDivision),
                                         (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
