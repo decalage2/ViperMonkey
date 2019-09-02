@@ -3041,8 +3041,8 @@ class With_Statement(VBA_Object):
         return
 
 # With statement
-with_statement = CaselessKeyword('With').suppress() + (member_access_expression('env') ^ \
-                                                       (Optional(".") + (lex_identifier('env') ^ function_call_limited('env')))) + Suppress(EOS) + \
+with_statement = CaselessKeyword('With').suppress() + Optional(".") + (member_access_expression('env') ^ \
+                                                                       ((lex_identifier('env') ^ function_call_limited('env')))) + Suppress(EOS) + \
                  Group(statement_block('body')) + \
                  CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
 with_statement.setParseAction(With_Statement)

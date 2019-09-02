@@ -980,7 +980,7 @@ member_object_limited = (
     + NotAny("!")
 )
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
-member_object = (func_call_array_access_limited ^ function_call_limited) | member_object_limited
+member_object = NotAny(CaselessKeyword("With")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
 
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?

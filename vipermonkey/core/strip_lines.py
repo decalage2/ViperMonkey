@@ -236,6 +236,12 @@ def fix_unbalanced_quotes(vba_code):
     vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
     vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
 
+    # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
+    # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
+    # to ".foo ' A comment" so it is not ambiguous (parse as comment).
+    vba_code += "\n"
+    vba_code = re.sub(r"'('[^'^\"]+\n)", r"\1", vba_code, re.DOTALL)
+    
     # Fix Execute statements with no space between the execute and the argument.
     vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)
     

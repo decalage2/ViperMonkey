@@ -121,11 +121,9 @@ unrestricted_name = entity_name | reserved_identifier
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
 # TODO: reduce this list when corresponding statements are implemented
-#reserved_keywords = Regex(re.compile(
-#    'Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function|End', re.IGNORECASE))
-# It would be nice if End could be in this list, but if it is things like 'Function EndOfSession(...' fail to parse.
+# Use '$' at end of regex to only block identifiers that exactly match a reserved word.
 reserved_keywords = Regex(re.compile(
-    'Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function', re.IGNORECASE))
+    '(?:Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function|End)$', re.IGNORECASE))
 
 strict_reserved_keywords = reserved_keywords | \
                            Regex(re.compile('Open', re.IGNORECASE))
