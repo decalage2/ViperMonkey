@@ -244,7 +244,7 @@ function_name = Combine(identifier + Suppress(Optional(type_suffix))) | lifecycl
 #
 # MS-GRAMMAR: end-label = statement-label-definition
 
-end_label = statement_label_definition
+#end_label = statement_label_definition
 
 # MS-GRAMMAR: procedure-tail = [WS] LINE-END / single-quote comment-body / ":" rem-statement
 

@@ -422,7 +422,9 @@ def fix_vba_code(vba_code):
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
     vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
     vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
-
+    vba_code = "\n" + vba_code
+    vba_code = re.sub(r"\n:", "\n", vba_code)
+    
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
