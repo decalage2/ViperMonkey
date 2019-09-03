@@ -946,6 +946,8 @@ def get_all_local_funcs(vba):
     pat = r"(?:Sub |Function )([^\(]+)"
     r = []
     for (_, _, _, vba_code) in vba.extract_macros():
+        if (vba_code is None):
+            continue
         for line in vba_code.split("\n"):
             names = re.findall(pat, line)
             r.extend(names)

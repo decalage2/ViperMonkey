@@ -241,6 +241,11 @@ def fix_unbalanced_quotes(vba_code):
     # to ".foo ' A comment" so it is not ambiguous (parse as comment).
     vba_code += "\n"
     vba_code = re.sub(r"'('[^'^\"]+\n)", r"\1", vba_code, re.DOTALL)
+
+    # More ambiguous EOL comments. Something like "a = 12 : 'stuff 'more stuff" could have
+    # 'stuff ' potentially parsed as a string. Just wipe out the comments in this case
+    # (ex. "a = 12 : 'stuff 'more stuff" => "a = 12 :").
+    vba_code = re.sub(r"('[^'^\"]+'[^'^\"]+\n)", r"", vba_code, re.DOTALL)
     
     # Fix Execute statements with no space between the execute and the argument.
     vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)
