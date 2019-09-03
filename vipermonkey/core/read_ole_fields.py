@@ -311,9 +311,19 @@ def _get_shapes_text_values_2007(fname):
         f1.close()
 
         # Pull out the text associated with the object.
-        if ("#" not in data):
+        anchor = None
+        pad = 0
+        if ("   #" in data):
+            anchor = "   #"
+            pad = 3
+        elif ("     €" in data):
+            anchor = "     €"
+            pad = 16
+        elif ("0  " in data):
+            anchor = "0  "
+        if (anchor is None):
             continue
-        start = data.rindex("   #") + len("   #") + 3
+        start = data.rindex(anchor) + len(anchor) + pad
         pat = r"([\x20-\x7e]+)"
         text = re.findall(pat, data[start:])
         if (len(text) == 0):

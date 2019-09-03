@@ -1315,8 +1315,12 @@ def _process_file (filename, data,
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
                 vm.doc_vars["thisdocument."+var_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name, var_val))
+                vm.doc_vars["thisdocument."+var_name+".caption"] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name+".caption", var_val))
                 vm.doc_vars["activedocument."+var_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name, var_val))
+                vm.doc_vars["activedocument."+var_name+".caption"] = var_val
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name+".caption", var_val))
                 tmp_name = "shapes('" + var_name + "').textframe.textrange.text"
                 vm.doc_vars[tmp_name] = var_val
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
