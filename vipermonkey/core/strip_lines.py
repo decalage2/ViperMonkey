@@ -235,7 +235,7 @@ def fix_unbalanced_quotes(vba_code):
     vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
     vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
     vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
-
+    
     # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
     # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
     # to ".foo ' A comment" so it is not ambiguous (parse as comment).
@@ -245,7 +245,7 @@ def fix_unbalanced_quotes(vba_code):
     # More ambiguous EOL comments. Something like "a = 12 : 'stuff 'more stuff" could have
     # 'stuff ' potentially parsed as a string. Just wipe out the comments in this case
     # (ex. "a = 12 : 'stuff 'more stuff" => "a = 12 :").
-    vba_code = re.sub(r"('[^'^\"]+'[^'^\"]+\n)", r"", vba_code, re.DOTALL)
+    vba_code = re.sub(r"(\n[^'^\"^\n]+)'[^'^\"^\n]+'[^'^\"^\n]+\n", r"\1\n", vba_code, re.DOTALL)
     
     # Fix Execute statements with no space between the execute and the argument.
     vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)
@@ -435,7 +435,7 @@ def fix_vba_code(vba_code):
     vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
     vba_code = "\n" + vba_code
     vba_code = re.sub(r"\n:", "\n", vba_code)
-    
+
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
@@ -444,7 +444,7 @@ def fix_vba_code(vba_code):
     # non-ASCII characters. Parsing these with pyparsing would be difficult
     # (or impossible), so convert the non-ASCII names to ASCII.
     vba_code = fix_non_ascii_names(vba_code)
-    
+
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)
 
@@ -523,7 +523,7 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Preprocess the code to make it easier to parse.
     vba_code = fix_vba_code(vba_code)
-        
+    
     # Track data change callback function names.
     change_callbacks = set()    
     
@@ -797,6 +797,7 @@ def strip_useless_code(vba_code, local_funcs):
         # Fix Application.Run "foo, bar baz" type expressions by removing
         # the quotes.
         if (line.strip().startswith("Application.Run") and
+            (re.match(r'Application\.Run\s+"[^"]+"', line) is not None) and
             (line.count('"') == 2) and
             (line.strip().endswith('"'))):
 
