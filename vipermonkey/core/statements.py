@@ -2464,6 +2464,14 @@ class If_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
+        # Copy constructor?
+        if (isinstance(tokens, If_Statement)):
+            self.pieces = tokens.pieces
+            return
+        if ((len(tokens) == 1) and (isinstance(tokens[0], If_Statement))):
+            self.pieces = tokens[0].pieces
+            return
+            
         # Save the boolean guard and body for each case in the if, in order.
         self.pieces = []
         for tok in tokens:
@@ -2584,18 +2592,20 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                                     Group(statement_block('statements')))
                           )
 
-single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
-                                  Group(simple_statements_line('statements')) )  + \
-                                  ZeroOrMore(
-                                      Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                   Group(simple_statements_line('statements')) )  + \
+                                   ZeroOrMore(
+                                       Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                              Group(simple_statements_line('statements')))
+                                   ) + \
+                                   Optional(
+                                       Group(CaselessKeyword("Else").suppress() + \
                                              Group(simple_statements_line('statements')))
-                                  ) + \
-                                  Optional(
-                                      Group(CaselessKeyword("Else").suppress() + \
-                                            Group(simple_statements_line('statements')))
-                                  ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
-simple_if_statement = multi_line_if_statement ^ single_line_if_statement
+                                   ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
+single_line_if_statement = _single_line_if_statement
+single_line_if_statement.setParseAction(If_Statement)
 
+simple_if_statement = multi_line_if_statement ^ _single_line_if_statement
 simple_if_statement.setParseAction(If_Statement)
 
 # --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
@@ -3318,6 +3328,7 @@ simple_statement_restricted = (
         | doevents_statement
         | rem_statement
         | resume_statement
+        | single_line_if_statement
     )
 )
 
