@@ -245,7 +245,7 @@ def fix_unbalanced_quotes(vba_code):
     # More ambiguous EOL comments. Something like "a = 12 : 'stuff 'more stuff" could have
     # 'stuff ' potentially parsed as a string. Just wipe out the comments in this case
     # (ex. "a = 12 : 'stuff 'more stuff" => "a = 12 :").
-    vba_code = re.sub(r"(\n[^'^\"^\n]+)'[^'^\"^\n]+'[^'^\"^\n]+\n", r"\1\n", vba_code, re.DOTALL)
+    vba_code = re.sub(r"(\n[^'^\n]+)'[^'^\"^\n]+'[^'^\"^\n]+\n", r"\1\n", vba_code, re.DOTALL)
     
     # Fix Execute statements with no space between the execute and the argument.
     vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)

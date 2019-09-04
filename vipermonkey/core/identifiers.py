@@ -122,8 +122,26 @@ unrestricted_name = entity_name | reserved_identifier
 
 # TODO: reduce this list when corresponding statements are implemented
 # Use '$' at end of regex to only block identifiers that exactly match a reserved word.
-reserved_keywords = Regex(re.compile(
-    '(?:Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function|End)$', re.IGNORECASE))
+#reserved_keywords = Regex(re.compile(
+#    '(?:[\s\n]*|(?:.+[\s\n]+))(?:Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function|End|To)(?:[\s\n]*|(?:[\s\n]+.+))$', re.IGNORECASE | re.DOTALL))
+# Handling whitespace in the RE version of reserved_keywords is a nightmare.
+reserved_keywords = CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrW") | \
+                    CaselessKeyword("Asc") | \
+                    CaselessKeyword("Case") | \
+                    CaselessKeyword("On") | \
+                    CaselessKeyword("Sub") | \
+                    CaselessKeyword("If") | \
+                    CaselessKeyword("Kill") | \
+                    CaselessKeyword("For") | \
+                    CaselessKeyword("Next") | \
+                    CaselessKeyword("Public") | \
+                    CaselessKeyword("Private") | \
+                    CaselessKeyword("Declare") | \
+                    CaselessKeyword("Function") | \
+                    CaselessKeyword("End") | \
+                    CaselessKeyword("To")
 
 strict_reserved_keywords = reserved_keywords | \
                            Regex(re.compile('Open', re.IGNORECASE))

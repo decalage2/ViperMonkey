@@ -48,6 +48,7 @@ import array
 from hashlib import sha256
 
 from identifiers import *
+from reserved import *
 from lib_functions import *
 from literals import *
 from operators import *
@@ -77,7 +78,7 @@ class SimpleNameExpression(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(SimpleNameExpression, self).__init__(original_str, location, tokens)
         self.name = tokens.name
-        log.debug('parsed %r as SimpleNameExpression' % self)
+        log.debug('parsed "%r" as SimpleNameExpression' % self)
 
     def __repr__(self):
         return '%s' % self.name
@@ -980,11 +981,11 @@ member_object_limited = (
     + NotAny("!")
 )
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
-member_object = NotAny(CaselessKeyword("With")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
-
+member_object_loose = ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
+member_object_strict = NotAny(reserved_identifier) + member_object_loose
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
-member_access_expression = Group(Group(member_object("lhs") + OneOrMore((Suppress(".") | Suppress("!")) + member_object("rhs"))))
+member_access_expression = Group(Group(member_object_strict("lhs") + OneOrMore((Suppress(".") | Suppress("!")) + member_object_loose("rhs"))))
 member_access_expression.setParseAction(MemberAccessExpression)
 
 
@@ -992,8 +993,8 @@ member_access_expression.setParseAction(MemberAccessExpression)
 member_access_expression_loose = Group(
     Group(
         Suppress(ZeroOrMore(" "))
-        + member_object("lhs")
-        + OneOrMore(Suppress(".") + member_object("rhs"))
+        + member_object_strict("lhs")
+        + OneOrMore(Suppress(".") + member_object_loose("rhs"))
     )
     + Suppress(ZeroOrMore(" "))
 )
@@ -1008,7 +1009,7 @@ member_object_limited = (
 )
 member_access_expression_limited = Group(
     Group((
-        member_object("lhs")
+        member_object_strict("lhs")
         + NotAny(White())
         + Suppress(".")
         + NotAny(White())
