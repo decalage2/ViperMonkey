@@ -76,6 +76,7 @@ def is_simple_statement(s):
             isinstance(s, Option_Statement) or
             isinstance(s, Prop_Assign_Statement) or
             isinstance(s, Let_Statement) or
+            isinstance(s, LSet_Statement) or
             # Calls run other statements, so they are not simple.
             #isinstance(s, Call_Statement) or
             isinstance(s, Exit_For_Statement) or
@@ -1057,7 +1058,14 @@ class Let_Statement(VBA_Object):
                 # TODO: Currently we are assuming that 'On Error Resume Next' is being
                 # used. Need to actually check what is being done on error.
                 log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
-        
+
+# --- LSET STATEMENT --------------------------------------------------------------
+
+class LSet_Statement(Let_Statement):
+    # TODO: Extend eval() method to do the left string alignment of LSet.
+    # See https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/lset-statement
+    pass
+                
 # 5.4.3.8   Let Statement
 #
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
@@ -1091,6 +1099,28 @@ let_statement = (
     + (expression('expression') ^ boolean_expression('expression'))
 )
 let_statement.setParseAction(Let_Statement)
+
+lset_statement = (
+    CaselessKeyword('LSet').suppress()
+    + Optional(Suppress(CaselessKeyword('Const')))
+    + Optional(".")
+    + (
+        (
+            TODO_identifier_or_object_attrib('name')
+            + Optional(
+                Suppress('(')
+                + Optional(expression('index'))
+                + Optional(',' + expression('index1'))
+                + Suppress(')')
+            )
+        )
+        ^ member_access_expression('name')
+        ^ string_modification('name')
+    )
+    + (Literal('=') | Literal('+=') | Literal('-='))('op')
+    + (expression('expression') ^ boolean_expression('expression'))
+)
+lset_statement.setParseAction(LSet_Statement)
 
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
 
@@ -3291,7 +3321,7 @@ simple_statement = (
         | option_statement
         | (
             prop_assign_statement
-            ^ (let_statement | call_statement)
+            ^ (let_statement | lset_statement |call_statement)
             ^ label_statement
             ^ expression
         )
@@ -3316,7 +3346,7 @@ simple_statement_restricted = (
         | option_statement
         | (
             prop_assign_statement
-            ^ (let_statement | call_statement)
+            ^ (let_statement | lset_statement | call_statement)
             ^ expression
         )
         | exit_loop_statement
