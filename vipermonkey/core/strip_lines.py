@@ -429,6 +429,12 @@ def fix_vba_code(vba_code):
     Fix up some substrings that ViperMonkey has problems parsing.
     """
 
+    # We don't handle Property constructs for now. Delete them.
+    # TODO: Actually handle Property consructs.
+    props = re.findall(r"Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    for prop in props:
+        vba_code = vba_code.replace(prop, "")
+    
     # Clear out lines broken up on multiple lines.
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
     vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
