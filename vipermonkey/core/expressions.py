@@ -1474,6 +1474,7 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 # - then identifiers
 # - finally literals (strings, integers, etc)
 
+typeof_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -1487,6 +1488,7 @@ expr_item <<= (
         | literal
         | file_pointer
         | placeholder
+        | typeof_expression
     )
 )
 
@@ -1846,3 +1848,21 @@ new_expression.setParseAction(New_Expression)
 
 any_expression = expression ^ boolean_expression
 
+# --- TYPEOF EXPRESSION --------------------------------------------------------------
+
+class TypeOf_Expression(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(TypeOf_Expression, self).__init__(original_str, location, tokens)
+        self.item = tokens.item
+        self.the_type = tokens.the_type
+        log.debug('parsed %r as TypeOf_Expression' % self)
+
+    def __repr__(self):
+        return "TypeOf " + str(self.item) + " Is " + str(self.the_type)
+
+    def eval(self, context, params=None):
+        # TODO: Not sure how to handle this. For now just always matchxs.
+        return True
+
+typeof_expression <<= CaselessKeyword("TypeOf") + expression("item") + CaselessKeyword("Is") + expression("the_type")
+typeof_expression.setParseAction(TypeOf_Expression)
