@@ -1401,8 +1401,8 @@ function_call_limited <<= (
     CaselessKeyword("nothing")
     | (
         #~(strict_reserved_keywords + Literal("("))
-        ~(reserved_keywords + Literal("("))
-        + lex_identifier('name')
+        #~(reserved_keywords + Literal("("))
+        lex_identifier('name')
         + Suppress(Optional('$'))
         + Suppress(Optional('#'))
         + Suppress(Optional('!'))
