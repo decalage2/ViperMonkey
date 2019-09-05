@@ -1081,19 +1081,35 @@ string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_li
 let_statement = (
     Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress()
     + Optional(Suppress(CaselessKeyword('Const')))
-    + Optional(".")
     + (
         (
-            TODO_identifier_or_object_attrib('name')
-            + Optional(
-                Suppress('(')
-                + Optional(expression('index'))
-                + Optional(',' + expression('index1'))
-                + Suppress(')')
+            (
+                TODO_identifier_or_object_attrib('name')
+                + Optional(
+                    Suppress('(')
+                    + Optional(expression('index'))
+                    + Optional(',' + expression('index1'))
+                    + Suppress(')')
+                )
             )
+            ^ member_access_expression('name')
+            ^ string_modification('name')
         )
-        ^ member_access_expression('name')
-        ^ string_modification('name')
+        |
+        (
+            Literal(".")
+            + (
+                TODO_identifier_or_object_attrib_loose('name')
+                + Optional(
+                    Suppress('(')
+                    + Optional(expression('index'))
+                    + Optional(',' + expression('index1'))
+                    + Suppress(')')
+                )
+            )
+            ^ member_access_expression('name')
+            ^ string_modification('name')
+        )
     )
     + (Literal('=') | Literal('+=') | Literal('-='))('op')
     + (expression('expression') ^ boolean_expression('expression'))

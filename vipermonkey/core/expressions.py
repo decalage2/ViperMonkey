@@ -982,7 +982,7 @@ member_object_limited = (
 )
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
 member_object_loose = ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
-member_object_strict = NotAny(reserved_identifier) + member_object_loose
+member_object_strict = Suppress(Optional(".")) + NotAny(reserved_identifier) + member_object_loose
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
 member_access_expression = Group(Group(member_object_strict("lhs") + OneOrMore((Suppress(".") | Suppress("!")) + member_object_loose("rhs"))))
