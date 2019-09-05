@@ -438,6 +438,18 @@ class ViperMonkey(object):
         context.globals["ThisDocument.Content.Start".lower()] = 0
         context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["['ActiveDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Content.Start".lower()] = 0
+        context.globals["['ActiveDocument'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['ActiveDocument'].Paragraphs".lower()] = self.doc_text
+        context.globals["['ThisDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Content.Start".lower()] = 0
+        context.globals["['ThisDocument'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['ThisDocument'].Paragraphs".lower()] = self.doc_text
 
         # Fake up some comments.
         # TODO: Figure out how to actually read the comments.
