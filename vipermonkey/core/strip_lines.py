@@ -432,8 +432,18 @@ def fix_vba_code(vba_code):
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
     props = re.findall(r"Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    if (len(props) > 0):
+        log.warning("VB Property constructs are not currently handled. Stripping them from code..")
     for prop in props:
         vba_code = vba_code.replace(prop, "")
+
+    # We don't handle Enum constructs for now. Delete them.
+    # TODO: Actually handle Enum consructs.
+    enums = re.findall(r"(?:(?:Public|Private)\s+)?Enum\s+.+?End\s+Enum", vba_code, re.DOTALL)
+    if (len(enums) > 0):
+        log.warning("VB Enum constructs are not currently handled. Stripping them from code..")
+    for enum in enums:
+        vba_code = vba_code.replace(enum, "")
     
     # Clear out lines broken up on multiple lines.
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
