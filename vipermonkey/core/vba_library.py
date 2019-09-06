@@ -3365,7 +3365,9 @@ for name, value in (
         # 6.1.2.2 Constants Module
         ('vbBack', '\n'),
         ('vbCr', '\r'),
-        ('vbCrLf', '\r\n'),
+        # From OleVBA the EOL character is just '\n'.
+        #('vbCrLf', '\r\n'),
+        ('vbCrLf', '\n'),
         ('vbFormFeed', '\f'),
         ('vbLf', '\n'),
         ('vbNewLine', '\r\n'),

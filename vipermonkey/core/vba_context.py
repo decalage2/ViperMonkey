@@ -675,6 +675,7 @@ class Context(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         if self.filename:
             self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
+            self.globals["['WSCRIPT'].SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
