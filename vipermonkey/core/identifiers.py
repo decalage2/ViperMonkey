@@ -106,7 +106,8 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # @ Currency
 # $ String
 # Don't parse 'c&' in 'c& d& e' as a typed_name. It's a string concat.
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Optional(White()) + (Word(alphanums) | '"'))
+#type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Optional(White()) + (Word(alphanums) | '"'))
+type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Optional(Regex(r" +")) + (Word(alphanums) | '"'))
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
@@ -121,10 +122,7 @@ unrestricted_name = entity_name | reserved_identifier
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
 # TODO: reduce this list when corresponding statements are implemented
-# Use '$' at end of regex to only block identifiers that exactly match a reserved word.
-#reserved_keywords = Regex(re.compile(
-#    '(?:[\s\n]*|(?:.+[\s\n]+))(?:Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function|End|To)(?:[\s\n]*|(?:[\s\n]+.+))$', re.IGNORECASE | re.DOTALL))
-# Handling whitespace in the RE version of reserved_keywords is a nightmare.
+# Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
 reserved_keywords = CaselessKeyword("ChrB") | \
                     CaselessKeyword("ChrB") | \
                     CaselessKeyword("ChrW") | \
