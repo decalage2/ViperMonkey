@@ -49,6 +49,30 @@ from pyparsing import *
 from reserved import *
 from logger import log
 
+# TODO: reduce this list when corresponding statements are implemented
+# Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
+reserved_keywords = CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrW") | \
+                    CaselessKeyword("Asc") | \
+                    CaselessKeyword("Case") | \
+                    CaselessKeyword("On") | \
+                    CaselessKeyword("Sub") | \
+                    CaselessKeyword("If") | \
+                    CaselessKeyword("Then") | \
+                    CaselessKeyword("Kill") | \
+                    CaselessKeyword("For") | \
+                    CaselessKeyword("Next") | \
+                    CaselessKeyword("Public") | \
+                    CaselessKeyword("Private") | \
+                    CaselessKeyword("Declare") | \
+                    CaselessKeyword("Function") | \
+                    CaselessKeyword("End") | \
+                    CaselessKeyword("To")
+
+strict_reserved_keywords = reserved_keywords | \
+                           Regex(re.compile('Open', re.IGNORECASE))
+
 # --- IDENTIFIER -------------------------------------------------------------
 
 # TODO: see MS-VBAL 3.3.5 page 33
@@ -106,8 +130,8 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # @ Currency
 # $ String
 # Don't parse 'c&' in 'c& d& e' as a typed_name. It's a string concat.
-#type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Optional(White()) + (Word(alphanums) | '"'))
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Optional(Regex(r" +")) + (Word(alphanums) | '"'))
+type_suffix = Word(r"%&^!#@$", exact=1) + \
+              NotAny(Optional(Regex(r" +")) + ((NotAny(reserved_keywords) + Word(alphanums)) | '"'))
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
@@ -120,29 +144,6 @@ entity_name = typed_name | untyped_name
 unrestricted_name = entity_name | reserved_identifier
 
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
-
-# TODO: reduce this list when corresponding statements are implemented
-# Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
-reserved_keywords = CaselessKeyword("ChrB") | \
-                    CaselessKeyword("ChrB") | \
-                    CaselessKeyword("ChrW") | \
-                    CaselessKeyword("Asc") | \
-                    CaselessKeyword("Case") | \
-                    CaselessKeyword("On") | \
-                    CaselessKeyword("Sub") | \
-                    CaselessKeyword("If") | \
-                    CaselessKeyword("Kill") | \
-                    CaselessKeyword("For") | \
-                    CaselessKeyword("Next") | \
-                    CaselessKeyword("Public") | \
-                    CaselessKeyword("Private") | \
-                    CaselessKeyword("Declare") | \
-                    CaselessKeyword("Function") | \
-                    CaselessKeyword("End") | \
-                    CaselessKeyword("To")
-
-strict_reserved_keywords = reserved_keywords | \
-                           Regex(re.compile('Open', re.IGNORECASE))
 
 test = NotAny(reserved_keywords) + lex_identifier
 

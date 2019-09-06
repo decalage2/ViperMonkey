@@ -265,7 +265,8 @@ def _read_from_object_text(arg, context):
         
             # Eval the leftmost prefix element of the member access expression first.
             log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
-            if (hasattr(lhs, "eval")):
+            if ((hasattr(lhs, "eval")) and
+                (not isinstance(lhs, pyparsing.ParseResults))):
                 lhs = lhs.eval(context)
             else:
 
