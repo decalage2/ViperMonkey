@@ -3210,6 +3210,7 @@ class Context(object):
         fname - The name of the file.
         """
         # Save that the file is opened.
+        fname = str(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
         self.open_files[fname] = b''
         log.info("Opened file " + fname)
@@ -3217,6 +3218,7 @@ class Context(object):
     def write_file(self, fname, data):
 
         # Make sure the "file" exists.
+        fname = str(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot write new data.'.format(fname))
