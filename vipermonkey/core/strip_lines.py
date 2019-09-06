@@ -372,20 +372,21 @@ def fix_non_ascii_names(vba_code):
 
     Also change things like "a!b!.c" to "a.b.c".
 
-    Also break up multiple statements seperated with '::' onto different lines.
+    Also break up multiple statements seperated with '::' or ':' onto different lines.
 
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
-        ("::" not in vba_code) and
+        (":" not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
     
     # Replace bad characters unless they appear in a string.
     in_str = False
+    in_comment = False
     prev_char = ""
     r = ""
     for c in vba_code:
@@ -393,7 +394,15 @@ def fix_non_ascii_names(vba_code):
         # Handle entering/leaving strings.
         if (c == '"'):
             in_str = not in_str
-        if in_str:
+
+        # Handle entering/leaving comments.
+        if (c == "'"):
+            in_comment = True
+        if (c == "\n"):
+            in_comment = False
+
+        # Don't change things in strings or comments.
+        if (in_str or in_comment):
             r += c
             prev_char = c
             continue
@@ -418,6 +427,11 @@ def fix_non_ascii_names(vba_code):
             if ((c == ':') and (prev_char == ':')):
                 r = r[:-1]
                 r += "\n"
+
+            # Replace a single ':' with a line break? Don't do this for labels.
+            elif ((prev_char == ':') and (c != "\n") and (c != '"')):
+                r = r[:-1]
+                r += "\n" + c
             else:
                 r += c
             prev_char = c
@@ -457,7 +471,7 @@ def fix_vba_code(vba_code):
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
     vba_code = re.sub(r"&_ *\r?\n", "&", vba_code)
     vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
-    vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
+    #vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
     vba_code = "\n" + vba_code
     vba_code = re.sub(r"\n:", "\n", vba_code)
 

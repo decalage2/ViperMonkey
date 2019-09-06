@@ -77,8 +77,9 @@ def get_ms_ascii_value(the_str):
 
     # Sanity check.
     if (len(the_str) == 0):
-        raise ValueError("String length is 0.")
-        
+        #raise ValueError("String length is 0.")
+        return 0
+    
     # Look up the MS extended ASCII code.
     if (the_str not in str_to_ascii_map):
 
