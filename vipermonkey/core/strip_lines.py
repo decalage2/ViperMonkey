@@ -464,12 +464,20 @@ def fix_vba_code(vba_code):
 
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
-    props = re.findall(r"Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    props = re.findall(r"(?:Public\s+|Private\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
     if (len(props) > 0):
         log.warning("VB Property constructs are not currently handled. Stripping them from code...")
     for prop in props:
         vba_code = vba_code.replace(prop, "")
 
+    # We don't handle Implements constructs for now. Delete them.
+    # TODO: Figure out if we need to worry about Implements.
+    implements = re.findall(r"Implements \w+", vba_code, re.DOTALL)
+    if (len(implements) > 0):
+        log.warning("VB Implements constructs are not currently handled. Stripping them from code...")
+    for imp in implements:
+        vba_code = vba_code.replace(imp, "")
+        
     # We don't handle Enum constructs for now. Delete them.
     # TODO: Actually handle Enum consructs.
     enums = re.findall(r"(?:(?:Public|Private)\s+)?Enum\s+.+?End\s+Enum", vba_code, re.DOTALL)
