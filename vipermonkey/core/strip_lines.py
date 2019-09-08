@@ -429,7 +429,7 @@ def fix_non_ascii_names(vba_code):
                 r += "\n"
 
             # Replace a single ':' with a line break? Don't do this for labels.
-            elif ((prev_char == ':') and (c != "\n") and (c != '"')):
+            elif ((prev_char == ':') and (c != "\n") and (c != '"') and (c != "=")):
                 r = r[:-1]
                 r += "\n" + c
             else:
