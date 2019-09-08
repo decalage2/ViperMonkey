@@ -383,10 +383,20 @@ def fix_non_ascii_names(vba_code):
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
+
+    # Temporarily replace macro #if, etc. with more unique strings. This is needed
+    # to handle tracking '#...#' delimited date strings in the next loop.
+    vba_code = vba_code.replace("#if", "HASH__if")
+    vba_code = vba_code.replace("#If", "HASH__if")
+    vba_code = vba_code.replace("#else", "HASH__else")    
+    vba_code = vba_code.replace("#Else", "HASH__else")
+    vba_code = vba_code.replace("#end if", "HASH__endif")
+    vba_code = vba_code.replace("#End If", "HASH__endif")
     
     # Replace bad characters unless they appear in a string.
     in_str = False
     in_comment = False
+    in_date = False
     prev_char = ""
     r = ""
     for c in vba_code:
@@ -395,14 +405,18 @@ def fix_non_ascii_names(vba_code):
         if (c == '"'):
             in_str = not in_str
 
+        # Handle entering/leaving date constants.
+        if ((not in_str) and (c == '#')):
+            in_date = not in_date
+
         # Handle entering/leaving comments.
-        if (c == "'"):
+        if ((not in_str) and (c == "'")):
             in_comment = True
         if (c == "\n"):
             in_comment = False
 
-        # Don't change things in strings or comments.
-        if (in_str or in_comment):
+        # Don't change things in strings or comments or dates.
+        if (in_str or in_comment or in_date):
             r += c
             prev_char = c
             continue
@@ -436,6 +450,11 @@ def fix_non_ascii_names(vba_code):
                 r += c
             prev_char = c
 
+    # Put the #if macros back.
+    r = r.replace("HASH__if", "#If")
+    r = r.replace("HASH__else", "#Else")
+    r = r.replace("HASH__endif", "#End If")
+            
     return r
             
 def fix_vba_code(vba_code):
