@@ -313,14 +313,14 @@ def _get_shapes_text_values_2007(fname):
         # Pull out the text associated with the object.
         anchor = None
         pad = 0
-        if ("   #" in data):
-            anchor = "   #"
+        if (b"\x1a\x00\x00\x00\x23" in data):
+            anchor = b"\x1a\x00\x00\x00\x23"
             pad = 3
-        elif ("     €" in data):
-            anchor = "     €"
+        elif (b"\x05\x00\x00\x00\x01\x00\x00\x80" in data):
+            anchor = b"\x05\x00\x00\x00\x01\x00\x00\x80"
             pad = 16
-        elif ("0  " in data):
-            anchor = "0  "
+        elif (b"\x30\x01\x00\x00" in data):
+            anchor = b"\x30\x01\x00\x00"
         if (anchor is None):
             continue
         start = data.rindex(anchor) + len(anchor) + pad
