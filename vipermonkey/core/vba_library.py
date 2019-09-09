@@ -1793,6 +1793,11 @@ class Dir(VbaLibraryFunc):
         if (len(params) > 1):
             attrib = params[1]
 
+        # Handle a special case for a maldoc that looks for things
+        # not existing in a certain directory.
+        if ("\\Microsoft\\Corporation\\" in pat):
+            return ""
+            
         # Just act like we found something always.
         r = pat.replace("*", "foo")
 

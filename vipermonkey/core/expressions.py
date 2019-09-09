@@ -1524,6 +1524,7 @@ expression <<= (infixNotation(expr_item,
 expression.setParseAction(lambda t: t[0])
 
 # Used in boolean expressions to limit confusion with boolean and/or and bitwise and/or.
+"""
 limited_expression = (infixNotation(expr_item,
                                     [
                                         # ("^", 2, opAssoc.RIGHT), # Exponentiation
@@ -1535,6 +1536,20 @@ limited_expression = (infixNotation(expr_item,
                                         ("&", 2, opAssoc.LEFT, Concatenation),
                                         (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
                                     ]))
+"""
+# Try to handle bitwise AND in boolean expressions. Needs work
+limited_expression = (infixNotation(expr_item,
+                                    [
+                                        # ("^", 2, opAssoc.RIGHT), # Exponentiation
+                                        ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
+                                        (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
+                                        ("\\", 2, opAssoc.LEFT, FloorDivision),
+                                        (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                        (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
+                                        ("&", 2, opAssoc.LEFT, Concatenation),
+                                        (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
+                                    ])) | \
+                                    Suppress(Literal("(")) + expression + Suppress(")")
 expression.setParseAction(lambda t: t[0])
 
 # constant expression: expression without variables or function calls, that can be evaluated to a literal:
