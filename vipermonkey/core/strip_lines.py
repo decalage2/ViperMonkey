@@ -464,6 +464,14 @@ def fix_vba_code(vba_code):
 
     # Fix dumb typo in some maldocs VBA.
     vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
+
+    # We don't handle Line Input constructs for now. Delete them.
+    # TODO: Actually handle Line Input consructs.
+    linputs = re.findall(r"Line\s+Input\s+#\d+\s*,\s*\w+", vba_code, re.DOTALL)
+    if (len(linputs) > 0):
+        log.warning("VB Line Input constructs are not currently handled. Stripping them from code...")
+    for linput in linputs:
+        vba_code = vba_code.replace(linput, "")
     
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.

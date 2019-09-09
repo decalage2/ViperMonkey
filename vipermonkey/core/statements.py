@@ -3279,6 +3279,7 @@ file_open_statement = (
         file_type("type")
         + Suppress(CaselessKeyword("As"))
         + (file_pointer("file_id") | TODO_identifier_or_object_attrib("file_id"))
+        + Suppress(Optional(CaselessKeyword("Len") + Literal("=") + expression))
     )
 )
 file_open_statement.setParseAction(File_Open)
