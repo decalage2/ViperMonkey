@@ -223,6 +223,10 @@ def collapse_macro_if_blocks(vba_code):
         # We have a block line. Save it.
         curr_block.append(line)
 
+    # Handle nested macro blocks.
+    if (r.strip() != vba_code.strip()):
+        r = collapse_macro_if_blocks(r)
+        
     # Return the stripped VBA.
     return r
 
