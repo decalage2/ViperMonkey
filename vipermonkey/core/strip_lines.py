@@ -462,6 +462,9 @@ def fix_vba_code(vba_code):
     Fix up some substrings that ViperMonkey has problems parsing.
     """
 
+    # Fix dumb typo in some maldocs VBA.
+    vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
+    
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
     props = re.findall(r"(?:Public\s+|Private\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
