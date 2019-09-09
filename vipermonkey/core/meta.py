@@ -47,27 +47,3 @@ def get_metadata_exif(filename):
 
     # Done.
     return r
-
-metadata = None
-
-def read_metadata_item(var):
-
-    # Make sure we read in the metadata.
-    if (metadata is None):
-        log.error("BuiltInDocumentProperties: Metadata not read.")
-        return ""
-    
-    # Nomalize the variable name.
-    var = var.lower()
-    if ("." in var):
-        var = var[:var.index(".")]
-    
-    # See if we can find the metadata attribute.
-    if (not hasattr(metadata, var)):
-        log.error("BuiltInDocumentProperties: Metadata field '" + var + "' not found.")
-        return ""
-
-    # We have the attribute. Return it.
-    r = getattr(metadata, var)
-    log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
-    return r

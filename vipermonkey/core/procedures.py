@@ -109,7 +109,7 @@ class Sub(VBA_Object):
                     param_value = ""
 
                 # Coerce parameters to String if needed.
-                if (self.params[i].my_type == "String"):
+                if ((self.params[i].my_type == "String") and (not self.params[i].is_array)):
                     param_value = str(param_value)
                     
                 # Add the parameter value to the local function context.
@@ -132,6 +132,9 @@ class Sub(VBA_Object):
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Set the parameter values in the current context.
         for param_name in call_info.keys():
             context.set(param_name, call_info[param_name], force_local=True)
@@ -241,7 +244,7 @@ function_name = Combine(identifier + Suppress(Optional(type_suffix))) | lifecycl
 #
 # MS-GRAMMAR: end-label = statement-label-definition
 
-end_label = statement_label_definition
+#end_label = statement_label_definition
 
 # MS-GRAMMAR: procedure-tail = [WS] LINE-END / single-quote comment-body / ":" rem-statement
 
@@ -270,7 +273,7 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 #       [procedure-body EOS]
 #       [end-label] "end" "property" procedure-tail
 
-sub_start = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
             + Optional(params_list_paren) + EOS.suppress()
 sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
@@ -414,6 +417,9 @@ class Function(VBA_Object):
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Set the parameter values in the current context.
         for param_name in call_info.keys():
             context.set(param_name, call_info[param_name], force_local=True)
@@ -466,7 +472,8 @@ class Function(VBA_Object):
 
             # Save the values of the ByRef parameters.
             for byref_param in self.byref_params.keys():
-                self.byref_params[byref_param] = context.get(byref_param[0].lower())
+                if (context.contains(byref_param[0].lower())):
+                    self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
             # Get the return value.
             return_value = context.get(self.name)
@@ -504,7 +511,7 @@ class Function(VBA_Object):
                 # Function does not return array.
                 else:
                     log.warn(str(self) + " does not return an array. Not doing array access.")
-                
+
             return return_value
 
         except KeyError:

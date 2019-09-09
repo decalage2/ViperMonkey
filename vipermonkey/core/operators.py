@@ -150,8 +150,8 @@ class Xor(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) ^ int(y), eval_args(self.arg, context))
-            except:
-                log.error('Impossible to xor arguments of different types.')
+            except Exception as e:
+                log.error('Impossible to xor arguments of different types. Arg list = ' + str(self.arg) + ". " + str(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval xor: %r" % self.arg)
@@ -248,6 +248,33 @@ class Not(VBA_Object):
 
     def __repr__(self):
         return "Not " + str(self.arg)
+
+# --- Negation --------------------------------------------------------
+
+class Neg(VBA_Object):
+    """
+    VBA binary Not operator.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(Neg, self).__init__(original_str, location, tokens)
+        self.arg = tokens[0][1]
+        log.debug('parsed %r as unary negation' % self)
+
+    def eval(self, context, params=None):
+        # return the and of all the arguments:
+        try:
+            log.debug("Compute negate " + str(self.arg))
+            val = self.arg
+            if (isinstance(val, VBA_Object)):
+                val = val.eval(context)
+            return (- int(val))
+        except Exception as e:
+            log.error("Cannot compute negation of " + str(self.arg) + ". " + str(e))
+            return "NULL"
+
+    def __repr__(self):
+        return "-" + str(self.arg)
     
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 

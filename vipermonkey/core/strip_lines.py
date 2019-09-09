@@ -234,7 +234,21 @@ def fix_unbalanced_quotes(vba_code):
     # Fix invalid string assignments.
     vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
     vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
-    vba_code = re.sub(r"([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    
+    # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
+    # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
+    # to ".foo ' A comment" so it is not ambiguous (parse as comment).
+    vba_code += "\n"
+    vba_code = re.sub(r"'('[^'^\"]+\n)", r"\1", vba_code, re.DOTALL)
+
+    # More ambiguous EOL comments. Something like "a = 12 : 'stuff 'more stuff" could have
+    # 'stuff ' potentially parsed as a string. Just wipe out the comments in this case
+    # (ex. "a = 12 : 'stuff 'more stuff" => "a = 12 :").
+    vba_code = re.sub(r"(\n[^'^\n]+)'[^'^\"^\n]+'[^'^\"^\n]+\n", r"\1\n", vba_code, re.DOTALL)
+    
+    # Fix Execute statements with no space between the execute and the argument.
+    vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)
     
     # See if we have lines with unbalanced double quotes.
     r = ""
@@ -251,11 +265,31 @@ def fix_unbalanced_quotes(vba_code):
     # Return the balanced code.
     return r
 
+MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"
 def fix_multiple_assignments(line):
 
     # Pull out multiple assignments and the final assignment value.
-    pat = r"((?:\w+\s*=\s*){2,})(.+)"
-    items = re.findall(pat, line)
+    items = re.findall(MULT_ASSIGN_RE, line)
+    if (len(items) == 0):
+        return line
+
+    # Don't count '=' that show up in strings.
+    in_str = False
+    new_line = ""
+    for c in line:
+
+        # Move in or out of strings.
+        if (c == '"'):
+            in_str = not in_str
+
+        # Temporarily replace '=' in strings with 'IN_STR_EQUAL'.
+        if ((c == '=') and (in_str)):
+            new_line += 'IN_STR_EQUAL'
+        else:
+            new_line += c
+            
+    # Split into multiple assignments.
+    items = re.findall(MULT_ASSIGN_RE, new_line)
     if (len(items) == 0):
         return line
     items = items[0]
@@ -269,6 +303,9 @@ def fix_multiple_assignments(line):
         if (len(var) == 0):
             continue
         r += var + " = " + val + "\n"
+
+    # Put back in the '=' that show up in strings.
+    r.replace('IN_STR_EQUAL', '=')
     return r
 
 def fix_skipped_1st_arg(vba_code):
@@ -276,6 +313,10 @@ def fix_skipped_1st_arg(vba_code):
     Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
     """
 
+    # Skipped this if unneeded.
+    if (re.match(r".*([0-9a-zA-Z_])\(\s*,.*", vba_code, re.DOTALL) is None):
+        return vba_code
+    
     # We don't want to replace things like this in string literals. Temporarily
     # pull out the string literals from the line.
 
@@ -323,27 +364,167 @@ def fix_skipped_1st_arg(vba_code):
 
     # Return the modified code.
     return vba_code
+
+def fix_non_ascii_names(vba_code):
+    """
+    Replace characters whose ordinal value is > 128 with dNNN, where NNN
+    is the ordinal value.
+
+    Also change things like "a!b!.c" to "a.b.c".
+
+    Also break up multiple statements seperated with '::' or ':' onto different lines.
+
+    Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
+    """
+
+    # Skip this if it is not needed.
+    if (("!" not in vba_code) and
+        (":" not in vba_code) and
+        (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
+        (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
+        return vba_code
+
+    # Temporarily replace macro #if, etc. with more unique strings. This is needed
+    # to handle tracking '#...#' delimited date strings in the next loop.
+    vba_code = vba_code.replace("#if", "HASH__if")
+    vba_code = vba_code.replace("#If", "HASH__if")
+    vba_code = vba_code.replace("#else", "HASH__else")    
+    vba_code = vba_code.replace("#Else", "HASH__else")
+    vba_code = vba_code.replace("#end if", "HASH__endif")
+    vba_code = vba_code.replace("#End If", "HASH__endif")
     
+    # Replace bad characters unless they appear in a string.
+    in_str = False
+    in_comment = False
+    in_date = False
+    prev_char = ""
+    r = ""
+    for c in vba_code:
+
+        # Handle entering/leaving strings.
+        if (c == '"'):
+            in_str = not in_str
+
+        # Handle entering/leaving date constants.
+        if ((not in_str) and (c == '#')):
+            in_date = not in_date
+
+        # Handle entering/leaving comments.
+        if ((not in_str) and (c == "'")):
+            in_comment = True
+        if (c == "\n"):
+            in_comment = False
+
+        # Don't change things in strings or comments or dates.
+        if (in_str or in_comment or in_date):
+            r += c
+            prev_char = c
+            continue
+
+        # Need to change "!" member access to "."?
+        if ((prev_char == "!") and (c.isalpha())):
+            r = r[:len(r)-1] + "."
+
+        # Need to eliminate bogus =+ assignments.
+        if ((c == "+") and (prev_char == "=")):
+
+            # Skip the '+'.
+            continue
+            
+        # Non-ASCII character that is not in a string?
+        if (ord(c) > 127):
+            r += "d" + str(ord(c))
+            prev_char = "d"
+        else:
+
+            # Replace a '::' with a line break?
+            if ((c == ':') and (prev_char == ':')):
+                r = r[:-1]
+                r += "\n"
+
+            # Replace a single ':' with a line break? Don't do this for labels.
+            elif ((prev_char == ':') and (c != "\n") and (c != '"') and (c != "=")):
+                r = r[:-1]
+                r += "\n" + c
+            else:
+                r += c
+            prev_char = c
+
+    # Put the #if macros back.
+    r = r.replace("HASH__if", "#If")
+    r = r.replace("HASH__else", "#Else")
+    r = r.replace("HASH__endif", "#End If")
+            
+    return r
+            
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
     """
 
+    # We don't handle Property constructs for now. Delete them.
+    # TODO: Actually handle Property consructs.
+    props = re.findall(r"(?:Public\s+|Private\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    if (len(props) > 0):
+        log.warning("VB Property constructs are not currently handled. Stripping them from code...")
+    for prop in props:
+        vba_code = vba_code.replace(prop, "")
+
+    # We don't handle Implements constructs for now. Delete them.
+    # TODO: Figure out if we need to worry about Implements.
+    implements = re.findall(r"Implements \w+", vba_code, re.DOTALL)
+    if (len(implements) > 0):
+        log.warning("VB Implements constructs are not currently handled. Stripping them from code...")
+    for imp in implements:
+        vba_code = vba_code.replace(imp, "")
+        
+    # We don't handle Enum constructs for now. Delete them.
+    # TODO: Actually handle Enum consructs.
+    enums = re.findall(r"(?:(?:Public|Private)\s+)?Enum\s+.+?End\s+Enum", vba_code, re.DOTALL)
+    if (len(enums) > 0):
+        log.warning("VB Enum constructs are not currently handled. Stripping them from code...")
+    for enum in enums:
+        vba_code = vba_code.replace(enum, "")
+
+    # We don't handle ([a1]) constructs for now. Delete them.
+    # TODO: Actually handle these things.
+    brackets = re.findall(r"\(\[[^\]]+\]\)", vba_code, re.DOTALL)
+    if (len(brackets) > 0):
+        log.warning("([a1]) style constructs are not currently handled. Rewriting them...")
+    for bracket in brackets:
+        vba_code = vba_code.replace(bracket, "(" + bracket[2:-2] + ")")
+    
     # Clear out lines broken up on multiple lines.
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
+    vba_code = re.sub(r"&_ *\r?\n", "&", vba_code)
     vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
-    vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
+    #vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
+    vba_code = "\n" + vba_code
+    vba_code = re.sub(r"\n:", "\n", vba_code)
 
     # Clear out some garbage characters.
     vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
-    
+
+    # It looks like VBA supports variable and function names containing
+    # non-ASCII characters. Parsing these with pyparsing would be difficult
+    # (or impossible), so convert the non-ASCII names to ASCII.
+    vba_code = fix_non_ascii_names(vba_code)
+
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)
 
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # Skip the next part if unnneeded.
+    if ((" if+" not in vba_code) and
+        (" If+" not in vba_code) and
+        ("\nif+" not in vba_code) and
+        ("\nIf+" not in vba_code) and
+        (len(re.findall(MULT_ASSIGN_RE, vba_code)) == 0)):
+        return vba_code
+    
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
     r = ""
     for line in vba_code.split("\n"):
@@ -408,7 +589,7 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Preprocess the code to make it easier to parse.
     vba_code = fix_vba_code(vba_code)
-        
+    
     # Track data change callback function names.
     change_callbacks = set()    
     
@@ -481,6 +662,11 @@ def strip_useless_code(vba_code, local_funcs):
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
                 log.debug("SKIP: Continuation line. Keep it.")
+                continue
+
+            # Skip lines that are a macro line.
+            if (line.strip().startswith("#")):
+                log.debug("SKIP: macro line. Keep it.")
                 continue
 
             # Skip function definitions.
@@ -651,7 +837,8 @@ def strip_useless_code(vba_code, local_funcs):
 
         # For now we are just stripping out class declarations. Need to actually
         # emulate classes somehow.
-        if ((line.strip().startswith("Class ")) or (line.strip() == "End Class")):
+        if ((line.strip().lower().startswith("class ")) or
+            (line.strip().lower().startswith("end class"))):
             log.warning("Classes not handled. Stripping '" + line.strip() + "'.")
             continue
 
@@ -665,16 +852,18 @@ def strip_useless_code(vba_code, local_funcs):
         # At least 1 maldoc builder is not putting a newline before the
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
-        if ((line.endswith("End Function")) and
+        if ((line.lower().endswith("end function")) and
             (not line.strip().startswith("'")) and
             (len(line) > len("End Function"))):
-            r += line.replace("End Function", "") + "\n"
+            tmp_line = line[:-len("End Function")]
+            r += tmp_line + "\n"
             r += "End Function\n"
             continue
 
         # Fix Application.Run "foo, bar baz" type expressions by removing
         # the quotes.
         if (line.strip().startswith("Application.Run") and
+            (re.match(r'Application\.Run\s+"[^"]+"', line) is not None) and
             (line.count('"') == 2) and
             (line.strip().endswith('"'))):
 

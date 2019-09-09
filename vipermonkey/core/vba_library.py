@@ -57,6 +57,7 @@ from curses_ascii import isprint
 
 from pyparsing import *
 
+import vb_str
 from vba_context import VBA_LIBRARY
 from vba_object import str_convert
 from vba_object import int_convert
@@ -66,7 +67,6 @@ from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 from vba_object import strip_nonvb_chars
 import expressions
-import meta
 import modules
 import strip_lines
 
@@ -81,6 +81,24 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class URLDownloadToFile(VbaLibraryFunc):
+    """
+    URLDownloadToFile() external function
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 3)):
+            return
+        context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        return 1
+    
+class URLDownloadToFileA(URLDownloadToFile):
+    pass
+
+class URLDownloadToFileW(URLDownloadToFile):
+    pass
+        
 class WeekDay(VbaLibraryFunc):
     """
     VBA WeekDay function
@@ -117,7 +135,16 @@ class Format(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+
+        # Fake up a date if needed.
+        # TODO: Currently this fake date is specific to a campaign targeting Italy.
         r = params[0]
+        if (len(params) > 1):
+            typ = str(params[1])
+            if (typ.lower() == "long date"):
+                r = "giovedì 27 giugno 2019"
+
+        # Done.
         log.debug("Format(%r): return %r" % (self, r))
         return r
 
@@ -129,6 +156,35 @@ class MsgBox(VbaLibraryFunc):
     def eval(self, context, params=None):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
+
+class Kill(VbaLibraryFunc):
+    """
+    Kill statement.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is not None) and (len(params) > 0)):
+            context.report_action('Delete File', params[0], 'Kill', strip_null_bytes=True)
+        return ""
+
+class RmDir(VbaLibraryFunc):
+    """
+    RmDir statement.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is not None) and (len(params) > 0)):
+            context.report_action('Delete Directory', params[0], 'RmDir', strip_null_bytes=True)
+        return ""  # vbOK
+
+class Quit(VbaLibraryFunc):
+    """
+    Wscript.Quit(). Just keeps going.
+    """
+
+    def eval(self, context, params=None):
+        log.warning("Ignoring Wscript.Quit() call. Execution is continuing...")
+        return 1
 
 class QBColor(VbaLibraryFunc):
     """
@@ -167,7 +223,15 @@ class FolderExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        return False
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return False
+
+        # Is this a directory that is expected to exist?
+        expected_dirs = set(["c:\\users"])
+        curr_dir = str(params[0]).lower()
+        return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 
 class FileExists(VbaLibraryFunc):
     """
@@ -217,7 +281,17 @@ class Len(VbaLibraryFunc):
             return 2
         val = str_convert(params[0])
         if (hasattr(params[0], '__len__')):
-            return len(val)
+
+            # Is this a string?            
+            if (isinstance(val, str)):
+
+                # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+                vb_val = vb_str.VbStr(val, context.is_vbscript)
+                return vb_val.len()
+
+            # Something with a length that is not a string.
+            else:
+                return len(val)
         else:
             log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
             return 0
@@ -268,16 +342,22 @@ class Mid(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
+        
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Mid: start>len(s) => return ""')
             return ''
+
         # What to do when start<=0 is not specified:
-        if start<=0:
+        if (start <= 0):
             start = 1
+
         # If length not specified, return up to the end of the string:
-        if len(params) == 2:
+        if (len(params) == 2):
             log.debug('Mid: no length specified, return s[%d:]=%r' % (start-1, s[start-1:]))
             return s[start-1:]
         length = 0
@@ -285,17 +365,26 @@ class Mid(VbaLibraryFunc):
             length = int_convert(params[2])
         except:
             pass
+
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
-        if start+length-1 > len(s):
+        if start+length-1 > vb_s.len():
             log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
-            return s[start-1:]
+            #return s[start-1:]
+            return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
+
         # What to do when length<=0 is not specified:
         if length <= 0:
             return ''
-        log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, s[start - 1:start-1+length]))
-        return s[start - 1:start-1+length]
+
+        # Regular Mid().
+        #r = s[start - 1:start-1+length]
+        r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
+
+        # Done.
+        log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
+        return r
 
 class MidB(Mid):
     pass
@@ -324,17 +413,23 @@ class Left(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
+        
         # "If Start is greater than the number of characters in String,
         # Left returns the whole string.
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Left: start>len(s) => return s')
             return s
+
         # Return empty string if start <= 0.
-        if start<=0:
+        if (start <= 0):
             return ""
 
         # Return characters from start of string.
-        r = s[:start]
+        #r = s[:start]
+        r = vb_s.get_chunk(0, start).to_python_str()
         log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
@@ -345,7 +440,7 @@ class PrivateProfileString(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return "**MATCH ANY**"
-    
+
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -370,17 +465,23 @@ class Right(VbaLibraryFunc):
             start = int_convert(params[1])
         except:
             pass
+
+        # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
+        vb_s = vb_str.VbStr(s, context.is_vbscript)
+        
         # "If Start is greater than the number of characters in String,
         # Right returns the whole string.
-        if start>len(s):
+        if (start > vb_s.len()):
             log.debug('Right: start>len(s) => return s')
             return s
+
         # Return empty string if start <= 0.
-        if start<=0:
+        if (start <= 0):
             return ""
 
         # Return characters from end of string.
-        r = s[(len(s) - start):]
+        #r = s[(len(s) - start):]
+        r = vb_s.get_chunk(vb_s.len() - start, vb_s.len()).to_python_str()
         log.debug('Right: return s[%d:]=%r' % (start, r))
         return r
 
@@ -391,13 +492,14 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        if (params is None):
+        if ((params is None) or (len(params) < 1)):
             return "NULL"
-        assert len(params) == 1
 
         # Get the property we are looking for.
-        prop = params[0]
-        return meta.read_metadata_item(prop)
+        prop = str(params[0])
+        if (not context.contains(prop)):
+            return "NULL"
+        return context.read_metadata_item(prop)
 
 class Item(BuiltInDocumentProperties):
     """
@@ -493,6 +595,14 @@ class Eval(VbaLibraryFunc):
             log.error("Parse error. Cannot evaluate '" + expr + "'")
             return "NULL"
 
+class Exists(VbaLibraryFunc):
+    """
+    Document Exists() method. Defaults to false.
+    """
+
+    def eval(self, context, params=None):
+        return False
+        
 class Execute(VbaLibraryFunc):
     """
     WScript Execute() function.
@@ -570,6 +680,16 @@ class AddFromString(Execute):
     """
     pass
 
+class IsObject(VbaLibraryFunc):
+    """
+    IsObject() function. Currently stubbed to always return True.
+    """
+
+    def eval(self, context, params=None):
+
+        # Say everything is an object.
+        return True
+
 class Add(VbaLibraryFunc):
     """
     Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
@@ -583,7 +703,7 @@ class Add(VbaLibraryFunc):
         """
 
         # Sanity check.
-        if (len(params) != 3):
+        if ((params is None) or (len(params) < 3)):
             return
 
         # Get the object (dict), key, and value.
@@ -675,7 +795,8 @@ class LTrim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return ""
         r = None
         if (isinstance(params[0], int)):
             r = str(params[0])
@@ -705,6 +826,16 @@ class AscB(AscW):
 class International(VbaLibraryFunc):
     """
     application.international() Function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Match anything compared to this result.
+        return "**MATCH ANY**"
+
+class GetLocale(VbaLibraryFunc):
+    """
+    GetLocale() Function.
     """
 
     def eval(self, context, params=None):
@@ -828,6 +959,8 @@ class Shapes(VbaLibraryFunc):
 
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
+        if ((params is None) or (len(params) == 0)):
+            return ""
         return "Shapes('" + str(params[0]) + "')"
 
 class InlineShapes(VbaLibraryFunc):
@@ -839,6 +972,8 @@ class InlineShapes(VbaLibraryFunc):
 
         # Just return the string representation of the access. This is used in
         # vba_object._read_from_object_text()
+        if ((params is None) or (len(params) == 0)):
+            return ""
         return "InlineShapes('" + str(params[0]) + "')"
 
 class GetCursorPos(VbaLibraryFunc):
@@ -1086,7 +1221,57 @@ class SaveToFile(VbaLibraryFunc):
         # Just return the file name. This is used in
         # expressions.MemberAccessExpression._handle_savetofile().
         return str(params[0])
-    
+
+class SaveAs(VbaLibraryFunc):
+    """
+    ActiveDocument.SaveAs() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if (len(params) < 4):
+            return 0
+
+        # Pull out the name of the file to save to and the format
+        # for saving.
+        new_fname = str(params[1])
+        fmt = params[3]
+        try:
+            fmt = int(fmt)
+        except:
+            return 0
+
+        # Handle saving as text.
+        # wdFormatText = 2
+        if (fmt != 2):
+            return 0
+
+        # Get the doc text.
+        doc_text = None
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+            doc_text = ""
+            for p in paragraphs:
+                doc_text += p + "\n"
+        except KeyError:
+            return 0
+
+        # Open the saveas file.
+        opener = CreateTextFile()
+        opener.eval(context, [new_fname])
+
+        # Write the data.
+        writer = WriteLine()
+        writer.eval(context, [doc_text])
+
+        # Close the file.
+        closer = Close()
+        closer.eval(context, [])
+
+        # Done.
+        return 1
+            
 class LoadXML(VbaLibraryFunc):
     """
     LoadXML() MSXML2.DOMDocument.3.0 method.
@@ -1119,7 +1304,27 @@ class LoadXML(VbaLibraryFunc):
 
         # Return the XML or base64 string.
         return xml
-        
+
+class RegRead(VbaLibraryFunc):
+    """
+    RegRead() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 1)):
+            return ""
+
+        # Fake some registry reads.
+        key = str(params[0])
+        context.report_action('Read Registry', key, 'RegRead', strip_null_bytes=True)
+        if (key == 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\PROCESSOR_ARCHITECTURE'):
+            return "x86"
+
+        # Not faked.
+        return ""
+    
 class Join(VbaLibraryFunc):
     """
     Join() string function.
@@ -1134,7 +1339,7 @@ class Join(VbaLibraryFunc):
         r = ""
         if (isinstance(strings, list)):
             for s in strings:
-                r += s + sep
+                r += str(s) + sep
         else:
             r = str(strings)
         log.debug("Join: return %r" % r)
@@ -1384,8 +1589,8 @@ class CByte(VbaLibraryFunc):
         r = ''
         try:
             tmp = params[0].upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
             num = int(round(float(tmp)))
             r = num
@@ -1407,7 +1612,7 @@ class CLng(VbaLibraryFunc):
         # Handle abstracted pointers to memory.
         val = params[0]
         if (isinstance(val, str) and
-            (not val.startswith("&H")) and
+            (not val.lower().startswith("&h")) and
             (val.startswith("&"))):
             return val
 
@@ -1417,8 +1622,8 @@ class CLng(VbaLibraryFunc):
             tmp = val
             if (isinstance(tmp, str)):
                 tmp = val.upper()
-                if (tmp.startswith("&H")):
-                    tmp = tmp.replace("&H", "0x")
+                if (tmp.lower().startswith("&h")):
+                    tmp = tmp.lower().replace("&h", "0x")
                     tmp = int(tmp, 16)
                 elif (len(tmp) == 1):
                     tmp = ord(tmp)
@@ -1476,8 +1681,8 @@ class CSng(VbaLibraryFunc):
         r = ''
         try:
             tmp = params[0].upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
             r = float(tmp)
         except:
@@ -1644,7 +1849,7 @@ class Str(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if ((params is None) or (len(params[0]) == 0)):
+        if ((params is None) or (len(params) == 0)):
             return ""
         r = str(params[0])
         log.debug("Str: %r returns %r" % (self, r))
@@ -2064,11 +2269,14 @@ class CallByName(VbaLibraryFunc):
         args = ''
         if (len(params) >= 4):
             args = params[3]
-        if (("Run" in cmd) or ("WScript.Shell" in obj)):
+        if (("run" in cmd.lower()) or ("create" in cmd.lower()) or ("wscript.shell" in obj.lower())):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
+        for pos in range(0, len(params)):
+            if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
+                context.report_action("Run", params[pos + 1], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
-            ((len(params) > 5) and (params[3].lower() == "get"))):
+            ((len(params) > 5) and (str(params[3]).lower() == "get"))):
             url = str(params[4])
             if (url.startswith("tp://")):
                 url = "ht" + url
@@ -2086,6 +2294,27 @@ class CallByName(VbaLibraryFunc):
             except KeyError:
                 pass
 
+        # Opening a file?
+        if (cmd.lower() == "createtextfile"):
+
+            # Open the file.
+            opener = CreateTextFile()
+            opener.eval(context, [args])
+
+        # Writing to a file?
+        if (cmd.lower() == "writeline"):
+
+            # Write to the file.
+            writer = WriteLine()
+            writer.eval(context, [args])
+
+        # Closing a file?
+        if (cmd.lower() == "close"):
+
+            # Close the file.
+            closer = Close()
+            closer.eval(context, [args])
+            
         # Do nothing.
         return None
 
@@ -2415,7 +2644,10 @@ class Exec(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return 1
 
         # Get the command to run.
         cmd = str(params[0])
@@ -2643,6 +2875,11 @@ class Range(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if (params is None):
+            log.warning("Range() called with no parameters.")
+            return "NULL"
+        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
 
@@ -2777,8 +3014,8 @@ class CDbl(VbaLibraryFunc):
         try:
             # Handle hex.
             tmp = str(params[0]).upper()
-            if (tmp.startswith("&H")):
-                tmp = tmp.replace("&H", "0x")
+            if (tmp.lower().startswith("&h")):
+                tmp = tmp.replace("&h", "0x")
                 tmp = int(tmp, 16)
 
             # VBA rounds the significant digits.
@@ -2848,7 +3085,29 @@ class GetExtensionName(VbaLibraryFunc):
             if ("." in fname):
                 r = fname[fname.rindex("."):]
         return r
-                
+
+class NumPut(VbaLibraryFunc):
+    """
+    DynamicWrapperX.NumPut() method. This simulates the NumPut() byte writing actions
+    by writing the byte values to a DOM_NumPut.dat file.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we need to open the simulated file?
+        if ("DOM_NumPut.dat" not in context.open_files):
+            context.open_file("DOM_NumPut.dat")
+
+        # Get the byte to write.
+        if (len(params) < 3):
+            return
+        val = params[0]
+        pos = params[2]
+
+        # Write the byte.
+        # TODO: Use the position parameter to write the byte to the proper position.
+        context.write_file("DOM_NumPut.dat", chr(val))
+    
 class CreateTextFile(VbaLibraryFunc):
     """
     CreateTextFile() method.
@@ -3005,6 +3264,16 @@ class FreeFile(VbaLibraryFunc):
         v = len(context.open_files) + 1
         return v
 
+class CreateElement(VbaLibraryFunc):
+    """
+    Faked emulation of things like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+    """
+
+    def eval(self, context, params=None):
+
+        # Assume that this is something like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+        return "Microsoft.XMLDOM"
+    
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -3014,7 +3283,7 @@ class Write(VbaLibraryFunc):
         assert params and len(params) >= 1
 
         # Get the data.
-        data = params[0]
+        data = str(params[0])
 
         # Save writes that look like they are writing URLs.
         if (("http:" in data) or ("https:" in data)):
@@ -3058,7 +3327,9 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddCode, StrPtr, International, ExecuteStatement, InlineShapes,
                RegWrite, QBColor, LoadXML, SaveToFile, InternetGetConnectedState, InternetOpenA,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
-               AddFromString, Not, PrivateProfileString, GetCursorPos):
+               AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
+               IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
@@ -3094,7 +3365,9 @@ for name, value in (
         # 6.1.2.2 Constants Module
         ('vbBack', '\n'),
         ('vbCr', '\r'),
-        ('vbCrLf', '\r\n'),
+        # From OleVBA the EOL character is just '\n'.
+        #('vbCrLf', '\r\n'),
+        ('vbCrLf', '\n'),
         ('vbFormFeed', '\f'),
         ('vbLf', '\n'),
         ('vbNewLine', '\r\n'),

@@ -118,6 +118,8 @@ def vba_collapse_long_lines(vba_code):
     :return: str, VBA module code with long lines collapsed
     """
     # make sure the last line ends with a newline char, otherwise the parser breaks:
+    if (vba_code is None):
+        return ""
     if vba_code[-1] != '\n':
         vba_code += '\n'
     # return module_body_lines.parseString(vba_code, parseAll=True)[0]

@@ -52,6 +52,16 @@ import string
 import codecs
 from curses_ascii import isascii
 
+def to_hex(s):
+    """
+    Convert a string to a VBA hex string.
+    """
+
+    r = ""
+    for c in str(s):
+        r += hex(ord(c)).replace("0x", "")
+    return r
+
 def is_procedure(vba_object):
     """
     Check if a VBA object is a procedure, e.g. a Sub or a Function.
@@ -73,6 +83,8 @@ VBA_LIBRARY = {}
 # Output directory to save dropped artifacts.
 out_dir = None  # type: str
 
+# Track intermediate IOC values stored in variables during emulation.
+intermediate_iocs = set()
 
 class Context(object):
     """
@@ -90,8 +102,12 @@ class Context(object):
                  filename=None,
                  copy_globals=False,
                  log_funcs=None,
-                 expand_env_vars=True):
+                 expand_env_vars=True,
+                 metadata=None):
 
+        # Track all external functions called by the program.
+        self.external_funcs = []
+        
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
         self.call_stack = []
@@ -101,6 +117,9 @@ class Context(object):
         # modified.
         self.max_static_iters = 2
 
+        # Track whether VBScript or VBA is being analyzed.
+        self.is_vbscript = False
+        
         # Allow user to provide extra function names to be reported on.
         if log_funcs:
             self._log_funcs = [func_name.lower() for func_name in log_funcs]
@@ -142,6 +161,9 @@ class Context(object):
         # Track the final contents of written files.
         self.closed_files = {}
 
+        # Track document metadata.
+        self.metadata = metadata
+        
         # Track whether variables by default should go in the global scope.
         self.global_scope = False
 
@@ -152,11 +174,18 @@ class Context(object):
                 self.globals = dict(_globals)
             else:
                 self.globals = _globals
+
+            # Save intermediate IOCs if any appear.
+            for var in _globals.keys():
+                self.save_intermediate_iocs(_globals[var])
+                
         elif context is not None:
             if (copy_globals):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.is_vbscript = context.is_vbscript
+            self.doc_vars = context.doc_vars
             self.open_files = context.open_files
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
@@ -165,6 +194,8 @@ class Context(object):
             self.skip_handlers = context.skip_handlers
             self.call_stack = context.call_stack
             self.expand_env_vars = context.expand_env_vars
+            self.metadata = context.metadata
+            self.external_funcs = context.external_funcs
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -185,8 +216,14 @@ class Context(object):
             
         # Track data saved in document variables.
         if doc_vars is not None:
+
             # direct copy of the pointer to globals:
             self.doc_vars = doc_vars
+
+            # Save intermediate IOCs if any appear.
+            for var in doc_vars.keys():
+                self.save_intermediate_iocs(doc_vars[var])
+
         elif context is not None:
             self.doc_vars = context.doc_vars
         else:
@@ -619,15 +656,33 @@ class Context(object):
         self.globals["xlDays".lower()] = 0
         self.globals["xlMonths".lower()] = 1
         self.globals["xlYears".lower()] = 2
+
+        # WdOrientation enumeration (Word)
+        self.globals["wdOrientLandscape".lower()] = 1
+        self.globals["wdOrientPortrait".lower()] = 0
         
         # Misc.
+        self.globals["ActiveDocument.PageSetup.PageWidth".lower()] = 10
+        self.globals["ThisDocument.PageSetup.PageWidth".lower()] = 10
+        self.globals["ActiveDocument.PageSetup.Orientation".lower()] = 1
+        self.globals["ThisDocument.PageSetup.Orientation".lower()] = 1
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
+        self.globals["ThisDocument.Scripts.Count".lower()] = 0
+        self.globals["ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
+        self.globals["ThisDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
+        self.globals["ActiveDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
+        self.globals["ThisDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         if self.filename:
             self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
+            self.globals["['WSCRIPT'].SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
+        self.globals["msoFontAlignTop".lower()] = 1
+        self.globals["msoTextBox".lower()] = "**MATCH ANY**"
+        self.globals["Application.MouseAvailable".lower()] = True
+        self.globals["Application.PathSeparator".lower()] = "\\"
 
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
@@ -2945,7 +3000,45 @@ class Context(object):
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
 
+        # WdSaveFormat enumeration (Word)
+        self.globals["wdFormatDocument".lower()] = 0
+        self.globals["wdFormatDOSText".lower()] = 4
+        self.globals["wdFormatDOSTextLineBreaks".lower()] = 5
+        self.globals["wdFormatEncodedText".lower()] = 7
+        self.globals["wdFormatFilteredHTML".lower()] = 10
+        self.globals["wdFormatFlatXML".lower()] = 19
+        self.globals["wdFormatFlatXMLMacroEnabled".lower()] = 20
+        self.globals["wdFormatFlatXMLTemplate".lower()] = 21
+        self.globals["wdFormatFlatXMLTemplateMacroEnabled".lower()] = 22
+        self.globals["wdFormatOpenDocumentText".lower()] = 23
+        self.globals["wdFormatHTML".lower()] = 8
+        self.globals["wdFormatRTF".lower()] = 6
+        self.globals["wdFormatStrictOpenXMLDocument".lower()] = 24
+        self.globals["wdFormatTemplate".lower()] = 1
+        self.globals["wdFormatText".lower()] = 2
+        self.globals["wdFormatTextLineBreaks".lower()] = 3
+        self.globals["wdFormatUnicodeText".lower()] = 7
+        self.globals["wdFormatWebArchive".lower()] = 9
+        self.globals["wdFormatXML".lower()] = 11
+        self.globals["wdFormatDocument97".lower()] = 0
+        self.globals["wdFormatDocumentDefault".lower()] = 16
+        self.globals["wdFormatPDF".lower()] = 17
+        self.globals["wdFormatTemplate97".lower()] = 1
+        self.globals["wdFormatXMLDocument".lower()] = 12
+        self.globals["wdFormatXMLDocumentMacroEnabled".lower()] = 13
+        self.globals["wdFormatXMLTemplate".lower()] = 14
+        self.globals["wdFormatXMLTemplateMacroEnabled".lower()] = 15
+        self.globals["wdFormatXPS".lower()] = 18
+        
         # endregion
+
+    def __repr__(self):
+        r = ""
+        r += "Locals:\n"
+        r += str(self.locals) + "\n\n"
+        #r += "Globals:\n"
+        #r += str(self.globals) + "\n"
+        return r
         
     def __eq__(self, other):
         if isinstance(other, Context):
@@ -2977,6 +3070,28 @@ class Context(object):
             glbl = (namespace+key).lower()
             self.globals[ glbl ] = value
 
+    def read_metadata_item(self, var):
+
+        # Make sure we read in the metadata.
+        if (self.metadata is None):
+            log.error("BuiltInDocumentProperties: Metadata not read.")
+            return ""
+    
+        # Normalize the variable name.
+        var = var.lower().replace(" ", "_")
+        if ("." in var):
+            var = var[:var.index(".")]
+    
+        # See if we can find the metadata attribute.
+        if (not hasattr(self.metadata, var)):
+            log.error("BuiltInDocumentProperties: Metadata field '" + var + "' not found.")
+            return ""
+
+        # We have the attribute. Return it.
+        r = getattr(self.metadata, var)
+        log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
+        return r
+            
     def get_error_handler(self):
         """
         Get the onerror goto error handler.
@@ -3096,11 +3211,16 @@ class Context(object):
         fname - The name of the file.
         """
         # Save that the file is opened.
+        fname = str(fname)
+        fname = fname.replace(".\\", "").replace("\\", "/")
         self.open_files[fname] = b''
         log.info("Opened file " + fname)
 
     def write_file(self, fname, data):
+
         # Make sure the "file" exists.
+        fname = str(fname)
+        fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot write new data.'.format(fname))
             return False
@@ -3117,17 +3237,26 @@ class Context(object):
 
         # Are we writing a list?
         elif isinstance(data, list):
-            self.open_files[fname] += ''.join(map(chr, data))
+            for d in data:
+                if (isinstance(d, int)):
+                    self.open_files[fname] += chr(d)
+                else:
+                    self.open_files[fname] += str(d)
             return True
 
+        # Are we writing a byte?
+        elif isinstance(data, int):
+            self.open_files[fname] += chr(data)
+            return True
+        
         # Unhandled.
         else:
             log.error("Unhandled data type to write. " + str(type(data)) + ".")
             return False
 
-    def dump_all_files(self):
+    def dump_all_files(self, autoclose=False):
         for fname in self.open_files.keys():
-            self.dump_file(fname)
+            self.dump_file(fname, autoclose=autoclose)
 
     def close_file(self, fname):
         """
@@ -3140,6 +3269,7 @@ class Context(object):
         global file_count
         
         # Make sure the "file" exists.
+        fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot close.'.format(fname))
             return
@@ -3158,16 +3288,20 @@ class Context(object):
 
     # FIXME: This function is too closely coupled to the CLI.
     #   Context should not contain business logic.
-    def dump_file(self, fname):
+    def dump_file(self, fname, autoclose=False):
         """
         Save the contents of a file dumped by the VBA to disk.
 
         fname - The name of the file.
         """
         if fname not in self.closed_files:
-            log.error('File {} not closed. Cannot save.'.format(fname))
-            return
-
+            if (not autoclose):
+                log.error('File {} not closed. Cannot save.'.format(fname))
+                return
+            else:
+                log.warning('File {} not closed. Closing file.'.format(fname))
+                self.close_file(fname)
+                
         raw_data = self.closed_files[fname]
         file_hash = sha256(raw_data).hexdigest()
         self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
@@ -3234,6 +3368,7 @@ class Context(object):
             return VBA_LIBRARY[name]
         # Is it a doc var?
         elif name in self.doc_vars:
+            log.debug('Found %r in VBA document variables' % name)
             return self.doc_vars[name]
         # Unknown symbol.
         else:
@@ -3368,17 +3503,44 @@ class Context(object):
         log.debug("Found doc var " + var + " = " + str(r))
         return r
             
-    # TODO: set_global?
+    def save_intermediate_iocs(self, value):
+        """
+        Save variable values that appear to contain base64 encoded or URL IOCs.
+        """
 
+        # Is there a URL in the data?
+        URL_REGEX = r'.*(http[s]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
+        try:
+            value = str(value)
+        except:
+            return
+        tmp_value = value
+        if (len(tmp_value) > 100):
+            tmp_value = tmp_value[:100] + " ..."
+        if (re.match(URL_REGEX, value) is not None):
+            if (value not in intermediate_iocs):
+                log.info("Found intermediate IOC (URL): '" + tmp_value + "'")
+                intermediate_iocs.add(value)
+
+        # Is there base64 in the data?
+        B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+        b64_strs = re.findall(B64_REGEX, value)
+        for curr_value in b64_strs:
+            if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
+                log.info("Found intermediate IOC (base64): '" + tmp_value + "'")
+                intermediate_iocs.add(value)
+        
     def set(self,
             name,
             value,
             var_type=None,
             do_with_prefix=True,
             force_local=False,
-            force_global=False):
+            force_global=False,
+            no_conversion=False):
 
         # Does the name make sense?
+        orig_name = name
         if (not isinstance(name, basestring)):
             log.warning("context.set() " + str(name) + " is improper type. " + str(type(name)))
             name = str(name)
@@ -3387,6 +3549,9 @@ class Context(object):
         if (value is None):
             log.debug("context.set() " + str(name) + " failed. Value is None.")
             return
+
+        # Save IOCs from intermediate values if needed.
+        self.save_intermediate_iocs(value)
         
         # convert to lowercase
         name = name.lower()
@@ -3438,33 +3603,60 @@ class Context(object):
             tmp_name = str(self.with_prefix) + "." + str(name)
             self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
 
+        # Skip automatic data conversion if needed.
+        if (no_conversion):
+            return
+            
         # Handle base64 conversion with VBA objects.
         if (name.endswith(".text")):
 
-            # Handle doing conversions on the data.
-            node_type = name.replace(".text", ".datatype")
+            # Is this a base64 object?
+            do_b64 = False
             try:
 
                 # Is the root object something set to the "bin.base64" data type?
+                node_type = name.replace(".text", ".datatype")
                 val = str(self.get(node_type)).strip()
-                if (val == "bin.base64"):
+                if (val.lower() == "bin.base64"):
+                    do_b64 = True
 
-                    # Try converting the text from base64.
-                    try:
-
-                        # Set the typed vale of the node to the decoded value.
-                        tmp_str = filter(isascii, str(value).strip())
-                        missing_padding = len(tmp_str) % 4
-                        if missing_padding:
-                            tmp_str += b'='* (4 - missing_padding)
-                        conv_val = base64.b64decode(tmp_str)
-                        val_name = name.replace(".text", ".nodetypedvalue")
-                        self.set(val_name, conv_val)
-                    except Exception as e:
-                        log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
-                        
             except KeyError:
                 pass
+
+            # Is this a general XML object?
+            try:
+
+                # Is this a Microsoft.XMLDOM object?
+                import expressions
+                import vba_object
+                node_type = orig_name
+                if (isinstance(orig_name, expressions.MemberAccessExpression)):
+                    node_type = orig_name.lhs
+                else:
+                    node_type = str(node_type).lower().replace(".text", "")
+                val = vba_object.eval_arg(node_type, self)
+                if (val == "Microsoft.XMLDOM"):
+                    do_b64 = True
+
+            except KeyError:
+                pass
+            
+            # Handle doing conversions on the data.
+            if (do_b64):
+
+                # Try converting the text from base64.
+                try:
+                    
+                    # Set the typed value of the node to the decoded value.
+                    tmp_str = filter(isascii, str(value).strip())
+                    missing_padding = len(tmp_str) % 4
+                    if missing_padding:
+                        tmp_str += b'='* (4 - missing_padding)
+                    conv_val = base64.b64decode(tmp_str)
+                    val_name = name.replace(".text", ".nodetypedvalue")
+                    self.set(val_name, conv_val, no_conversion=True)
+                except Exception as e:
+                    log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
 
         # Handle hex conversion with VBA objects.
         if (name.endswith(".nodetypedvalue")):
@@ -3475,20 +3667,63 @@ class Context(object):
 
                 # Something set to type "bin.hex"?
                 val = str(self.get(node_type)).strip()
-                if (val == "bin.hex"):
+                if (val.lower() == "bin.hex"):
 
                     # Try converting from hex.
                     try:
 
-                        # Set the typed vale of the node to the decoded value.
+                        # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(str(value).strip(), "hex")
-                        self.set(name, conv_val)
+                        self.set(name, conv_val, no_conversion=True)
                     except Exception as e:
-                        log.error("hex conversion of '" + str(value) + "' failed. " + str(e))
+                        log.warning("hex conversion of '" + str(value) + "' FROM hex failed. Converting TO hex. " + str(e))
+                        conv_val = to_hex(str(value).strip())
+                        self.set(name, conv_val, no_conversion=True)
                         
             except KeyError:
                 pass
 
+        # Handle after the fact data conversion with VBA objects.
+        if (name.endswith(".datatype")):
+
+            # Handle doing conversions on the existing data.
+            node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            try:
+
+                # Do we have data to convert from type "bin.hex"?
+                node_value = self.get(node_value_name)
+                if (value.lower() == "bin.hex"):
+
+                    # Try converting from hex.
+                    try:
+
+                        # Set the typed value of the node to the decoded value.
+                        conv_val = codecs.decode(str(node_value).strip(), "hex")
+                        self.set(node_value_name, conv_val, no_conversion=True)
+                    except Exception as e:
+                        log.warning("hex conversion of '" + str(node_value) + "' FROM hex failed. Converting TO hex. " + str(e))
+                        conv_val = to_hex(str(node_value).strip())
+                        self.set(node_value_name, conv_val, no_conversion=True)
+
+                # Do we have data to convert from type "bin.base64"?
+                if (value.lower() == "bin.base64"):
+
+                    # Try converting the text from base64.
+                    try:
+                    
+                        # Set the typed value of the node to the decoded value.
+                        tmp_str = filter(isascii, str(node_value).strip())
+                        missing_padding = len(tmp_str) % 4
+                        if missing_padding:
+                            tmp_str += b'='* (4 - missing_padding)
+                        conv_val = base64.b64decode(tmp_str)
+                        self.set(node_value_name, conv_val, no_conversion=True)
+                    except Exception as e:
+                        log.error("base64 conversion of '" + str(node_value) + "' failed. " + str(e))
+                        
+            except KeyError:
+                pass
+            
     def _strip_null_bytes(self, item):
         r = item
         if (isinstance(item, str)):
