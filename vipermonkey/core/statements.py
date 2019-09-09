@@ -411,6 +411,12 @@ def do_const_assignments(code_block, context):
     """
     Perform all of the const variable declarations in a given code block.
     """
+
+    # Make sure we can iterate.
+    if (not isinstance(code_block, list)):
+        code_block = [code_block]
+
+    # Emulate all the const assignments in the code block.
     for s in code_block:
         if (isinstance(s, Dim_Statement) and (s.decl_type.lower() == "const")):
             log.info("Pre-running const assignment '" + str(s) + "'")
