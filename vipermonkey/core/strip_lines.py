@@ -402,11 +402,11 @@ def fix_non_ascii_names(vba_code):
     for c in vba_code:
 
         # Handle entering/leaving strings.
-        if (c == '"'):
+        if ((not in_comment) and (c == '"')):
             in_str = not in_str
 
         # Handle entering/leaving date constants.
-        if ((not in_str) and (c == '#')):
+        if ((not in_comment) and (not in_str) and (c == '#')):
             in_date = not in_date
 
         # Handle entering/leaving comments.
