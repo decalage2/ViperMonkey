@@ -3622,6 +3622,23 @@ class NameStatement(VBA_Object):
 name_statement = CaselessKeyword('Name') + expression("old_name") + CaselessKeyword('As') + expression("new_name")
 name_statement.setParseAction(NameStatement)
 
+# --- STOP statement ----------------------------------------------------------
+
+class Stop_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Stop_Statement, self).__init__(original_str, location, tokens)
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Stop'
+
+    def eval(self, context, params=None):
+        # Looks like this is for debugging, so we will assume execution is contunued.
+        pass
+
+stop_statement = CaselessKeyword('Stop').suppress()
+stop_statement.setParseAction(Stop_Statement)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -3639,8 +3656,9 @@ def extend_statement_grammar():
 
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
                   simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement
+                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement
     statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
                              simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
-                             with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub
+                             with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub | \
+                             stop_statement
 

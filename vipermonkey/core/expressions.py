@@ -1540,8 +1540,8 @@ limited_expression = (infixNotation(expr_item,
 # Try to handle bitwise AND in boolean expressions. Needs work
 limited_expression = (infixNotation(expr_item,
                                     [
-                                        # ("^", 2, opAssoc.RIGHT), # Exponentiation
                                         ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
+                                        ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
                                         (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
                                         ("\\", 2, opAssoc.LEFT, FloorDivision),
                                         (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
