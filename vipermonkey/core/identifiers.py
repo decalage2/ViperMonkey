@@ -49,6 +49,30 @@ from pyparsing import *
 from reserved import *
 from logger import log
 
+# TODO: reduce this list when corresponding statements are implemented
+# Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
+reserved_keywords = CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrB") | \
+                    CaselessKeyword("ChrW") | \
+                    CaselessKeyword("Asc") | \
+                    CaselessKeyword("Case") | \
+                    CaselessKeyword("On") | \
+                    CaselessKeyword("Sub") | \
+                    CaselessKeyword("If") | \
+                    CaselessKeyword("Then") | \
+                    CaselessKeyword("Kill") | \
+                    CaselessKeyword("For") | \
+                    CaselessKeyword("Next") | \
+                    CaselessKeyword("Public") | \
+                    CaselessKeyword("Private") | \
+                    CaselessKeyword("Declare") | \
+                    CaselessKeyword("Function") | \
+                    CaselessKeyword("End") | \
+                    CaselessKeyword("To")
+
+strict_reserved_keywords = reserved_keywords | \
+                           Regex(re.compile('Open', re.IGNORECASE))
+
 # --- IDENTIFIER -------------------------------------------------------------
 
 # TODO: see MS-VBAL 3.3.5 page 33
@@ -59,12 +83,13 @@ from logger import log
 # MS-GRAMMAR: subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
 # MS-GRAMMAR: identifier = expression
 
-general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit) + Suppress(Optional("^")) + Suppress(Optional("%"))
+general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit) + \
+                     Suppress(Optional("^")) + Suppress(Optional("%")) + Suppress(Optional("!..."))
 
 # MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
 # MS-GRAMMAR: Korean-identifier / simplified-Chinese-identifier / traditional-Chinese-identifier
 # TODO: add other identifier types
-lex_identifier = general_identifier | Regex(r"%\w+%")
+lex_identifier = general_identifier | Regex(r"%\w+%") | "..."
 
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # IDENTIFIER = <any lex-identifier that is not a reserved-identifier>
@@ -105,8 +130,8 @@ builtin_type = reserved_type_identifier | (Suppress("[") + reserved_type_identif
 # @ Currency
 # $ String
 # Don't parse 'c&' in 'c& d& e' as a typed_name. It's a string concat.
-#type_suffix = Word(r"%&^!#@$", exact=1) + NotAny(Word(alphanums) | '"')
-type_suffix = Word(r"%&^!#@$", exact=1) + NotAny((Optional(White()) + Word(alphanums)) | '"')
+type_suffix = Word(r"%&^!#@$", exact=1) + \
+              NotAny(Optional(Regex(r" +")) + ((NotAny(reserved_keywords) + Word(alphanums)) | '"'))
 typed_name = Combine(identifier + type_suffix)
 
 # 5.1 Module Body Structure
@@ -120,17 +145,15 @@ unrestricted_name = entity_name | reserved_identifier
 
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
-# TODO: reduce this list when corresponding statements are implemented
-reserved_keywords = Regex(re.compile(
-    'Chr[BW]?|Asc|Case|On|Sub|If|Kill|For|Next|Public|Private|Declare|Function', re.IGNORECASE))
+test = NotAny(reserved_keywords) + lex_identifier
 
 TODO_identifier_or_object_attrib = Combine(
     NotAny(reserved_keywords)
-    + Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
+    + (Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier)))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
-)
+) 
 
 TODO_identifier_or_object_attrib_loose = Combine(
     Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))

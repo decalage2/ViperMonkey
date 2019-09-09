@@ -56,6 +56,8 @@ from from_unicode_str import *
 from vba_object import int_convert
 import procedures
 from var_in_expr_visitor import *
+from function_call_visitor import *
+import vb_str
 
 import traceback
 import string
@@ -74,6 +76,7 @@ def is_simple_statement(s):
             isinstance(s, Option_Statement) or
             isinstance(s, Prop_Assign_Statement) or
             isinstance(s, Let_Statement) or
+            isinstance(s, LSet_Statement) or
             # Calls run other statements, so they are not simple.
             #isinstance(s, Call_Statement) or
             isinstance(s, Exit_For_Statement) or
@@ -200,11 +203,12 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 type_declaration_composite = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
-                             OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + \
+                             OneOrMore(lex_identifier + Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + \
+                                       CaselessKeyword('As') + reserved_type_identifier + \
                                        Suppress(Optional("*" + (decimal_literal | lex_identifier))) + Suppress(EOS)) + \
                              CaselessKeyword('End') + CaselessKeyword('Type') + \
                              ZeroOrMore( Literal(':') + (CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
-                                         lex_identifier + Suppress(EOS) + \
+                                         lex_identifier + Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + Suppress(EOS) + \
                                          OneOrMore(lex_identifier + CaselessKeyword('As') + reserved_type_identifier + Suppress(EOS)) + \
                                          CaselessKeyword('End') + CaselessKeyword('Type') )
 
@@ -232,11 +236,13 @@ class Parameter(VBA_Object):
         self.name = tokens.name
         self.my_type = tokens.type
         self.init_val = tokens.init_val
+        self.is_array = False
         self.mechanism = str(tokens.mechanism)
         # Is this an array parameter?
         if (('(' in str(tokens)) and (')' in str(tokens))):
             # Arrays are always passed by reference.
             self.mechanism = 'ByRef'
+            self.is_array = True
         # The default parameter passing mechanism is ByRef.
         # See https://www.bettersolutions.com/vba/macros/byval-or-byref.htm
         if (len(self.mechanism) == 0):
@@ -301,7 +307,8 @@ untyped_name_param_dcl = identifier + Optional(parameter_type)
 # MS-GRAMMAR: param_dcl = untyped_name_param_dcl | typed_name_param_dcl
 # MS-GRAMMAR: typed_name_param_dcl = TYPED_NAME [array_designator]
 
-parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism('mechanism')) + TODO_identifier_or_object_attrib('name') + \
+parameter = Optional(CaselessKeyword("optional").suppress()) + Optional(parameter_mechanism('mechanism')) + Optional(CaselessKeyword("ParamArray").suppress()) + \
+            TODO_identifier_or_object_attrib('name') + \
             Optional(CaselessKeyword("(") + ZeroOrMore(" ").suppress() + CaselessKeyword(")")) + \
             Optional(CaselessKeyword('as').suppress() + (lex_identifier('type') ^ reserved_complex_type_identifier('type'))) + \
             Optional('=' + expression('init_val'))
@@ -360,6 +367,10 @@ class TaggedBlock(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
+
+        # Assign all const variables first.
+        do_const_assignments(self.block, context)
+
         for s in self.block:
             s.eval(context, params=params)
 
@@ -383,15 +394,27 @@ label_statement = Forward()
         
 # need to declare statement beforehand:
 statement = Forward()
+statements_line = Forward()
+statements_line_no_eos = Forward()
+statement_restricted = Forward()
 external_function = Forward()
 
 # NOTE: statements should NOT include EOS
-block_statement = rem_statement | external_function | statement
+block_statement = rem_statement | external_function | (statement ^ statements_line_no_eos)
 # tagged_block broken out so it does not consume the final EOS in the statement block.
 statement_block = ZeroOrMore(tagged_block ^ (block_statement + EOS.suppress()))
 statement_block_not_empty = OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))
 tagged_block <<= label_statement('label') + Suppress(EOS) + statement_block('block')
 tagged_block.setParseAction(TaggedBlock)
+
+def do_const_assignments(code_block, context):
+    """
+    Perform all of the const variable declarations in a given code block.
+    """
+    for s in code_block:
+        if (isinstance(s, Dim_Statement) and (s.decl_type.lower() == "const")):
+            log.info("Pre-running const assignment '" + str(s) + "'")
+            s.eval(context)
 
 # --- DIM statement ----------------------------------------------------------
 
@@ -403,9 +426,19 @@ class Dim_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
         
+        # Track whether this is a const variable.
+        self.decl_type = ""
+        var_info = []
+        for f in tokens:
+            if (str(f).lower() == "const"):
+                self.decl_type = str(f)
+            if (isinstance(f, pyparsing.ParseResults)):
+                var_info.append(f)
+        tokens = var_info
+        
         # Track the initial value of the variable.
         self.init_val = "NULL"
-        last_var = tokens[-1:][0]
+        last_var = tokens[0]
         if ((len(last_var) >= 3) and
             (last_var[len(last_var) - 2] == '=')):
             self.init_val = last_var[len(last_var) - 1]
@@ -502,9 +535,19 @@ class Dim_Statement(VBA_Object):
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = [''] * var[3]
 
-            # Set the initial value of the declared variable.
-            context.set(var[0], curr_init_val, curr_type)
-            log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
+            # Handle untyped arrays.
+            elif (var[1]):
+                curr_init_val = []
+
+            # Handle uninitialized global variables.
+            if ((context.global_scope) and (curr_init_val is None)):
+                curr_init_val = "NULL"
+                
+            # Set the initial value of the declared variable. Only do this if the variable
+            # does not already exist.
+            if (not context.contains(var[0])):
+                context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
+                log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
     
 # 5.4.3.1 Local Variable Declarations
 #
@@ -585,7 +628,8 @@ typed_variable_dcl = typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
-local_variable_declaration = Suppress(CaselessKeyword("Dim") | CaselessKeyword("Static") | CaselessKeyword("Const")) + Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
+local_variable_declaration = (CaselessKeyword("Dim") | CaselessKeyword("Static") | (Suppress(Optional(Literal("#"))) + CaselessKeyword("Const"))) + \
+                             Optional(CaselessKeyword("Shared")).suppress() + variable_declaration_list
 
 dim_statement = local_variable_declaration
 dim_statement.setParseAction(Dim_Statement)
@@ -597,9 +641,9 @@ class Global_Var_Statement(Dim_Statement):
     pass
 
 public_private = Forward()
-global_variable_declaration = Suppress(Optional(public_private)) + \
+global_variable_declaration = Optional(public_private) + \
                               Optional(CaselessKeyword("Shared")).suppress() + \
-                              Optional(CaselessKeyword("Const")).suppress() + \
+                              Optional(CaselessKeyword("Const")) + \
                               variable_declaration_list
 global_variable_declaration.setParseAction(Global_Var_Statement)
 
@@ -609,6 +653,15 @@ class Let_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Let_Statement, self).__init__(original_str, location, tokens)
+
+        # Are we just making an empty Let_Statement object?
+        self.string_op = None
+        self.index = None
+        self.index1 = None
+        if (original_str is None):
+            return
+
+        # We are making a Let_Statement from parse results.
         self.name = tokens.name
         string_ops = set(["mid"])
         self.string_op = None
@@ -670,6 +723,35 @@ class Let_Statement(VBA_Object):
             # No callback.
             pass
 
+    def _make_let_statement(self, the_str_var, mod_str):
+        """
+        Make a Let_Statement object to assign the results of a Mid() assignment to the
+        proper variable. This handles assigning to items in an array if needed.
+        """
+
+        # Make an empty Let statement.
+        tmp_let = Let_Statement(None, None, None)
+
+        # Do we have an array item assignment?
+        tmp_let.name = the_str_var
+        if (isinstance(the_str_var, Function_Call)):
+
+            # Pull out the name of the 'function'. This is the array var name.
+            tmp_let.name = the_str_var.name
+
+            # The array indices are the 'function' args.
+            if (len(the_str_var.params) > 0):
+                tmp_let.index = the_str_var.params[0]
+            if (len(the_str_var.params) > 1):
+                tmp_let.index1 = the_str_var.params[1]
+
+        # Set the value to assign.
+        tmp_let.expression = mod_str
+        tmp_let.op = "="
+
+        # Done.
+        return tmp_let
+        
     def _handle_string_mod(self, context, rhs):
         """
         Handle assignments like Mid(a_string, start_pos, len) = "..."
@@ -690,7 +772,7 @@ class Let_Statement(VBA_Object):
             the_str_var = args[0]
             start = eval_arg(args[1], context)
             size = eval_arg(args[2], context)
-
+            
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
                 log.error("Assigning " + str(self.name) + " failed. " + str(the_str_var) + " not str or list.")
@@ -701,12 +783,26 @@ class Let_Statement(VBA_Object):
             if (((start-1 + size) > len(the_str)) or (start < 1)):
                 log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
                 return False
+
+            # Convert to a VB string to handle mixed ASCII/wide char weirdness.
+            vb_rhs = vb_str.VbStr(rhs, context.is_vbscript)
             
+            # Fix the length of the new data if needed.
+            if (vb_rhs.len() > size):
+                #rhs = rhs[:size]
+                vb_rhs = vb_rhs.get_chunk(0, size)
+            if (vb_rhs.len() < size):
+                #size = len(rhs)
+                size = vb_rhs.len()
+                
             # Modify the string.
-            mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
+            vb_the_str = vb_str.VbStr(the_str, context.is_vbscript)
+            #mod_str = the_str[:start-1] + rhs + the_str[(start-1 + size):]
+            mod_str = vb_the_str.update_chunk(start - 1, start - 2 + size, vb_rhs).to_python_str()
 
             # Set the string in the context.
-            context.set(str(the_str_var), mod_str)
+            tmp_let = self._make_let_statement(the_str_var, mod_str)
+            tmp_let.eval(context)
             return True
 
         # No string modification.
@@ -889,9 +985,11 @@ class Let_Statement(VBA_Object):
 
             # Evaluate the index expression(s).
             index = int_convert(eval_arg(self.index, context=context))
+            index1 = None
             if (self.index1 is not None):
-                log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, index, index1, value))
-                return
+                index1 = int_convert(eval_arg(self.index1, context=context))
+                #log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, self.index, self.index1, value))
+                #return
                 
             # Is array variable being set already represented as a list?
             # Or a string?
@@ -908,13 +1006,23 @@ class Let_Statement(VBA_Object):
             # Handle lists
             if (isinstance(arr_var, list)):
             
-                # Do we need to extend the length of the list to include the index?
+                # Do we need to extend the length of the list to include the indices?
                 if (index >= len(arr_var)):
-                    arr_var.extend([0] * (index - len(arr_var)))
+                    arr_var.extend([0] * (index - len(arr_var) + 1))
+                if (index1 is not None):
+                    if (not isinstance(arr_var[index], list)):
+                        arr_var[index] = []
+                    if (index1 >= len(arr_var[index])):
+                        arr_var[index].extend([0] * (index1 - len(arr_var[index])))
                 
                 # We now have a list with the proper # of elements. Set the
                 # array element to the proper value.
-                arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                if (index1 is None):
+                    arr_var = arr_var[:index] + [value] + arr_var[(index + 1):]
+                else:
+                    new_arr = arr_var[index]
+                    new_arr = new_arr[:index1] + [value] + new_arr[(index1 + 1):]
+                    arr_var[index] = new_arr
 
             # Handle strings.
             if ((isinstance(arr_var, str)) or (isinstance(arr_var, unicode))):
@@ -950,7 +1058,14 @@ class Let_Statement(VBA_Object):
                 # TODO: Currently we are assuming that 'On Error Resume Next' is being
                 # used. Need to actually check what is being done on error.
                 log.debug('Not setting ' + self.name + ", eval of RHS gave an error.")
-        
+
+# --- LSET STATEMENT --------------------------------------------------------------
+
+class LSet_Statement(Let_Statement):
+    # TODO: Extend eval() method to do the left string alignment of LSet.
+    # See https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/lset-statement
+    pass
+                
 # 5.4.3.8   Let Statement
 #
 # A let statement performs Let-assignment of a non-object value. The Let keyword itself is optional
@@ -965,6 +1080,44 @@ string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_li
 
 let_statement = (
     Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress()
+    + Optional(Suppress(CaselessKeyword('Const')))
+    + (
+        (
+            (
+                TODO_identifier_or_object_attrib('name')
+                + Optional(
+                    Suppress('(')
+                    + Optional(expression('index'))
+                    + Optional(',' + expression('index1'))
+                    + Suppress(')')
+                )
+            )
+            ^ member_access_expression('name')
+            ^ string_modification('name')
+        )
+        |
+        (
+            Literal(".")
+            + (
+                TODO_identifier_or_object_attrib_loose('name')
+                + Optional(
+                    Suppress('(')
+                    + Optional(expression('index'))
+                    + Optional(',' + expression('index1'))
+                    + Suppress(')')
+                )
+            )
+            ^ member_access_expression('name')
+            ^ string_modification('name')
+        )
+    )
+    + (Literal('=') | Literal('+=') | Literal('-='))('op')
+    + (expression('expression') ^ boolean_expression('expression'))
+)
+let_statement.setParseAction(Let_Statement)
+
+lset_statement = (
+    CaselessKeyword('LSet').suppress()
     + Optional(Suppress(CaselessKeyword('Const')))
     + Optional(".")
     + (
@@ -983,7 +1136,7 @@ let_statement = (
     + (Literal('=') | Literal('+=') | Literal('-='))('op')
     + (expression('expression') ^ boolean_expression('expression'))
 )
-let_statement.setParseAction(Let_Statement)
+lset_statement.setParseAction(LSet_Statement)
 
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
 
@@ -1067,7 +1220,7 @@ class For_Statement(VBA_Object):
         # Does the loop body do the same thing repeatedly?
         if (not all_static_assigns):
             return False
-
+        
         # The loop body has all static assignments. Emulate the loop body once.
         log.info("Short circuited loop. " + str(self))
         for s in self.statements:
@@ -1247,6 +1400,9 @@ class For_Statement(VBA_Object):
             log.debug("FOR loop: empty body. Skipping.")
             return
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
@@ -1314,8 +1470,16 @@ class For_Statement(VBA_Object):
 
         # Set end to valid values.
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
-            end = VBA_Object.loop_upper_bound
-            log.debug("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
+
+            # Fix the loop upper bound if it is ridiculously huge. We are assuming that a
+            # really huge loop is just there to foil emulation.
+            if (end > 100000000):
+                end = 10
+            else:
+
+                # Might be legitimate. Set to a smaller but still large value.
+                end = VBA_Object.loop_upper_bound
+            log.warn("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -1496,6 +1660,9 @@ class For_Each_Statement(VBA_Object):
         except AssertionError:
             pass
 
+        # Assign all const variables first.
+        do_const_assignments(self.statements, context)
+        
         # Try iterating over the values in the container.
         if (not isinstance(container, list)):
             container = [container]
@@ -1599,6 +1766,7 @@ class While_Statement(VBA_Object):
         self.loop_type = tokens.clause.type
         self.guard = tokens.clause.guard
         self.body = tokens[2]
+        self._local_calls = None
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -1761,7 +1929,69 @@ class While_Statement(VBA_Object):
         
         # We short circuited the loop evaluation.
         return True
+
+    def _has_local_calls(self, context):
+        """
+        See if the current loop body makes any local function calls.
+        """
+
+        # Already computed?
+        if (self._local_calls is not None):
+            return self._local_calls
+
+        # Sanity check.
+        if (not hasattr(self.body, "accept")):
+            log.debug("Loop body has no accept() method.")
+            return True
+
+        # Get the names of all the called functions in the loop body.
+        call_visitor = function_call_visitor()
+        for s in self.body:
+            if (not isinstance(s, VBA_Object)):
+                continue
+            s.accept(call_visitor)
+
+        # See if any of the called functions are local.
+        for func in call_visitor.called_funcs:
+            if (func not in context.external_funcs):
+                # Not an external call, so it is local.
+                self._local_calls = True
+                return True
+
+        # Only external calls.
+        self._local_calls = False
+        return False
             
+    def _no_state_change(self, prev_context, context):
+        """
+        Return True if the loop body contains no calls and the previous
+        program state (minus the guard variables) is equal to the
+        current program state.
+        """
+
+        # Sanity check.
+        if ((prev_context is None) or (context is None)):
+            return False
+        
+        # First check to see if the loop body contains no local calls.
+        if (self._has_local_calls(context)):
+            return False
+
+        # Remove the loop counter variables from the previous loop iteration
+        # program state and the current program state.
+        guard_vars = _get_guard_variables(self, context)
+        prev_context = Context(context=prev_context, _locals=prev_context.locals, copy_globals=True).delete("now").delete("application.username")
+        for gvar in guard_vars.keys():
+            prev_context = prev_context.delete(gvar)
+        curr_context = Context(context=context, _locals=context.locals, copy_globals=True).delete("now").delete("application.username")
+        for gvar in guard_vars.keys():
+            curr_context = curr_context.delete(gvar)
+        
+        # There is no state change if the previous state is equal to the
+        # current state.
+        r = (prev_context == curr_context)
+        return r
+    
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -1774,6 +2004,9 @@ class While_Statement(VBA_Object):
             log.info("WHILE loop: empty body. Skipping.")
             return
 
+        # Assign all const variables first.
+        do_const_assignments(self.body, context)
+        
         # See if we can short circuit the loop.
         if (self._handle_simple_loop(context)):
 
@@ -1792,12 +2025,27 @@ class While_Statement(VBA_Object):
 
         # Get the initial values of all the variables that appear in the loop guard.
         old_guard_vals = _get_guard_variables(self, context)
-            
+
+        # Track the context from the previous loop iteration to see if we have
+        # a loop that is just there for obfuscation.
+        num_no_change_body = 0
+        prev_context = None
+        
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
         num_no_change = 0
         while (True):
 
+            # Is the loop body a simple series of atomic statements and has
+            # nothing changed in the program state since the last iteration?
+            if (self._no_state_change(prev_context, context)):
+                num_no_change_body += 1
+                if (num_no_change_body >= context.max_static_iters * 500):
+                    log.warn("Possible useless While loop detected. Exiting loop.")
+                    self.is_useless = True
+                    break
+            prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
+            
             # Break infinite loops.
             if (num_iters > max_loop_iters):
                 log.error("Maximum loop iterations exceeded. Breaking loop.")
@@ -1907,6 +2155,9 @@ class Do_Statement(VBA_Object):
         # Track that the current loop is running.
         context.loop_stack.append(True)
 
+        # Assign all const variables first.
+        do_const_assignments(self.body, context)
+        
         # Some loop guards check the readystate value on an object. To simulate this
         # will will just go around the loop a small fixed # of times.
         max_loop_iters = VBA_Object.loop_upper_bound
@@ -2057,7 +2308,11 @@ class Select_Statement(VBA_Object):
 class Select_Clause(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
-        self.select_val = tokens.select_val[0]
+        self.select_val = tokens.select_val
+        try:
+            self.select_val = tokens.select_val[0]
+        except TypeError:
+            pass
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -2167,7 +2422,11 @@ class Case_Clause_Atomic(VBA_Object):
 
         # We just have a regular test.
         expected_val = eval_arg(self.case_val[0], context)
-        return (test_val == expected_val)
+        if (isinstance(test_val, int) and isinstance(expected_val, float)):
+            test_val = 0.0 + test_val
+        if (isinstance(test_val, float) and isinstance(expected_val, int)):
+            expected_val = 0.0 + expected_val
+        return (str(test_val) == str(expected_val))
 
 class Case_Clause(VBA_Object):
 
@@ -2222,7 +2481,7 @@ class Select_Case(VBA_Object):
             return
     
 select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").suppress() \
-                + expression("select_val")
+                + (expression("select_val") ^ boolean_expression("select_val"))
 select_clause.setParseAction(Select_Clause)
 
 case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
@@ -2230,7 +2489,7 @@ case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() +
                       (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
-case_clause = CaselessKeyword("Case").suppress() + Suppress(Optional(CaselessKeyword("Is") + Literal('='))) + \
+case_clause = CaselessKeyword("Case").suppress() + Suppress(Optional(CaselessKeyword("Is") + (Literal('=') | Literal('<')))) + \
               case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
@@ -2251,6 +2510,14 @@ class If_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
+        # Copy constructor?
+        if (isinstance(tokens, If_Statement)):
+            self.pieces = tokens.pieces
+            return
+        if ((len(tokens) == 1) and (isinstance(tokens[0], If_Statement))):
+            self.pieces = tokens[0].pieces
+            return
+            
         # Save the boolean guard and body for each case in the if, in order.
         self.pieces = []
         for tok in tokens:
@@ -2315,8 +2582,9 @@ class If_Statement(VBA_Object):
             # Add in the body.
             r += keyword
             body = piece["body"].__repr__().replace("\n", "; ")
-            if (len(body) > 5):
-                body = body[:6] + "..."
+            if (len(body) > 25):
+                body = body[:26] + "..."
+            r += body + " "
 
         return r
             
@@ -2349,14 +2617,14 @@ class If_Statement(VBA_Object):
 
 # Grammar element for IF statements.
 multi_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
-                                 Group(statement_block('statements'))) + \
+                                 Group(statement_block)) + \
                                  ZeroOrMore(
                                      Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
-                                            Group(statement_block('statements')))
+                                            Group(statement_block))
                                  ) + \
                                  Optional(
-                                     Group(CaselessKeyword("Else").suppress() + Group(simple_statements_line('statements'))) + Suppress(EOS) | \
-                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + Group(statement_block('statements')))
+                                     Group(CaselessKeyword("Else").suppress() + Group(simple_statements_line)) + Suppress(EOS) | \
+                                     Group(CaselessKeyword("Else").suppress() + Suppress(EOS) + Group(statement_block))
                                  ) + \
                                  CaselessKeyword("End").suppress() + CaselessKeyword("If").suppress()
 bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(EOS) + \
@@ -2370,18 +2638,20 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                                     Group(statement_block('statements')))
                           )
 
-single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
-                                  Group(simple_statements_line('statements')) )  + \
-                                  ZeroOrMore(
-                                      Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                   Group(simple_statements_line('statements')) )  + \
+                                   ZeroOrMore(
+                                       Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+                                              Group(simple_statements_line('statements')))
+                                   ) + \
+                                   Optional(
+                                       Group(CaselessKeyword("Else").suppress() + \
                                              Group(simple_statements_line('statements')))
-                                  ) + \
-                                  Optional(
-                                      Group(CaselessKeyword("Else").suppress() + \
-                                            Group(simple_statements_line('statements')))
-                                  ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
-simple_if_statement = multi_line_if_statement ^ single_line_if_statement
+                                   ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
+single_line_if_statement = _single_line_if_statement
+single_line_if_statement.setParseAction(If_Statement)
 
+simple_if_statement = multi_line_if_statement ^ _single_line_if_statement
 simple_if_statement.setParseAction(If_Statement)
 
 # --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
@@ -2433,7 +2703,7 @@ simple_if_statement_macro.setParseAction(If_Statement_Macro)
 class Call_Statement(VBA_Object):
 
     # List of interesting functions to log calls to.
-    log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
+    log_funcs = ["CreateProcessA", "CreateProcessW", "CreateProcess", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
@@ -2455,10 +2725,34 @@ class Call_Statement(VBA_Object):
     def __repr__(self):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
+    def _handle_with_calls(self, context):
+
+        # Is this a call like '.WriteText "foo"'?
+        func_name = str(self.name).strip()
+        if (not func_name.startswith(".")):
+            return None
+
+        # We have a call to a function whose name starts with '.'. Are
+        # we in a With block?
+        if (len(context.with_prefix) == 0):
+            return None
+
+        # We have a method call of the With object. Make a member
+        # access expression representing the method call of the
+        # With object.
+        call_obj = Function_Call(None, None, None, old_call=self)
+        call_obj.name = func_name[1:] # Get rid of initial '.'
+        full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
+
+        # Evaluate the fully qualified object method call.
+        r = eval_arg(full_expr, context)
+        return r
+        
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exit function previously called. Not evaluating '" + str(self) + "'")
             return
 
         # Save the unresolved argument values.
@@ -2468,7 +2762,9 @@ class Call_Statement(VBA_Object):
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
         dll_func_name = context.get_true_name(self.name)
+        is_external = False
         if (dll_func_name is not None):
+            is_external = True
             self.name = dll_func_name
 
         # Are we calling a member access expression?
@@ -2478,7 +2774,8 @@ class Call_Statement(VBA_Object):
             assert not self.params, 'Unexpected parameters. Parsing has failed.'
             # Just evaluate the expression as the call.
             log.debug("Call of member access expression " + str(self.name))
-            return self.name.eval(context, self.params)
+            r = self.name.eval(context, self.params)
+            return r
 
         # TODO: The following should share the same code as MemberAccessExpression and Function_Call?
 
@@ -2496,12 +2793,19 @@ class Call_Statement(VBA_Object):
 
         # Log functions of interest.
         log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+        if (is_external):
+            context.report_action("External Call", self.name + "(" + str(call_params) + ")", self.name, strip_null_bytes=True)
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
+
+        # Handle method calls inside a With statement.
+        r = self._handle_with_calls(context)
+        if (r is not None):
+            return r
         
         # Handle VBA functions:
-        func_name = str(self.name)
+        func_name = str(self.name).strip()
         if func_name.lower() == 'msgbox':
             # 6.1.2.8.1.13 MsgBox
             context.report_action('Display Message', call_params, 'MsgBox', strip_null_bytes=True)
@@ -2535,6 +2839,12 @@ class Call_Statement(VBA_Object):
                     for byref_param_info in s.byref_params.keys():
                         arg_var_name = str(self.params[byref_param_info[1]])
                         context.set(arg_var_name, s.byref_params[byref_param_info])
+
+                # We are out of the called function, so if we exited the called function early
+                # it does not apply to the current function.
+                context.exit_func = False
+
+                # Return function result.
                 return ret
             
         except KeyError:
@@ -2565,8 +2875,17 @@ class Call_Statement(VBA_Object):
                     # See if we can run the other function.
                     log.debug("Try indirect run of function '" + new_func + "'")
                     try:
+
+                        # Emulate the function.
                         s = context.get(new_func)
-                        return s.eval(context=context, params=new_params)
+                        r = s.eval(context=context, params=new_params)
+                        
+                        # We are out of the called function, so if we exited the called function early
+                        # it does not apply to the current function.
+                        context.exit_func = False
+
+                        # Return the function result.
+                        return r
                     except KeyError:
                         pass
                 log.error('Procedure %r not found' % func_name)
@@ -2654,6 +2973,7 @@ class Exit_Function_Statement(VBA_Object):
 
     def eval(self, context, params=None):
         # Mark that we should return from the current function.
+        log.info("Explicit exit function invoked")
         context.exit_func = True
 
 # Return from a function.
@@ -2727,6 +3047,9 @@ class With_Statement(VBA_Object):
             context.with_prefix = str(prefix_val)
         if (context.with_prefix.startswith(".")):
             context.with_prefix = context.with_prefix[1:]
+
+        # Assign all const variables first.
+        do_const_assignments(self.body, context)
             
         # Evaluate each statement in the with block.
         log.debug("START WITH")
@@ -2769,8 +3092,8 @@ class With_Statement(VBA_Object):
         return
 
 # With statement
-with_statement = CaselessKeyword('With').suppress() + (member_access_expression('env') ^ \
-                                                       (Optional(".") + (lex_identifier('env') ^ function_call_limited('env')))) + Suppress(EOS) + \
+with_statement = CaselessKeyword('With').suppress() + Optional(".") + (member_access_expression('env') ^ \
+                                                                       ((lex_identifier('env') ^ function_call_limited('env')))) + Suppress(EOS) + \
                  Group(statement_block('body')) + \
                  CaselessKeyword('End').suppress() + CaselessKeyword('With').suppress()
 with_statement.setParseAction(With_Statement)
@@ -2934,7 +3257,7 @@ file_type = (
     )("mode")
     + Suppress(Optional(CaselessKeyword("Lock")))
     + Optional(
-        Suppress(CaselessKeyword("Access"))
+        Optional(Suppress(CaselessKeyword("Access")))
         + (
             CaselessKeyword("Read Write")
             ^ CaselessKeyword("Read")
@@ -3014,7 +3337,7 @@ simple_statement = (
         | option_statement
         | (
             prop_assign_statement
-            ^ (let_statement | call_statement)
+            ^ (let_statement | lset_statement |call_statement)
             ^ label_statement
             ^ expression
         )
@@ -3030,14 +3353,44 @@ simple_statement = (
     )
 )
 
-simple_statements_line <<= (
-   (simple_statement + OneOrMore(Suppress(':') + simple_statement))
-   ^ simple_statement
+# No label statement.
+simple_statement_restricted = (
+    NotAny(Regex(r"End\s+Sub"))
+    + (
+        print_statement
+        | dim_statement
+        | option_statement
+        | (
+            prop_assign_statement
+            ^ (let_statement | lset_statement | call_statement)
+            ^ expression
+        )
+        | exit_loop_statement
+        | exit_func_statement
+        | redim_statement
+        | goto_statement
+        | on_error_statement
+        | file_open_statement
+        | doevents_statement
+        | rem_statement
+        | resume_statement
+        | single_line_if_statement
+    )
 )
 
-statements_line = (
+simple_statements_line <<= (
+   (simple_statement_restricted + OneOrMore(Suppress(':') + simple_statement_restricted))
+   ^ simple_statement_restricted
+)
+
+statements_line <<= (
     tagged_block
-    ^ (Optional(statement + ZeroOrMore(Suppress(':') + statement)) + EOS.suppress())
+    ^ (Optional(statement_restricted + ZeroOrMore(Suppress(':') + statement_restricted)) + EOS.suppress())
+)
+
+statements_line_no_eos <<= (
+    tagged_block
+    ^ (Optional(statement_restricted + ZeroOrMore(Suppress(':') + statement_restricted)))
 )
 
 # --- EXTERNAL FUNCTION ------------------------------------------------------
@@ -3172,13 +3525,15 @@ class External_Function(VBA_Object):
         
         # TODO: return result according to the known DLLs and functions
         log.warning('Unknown external function %s from DLL %s' % (function_name, self.lib_name))
-        return 0
+
+        # Assume that returning 0 means the call failed, return 1 to (hopefully) indicate success.
+        return 1
 
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
                  + Optional(Literal('(') + Literal(')')).suppress()
 
-public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Global')).suppress() + \
-                   Optional(CaselessKeyword('WithEvents')).suppress()
+public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Global')) + \
+                   Optional(CaselessKeyword('WithEvents'))
 
 params_list_paren = Suppress('(') + Optional(parameters_list('params')) + Suppress(')')
 
@@ -3233,6 +3588,34 @@ try_catch = Suppress(CaselessKeyword('Try')) + Suppress(EOS) + statement_block('
             Suppress(EOS) + statement_block('catch_block') + Suppress(CaselessKeyword('End')) + Suppress(CaselessKeyword('Try'))
 try_catch.setParseAction(TryCatch)
 
+# --- TRY/CATCH STATEMENT ------------------------------------------------------
+
+class NameStatement(VBA_Object):
+    """
+    File renaming Name statement.
+    """
+
+    def __init__(self, original_str, location, tokens):
+        super(NameStatement, self).__init__(original_str, location, tokens)
+        self.old_name = tokens.old_name
+        self.new_name = tokens.new_name
+        log.debug('parsed %r' % self)
+
+    def __repr__(self):
+        return "Name " + str(self.old_name) + " As " + str(self.new_name)
+
+    def eval(self, context, params=None):
+
+        # Resolve names.
+        old_name = eval_arg(self.old_name, context=context)
+        new_name = eval_arg(self.new_name, context=context)
+
+        # Report file rename.
+        context.report_action("File Rename", "Rename '" + old_name + "' to '" + new_name + "'", "File Rename", strip_null_bytes=True)
+        
+name_statement = CaselessKeyword('Name') + expression("old_name") + CaselessKeyword('As') + expression("new_name")
+name_statement.setParseAction(NameStatement)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -3246,7 +3629,12 @@ def extend_statement_grammar():
     # statement has to be declared beforehand using Forward(), so here we use
     # the "<<=" operator:
     global statement
+    global statement_restricted
+
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
                   simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub
+                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement
+    statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+                             simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
+                             with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub
 

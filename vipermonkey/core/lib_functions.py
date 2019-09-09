@@ -45,6 +45,7 @@ from pyparsing import *
 
 from vba_object import *
 from literals import *
+import vb_str
 
 from logger import log
 
@@ -103,10 +104,10 @@ class Chr(VBA_Object):
             
         # Figure out whether to create a unicode or ascii character.
         converter = chr
-        if (param > 255):
-            converter = unichr
         if (param < 0):
             param = param * -1
+        if (param > 255):
+            converter = unichr
             
         # Do the conversion.
         try:
@@ -144,12 +145,21 @@ class Asc(VBA_Object):
         self.arg = tokens[0]
 
     def eval(self, context, params=None):
-        r = 0
-        try:
-            r = ord(eval_arg(self.arg, context)[0])
-        except:
-            pass
-        log.debug("Asc(%r): return %r" % (self.arg, r))
+
+        # Eval the argument.
+        c = eval_arg(self.arg, context)
+
+        # Calling Asc() on int?
+        if (isinstance(c, int)):
+            r = c
+        else:
+
+            # Got a string.
+            c = str(c)
+            r = vb_str.get_ms_ascii_value(c)
+
+        # Return the result.
+        log.debug("Asc: return %r" % r)
         return r
 
     def __repr__(self):

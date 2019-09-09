@@ -115,6 +115,9 @@ class Module(VBA_Object):
                     if isinstance(curr_statement, Function):
                         log.debug("saving func decl: %r" % curr_statement.name)
                         self.functions[curr_statement.name] = curr_statement
+                    if isinstance(curr_statement, External_Function):
+                        log.debug("saving external func decl: %r" % curr_statement.name)
+                        self.external_functions[curr_statement.name] = curr_statement
                     
         self.name = self.attributes.get('VB_Name', None)
 
@@ -130,6 +133,18 @@ class Module(VBA_Object):
 
     def eval(self, context, params=None):
 
+        # Perform all of the const assignments first.
+        for block in self.loose_lines:
+            if (isinstance(block, Sub) or
+                isinstance(block, Function) or
+                isinstance(block, External_Function)):
+                log.debug("Skip loose line const eval of " + str(block))
+                continue
+            if (isinstance(block, LooseLines)):
+                context.global_scope = True
+                do_const_assignments(block.block, context)
+                context.global_scope = False
+        
         # Emulate the loose line blocks (statements that appear outside sub/func
         # defs) in order.
         done_emulation = False
@@ -196,7 +211,8 @@ module_header = ZeroOrMore(header_statements_line)
 
 loose_lines = Forward()
 #declaration_statement = external_function | global_variable_declaration | loose_lines | option_statement | dim_statement | rem_statement
-declaration_statement = external_function | loose_lines | global_variable_declaration | option_statement | dim_statement | rem_statement
+declaration_statement = external_function | loose_lines | global_variable_declaration | \
+                        option_statement | dim_statement | rem_statement | type_declaration
 declaration_statements_line = Optional(declaration_statement + ZeroOrMore(Suppress(':') + declaration_statement)) \
                               + EOL.suppress()
 
@@ -232,6 +248,9 @@ class LooseLines(VBA_Object):
         #if (context.exit_func):
         #    return
 
+        # Assign all const variables first.
+        do_const_assignments(self.block, context)
+        
         # Emulate the statements in the block.
         log.info("Emulating " + str(self) + " ...")
         context.global_scope = True
@@ -269,11 +288,23 @@ module_code = ZeroOrMore(
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
+    | type_declaration
 )
 
 module_body = module_declaration + module_code
 
-module = module_header + module_body
+#module = module_header + module_body
+module = ZeroOrMore(
+    option_statement
+    | sub
+    | function
+    | Suppress(empty_line)
+    | simple_if_statement_macro
+    | loose_lines
+    | type_declaration
+    | declaration_statements_line
+    | header_statements_line
+)
 module.setParseAction(Module)
 
 # === LINE PARSER ============================================================

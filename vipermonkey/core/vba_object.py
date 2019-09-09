@@ -55,13 +55,13 @@ import base64
 from logger import log
 import re
 from curses_ascii import isprint
+import traceback
 
 from inspect import getouterframes, currentframe
 import sys
 from datetime import datetime
 import pyparsing
 
-from meta import read_metadata_item
 import expressions
 
 max_emulation_time = None
@@ -265,7 +265,8 @@ def _read_from_object_text(arg, context):
         
             # Eval the leftmost prefix element of the member access expression first.
             log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
-            if (hasattr(lhs, "eval")):
+            if ((hasattr(lhs, "eval")) and
+                (not isinstance(lhs, pyparsing.ParseResults))):
                 lhs = lhs.eval(context)
             else:
 
@@ -456,9 +457,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = func
-                    if (isinstance(func, Function) or isinstance(func, Sub)):
+                    import procedures
+                    if (isinstance(func, procedures.Function) or
+                        isinstance(func, procedures.Sub) or
+                        ('vipermonkey.core.vba_library.' in str(type(func)))):
                         r = eval_arg(func, context, treat_as_var_name=True)
-
+                        
                     # Did the function resolve to a value?
                     if (r != func):
 
@@ -474,6 +478,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                 except Exception as e:
                     log.debug("eval_arg: Failed. Not a function. " + str(e))
+                    traceback.print_exc()
 
                 # Are we trying to load some document meta data?
                 tmp = arg.lower().strip()
@@ -509,7 +514,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         return val
 
                     # Try getting from meta data.
-                    val = read_metadata_item(var)
+                    val = context.read_metadata_item(var)
                     if (val is not None):
                         return val
                     
@@ -669,8 +674,8 @@ def coerce_to_int(obj):
             return 0
 
         # Hex string?
-        if ((obj.startswith("&H")) and (len(obj) <= 4)):
-            return int(obj.replace("&H", "0x"), 16)
+        if ((obj.lower().startswith("&h")) and (len(obj) <= 4)):
+            return int(obj.lower().replace("&h", "0x"), 16)
 
     # Try regular int.
     return int(obj)
