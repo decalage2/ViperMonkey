@@ -142,7 +142,7 @@ class Format(VbaLibraryFunc):
         if (len(params) > 1):
             typ = str(params[1])
             if (typ.lower() == "long date"):
-                r = "giovedì 27 giugno 2019"
+                r = "gioved\xc3\xac 27 giugno 2019"
 
         # Done.
         log.debug("Format(%r): return %r" % (self, r))
