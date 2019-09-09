@@ -441,6 +441,14 @@ class PrivateProfileString(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "**MATCH ANY**"
 
+class EOF(VbaLibraryFunc):
+    """
+    Stubbed EOF file method.
+    """
+
+    def eval(self, context, params=None):
+        return True
+
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -3329,7 +3337,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir):
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

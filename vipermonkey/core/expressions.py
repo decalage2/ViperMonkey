@@ -191,6 +191,8 @@ class MemberAccessExpression(VBA_Object):
             tokens = tokens[0][0]
             self.rhs = tokens[1:]
             self.lhs = tokens.lhs
+            if ((isinstance(self.lhs, list) or isinstance(self.lhs, pyparsing.ParseResults)) and (len(self.lhs) > 0)):
+                self.lhs = self.lhs[0]
             self.rhs1 = ""
             if (hasattr(tokens, "rhs1")):
                 self.rhs1 = tokens.rhs1
