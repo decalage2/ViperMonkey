@@ -104,6 +104,7 @@ from function_call_visitor import *
 from function_defn_visitor import *
 from function_import_visitor import *
 from var_defn_visitor import *
+import filetype
 
 # === FUNCTIONS ==============================================================
 
@@ -152,18 +153,13 @@ class ViperMonkey(object):
         self.actions = []
 
         # Figure out whether this is VBScript or VBA.
-        # TODO: vmonkey should not call file as an external process to check the file type, use olevba instead
-        # This check should happen later, when the file is loaded by olevba
-        # For now, VBS is disabled:
         self.is_vbscript = False
-        log.info("Emulating an Office (VBA) file. VBScript support is temporarily disabled in this version.")
-        # file_info = subprocess.check_output(["file", self.filename]).strip()
-        # if (("Microsoft" in file_info) or ("Composite" in file_info) or ("Zip" in file_info)):
-        #     self.is_vbscript = False
-        #     log.info("Emulating an Office (VBA) file.")
-        # else:
-        #     self.is_vbscript = True
-        #     log.info("Emulating a VBScript file.")
+        if (filetype.is_office_file(self.filename)):
+            self.is_vbscript = False
+            log.info("Emulating an Office (VBA) file.")
+        else:
+            self.is_vbscript = True
+            log.info("Emulating a VBScript file.")
             
         # Track the loaded Excel spreadsheet (xlrd).
         self.loaded_excel = None

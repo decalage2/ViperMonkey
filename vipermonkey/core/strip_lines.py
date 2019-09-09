@@ -588,6 +588,7 @@ def strip_useless_code(vba_code, local_funcs):
     """
 
     # Preprocess the code to make it easier to parse.
+    log.info("Modifying VB code...")
     vba_code = fix_vba_code(vba_code)
     
     # Track data change callback function names.
