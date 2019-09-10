@@ -3352,6 +3352,10 @@ class Context(object):
         # convert to lowercase
         name = name.lower()
         log.debug("Looking for var '" + name + "'...")
+
+        # We will always say that a directory is not accessible.
+        if (name.strip().endswith(".subfolders.count")):
+            return -1
         
         # First, search in locals. This handles variables whose name overrides
         # a system function.
