@@ -142,9 +142,10 @@ from vba_library import *
 class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self, filename):
+    def __init__(self, filename, data):
         self.metadata = None
         self.filename = filename
+        self.data = data
         self.modules = []
         self.modules_code = []
         self.globals = {}
@@ -153,8 +154,11 @@ class ViperMonkey(object):
         self.actions = []
 
         # Figure out whether this is VBScript or VBA.
+        vba_pointer = self.filename
+        if (self.filename is None):
+            vba_pointer = self.data
         self.is_vbscript = False
-        if (filetype.is_office_file(self.filename)):
+        if (filetype.is_office_file(vba_pointer, self.filename is None)):
             self.is_vbscript = False
             log.info("Emulating an Office (VBA) file.")
         else:

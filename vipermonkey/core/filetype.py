@@ -42,7 +42,7 @@ magic_nums = [
     "50 4B 3 4", # Office 2007+ (PKZip)
 ]
 
-def is_office_file(fname):
+def is_office_file(fname, is_data):
     """
     Check to see if the given file is a MS Office file format.
 
@@ -51,8 +51,11 @@ def is_office_file(fname):
 
     # Read the 1st 8 bytes of the file.
     info = None
-    with open(fname, 'rb') as f:
-        info = f.read(8)
+    if (not is_data):
+        with open(fname, 'rb') as f:
+            info = f.read(8)
+    else:
+        info = fname[:9]
 
     # See if we have 1 of the known magic #s.
     curr_magic = ""
