@@ -427,12 +427,33 @@ class MemberAccessExpression(VBA_Object):
         tmp = self.__repr__().lower()
         if (tmp.startswith("activedocument.variables(")):
             return eval_arg(self.__repr__(), context)
-
+        
         # Now widen this up to more general data that can be read from the
         # doc.
         if ("(" in tmp):
             tmp = tmp[:tmp.rindex("(")]
-        return context.get_doc_var(tmp)
+        val = context.get_doc_var(tmp)
+
+        # Are we referencing an item by index?
+        # zQGGrrccT('0').Caption
+        if (("(" in str(self.lhs)) and
+            (isinstance(self.lhs, Function_Call)) and
+            (val is not None) and
+            (isinstance(val, list))):
+
+            # Get the index.
+            if (len(self.lhs.params) > 0):
+                index = eval_arg(self.lhs.params[0], context)
+                if ((isinstance(index, int)) and (index < len(val))):
+                    val = val[index]
+
+        # Are we referencing a field?
+        rhs = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
+        if ((isinstance(val, dict)) and (rhs in val)):
+            val = val[rhs]
+                    
+        # Return the value.
+        return val
 
     def _handle_text_file_read(self, context):
         """
