@@ -224,9 +224,36 @@ class MemberAccessExpression(VBA_Object):
         """
         Handle references to the .Count field of the current item.
         """
-        if (isinstance(curr_item, list)):
+        if ((".count" in str(self).lower()) and (isinstance(curr_item, list))):
             return len(curr_item)
-    
+
+    def _handle_item(self, context, curr_item):
+        """
+        Handle accessing a list item.
+        """
+
+        # Only works for lists.
+        if (not isinstance(curr_item, list)):
+            return None
+
+        # Do we have an Item() call?
+        if (".item(" not in str(self).lower()):
+            return None
+
+        # Get the index.
+        tmp_rhs = self.rhs
+        if (isinstance(tmp_rhs, list) and (len(tmp_rhs) > 0)):
+            tmp_rhs = tmp_rhs[0]
+        if ((not isinstance(tmp_rhs, Function_Call)) or
+            (tmp_rhs.name != "Item")):
+            return None
+        index = eval_arg(tmp_rhs.params[0], context)
+        if ((not isinstance(index, int)) or (index >= len(curr_item))):
+            return None
+
+        # Return the list item.
+        return curr_item[index]
+        
     def _handle_oslanguage(self, context):
         """
         Handle references to the OSlanguage field.
@@ -502,7 +529,7 @@ class MemberAccessExpression(VBA_Object):
             return None
         if (rhs.name != "Replace"):
             return None
-        if (str(lhs) != "RegExp"):
+        if (not str(lhs).lower().endswith("regexp")):
             return None
 
         # Do we have a pattern for the RegExp?
@@ -768,11 +795,57 @@ class MemberAccessExpression(VBA_Object):
             return None
         r = control_val[field]
         return r
-            
+
+    def _handle_regex_execute(self, context, tmp_lhs):
+        """
+        Handle application of a RegEx object to a string via the RegEx object's Execute() method.
+        """
+
+        # Is this dealing with a RegEx object?
+        if (str(tmp_lhs).lower() != "vbscript.regexp"):
+            return None
+
+        # Are we calling the Execute() method?
+        if (".Execute(" not in str(self)):
+            return None
+
+        # We are doing a regex execute. Pull out the regex pattern and string
+        # to which to apply the regex.
+
+        # Get pattern.
+        pat_var = str(self.lhs).lower() + ".pattern"
+        pat = None
+        try:
+            pat = context.get(pat_var)
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Get string.
+        tmp_rhs = self.rhs
+        if (isinstance(tmp_rhs, list) and (len(tmp_rhs) > 0)):
+            tmp_rhs = tmp_rhs[0]
+        if ((not isinstance(tmp_rhs, Function_Call)) or
+            (tmp_rhs.name != "Execute")):
+            return None
+        mod_str = tmp_rhs.params[0]
+        try:
+            str_val = context.get(mod_str)
+            mod_str = str_val
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Find all the regex matches in the string.
+        r = re.findall(pat, mod_str)
+        return r
+        
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
-
+        
         # Handle accessing control values from a form by index..
         call_retval = self._handle_indexed_form_access(context)
         if (call_retval is not None):
@@ -836,7 +909,17 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_count(context, tmp_lhs)
         if (call_retval is not None):
             return call_retval
-            
+
+        # Handle reading an item from a data collection.
+        call_retval = self._handle_item(context, tmp_lhs)
+        if (call_retval is not None):
+            return call_retval
+
+        # Handle Regex object applications.
+        call_retval = self._handle_regex_execute(context, tmp_lhs)
+        if (call_retval is not None):
+            return call_retval
+        
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
         tmp_rhs = None

@@ -1184,7 +1184,11 @@ class Replace(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 3
+        if (len(params) < 3):
+            if (len(params) > 0):
+                return params[0]
+            else:
+                return ""
         # TODO: Handle start, count, and compare parameters.
         string = str(params[0])
         if (string is None):
