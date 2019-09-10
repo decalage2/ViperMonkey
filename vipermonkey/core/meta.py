@@ -30,6 +30,7 @@ def get_metadata_exif(filename):
         return {}
 
     # Sanity check results.
+    log.debug("exiftool output: '" + str(output) + "'")
     if (":" not in output):
         log.warning("Cannot read metadata with exiftool.")
         return {}
