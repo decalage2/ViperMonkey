@@ -2644,7 +2644,7 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                                     Group(statement_block('statements')))
                           )
 
-_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
+_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(Optional(EOS)) + \
                                    Group(simple_statements_line('statements')) )  + \
                                    ZeroOrMore(
                                        Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
