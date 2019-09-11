@@ -3259,6 +3259,7 @@ file_type = (
         | CaselessKeyword("Binary")
         | CaselessKeyword("Input")
         | CaselessKeyword("Output")
+        | CaselessKeyword("Input")
         | CaselessKeyword("Random")
     )("mode")
     + Suppress(Optional(CaselessKeyword("Lock")))
@@ -3640,6 +3641,28 @@ class Stop_Statement(VBA_Object):
 stop_statement = CaselessKeyword('Stop').suppress()
 stop_statement.setParseAction(Stop_Statement)
 
+# --- LINE INPUT statement ----------------------------------------------------------
+
+class Line_Input_Statement(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Line_Input_Statement, self).__init__(original_str, location, tokens)
+        self.file_id = tokens.file_id
+        self.var = tokens.var
+        log.debug('parsed %r as Line_Input_Statement' % self)
+
+    def __repr__(self):
+        return 'Line Input #' + str(self.file_id) + ", " + str(self.var)
+
+    def eval(self, context, params=None):
+
+        # TODO: Implement Line Input functionality.
+        log.warn("'Line Input' statements not emulated. Treating '" + str(self) + "' as a NOOP.")
+
+line_input_statement = CaselessKeyword('Line').suppress() + CaselessKeyword('Input').suppress() + \
+                       Literal("#").suppress() + expression("file_id") + Literal(",") + \
+                       expression("var")
+line_input_statement.setParseAction(Line_Input_Statement)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -3656,10 +3679,10 @@ def extend_statement_grammar():
     global statement_restricted
 
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
-                  simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+                  line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement
     statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
-                             simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
+                             line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub | \
                              stop_statement
 
