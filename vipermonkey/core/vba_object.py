@@ -185,10 +185,8 @@ def _read_from_excel(arg, context):
 
     # Try handling reading value from an Excel spreadsheet cell.
     arg_str = str(arg)
-    if (("thisworkbook." in arg_str.lower()) and
-        ('("thisworkbook.' not in arg_str.lower()) and
-        ("sheets(" in arg_str.lower()) and
-        ("range(" in arg_str.lower())):
+    if (("sheets(" in arg_str.lower()) and
+        (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
         log.debug("Try as Excel cell read...")
         
@@ -199,7 +197,11 @@ def _read_from_excel(arg, context):
         sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         
         # Pull out the cell index.
-        start = tmp_arg_str.index("range(") + len("range(")
+        start = None
+        if ("range(" in arg_str.lower()):
+            start = tmp_arg_str.index("range(") + len("range(")
+        else:
+            start = tmp_arg_str.index("cells(") + len("cells(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
