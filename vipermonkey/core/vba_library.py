@@ -81,6 +81,21 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class MonthName(VbaLibraryFunc):
+    """
+    MonthName() function. Currently only returns results in Italian.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        num = params[0]
+        if ((not isinstance(num, int)) or (num > 12) or (num < 1)):
+            return "NULL"
+        # TODO: Somehow specify the language for the months.
+        months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+        return months[num-1]        
+
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function
@@ -3346,7 +3361,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF):
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
+               MonthName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

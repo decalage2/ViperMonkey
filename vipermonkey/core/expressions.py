@@ -1773,7 +1773,6 @@ class BoolExprItem(VBA_Object):
             
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
-            (self.op.lower() == "like") or
             (self.op.lower() == "is")):
             rhs = strip_nonvb_chars(rhs)
             lhs = strip_nonvb_chars(lhs)
@@ -1798,6 +1797,7 @@ class BoolExprItem(VBA_Object):
             rhs = str(rhs)
             lhs = str(lhs)
             try:
+                rhs = rhs.replace("*", ".*")
                 r = (re.match(rhs, lhs) is not None)
                 log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
                 return r
