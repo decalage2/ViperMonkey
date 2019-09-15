@@ -37,11 +37,26 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Office magic numbers.
-magic_nums = [
-    "D0 CF 11 E0 A1 B1 1A E1", # Office 97
-    "50 4B 3 4", # Office 2007+ (PKZip)
-]
+magic_nums = {
+    "office97" : "D0 CF 11 E0 A1 B1 1A E1",    # Office 97
+    "office2007" : "50 4B 3 4",                # Office 2007+ (PKZip)
+}
 
+def get_1st_8_bytes(fname, is_data):
+
+    info = None
+    if (not is_data):
+        with open(fname, 'rb') as f:
+            info = f.read(8)
+    else:
+        info = fname[:9]
+
+    curr_magic = ""
+    for b in info:
+        curr_magic += hex(ord(b)).replace("0x", "").upper() + " "
+        
+    return curr_magic
+    
 def is_office_file(fname, is_data):
     """
     Check to see if the given file is a MS Office file format.
@@ -50,20 +65,21 @@ def is_office_file(fname, is_data):
     """
 
     # Read the 1st 8 bytes of the file.
-    info = None
-    if (not is_data):
-        with open(fname, 'rb') as f:
-            info = f.read(8)
-    else:
-        info = fname[:9]
+    curr_magic = get_1st_8_bytes(fname, is_data)
 
     # See if we have 1 of the known magic #s.
-    curr_magic = ""
-    for b in info:
-        curr_magic += hex(ord(b)).replace("0x", "").upper() + " "
-    for magic in magic_nums:
+    for typ in magic_nums.keys():
+        magic = magic_nums[typ]
         if (curr_magic.startswith(magic)):
             return True
     return False
+
+def is_office97_file(fname, is_data):
+
+    # Read the 1st 8 bytes of the file.
+    curr_magic = get_1st_8_bytes(fname, is_data)
+
+    # See if we have the Office97 magic #.
+    return (curr_magic.startswith(magic_nums["office97"]))
 
     

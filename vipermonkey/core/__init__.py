@@ -105,6 +105,7 @@ from function_defn_visitor import *
 from function_import_visitor import *
 from var_defn_visitor import *
 import filetype
+import read_ole_fields
 
 # === FUNCTIONS ==============================================================
 
@@ -414,7 +415,7 @@ class ViperMonkey(object):
 
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
-
+        
         # TODO: use the provided entrypoint
         # Create the global context for the engine
         context = Context(_globals=self.globals,
@@ -425,6 +426,16 @@ class ViperMonkey(object):
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
 
+        # Add any URLs we can pull directly from the file being analyzed.
+        fname = self.filename
+        is_data = False
+        if (fname is None):
+            fname = self.data
+            is_data = True
+        direct_urls = read_ole_fields.pull_urls_office97(fname, is_data)
+        for url in direct_urls:
+            context.save_intermediate_iocs(url)
+        
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():
             func = self.externals[func_name]

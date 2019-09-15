@@ -45,6 +45,7 @@ import sys
 import olefile
 
 from core.logger import log
+import filetype
 
 def _read_form_strings(vba):
     """
@@ -447,6 +448,28 @@ def _get_shapes_text_values(fname, stream):
             r = _get_shapes_text_values_xml(fname)
 
     return r
+
+def pull_urls_office97(fname, is_data):
+    """
+    Pull URLs directly from an Office97 file.
+    """
+
+    # Is this an Office97 file?
+    if (not filetype.is_office97_file(fname, is_data)):
+        return []
+    
+    # Read in the Office97 file.
+    data = None
+    if (not is_data):
+        with open(fname, 'rb') as f:
+            data = f.read()
+    else:
+        data = fname
+
+    # Pull URLs.
+    URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
+    pat = r"(/[/\?&\~=a-zA-Z0-9_\-\.]+)"
+    return re.findall(URL_REGEX, data)
 
 ###########################################################################
 ## Main Program
