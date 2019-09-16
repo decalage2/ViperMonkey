@@ -339,9 +339,14 @@ def _get_shapes_text_values_2007(fname):
             # Try version 2.
             size_pat = r"\x48\x80\x2c(.{2})"
             tmp = re.findall(size_pat, data)
+        if (len(tmp) == 0):
+            # Try version 3.
+            size_pat = r"\x00\x01\x00\x00\x80(.{2})"
+            tmp = re.findall(size_pat, data)
         if (len(tmp) > 0):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+            #print "size: " + str(size)
             if (len(text) > size):
                 text = text[:size]
         
@@ -360,6 +365,7 @@ def _get_shapes_text_values_2007(fname):
     unzipped_data.close()
     if (delete_file):
         os.remove(fname)
+    #sys.exit(0)
     return r
 
 def _get_shapes_text_values(fname, stream):
