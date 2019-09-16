@@ -44,7 +44,7 @@ import sys
 
 import olefile
 
-from core.logger import log
+from logger import log
 import filetype
 
 def _read_form_strings(vba):
