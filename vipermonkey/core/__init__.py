@@ -156,10 +156,12 @@ class ViperMonkey(object):
 
         # Figure out whether this is VBScript or VBA.
         vba_pointer = self.filename
-        if (self.filename is None):
+        is_data = False
+        if ((self.filename is None) or (len(self.filename.strip()) == 0)):
             vba_pointer = self.data
+            is_data = True
         self.is_vbscript = False
-        if (filetype.is_office_file(vba_pointer, self.filename is None)):
+        if (filetype.is_office_file(vba_pointer, is_data)):
             self.is_vbscript = False
             log.info("Emulating an Office (VBA) file.")
         else:
@@ -429,7 +431,7 @@ class ViperMonkey(object):
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
         is_data = False
-        if (fname is None):
+        if ((fname is None) or (len(fname.strip()) == 0)):
             fname = self.data
             is_data = True
         direct_urls = read_ole_fields.pull_urls_office97(fname, is_data)
