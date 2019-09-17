@@ -40,8 +40,8 @@ def get_metadata_exif(filename):
     r = FakeMeta()
     for line in lines:
         line = line.strip()
-        if (len(line) == 0):
-            continue
+        if ((len(line) == 0) or (":" not in line)):
+            continue        
         field = line[:line.index(":")].strip().lower()
         val = line[line.index(":") + 1:].strip()
         setattr(r, field, val)
