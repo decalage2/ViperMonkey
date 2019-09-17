@@ -2905,7 +2905,8 @@ class Call_Statement(VBA_Object):
 # call statement params may be surrounded by parentheses or not
 call_params = (
     (Suppress('(') + Optional(expr_list('params')) + Suppress(')'))
-    ^ (White(" \t") + expr_list('params'))
+    # Handle missing 1st call argument.
+    ^ (White(" \t") + Optional(Literal(",")) + expr_list('params'))
 )
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
@@ -3190,7 +3191,7 @@ class On_Error_Statement(VBA_Object):
 
         return
 
-on_error_statement = CaselessKeyword('On') + Optional(Suppress(CaselessKeyword('Local'))) + CaselessKeyword('Error') + \
+on_error_statement = CaselessKeyword('On') + Optional(Suppress(CaselessKeyword('Local'))) + (CaselessKeyword('Error') | lex_identifier) + \
                      ((CaselessKeyword('Goto') + (decimal_literal | lex_identifier)) |
                       (CaselessKeyword('Resume') + CaselessKeyword('Next')))
 
@@ -3334,9 +3335,6 @@ doevents_statement = Suppress(CaselessKeyword("DoEvents"))
 # --- STATEMENTS -------------------------------------------------------------
 
 # simple statement: fits on a single line (excluding for/if/do/etc blocks)
-#simple_statement = dim_statement | option_statement | (prop_assign_statement ^ expression ^ (let_statement | call_statement) ^ label_statement) | exit_loop_statement | \
-#                   exit_func_statement | redim_statement | goto_statement | on_error_statement | file_open_statement | doevents_statement | \
-#                   rem_statement | print_statement | resume_statement
 simple_statement = (
     NotAny(Regex(r"End\s+Sub"))
     + (
