@@ -396,6 +396,12 @@ def fix_non_ascii_names(vba_code):
     vba_code = vba_code.replace("#Else", "HASH__else")
     vba_code = vba_code.replace("#end if", "HASH__endif")
     vba_code = vba_code.replace("#End If", "HASH__endif")
+
+    # Same thing with Put and Close of file descriptors.
+    vba_code = re.sub(r"[Aa]s\s+#", "as__HASH", vba_code)
+    vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
+    vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
+    vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -458,7 +464,13 @@ def fix_non_ascii_names(vba_code):
     r = r.replace("HASH__if", "#If")
     r = r.replace("HASH__else", "#Else")
     r = r.replace("HASH__endif", "#End If")
-            
+
+    # Put the As, Put and Close statements back.
+    r = r.replace("as__HASH", "As #")
+    r = r.replace("put__HASH", "Put #")
+    r = r.replace("get__HASH", "Get #")
+    r = r.replace("close__HASH", "Close #")
+    
     return r
             
 def fix_vba_code(vba_code):

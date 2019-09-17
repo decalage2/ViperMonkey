@@ -81,6 +81,27 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class GetSpecialFolder(VbaLibraryFunc):
+    """
+    GetSpecialFolder() function
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "UNKNOWN_FOLDER"
+        try:
+            typ = int(params[0])
+            if (typ == 0):
+                return "C:\\Windows"
+            elif (typ == 1):
+                return "C:\\Windows\\system32"
+            elif (typ == 2):
+                return "C:\\Documents and Settings\\admin\\Local Settings\\Temp"
+            else:
+                return "UNKNOWN_FOLDER"
+        except:
+            return "UNKNOWN_FOLDER"
+            
 class MonthName(VbaLibraryFunc):
     """
     MonthName() function. Currently only returns results in Italian.
@@ -3362,7 +3383,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
-               MonthName):
+               MonthName, GetSpecialFolder):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
