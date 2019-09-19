@@ -1108,10 +1108,15 @@ def _process_file (filename,
                 for (var_name, var_val) in _get_inlineshapes_text_values(data):
                     vm.doc_vars[var_name.lower()] = var_val
                     log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+
+            # Get the VBA code.
+            vba_code = ""
+            for (subfilename, stream_path, vba_filename, macro_code) in vba.extract_macros():
+                vba_code += macro_code
                     
             # Pull out embedded OLE form textbox text.
             log.info("Reading TextBox object text fields...")
-            for (var_name, var_val) in read_ole_fields.get_ole_textbox_values(data, 'worddocument'):
+            for (var_name, var_val) in read_ole_fields.get_ole_textbox_values(data, vba_code):
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
                 tmp_var_name = "ActiveDocument." + var_name
