@@ -384,7 +384,7 @@ def get_ole_textbox_values(obj, vba_code):
         last_val = dat[1]
 
     # Add in the final result.
-    if (len(last_var) < 50):
+    if ((last_var is not None) and (len(last_var) < 50)):
         tmp.append((last_var, last_val))
     r = tmp
 
