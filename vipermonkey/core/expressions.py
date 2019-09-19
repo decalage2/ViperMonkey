@@ -1087,7 +1087,9 @@ member_object_limited = (
     + NotAny("!")
 )
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
-member_object_loose = ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
+member_object_loose = Suppress(Literal("(")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited) + Suppress(Literal(")")) | \
+                      ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
+#member_object_loose = ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
 member_object_strict = Suppress(Optional(".")) + NotAny(reserved_identifier) + member_object_loose
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
