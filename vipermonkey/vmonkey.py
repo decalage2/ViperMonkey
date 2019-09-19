@@ -1196,6 +1196,8 @@ def _process_file (filename,
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".ControlTipText", control_tip_text))
                         vm.globals[name + ".text"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+                        vm.globals[name + ".value"] = val
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Value", val))
 
                         # Save control in a list so it can be accessed by index.
                         if ("." in name):
