@@ -115,7 +115,22 @@ class MonthName(VbaLibraryFunc):
             return "NULL"
         # TODO: Somehow specify the language for the months.
         months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
-        return months[num-1]        
+        return months[num-1]
+
+class IsEmpty(VbaLibraryFunc):
+    """
+    IsEmpty() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return True
+        item = params[0]
+        if ((item is None) or (item == "NULL")):
+            return True
+        if ((hasattr(item, '__len__')) and (len(item) == 0)):
+            return True
+        return False
 
 class URLDownloadToFile(VbaLibraryFunc):
     """
@@ -3383,7 +3398,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
-               MonthName, GetSpecialFolder):
+               MonthName, GetSpecialFolder, IsEmpty):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

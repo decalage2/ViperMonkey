@@ -145,19 +145,21 @@ unrestricted_name = entity_name | reserved_identifier
 
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
-test = NotAny(reserved_keywords) + lex_identifier
-
-TODO_identifier_or_object_attrib = Combine(
+base_attrib = Combine(
     NotAny(reserved_keywords)
     + (Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier)))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
-) 
+)
 
-TODO_identifier_or_object_attrib_loose = Combine(
+TODO_identifier_or_object_attrib = base_attrib ^ Suppress(Literal("{")) + base_attrib + Suppress(Literal("}"))
+
+base_attrib_loose = Combine(
     Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
 )
+
+TODO_identifier_or_object_attrib_loose = base_attrib_loose ^ Suppress(Literal("{")) + base_attrib_loose + Suppress(Literal("}"))
