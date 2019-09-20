@@ -707,6 +707,11 @@ def strip_useless_code(vba_code, local_funcs):
                 log.debug("SKIP: GetObject()/Shell() call. Keep it.")
                 continue
 
+            # Skip Loop statements.
+            if ("Loop " in line):
+                log.debug("SKIP: Loop statement. Keep it.")
+                continue
+
             # Skip calls to various interesting calls.
             if (is_interesting_call(line, external_funcs, local_funcs)):
                 continue

@@ -683,7 +683,8 @@ class Context(object):
         self.globals["msoTextBox".lower()] = "**MATCH ANY**"
         self.globals["Application.MouseAvailable".lower()] = True
         self.globals["Application.PathSeparator".lower()] = "\\"
-
+        self.globals["RecentFiles.Count".lower()] = 4 + random.randint(1, 10)
+        
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
         self.globals["_xlDialogPhonetic".lower()] = 538
