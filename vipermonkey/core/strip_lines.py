@@ -409,15 +409,41 @@ def fix_non_ascii_names(vba_code):
     in_date = False
     prev_char = ""
     r = ""
+    pos = -1
     for c in vba_code:
 
         # Handle entering/leaving strings.
+        pos += 1
         if ((not in_comment) and (c == '"')):
             in_str = not in_str
 
         # Handle entering/leaving date constants.
         if ((not in_comment) and (not in_str) and (c == '#')):
-            in_date = not in_date
+
+            # Entering date constant?
+            if (not in_date):
+
+                # Is this a # at the end of a variable decl?
+                end = pos + 1
+                if ((end < len(vba_code)) and (vba_code[end] != ",") and (vba_code[end] != "\n")):
+
+                    # A date should be relatively short. See if the matching # is close.
+                    end = pos + 60
+                    if (end > len(vba_code)):
+                        end = len(vba_code)
+                    got_hash = False
+                    for i in range(pos + 1, end):
+                        if (vba_code[i] == "#"):
+                            got_hash = True
+                            break
+
+                    # Only count entering a date constant if the closing # is close.
+                    if (got_hash):
+                        in_date = True
+
+            # Leaving date constant?
+            else:
+                in_date = False
 
         # Handle entering/leaving comments.
         if ((not in_str) and (c == "'")):

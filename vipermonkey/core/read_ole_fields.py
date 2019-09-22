@@ -287,11 +287,15 @@ def get_ole_textbox_values(obj, vba_code):
             print "Possible Name: '" + name + "'"
         text = ""
         # This is not working.
-        #if ((name_pos + 1 < len(strs)) and
-        #    ("Calibr" not in strs[name_pos + 1]) and
-        #    ("OCXNAME" not in strs[name_pos + 1].replace("\x00", ""))):
-        #    print "Value: 1"
-        #    text = strs[name_pos + 1]
+        if ((name_pos + 1 < len(strs)) and
+            ("Calibr" not in strs[name_pos + 1]) and
+            ("OCXNAME" not in strs[name_pos + 1].replace("\x00", "")) and
+            ("contents" != strs[name_pos + 1].replace("\x00", "").strip()) and
+            ("ObjInfo" != strs[name_pos + 1].replace("\x00", "").strip()) and
+            ("CompObj" != strs[name_pos + 1].replace("\x00", "").strip())):
+            if debug:
+                print "Value: 1"
+            text = strs[name_pos + 1]
 
         # Break out the (possible additional) value.
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
