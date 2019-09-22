@@ -615,10 +615,12 @@ class MemberAccessExpression(VBA_Object):
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
-        if (lhs != "ADODB.Stream"):
+        if (lhs.lower() != "ADODB.Stream".lower()):
 
             # Maybe we need a sub field? Do we have a subfield?
+            log.debug(str(lhs) + " is not an ADODB.Stream")
             if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
+                log.debug("Done (1).")
                 return False
 
             # Look for ADODB.Stream in a variable from a subfield.
@@ -627,6 +629,7 @@ class MemberAccessExpression(VBA_Object):
 
             # Are we referencing a stream contained in a variable?        
             if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
+                log.debug("Done (2).")
                 return False
         
         # Pull out the text to write to the text stream.
@@ -866,6 +869,14 @@ class MemberAccessExpression(VBA_Object):
     def eval(self, context, params=None):
 
         log.debug("MemberAccess eval of " + str(self))
+
+        # Easy case. Do we have this saved as a variable?
+        try:
+            r = context.get(str(self))
+            log.debug("Memeber access " + str(self) + " stored as variable = " + str(r))
+            return r
+        except KeyError:
+            pass
         
         # Handle accessing control values from a form by index..
         call_retval = self._handle_indexed_form_access(context)
@@ -1012,6 +1023,14 @@ class MemberAccessExpression(VBA_Object):
             # It was a regular call.
             return tmp_rhs
 
+        # Arracy access of function call as the RHS?
+        elif (isinstance(rhs, Function_Call_Array_Access)):
+
+            # Just evaluate and return the array access.
+            log.debug('rhs {!r} is a Function_Call_Array_Access'.format(rhs))
+            tmp_rhs = eval_arg(rhs, context)
+            return tmp_rhs
+            
         # Did the lhs resolve to something new?
         elif (str(self.lhs) != str(tmp_lhs)):
 
