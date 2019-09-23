@@ -1258,6 +1258,7 @@ class Replace(VbaLibraryFunc):
             if (pat.strip() != "."):
                 try:
                     pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                    rep = re.sub(r"\$(\d)", r"\\\1", rep)
                     r = re.sub(pat1, rep, string)
                 except:
                     r = string

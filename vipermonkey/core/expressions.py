@@ -556,7 +556,9 @@ class MemberAccessExpression(VBA_Object):
         # Do we have a pattern for the RegExp?
         pat_name = str(self.lhs) + ".pattern"
         if (not context.contains(pat_name)):
-            return None
+            pat_name = ".pattern"
+            if (not context.contains(pat_name)):
+                return None
         repl = context.get(pat_name)
         
         # Run the string replace.
