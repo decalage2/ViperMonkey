@@ -99,6 +99,7 @@ def get_ole_textbox_values(obj, vba_code):
     index = 0
     r = []
     found_names = set()
+    long_strs = []
     while (form_str in data[index:]):
 
         # Break out the data for an embedded OLE textbox form.
@@ -349,6 +350,13 @@ def get_ole_textbox_values(obj, vba_code):
         # Save the form name and text value.
         r.append((name, text))
 
+        # Save long strings. Maybe they are the value of a previous variable?
+        longest_str = ""
+        for field in strs:
+            if ((len(field) > 30) and (len(field) > len(longest_str))):
+                longest_str = field
+        long_strs.append(longest_str)
+
         # Move to next chunk.
         index = end
 
@@ -422,10 +430,15 @@ def get_ole_textbox_values(obj, vba_code):
             # hope for the best.
             replaced = False
             for i in range(pos + 1, len(r)):
-                if (len(r[i][1]) > 15):
+                poss_val1 = r[i][1]
+                poss_val2 = long_strs[i]
+                poss_val = poss_val2
+                if (len(poss_val1) > len(poss_val2)):
+                    poss_val = poss_val1
+                if (len(poss_val) > 15):
                     if debug:
                         print "REPLACE (1)"
-                    curr_val = r[i][1]
+                    curr_val = poss_val
                     break
 
             # If we found nothing going forward, try the previous value?
