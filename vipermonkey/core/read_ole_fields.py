@@ -56,7 +56,9 @@ def get_ole_textbox_values(obj, vba_code):
     # Set to True to print lots of debugging.
     #debug = True
     debug = False
-
+    if debug:
+        print "Extracting OLE/ActiveX TextBox strings..."
+    
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument)\.(\w+)", vba_code))
@@ -80,15 +82,17 @@ def get_ole_textbox_values(obj, vba_code):
     # Sanity check.
     if (data is None):
         if debug:
-            print "NO DATA" 
+            print "NO DATA"
+            sys.exit(0)
         return []
 
     # Set the general markr for Form data chunks and fields in the Form chunks.
-    form_str = "Microsoft Forms 2.0 "
+    form_str = "Microsoft Forms 2.0"
     field_marker = "Forms."
     if (form_str not in data):
         if debug:
             print "NO FORMS"
+            sys.exit(0)
         return []
 
     pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
