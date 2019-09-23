@@ -299,7 +299,10 @@ def get_ole_textbox_values(obj, vba_code):
             ("CompObj" != strs[name_pos + 1].replace("\x00", "").strip())):
             if debug:
                 print "Value: 1"
-            text = strs[name_pos + 1]
+
+            # Only used with large text values?
+            if (len(strs[name_pos + 1]) > 20):
+                text = strs[name_pos + 1]
 
         # Break out the (possible additional) value.
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
