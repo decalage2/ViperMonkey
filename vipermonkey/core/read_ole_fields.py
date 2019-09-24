@@ -294,7 +294,7 @@ def get_ole_textbox_values(obj, vba_code):
         if debug:
             print "Possible Name: '" + name + "'"
         text = ""
-        # This is not working.
+        # This is not working quite right.
         if ((name_pos + 1 < len(strs)) and
             ("Calibr" not in strs[name_pos + 1]) and
             ("OCXNAME" not in strs[name_pos + 1].replace("\x00", "")) and
@@ -317,7 +317,8 @@ def get_ole_textbox_values(obj, vba_code):
                 poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
                 if (poss_val != text):
                     text += poss_val.replace("\x00", "")
-        #val_pat = r"\x00#\x00\x00\x00[^\x00]+\x00\x02"
+
+        # Pattern 2                    
         val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
         vals = re.findall(val_pat, chunk)
         if (len(vals) > 0):
@@ -330,6 +331,13 @@ def get_ole_textbox_values(obj, vba_code):
                         print poss_val
                     text += poss_val
 
+        # Pattern 3
+        val_pat = r"([\x20-\x7e]{5,})\x00\x02\x0c\x00\x34"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            for v in vals:
+                text += v
+                
         # Pull out the size of the text.
         # Try version 1.
         size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
