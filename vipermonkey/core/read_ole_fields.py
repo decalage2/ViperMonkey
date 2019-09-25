@@ -61,7 +61,7 @@ def get_ole_textbox_values(obj, vba_code):
     
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
-    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument)\.(\w+)", vba_code))
+    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
     if debug:
         print "Names from VBA code:"
         print object_names
