@@ -88,6 +88,7 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Make sure some special fields are seperated.
     data = data.replace("c\x00o\x00n\x00t\x00e\x00n\x00t\x00s", "\x00c\x00o\x00n\x00t\x00e\x00n\x00t\x00s\x00")
+    data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
     form_str = "Microsoft Forms 2.0"

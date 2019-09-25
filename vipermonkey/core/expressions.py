@@ -1485,10 +1485,17 @@ expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("B
 # NOTE: This helps to speed up parsing and prevent recursion loops.
 expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 
+def quick_parse_int_or_var(text):
+    text = str(text).strip()
+    #print "item: '" + text + "'"
+    if (text.isdigit()):
+        return int(text)        
+    return expression.parseString(text, parseAll=True)[0]
+    
 # Parse large array expressions quickly with a regex.
 # language=PythonRegExp
 expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+\s*,\s*){10,}\s*[0-9a-zA-Z_]+\s*")
-expr_list_fast.setParseAction(lambda t: [expression.parseString(i, parseAll=True)[0] for i in t[0].split(",")])
+expr_list_fast.setParseAction(lambda t: [quick_parse_int_or_var(i) for i in t[0].split(",")])
 
 # Parse general expression lists more completely but more slowly.
 expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
