@@ -337,6 +337,13 @@ def get_ole_textbox_values(obj, vba_code):
         if (len(vals) > 0):
             for v in vals:
                 text += v
+
+        # Pattern 4
+        val_pat = r"([\x20-\x7e]{5,})\x00\x00\x00\x00\x02\x0c"
+        vals = re.findall(val_pat, chunk)
+        if (len(vals) > 0):
+            for v in vals:
+                text += v
                 
         # Pull out the size of the text.
         # Try version 1.
