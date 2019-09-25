@@ -432,6 +432,7 @@ def get_ole_textbox_values(obj, vba_code):
     last_val = ""
     if debug:
         print "&&&&&&&&&&&&"
+        print long_strs
     for dat in r:
 
         # Does the current variable have no value?
@@ -457,6 +458,7 @@ def get_ole_textbox_values(obj, vba_code):
                     if debug:
                         print "REPLACE (1)"
                     curr_val = poss_val
+                    replaced = True
                     break
 
             # If we found nothing going forward, try the previous value?
