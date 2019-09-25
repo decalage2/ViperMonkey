@@ -368,8 +368,8 @@ def fix_skipped_1st_arg(vba_code):
 
     # Return the modified code.
     return vba_code
-
-def fix_non_ascii_names(vba_code):
+    
+def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
     is the ordinal value.
@@ -402,21 +402,60 @@ def fix_non_ascii_names(vba_code):
     vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
     vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
+
+    # Characters that change how we modify the code.
+    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
     in_comment = False
     in_date = False
     prev_char = ""
+    next_char = ""
     r = ""
     pos = -1
-    for c in vba_code:
+    while (pos < (len(vba_code) - 1)):
 
-        # Handle entering/leaving strings.
+        # Are we looking at an interesting character?
         pos += 1
+        c = vba_code[pos]
+        if (pos > 1):
+            prev_char = vba_code[pos - 1]
+        if (pos < (len(vba_code) - 1)):
+            next_char = vba_code[pos + 1]
+        got_interesting = False
+        for interesting_c in interesting_chars:
+            index = re.search(interesting_c, c)
+            if (index is None):
+                continue
+            got_interesting = True
+            break
+        if (not got_interesting):
+
+            # We are not. Fast forward to the nearest interesting character.
+            next_pos = len(vba_code)
+            for interesting_c in interesting_chars:
+                index = re.search(interesting_c, vba_code[pos:])
+                if (index is None):
+                    continue                
+                poss_pos = index.start() + pos
+                #print interesting_c
+                #print pos
+                #print poss_pos
+                if (poss_pos < next_pos):
+                    next_pos = poss_pos
+
+            # Add in the chunk of characters that don't affect what we are doing.
+            r += vba_code[pos:next_pos]
+
+            # Jump to the position of the interesting character.
+            pos = next_pos - 1
+            continue
+        
+        # Handle entering/leaving strings.        
         if ((not in_comment) and (c == '"')):
             in_str = not in_str
-
+            
         # Handle entering/leaving date constants.
         if ((not in_comment) and (not in_str) and (c == '#')):
 
@@ -454,7 +493,6 @@ def fix_non_ascii_names(vba_code):
         # Don't change things in strings or comments or dates.
         if (in_str or in_comment or in_date):
             r += c
-            prev_char = c
             continue
 
         # Need to change "!" member access to "."?
@@ -470,7 +508,6 @@ def fix_non_ascii_names(vba_code):
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
             r += "d" + str(ord(c))
-            prev_char = "d"
         else:
 
             # Replace a '::' with a line break?
@@ -479,12 +516,10 @@ def fix_non_ascii_names(vba_code):
                 r += "\n"
 
             # Replace a single ':' with a line break? Don't do this for labels.
-            elif ((prev_char == ':') and (c != "\n") and (c != '"') and (c != "=")):
-                r = r[:-1]
-                r += "\n" + c
+            elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=")):
+                r += "\n"
             else:
                 r += c
-            prev_char = c
 
     # Put the #if macros back.
     r = r.replace("HASH__if", "#If")
@@ -562,7 +597,9 @@ def fix_vba_code(vba_code):
     # It looks like VBA supports variable and function names containing
     # non-ASCII characters. Parsing these with pyparsing would be difficult
     # (or impossible), so convert the non-ASCII names to ASCII.
-    vba_code = fix_non_ascii_names(vba_code)
+    #
+    # Break up lines with multiple statements onto their own lines.
+    vba_code = fix_difficult_code(vba_code)
 
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)

@@ -75,9 +75,12 @@ class SimpleNameExpression(VBA_Object):
     single identifier with no qualification or argument list
     """
 
-    def __init__(self, original_str, location, tokens):
+    def __init__(self, original_str, location, tokens, name=None):
         super(SimpleNameExpression, self).__init__(original_str, location, tokens)
-        self.name = tokens.name
+        if (name is not None):
+            self.name = name
+        else:
+            self.name = tokens.name
         log.debug('parsed "%r" as SimpleNameExpression' % self)
 
     def __repr__(self):
@@ -1488,9 +1491,20 @@ expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 def quick_parse_int_or_var(text):
     text = str(text).strip()
     #print "item: '" + text + "'"
+
+    # Integer?
     if (text.isdigit()):
         return int(text)        
-    return expression.parseString(text, parseAll=True)[0]
+
+    # Variable?
+    if (re.match(r"[_a-zA-Z][_a-zA-Z\d]*", text) is not None):
+        r = SimpleNameExpression(None, None, None, text)
+        #print r
+        return r
+
+    # Non-special case. Parse it.
+    r = expression.parseString(text, parseAll=True)[0]
+    return r
     
 # Parse large array expressions quickly with a regex.
 # language=PythonRegExp
