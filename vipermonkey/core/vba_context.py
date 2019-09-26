@@ -684,6 +684,8 @@ class Context(object):
         self.globals["Application.MouseAvailable".lower()] = True
         self.globals["Application.PathSeparator".lower()] = "\\"
         self.globals["RecentFiles.Count".lower()] = 4 + random.randint(1, 10)
+        self.globals["ActiveDocument.Revisions.Count".lower()] = 1 + random.randint(1, 3)
+        self.globals["ThisDocument.Revisions.Count".lower()] = 1 + random.randint(1, 3)
         
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
