@@ -658,6 +658,26 @@ def fix_vba_code(vba_code):
     # Return the updated code.
     return r
 
+def replace_constant_int_inline(vba_code):
+    """
+    Replace constant integer definitions inline, but leave the definition
+    behind in case the regex fails.
+    """
+
+    const_pattern = re.compile("(?i)const ([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
+    d_const = dict()
+
+    for const in re.findall(const_pattern, vba_code):
+        d_const[const[0]] = const[1]
+
+    if len(d_const) > 0:
+        log.debug("Found constant integer definitions, replacing them.")
+    for const in d_const:
+        this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))')
+        vba_code = re.sub(this_const, str(d_const[const]), vba_code)
+    return(vba_code)
+
+
 def strip_line_nums(line):
     """
     Strip line numbers from the start of a line.
@@ -877,6 +897,10 @@ def strip_useless_code(vba_code, local_funcs):
             tmp.add(l)
     comment_lines = tmp
     
+    # For each const integer defined, replace it inline in the code to reduce lookups
+    vba_code = replace_constant_int_inline(vba_code)
+    
+
     # Now strip out all useless assignments.
     r = ""
     line_num = 0
