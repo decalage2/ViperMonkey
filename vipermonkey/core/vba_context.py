@@ -3272,7 +3272,7 @@ class Context(object):
         global file_count
         
         # Make sure the "file" exists.
-        fname = fname.replace(".\\", "").replace("\\", "/")
+        fname = str(fname).replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
             log.error('File {} not open. Cannot close.'.format(fname))
             return

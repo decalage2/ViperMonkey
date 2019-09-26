@@ -607,6 +607,9 @@ def fix_vba_code(vba_code):
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # For each const integer defined, replace it inline in the code to reduce lookups
+    vba_code = replace_constant_int_inline(vba_code)
+    
     # Skip the next part if unnneeded.
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
@@ -671,7 +674,7 @@ def replace_constant_int_inline(vba_code):
         d_const[const[0]] = const[1]
 
     if len(d_const) > 0:
-        log.debug("Found constant integer definitions, replacing them.")
+        log.info("Found constant integer definitions, replacing them.")
     for const in d_const:
         this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))')
         vba_code = re.sub(this_const, str(d_const[const]), vba_code)
@@ -896,11 +899,7 @@ def strip_useless_code(vba_code, local_funcs):
         if (l not in keep_lines):
             tmp.add(l)
     comment_lines = tmp
-    
-    # For each const integer defined, replace it inline in the code to reduce lookups
-    vba_code = replace_constant_int_inline(vba_code)
-    
-
+        
     # Now strip out all useless assignments.
     r = ""
     line_num = 0

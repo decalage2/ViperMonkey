@@ -1625,6 +1625,7 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 # - finally literals (strings, integers, etc)
 
 typeof_expression = Forward()
+addressof_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -1639,6 +1640,7 @@ expr_item <<= (
         | file_pointer
         | placeholder
         | typeof_expression
+        | addressof_expression
     )
 )
 
@@ -2026,8 +2028,26 @@ class TypeOf_Expression(VBA_Object):
         return "TypeOf " + str(self.item) + " Is " + str(self.the_type)
 
     def eval(self, context, params=None):
-        # TODO: Not sure how to handle this. For now just always matchxs.
+        # TODO: Not sure how to handle this. For now just always matches.
         return True
 
 typeof_expression <<= CaselessKeyword("TypeOf") + expression("item") + CaselessKeyword("Is") + expression("the_type")
 typeof_expression.setParseAction(TypeOf_Expression)
+
+# --- ADDRESSOF EXPRESSION --------------------------------------------------------------
+
+class AddressOf_Expression(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(AddressOf_Expression, self).__init__(original_str, location, tokens)
+        self.item = tokens.item
+        log.debug('parsed %r as AddressOf_Expression' % self)
+
+    def __repr__(self):
+        return "AddressOf " + str(self.item)
+
+    def eval(self, context, params=None):
+        # TODO: Not sure how to handle this. For now just always matches anything.
+        return "**MATCH ANY**"
+
+addressof_expression <<= CaselessKeyword("AddressOf") + expression("item")
+addressof_expression.setParseAction(AddressOf_Expression)
