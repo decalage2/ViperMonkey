@@ -3233,8 +3233,8 @@ class Context(object):
         if isinstance(data, str):
 
             # Hex string?
-            if re.match('&H[0-9A-F]{2}', data, re.IGNORECASE):
-                data = chr(int(data[-2:], 16))
+            if ((len(data.strip()) == 4) and (re.match('&H[0-9A-F]{2}', data, re.IGNORECASE))):
+                data = chr(int(data.strip()[-2:], 16))
 
             self.open_files[fname] += data
             return True
@@ -3319,6 +3319,8 @@ class Context(object):
         # Dump the file.
         try:
             # Get a unique name for the file.
+            fname = fname.replace("\x00", "")
+            print fname
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
             count = 0

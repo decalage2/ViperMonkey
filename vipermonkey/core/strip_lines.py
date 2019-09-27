@@ -403,6 +403,18 @@ def fix_difficult_code(vba_code):
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
     vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
 
+    # Replace the ':' in single line if statements so they don't get broken up.
+    # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
+    # If op < OLen Then Out(op) = o1: op = op + 1
+    pat = r"(?i)If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
+    single_line_ifs = []
+    pos = 0
+    for curr_if in re.findall(pat, vba_code):
+        if_name = "HIDE_THIS_IF_" + str(pos)
+        pos += 1
+        vba_code = vba_code.replace(curr_if, if_name + "\n")
+        single_line_ifs.append((if_name, curr_if))
+        
     # Characters that change how we modify the code.
     interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]"]
     
@@ -531,6 +543,10 @@ def fix_difficult_code(vba_code):
     r = r.replace("put__HASH", "Put #")
     r = r.replace("get__HASH", "Get #")
     r = r.replace("close__HASH", "Close #")
+
+    # Put the single line ifs back.
+    for if_info in single_line_ifs:
+        r = r.replace(if_info[0], if_info[1])
     
     return r
             
@@ -679,7 +695,6 @@ def replace_constant_int_inline(vba_code):
         this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))(?!\s*=)')
         vba_code = re.sub(this_const, str(d_const[const]), vba_code)
     return(vba_code)
-
 
 def strip_line_nums(line):
     """

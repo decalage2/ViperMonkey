@@ -737,6 +737,7 @@ class MemberAccessExpression(VBA_Object):
         if ("\\" in filename):
             filename = filename[filename.rindex("\\") + 1:]
         fname = out_dir + "/" + filename
+        fname = fname.replace("\x00", "")
         try:
 
             # Write out the file.

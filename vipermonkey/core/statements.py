@@ -548,12 +548,14 @@ class Dim_Statement(VBA_Object):
             # Handle uninitialized global variables.
             if ((context.global_scope) and (curr_init_val is None)):
                 curr_init_val = "NULL"
+
+            # Keep the current variable value if this variable already exists.
+            if (context.contains(var[0])):
+                curr_init_val = context.get(var[0])
                 
-            # Set the initial value of the declared variable. Only do this if the variable
-            # does not already exist.
-            if (not context.contains(var[0])):
-                context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
-                log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
+            # Set the initial value of the declared variable. And the type.
+            context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
+            log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
     
 # 5.4.3.1 Local Variable Declarations
 #

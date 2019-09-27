@@ -1843,7 +1843,7 @@ class Dir(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert (len(params) >= 1)
-        pat = params[0]
+        pat = str(params[0])
         attrib = None
         # TODO: Handle multiple attributes.
         if (len(params) > 1):
