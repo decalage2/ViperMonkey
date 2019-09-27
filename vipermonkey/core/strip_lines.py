@@ -672,11 +672,11 @@ def replace_constant_int_inline(vba_code):
 
     for const in re.findall(const_pattern, vba_code):
         d_const[const[0]] = const[1]
-
+        
     if len(d_const) > 0:
         log.info("Found constant integer definitions, replacing them.")
     for const in d_const:
-        this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))')
+        this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))(?!\s*=)')
         vba_code = re.sub(this_const, str(d_const[const]), vba_code)
     return(vba_code)
 

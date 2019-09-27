@@ -71,7 +71,6 @@ def get_ms_ascii_value(the_str):
                 for bt in bts:
                     chars += chr(bt)
                 str_to_ascii_map[chars] = code
-        print str_to_ascii_map
 
     # Convert the string to a Python string if we were given a VB string.
     if (isinstance(the_str, VbStr)):
