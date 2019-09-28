@@ -943,6 +943,16 @@ class MemberAccessExpression(VBA_Object):
             # is the With context item.
             tmp_lhs = eval_arg(context.with_prefix, context)
 
+        # Is the LHS a python dict and are we looking for a field?
+        if (isinstance(tmp_lhs, dict)):
+
+            # Do we have the needed field?
+            key = str(self.rhs).replace("[", "").replace("]", "").replace("'", "")
+            if (key in tmp_lhs.keys()):
+
+                # Return the field value.
+                return tmp_lhs[key]
+            
         # Handle getting the .Count of a data collection..
         call_retval = self._handle_count(context, tmp_lhs)
         if (call_retval is not None):

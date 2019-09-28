@@ -2737,6 +2737,13 @@ class ExecQuery(VbaLibraryFunc):
         cmd = str(params[0])
         context.report_action("Execute Query", cmd, 'Query', strip_null_bytes=True)
 
+        # Return some data for some queries.
+        if (cmd.lower() == "select * from win32_process"):
+            return [{"name" : "wscript.exe"},
+                    {"name" : "cscript.exe"},
+                    {"name" : "word.exe"},
+                    {"name" : "excel.exe"},]
+        
         # Say it was successful.
         return ["", ""]
         
