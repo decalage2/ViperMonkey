@@ -241,11 +241,12 @@ def fix_unbalanced_quotes(vba_code):
     """
 
     # Fix invalid string assignments.
-    if (re2.search(u"(\w+)\s+=\s+\"\r?\n", u"" + vba_code) is not None):
+    uni_vba_code = vba_code.decode("utf-8")
+    if (re2.search(u"(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
         vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
-    if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", u"" + vba_code) is not None):
+    if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", uni_vba_code) is not None):
         vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
-    if (re2.search(u"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", u"" + vba_code) is not None):
+    if (re2.search(u"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", uni_vba_code) is not None):
         vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
     
     # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
@@ -635,7 +636,8 @@ def fix_vba_code(vba_code):
     vba_code = replace_constant_int_inline(vba_code)
     
     # Skip the next part if unnneeded.
-    got_multassign = (re2.search(u"(?:\w+\s*=\s*){2}", u"" + vba_code) is not None)
+    uni_vba_code = vba_code.decode("utf-8")
+    got_multassign = (re2.search(u"(?:\w+\s*=\s*){2}", uni_vba_code) is not None)
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
         ("\nif+" not in vba_code) and
@@ -766,7 +768,8 @@ def strip_useless_code(vba_code, local_funcs):
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
-        match = assign_re.findall(u"" + tmp_line)
+        uni_tmp_line = tmp_line.decode("utf-8")
+        match = assign_re.findall(uni_tmp_line)
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)
@@ -851,11 +854,14 @@ def strip_useless_code(vba_code, local_funcs):
             # Yes, there is an assignment. Save the assigned variable and line #
             log.debug("SKIP: Assigned vars = " + str(match))
             for var in match:
-
+                
                 # Skip empty.
                 var = var[0]
                 if (len(var.strip()) == 0):
                     continue
+
+                # Convert to ASCII.
+                var = var.encode("ascii","ignore")
                 
                 # Keep lines where we may be running a command via an object.
                 val = line[line.rindex("=") + 1:]
