@@ -69,6 +69,11 @@ https://github.com/decalage2/ViperMonkey
 
 import sys
 import re
+try:
+    # sudo pypy -m pip install rure
+    import rure as re2
+except:
+    import re as re2
 from logger import log
 import vba_context
 from random import randint
@@ -236,9 +241,12 @@ def fix_unbalanced_quotes(vba_code):
     """
 
     # Fix invalid string assignments.
-    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
-    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
-    vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    if (re2.search(u"(\w+)\s+=\s+\"\r?\n", u"" + vba_code) is not None):
+        vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", u"" + vba_code) is not None):
+        vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    if (re2.search(u"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", u"" + vba_code) is not None):
+        vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
     
     # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
     # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
@@ -257,10 +265,10 @@ def fix_unbalanced_quotes(vba_code):
     # See if we have lines with unbalanced double quotes.
     r = ""
     for line in vba_code.split("\n"):
-        num_quotes = 0
-        for c in line:
-            if (c == '"'):
-                num_quotes += 1
+        if ('"' not in line):
+            r += line + "\n"
+            continue
+        num_quotes = line.count('"')
         if ((num_quotes % 2) != 0):
             last_quote = line.rindex('"')
             line = line[:last_quote] + '"' + line[last_quote:]
@@ -627,11 +635,12 @@ def fix_vba_code(vba_code):
     vba_code = replace_constant_int_inline(vba_code)
     
     # Skip the next part if unnneeded.
+    got_multassign = (re2.search(u"(?:\w+\s*=\s*){2}", u"" + vba_code) is not None)
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
         ("\nif+" not in vba_code) and
         ("\nIf+" not in vba_code) and
-        (len(re.findall(MULT_ASSIGN_RE, vba_code)) == 0)):
+        (not got_multassign)):
         return vba_code
     
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
@@ -723,7 +732,7 @@ def strip_useless_code(vba_code, local_funcs):
     change_callbacks = set()    
     
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+(\.\w+)*)\s*=\s*")
+    assign_re = re2.compile(u"\s*(\w+(\.\w+)*)\s*=\s*")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
@@ -757,7 +766,7 @@ def strip_useless_code(vba_code, local_funcs):
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
-        match = assign_re.findall(tmp_line)
+        match = assign_re.findall(u"" + tmp_line)
         if (len(match) > 0):
 
             log.debug("SKIP: Assign line: " + line)

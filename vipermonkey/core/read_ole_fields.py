@@ -53,19 +53,6 @@ def get_ole_textbox_values(obj, vba_code):
     NOTE: This currently is a NASTY hack.
     """
 
-    # Set to True to print lots of debugging.
-    #debug = True
-    debug = False
-    if debug:
-        print "Extracting OLE/ActiveX TextBox strings..."
-    
-    # Pull out the names of forms the VBA is accessing. We will use that later to try to
-    # guess the names of ActiveX forms parsed from the raw Office file.
-    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
-    if debug:
-        print "Names from VBA code:"
-        print object_names
-    
     # Figure out if we have been given already read in data or a file name.
     if obj[0:4] == '\xd0\xcf\x11\xe0':
         #its the data blob
@@ -79,6 +66,23 @@ def get_ole_textbox_values(obj, vba_code):
         except:
             data = obj
 
+    # Is this an Office97 file?
+    if (not filetype.is_office97_file(data, True)):
+        return []
+    
+    # Set to True to print lots of debugging.
+    #debug = True
+    debug = False
+    if debug:
+        print "Extracting OLE/ActiveX TextBox strings..."
+    
+    # Pull out the names of forms the VBA is accessing. We will use that later to try to
+    # guess the names of ActiveX forms parsed from the raw Office file.
+    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
+    if debug:
+        print "Names from VBA code:"
+        print object_names
+            
     # Sanity check.
     if (data is None):
         if debug:
