@@ -125,7 +125,7 @@ def get_ole_textbox_values(obj, vba_code):
         else:
 
             # Jump an arbitrary amount ahead.
-            end = index + 5000
+            end = index + 15000
             if (end > len(data)):
                 end = len(data) - 1
 
