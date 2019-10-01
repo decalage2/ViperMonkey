@@ -69,6 +69,7 @@ file_pointer.setParseAction(lambda t: "#" + str(t[0]))
 
 # --- SIMPLE NAME EXPRESSION -------------------------------------------------
 
+missed_var_count = {}
 class SimpleNameExpression(VBA_Object):
     """
     Identifier referring to a variable within a VBA expression:
@@ -109,7 +110,16 @@ class SimpleNameExpression(VBA_Object):
                 log.debug('evaluated function %r = %r' % (self.name, value))
             return value
         except KeyError:
-            log.warning('Variable %r not found' % self.name)
+
+            # Track the # of times we have failed to look up this variable. Stop reporting
+            # if there are many failed lookups.
+            var_name = str(self.name)
+            global missed_var_count
+            if (var_name not in missed_var_count.keys()):
+                missed_var_count[var_name] = 0
+            missed_var_count[var_name] += 1
+            if (missed_var_count[var_name] < 20):
+                log.warning('Variable %r not found' % self.name)
             if (self.name.startswith("%") and self.name.endswith("%")):
                 return self.name.upper()
             return "NULL"
@@ -1344,9 +1354,13 @@ class Function_Call(VBA_Object):
         if (context.have_error()):
             log.warn('Short circuiting function call %s(%s) due to thrown VB error.' % (self.name, str_params))
             return None
+
+        # We will not report the calls of some functions.
+        skip_report_functions = set(["cos"])
+        if (str(self.name).lower() not in skip_report_functions):
+            log.info('calling Function: %s(%s)' % (self.name, str_params))
         
         # Actually emulate the function call.
-        log.info('calling Function: %s(%s)' % (self.name, str_params))
         if (is_external):
             context.report_action("External Call", self.name + "(" + str(params) + ")", self.name, strip_null_bytes=True)
         if self.name.lower() in context._log_funcs \
