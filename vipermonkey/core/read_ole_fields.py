@@ -171,8 +171,11 @@ def get_ole_textbox_values(obj, vba_code):
     
                     # If the next field does not look something like '_1619423091' the
                     # next field is the name. CompObj does not count either.
-                    poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
-                    if (((not poss_name.startswith("_")) or
+                    poss_name = None
+                    if ((curr_pos + 1) < len(strs)):
+                        poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
+                    if ((poss_name is not None) and
+                        ((not poss_name.startswith("_")) or
                          (not poss_name[1:].isdigit())) and
                         (poss_name != "CompObj") and
                         (poss_name != "ObjInfo") and

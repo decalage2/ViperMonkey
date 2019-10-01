@@ -3320,7 +3320,6 @@ class Context(object):
         try:
             # Get a unique name for the file.
             fname = fname.replace("\x00", "")
-            print fname
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
             count = 0

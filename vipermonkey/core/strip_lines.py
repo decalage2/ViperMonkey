@@ -720,6 +720,7 @@ def strip_line_nums(line):
         pos += 1
     return line[pos:]
 
+external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """
     Strip statements that have no usefull effect from the given VB. The
@@ -738,7 +739,7 @@ def strip_useless_code(vba_code, local_funcs):
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
-    external_funcs = []
+    global external_funcs
     for line in vba_code.split("\n"):
 
         # Skip comment lines.
