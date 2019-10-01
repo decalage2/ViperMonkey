@@ -47,6 +47,7 @@ import sys
 from vba_object import *
 
 from logger import log
+from vba_object import int_convert
 
 def debug_repr(op, args):
     r = "("
@@ -447,7 +448,7 @@ class MultiOp(VBA_Object):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
-                args = map(int, evaluated_args)
+                args = map(int_convert, evaluated_args)
                 ret = args[0]
                 for operator, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[operator](ret, arg)

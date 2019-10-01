@@ -952,15 +952,6 @@ def strip_useless_code(vba_code, local_funcs):
         if (line.strip().startswith("If ")):
             if_count += 1
 
-        # Do we have an unmatched 'end if'? If so, replace it with an
-        # 'end function' to handle some Carbanak maldocs.
-        #if (line.strip().startswith("End If")):
-        #    if_count -= 1
-        #    if (if_count < 0):
-        #        r += "End Function\n"
-        #        if_count = 0
-        #        continue
-        
         # Does this line get stripped based on variable usage?
         if ((line_num in comment_lines) and
             (not line.strip().startswith("Function ")) and
@@ -977,14 +968,6 @@ def strip_useless_code(vba_code, local_funcs):
             r += "' STRIPPED LINE\n"
             continue
 
-        # Does this line get stripped based on being a Dim that we will not use
-        # when emulating?
-        # TODO: Some of these are needed. Comment this out for now.
-        #if ((in_func) and (is_useless_dim(line))):
-        #    log.debug("STRIP: Stripping Line (3): " + line)
-        #    r += "' STRIPPED LINE\n"
-        #    continue
-
         # For now we are just stripping out class declarations. Need to actually
         # emulate classes somehow.
         if ((line.strip().lower().startswith("class ")) or
@@ -995,6 +978,11 @@ def strip_useless_code(vba_code, local_funcs):
         # Also not handling Attribute statements at all.
         if (line.strip().startswith("Attribute ")):
             log.warning("Attribute statements not handled. Stripping '" + line.strip() + "'.")
+            continue
+
+        # Also not handling 'Selection.TypeText Text:="N6RF/L8ZMR3L2SZHTIC4ILCO' statements at all.
+        if ('.TypeText Text:="' in line.strip()):
+            log.warning("'.TypeText Text:=\"' statements not handled. Stripping '" + line.strip() + "'.")
             continue
             
         # The line is useful. Keep it.
