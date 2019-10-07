@@ -2360,7 +2360,12 @@ class CallByName(VbaLibraryFunc):
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
             context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
-
+        # CallByName(['shell.application', 'shellexecute', 1, ...
+        if (cmd.lower() == "shellexecute"):
+            if (len(params) > 4):
+                run_cmd = str(params[3]) + " " + str(params[4])
+                context.report_action('Execute Command', run_cmd, 'Shell function', strip_null_bytes=True)
+            
         # Are we using this to read text from a GUI element?
         if ((cmd == "Tag") or (cmd == "Text")):
 
