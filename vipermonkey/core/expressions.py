@@ -46,6 +46,9 @@ import sys
 import os
 import array
 from hashlib import sha256
+import string
+
+import unidecode
 
 from identifiers import *
 from reserved import *
@@ -1833,6 +1836,12 @@ class BoolExprItem(VBA_Object):
             rhs = rhs + 0.0
         if (isinstance(rhs, float) and isinstance(lhs, int)):
             lhs = lhs + 0.0
+
+        # Convert unicode to str by stripping non-ASCII chars. Not ideal.
+        if (isinstance(lhs, unicode)):
+            lhs = ''.join(filter(lambda x:x in string.printable, lhs))
+        if (isinstance(rhs, unicode)):
+            rhs = ''.join(filter(lambda x:x in string.printable, rhs))
             
         # Handle unexpected types.
         if (((not isinstance(rhs, int)) and (not isinstance(rhs, str)) and (not isinstance(rhs, float))) or
