@@ -155,8 +155,15 @@ class Asc(VBA_Object):
         else:
 
             # Got a string.
+
+            # Should this match anything?
             c = str(c)
-            r = vb_str.get_ms_ascii_value(c)
+            if (c == "**MATCH ANY**"):
+                r = "**MATCH ANY**"
+
+            # This is an unmodified Asc() call.
+            else:
+                r = vb_str.get_ms_ascii_value(c)
 
         # Return the result.
         log.debug("Asc: return %r" % r)

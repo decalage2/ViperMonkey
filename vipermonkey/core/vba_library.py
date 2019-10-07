@@ -188,13 +188,19 @@ class Format(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        # Fake up a date if needed.
-        # TODO: Currently this fake date is specific to a campaign targeting Italy.
+        # Are we faking a value for this particular format call?
         r = params[0]
         if (len(params) > 1):
             typ = str(params[1])
+
+            # Fake up a date if needed.
+            # TODO: Currently this fake date is specific to a campaign targeting Italy.
             if (typ.lower() == "long date"):
                 r = "gioved\xc3\xac 27 giugno 2019"
+
+            # Let's match any currency checks.
+            if (typ.lower() == "currency"):
+                r = "**MATCH ANY**"
 
         # Done.
         log.debug("Format(%r): return %r" % (self, r))
@@ -3359,6 +3365,14 @@ class CreateElement(VbaLibraryFunc):
 
         # Assume that this is something like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
         return "Microsoft.XMLDOM"
+
+class Send(VbaLibraryFunc):
+    """
+    Faked emulation of HTTP send(). Always returns 200.
+    """
+
+    def eval(self, context, params=None):
+        return 200
     
 class Write(VbaLibraryFunc):
     """

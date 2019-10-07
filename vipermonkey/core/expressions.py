@@ -1841,16 +1841,18 @@ class BoolExprItem(VBA_Object):
             # Punt and compare everything as strings.
             lhs = str(lhs)
             rhs = str(rhs)
-            
+
+        # Always evaluate to true if comparing against a wildcard.
+        rhs = strip_nonvb_chars(rhs)
+        lhs = strip_nonvb_chars(lhs)
+        rhs_str = str(rhs)
+        lhs_str = str(lhs)
+        if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
+            return True
+        
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):
-            rhs = strip_nonvb_chars(rhs)
-            lhs = strip_nonvb_chars(lhs)
-            rhs_str = str(rhs)
-            lhs_str = str(lhs)
-            if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
-                return True
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
