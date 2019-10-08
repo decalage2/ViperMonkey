@@ -3140,7 +3140,8 @@ class Print(VbaLibraryFunc):
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'Debug Print')
 
-        context.report_action("Debug Print", str(params[0]), '')
+        if (params[0] is not None):
+            context.report_action("Debug Print", str(params[0]), '')
 
 class Debug(Print):
     """
