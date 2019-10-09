@@ -1069,7 +1069,8 @@ class MemberAccessExpression(VBA_Object):
             if ((isinstance(tmp_lhs, str)) and
                 (tmp_lhs != "NULL") and
                 (not "Shapes(" in tmp_lhs) and
-                (not "Close" in str(self.rhs))):
+                (not "Close" in str(self.rhs)) and
+                (not context.contains(self.lhs))):
 
                 # Just work with the returned string value.
                 return tmp_lhs
@@ -1105,7 +1106,7 @@ class MemberAccessExpression(VBA_Object):
             # Do we know what the RHS variable evaluates to?
             tmp_rhs = eval_arg(rhs, context)
             if ((tmp_rhs != rhs) and
-                (tmp_lhs == "NULL") and
+                ((tmp_lhs == "NULL") or (tmp_lhs.lower().endswith(".application"))) and
                 (tmp_rhs != "NULL") and
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 log.debug("Resolved member access variable.")
