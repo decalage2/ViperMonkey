@@ -1106,7 +1106,7 @@ class MemberAccessExpression(VBA_Object):
             # Do we know what the RHS variable evaluates to?
             tmp_rhs = eval_arg(rhs, context)
             if ((tmp_rhs != rhs) and
-                ((tmp_lhs == "NULL") or (tmp_lhs.lower().endswith(".application"))) and
+                ((tmp_lhs == "NULL") or (str(tmp_lhs).lower().endswith(".application"))) and
                 (tmp_rhs != "NULL") and
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 log.debug("Resolved member access variable.")
