@@ -383,7 +383,7 @@ def fix_difficult_code(vba_code):
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
     is the ordinal value.
 
-    Also change things like "a!b!.c" to "a.b.c".
+    Also change things like "a!b!c" to "a.b.c".
 
     Also break up multiple statements seperated with '::' or ':' onto different lines.
 
@@ -451,6 +451,11 @@ def fix_difficult_code(vba_code):
                 continue
             got_interesting = True
             break
+        #print "--------"
+        #print pos
+        #print c
+        #print prev_char
+        #print next_char
         if (not got_interesting):
 
             # We are not. Fast forward to the nearest interesting character.
@@ -517,8 +522,9 @@ def fix_difficult_code(vba_code):
             continue
 
         # Need to change "!" member access to "."?
-        if ((prev_char == "!") and (c.isalpha())):
-            r = r[:len(r)-1] + "."
+        if ((c == "!") and (next_char.isalpha())):
+            r += "."
+            continue
 
         # Need to eliminate bogus =+ assignments.
         if ((c == "+") and (prev_char == "=")):
