@@ -1012,7 +1012,7 @@ class Let_Statement(VBA_Object):
                 arr_var = []
 
             # Handle lists
-            if (isinstance(arr_var, list)):
+            if ((isinstance(arr_var, list)) and (index >= 0)):
             
                 # Do we need to extend the length of the list to include the indices?
                 if (index >= len(arr_var)):
