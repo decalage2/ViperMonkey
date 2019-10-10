@@ -69,6 +69,8 @@ from logger import log
 
 file_pointer = Suppress('#') + (decimal_literal | lex_identifier)
 file_pointer.setParseAction(lambda t: "#" + str(t[0]))
+file_pointer_loose = (decimal_literal | lex_identifier)
+file_pointer_loose.setParseAction(lambda t: "#" + str(t[0]))
 
 # --- SIMPLE NAME EXPRESSION -------------------------------------------------
 
