@@ -203,7 +203,9 @@ type_expression = lex_identifier + Optional('.' + lex_identifier)
 
 type_declaration_composite = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')) + CaselessKeyword('Type') + \
                              lex_identifier + Suppress(EOS) + \
-                             OneOrMore(lex_identifier + Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + \
+                             OneOrMore(lex_identifier + \
+                                       Optional(Suppress(Literal('(') + Optional(expr_list) + Literal(')'))) + \
+                                       Optional(Suppress(Literal('(') + expression + CaselessKeyword("To") + expression + Literal(')'))) + \
                                        CaselessKeyword('As') + reserved_type_identifier + \
                                        Suppress(Optional("*" + (decimal_literal | lex_identifier))) + Suppress(EOS)) + \
                              CaselessKeyword('End') + CaselessKeyword('Type') + \
@@ -770,7 +772,7 @@ class Let_Statement(VBA_Object):
             return False
 
         # Modifying a substring?
-        if (self.string_op["op"] == "mid"):
+        if ((self.string_op["op"] == "mid") or (self.string_op["op"] == "mid$")):
 
             # Get the string to modify, substring start index, and substring length.
             args = self.string_op["args"]
@@ -1084,7 +1086,7 @@ class LSet_Statement(Let_Statement):
 # TODO: remove Set when Set_Statement implemented:
 
 # Mid(zLGzE1gWt, MbgQPcQzy, 1)
-string_modification = CaselessKeyword('Mid') + Optional(Suppress('(')) + expr_list('params') + Optional(Suppress(')'))
+string_modification = (CaselessKeyword('Mid') | CaselessKeyword('Mid$')) + Optional(Suppress('(')) + expr_list('params') + Optional(Suppress(')'))
 
 let_statement = (
     Optional(CaselessKeyword('Let') | CaselessKeyword('Set')).suppress()

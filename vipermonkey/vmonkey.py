@@ -648,6 +648,11 @@ def parse_stream(subfilename,
     if (stream_path is None):
         subfilename, stream_path, vba_filename, vba_code = subfilename
 
+    # Skip old-style XLM macros.
+    if (repr(stream_path).strip() == "'xlm_macro'"):
+        log.warning("Skipping XLM macro stream...")
+        return "empty"
+        
     # Collapse long lines.
     vba_code = vba_collapse_long_lines(vba_code)
         

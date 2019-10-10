@@ -241,7 +241,13 @@ def fix_unbalanced_quotes(vba_code):
     """
 
     # Fix invalid string assignments.
-    uni_vba_code = vba_code.decode("utf-8")
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+
     if (re2.search(u"(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
         vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
     if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", uni_vba_code) is not None):
@@ -642,7 +648,12 @@ def fix_vba_code(vba_code):
     vba_code = replace_constant_int_inline(vba_code)
     
     # Skip the next part if unnneeded.
-    uni_vba_code = vba_code.decode("utf-8")
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
     got_multassign = (re2.search(u"(?:\w+\s*=\s*){2}", uni_vba_code) is not None)
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
