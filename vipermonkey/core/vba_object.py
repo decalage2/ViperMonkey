@@ -790,7 +790,7 @@ def int_convert(arg):
     try:
         return int(arg_str)
     except Exception as e:
-        log.error("Cannot convert '" + str(arg_str) + "' to int. " + str(e))
+        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0." + str(e))
         return 0
 
 def str_convert(arg):

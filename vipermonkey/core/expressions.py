@@ -1360,7 +1360,7 @@ class Function_Call(VBA_Object):
             return None
 
         # We will not report the calls of some functions.
-        skip_report_functions = set(["cos"])
+        skip_report_functions = set(["cos", "tan"])
         if (str(self.name).lower() not in skip_report_functions):
             log.info('calling Function: %s(%s)' % (self.name, str_params))
         

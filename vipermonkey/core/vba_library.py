@@ -1212,7 +1212,9 @@ class StrReverse(VbaLibraryFunc):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string =''
-        if (params[0] is not None):
+        if ((params[0] is not None) and
+            (not isinstance(params[0], str)) and
+            (not isinstance(params[0], unicode))):
             string = str(params[0])
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
@@ -2299,7 +2301,8 @@ class IIf(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 3)
+        if ((params is None) or (len(params) < 3)):
+            return "NULL"
         guard = params[0]
         true_part = params[1]
         false_part = params[2]

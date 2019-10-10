@@ -3590,7 +3590,10 @@ class Context(object):
         else:
             # new name, typically store in local scope.
             if (not self.global_scope):
-                log.debug("Set local var " + str(name) + " = " + str(value))
+                try:
+                    log.debug("Set local var " + str(name) + " = " + str(value))
+                except:
+                    pass
                 self.locals[name] = value
             else:
                 self.globals[name] = value
