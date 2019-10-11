@@ -358,6 +358,12 @@ def get_ole_textbox_values(obj, vba_code):
             for v in vals:
                 text += v
                 
+        # Maybe big chunks of text after the name are part of the value?
+        for pos in range(name_pos + 2, len(strs)):
+            curr_str = strs[pos].replace("\x00", "")
+            if (len(curr_str) > 40):
+                text += curr_str
+                
         # Pull out the size of the text.
         # Try version 1.
         size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
