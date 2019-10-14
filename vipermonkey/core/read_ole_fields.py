@@ -925,7 +925,6 @@ def pull_urls_office97(fname, is_data):
 
     # Pull URLs.
     URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
-    pat = r"(/[/\?&\~=a-zA-Z0-9_\-\.]+)"
     return re.findall(URL_REGEX, data)
 
 ###########################################################################

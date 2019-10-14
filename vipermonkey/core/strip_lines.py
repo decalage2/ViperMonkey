@@ -399,6 +399,7 @@ def fix_difficult_code(vba_code):
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
+        ("Rem " not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
@@ -429,6 +430,10 @@ def fix_difficult_code(vba_code):
         pos += 1
         vba_code = vba_code.replace(curr_if, if_name + "\n")
         single_line_ifs.append((if_name, curr_if))
+
+    # Replace 'Rem fff' style comments with "' fff" comments.
+    vba_code = vba_code.replace("\nRem ", "\n' ")
+    vba_code = vba_code.replace(" Rem ", " ' ")
         
     # Characters that change how we modify the code.
     interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]"]
