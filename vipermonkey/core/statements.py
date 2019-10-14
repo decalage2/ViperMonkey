@@ -58,6 +58,7 @@ import procedures
 from var_in_expr_visitor import *
 from function_call_visitor import *
 import vb_str
+import loop_transform
 
 import traceback
 import string
@@ -1773,6 +1774,7 @@ class While_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
+        self.original_str = original_str[location:]
         self.loop_type = tokens.clause.type
         self.guard = tokens.clause.guard
         self.body = tokens[2]
@@ -2016,6 +2018,14 @@ class While_Statement(VBA_Object):
 
         # Assign all const variables first.
         do_const_assignments(self.body, context)
+
+        # See if we can transform the loop to a simpler form and just emulate that.
+        new_loop = loop_transform.transform_loop(self)
+        if (new_loop != self):
+
+            # We have something simpler. Just emulate that.
+            log.warning("Emulating transformed loop...")
+            return new_loop.eval(context, params=params)
         
         # See if we can short circuit the loop.
         if (self._handle_simple_loop(context)):
@@ -2032,7 +2042,7 @@ class While_Statement(VBA_Object):
         if (".readyState" in str(self.guard)):
             log.info("Limiting # of iterations of a .readyState loop.")
             max_loop_iters = 5
-
+            
         # Get the initial values of all the variables that appear in the loop guard.
         old_guard_vals = _get_guard_variables(self, context)
 
@@ -2565,8 +2575,14 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
         return self._children
-                
+
     def __repr__(self):
+        return self._to_str(False)
+
+    def full_str(self):
+        return self._to_str(True)
+    
+    def _to_str(self, full_str):
         r = ""
         first = True
         for piece in self.pieces:
@@ -2584,19 +2600,31 @@ class If_Statement(VBA_Object):
             guard = ""
             keyword = ""
             if (piece["guard"] is not None):
-                guard = piece["guard"].__repr__()
-                if (len(guard) > 5):
-                    guard = guard[:6] + "..."
+                guard = None
+                if (full_str):
+                    guard = piece["guard"].full_str()
+                else:
+                    guard = piece["guard"].__repr__()
+                    if (len(guard) > 5):
+                        guard = guard[:6] + "..."
             r += guard + " "
             keyword = "Then "
 
             # Add in the body.
             r += keyword
-            body = piece["body"].__repr__().replace("\n", "; ")
-            if (len(body) > 25):
-                body = body[:26] + "..."
+            body = None
+            if (full_str):
+                body = piece["body"].full_str()
+            else:
+                body = piece["body"].__repr__().replace("\n", "; ")
+                if (len(body) > 25):
+                    body = body[:26] + "..."
             r += body + " "
 
+        if (full_str):
+            print guard
+            print body
+            sys.exit(0)
         return r
             
     def eval(self, context, params=None):

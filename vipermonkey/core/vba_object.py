@@ -134,6 +134,9 @@ class VBA_Object(object):
         log.debug(self)
         # raise NotImplementedError
 
+    def full_str(self):
+        return str(self)
+        
     def get_children(self):
         """
         Return the child VBA objects of the current object.

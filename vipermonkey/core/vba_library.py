@@ -3157,7 +3157,26 @@ class Echo(Print):
     WScript.Echo() debugging function.
     """
     pass
-        
+
+class DeleteFile(VbaLibraryFunc):
+    """
+    File delete DeleteFile() call.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) > 0):
+            context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
+
+class MoveFile(VbaLibraryFunc):
+    """
+    File move MoveFile() call.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) > 1):
+            context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
+                                  'MoveFile() Call', strip_null_bytes=True)
+
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function.
@@ -3439,7 +3458,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
-               MonthName, GetSpecialFolder, IsEmpty, Date):
+               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
