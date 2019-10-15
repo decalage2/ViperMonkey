@@ -2700,7 +2700,8 @@ class Run(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) == 0)):
+            return
 
         # Get the name of the function to call.
         func_name = str(params[0])
