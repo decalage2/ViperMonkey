@@ -906,7 +906,32 @@ def _get_shapes_text_values(fname, stream):
 
     return r
 
-def pull_urls_office97(fname, is_data):
+URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
+def pull_urls_from_comments(vba):
+    """
+    Pull out URLs that just appear in VBA comments.
+    """
+
+    # Get the VBA source code.
+    macros = ""
+    for (_, _, _, vba_code) in vba.extract_macros():
+        if (vba_code is None):
+            continue
+        macros += vba_code + "\n"
+
+    # Pull URLs from each comment line.
+    urls = set()
+    for line in macros.split("\n"):
+        line = line.strip()
+        if ((not line.startswith("'")) and (not line.lower().startswith("rem "))):
+            continue
+        for url in re.findall(URL_REGEX, line):
+            urls.add(url.strip())
+
+    # Return the URLs that appear in comments.
+    return urls
+
+def pull_urls_office97(fname, is_data, vba):
     """
     Pull URLs directly from an Office97 file.
     """
@@ -923,9 +948,22 @@ def pull_urls_office97(fname, is_data):
     else:
         data = fname
 
-    # Pull URLs.
-    URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
-    return re.findall(URL_REGEX, data)
+    # Skip URLs that appear in comments.
+    comment_urls = pull_urls_from_comments(vba)
+    file_urls = re.findall(URL_REGEX, data)
+    r = set()
+    for url in file_urls:
+        url = url.strip()
+        not_comment_url = True
+        for comment_url in comment_urls:
+            if ((url.startswith(comment_url)) or (comment_url.startswith(url))):
+                not_comment_url = False
+                break
+        if (not_comment_url):
+            r.add(url)
+        
+    # Return URLs.
+    return r
 
 ###########################################################################
 ## Main Program

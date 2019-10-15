@@ -153,6 +153,7 @@ class ViperMonkey(object):
         self.externals = {}
         # list of actions (stored as tuples by report_action)
         self.actions = []
+        self.vba = None
 
         # Figure out whether this is VBScript or VBA.
         vba_pointer = self.filename
@@ -435,7 +436,7 @@ class ViperMonkey(object):
         if ((fname is None) or (len(fname.strip()) == 0)):
             fname = self.data
             is_data = True
-        direct_urls = read_ole_fields.pull_urls_office97(fname, is_data)
+        direct_urls = read_ole_fields.pull_urls_office97(fname, is_data, self.vba)
         for url in direct_urls:
             context.save_intermediate_iocs(url)
         

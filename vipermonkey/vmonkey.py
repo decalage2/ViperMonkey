@@ -1328,6 +1328,7 @@ def _process_file (filename,
             print('TRACING VBA CODE (entrypoint = Auto*):')
             if (entry_points is not None):
                 log.info("Starting emulation from function(s) " + str(entry_points))
+            vm.vba = vba
             vm.trace()
             # print table of all recorded actions
             print('\nRecorded Actions:')
