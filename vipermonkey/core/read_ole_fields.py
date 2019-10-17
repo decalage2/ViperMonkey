@@ -373,6 +373,10 @@ def get_ole_textbox_values(obj, vba_code):
             # Try version 2.
             size_pat = r"\x48\x80\x2c(.{2})"
             tmp = re.findall(size_pat, chunk)
+        if (len(tmp) == 0):
+            # Try version 3.
+            size_pat = r"\xf8\x00\x28\x00\x00\x00(.{2})"
+            tmp = re.findall(size_pat, chunk)
         if (len(tmp) > 0):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
