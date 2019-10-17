@@ -1217,8 +1217,6 @@ class StrReverse(VbaLibraryFunc):
             if ((not isinstance(params[0], str)) and
                 (not isinstance(params[0], unicode))):
                 string = str(params[0])
-        print type(string)
-        print string
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
         return r

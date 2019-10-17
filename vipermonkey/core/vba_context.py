@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+1#!/usr/bin/env python
 """
 ViperMonkey: Execution context for global and local variables
 
@@ -167,6 +167,9 @@ class Context(object):
         # Track whether variables by default should go in the global scope.
         self.global_scope = False
 
+        # Track if this is the context of a function/sub.
+        self.in_procedure = False
+        
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -3570,7 +3573,7 @@ class Context(object):
         # Set the variable
         if (force_global):
             try:
-                log.debug("Set local var " + str(name) + " = " + str(value))
+                log.debug("Set global var " + str(name) + " = " + str(value))
             except:
                 pass
             self.globals[name] = value

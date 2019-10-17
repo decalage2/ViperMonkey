@@ -553,11 +553,13 @@ class Dim_Statement(VBA_Object):
                 curr_init_val = "NULL"
 
             # Keep the current variable value if this variable already exists.
-            if (context.contains(var[0])):
+            if (context.contains(var[0], local=True)):
                 curr_init_val = context.get(var[0])
                 
             # Set the initial value of the declared variable. And the type.
-            context.set(var[0], curr_init_val, curr_type, force_global=(self.decl_type.lower() == "const"))
+            is_const = (self.decl_type.lower() == "const")
+            is_local = context.in_procedure and (not is_const)
+            context.set(var[0], curr_init_val, curr_type, force_global=is_const, force_local=is_local)
             log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
     
 # 5.4.3.1 Local Variable Declarations

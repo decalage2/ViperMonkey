@@ -76,7 +76,10 @@ class Sub(VBA_Object):
         caller_context = context
         # Looks like local variables from the calling context can be accessed in the called
         # function, so keep those.
-        context = Context(context=caller_context, _locals=context.locals)
+        #context = Context(context=caller_context, _locals=context.locals)
+        # TODO: Local variable inheritence needs to be investigated more...
+        context = Context(context=caller_context)
+        context.in_procedure = True
 
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -341,7 +344,10 @@ class Function(VBA_Object):
         caller_context = context
         # Looks like local variables from the calling context can be accessed in the called
         # function, so keep those.
-        context = Context(context=caller_context, _locals=context.locals)
+        #context = Context(context=caller_context, _locals=context.locals)
+        # TODO: Local variable inheritence needs to be investigated more...
+        context = Context(context=caller_context)        
+        context.in_procedure = True
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
