@@ -312,6 +312,7 @@ def get_ole_textbox_values(obj, vba_code):
             ("contents" != asc_str) and
             ("ObjInfo" != asc_str) and
             ("CompObj" != asc_str) and
+            (not asc_str.startswith("_DELETED_NAME_")) and
             (re.match(r"_\d{10}", asc_str) is None)):
             if debug:
                 print "Value: 1"
@@ -950,7 +951,6 @@ def pull_urls_office97(fname, is_data, vba):
 
     # Skip URLs that appear in comments.
     comment_urls = pull_urls_from_comments(vba)
-    print comment_urls
     file_urls = re.findall(URL_REGEX, data)
     r = set()
     for url in file_urls:

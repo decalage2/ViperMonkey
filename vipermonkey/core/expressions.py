@@ -450,7 +450,7 @@ class MemberAccessExpression(VBA_Object):
         # doc.
         if ("(" in tmp):
             tmp = tmp[:tmp.rindex("(")]
-        val = context.get_doc_var(tmp)
+        val = context.get_doc_var(tmp, search_wildcard=False)
 
         # Are we referencing an item by index?
         # zQGGrrccT('0').Caption
@@ -893,8 +893,8 @@ class MemberAccessExpression(VBA_Object):
 
         # Easy case. Do we have this saved as a variable?
         try:
-            r = context.get(str(self))
-            log.debug("Memeber access " + str(self) + " stored as variable = " + str(r))
+            r = context.get(str(self), search_wildcard=False)
+            log.debug("Member access " + str(self) + " stored as variable = " + str(r))
             return r
         except KeyError:
             pass
@@ -1521,7 +1521,6 @@ expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 
 def quick_parse_int_or_var(text):
     text = str(text).strip()
-    #print "item: '" + text + "'"
 
     # Integer?
     if (text.isdigit()):
@@ -1530,7 +1529,6 @@ def quick_parse_int_or_var(text):
     # Variable?
     if (re.match(r"[_a-zA-Z][_a-zA-Z\d]*", text) is not None):
         r = SimpleNameExpression(None, None, None, text)
-        #print r
         return r
 
     # Non-special case. Parse it.

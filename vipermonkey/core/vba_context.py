@@ -3387,7 +3387,7 @@ class Context(object):
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
 
-    def get(self, name):
+    def get(self, name, search_wildcard=True):
         
         # See if this is an aliased reference to an objects .Text field.
         name = str(name)
@@ -3420,13 +3420,14 @@ class Context(object):
                 pass
 
             # Look for wild carded field value.
-            new_name = name[:name.index(".")] + ".*"
-            try:
-                r = self._get(str(new_name))
-                log.debug("Found wildcarded field value " + new_name + " = " + str(r))
-                return r
-            except KeyError:
-                pass
+            if (search_wildcard):
+                new_name = name[:name.index(".")] + ".*"
+                try:
+                    r = self._get(str(new_name))
+                    log.debug("Found wildcarded field value " + new_name + " = " + str(r))
+                    return r
+                except KeyError:
+                    pass
             
         # See if the variable was initially defined with a trailing '$'.
         return self._get(str(name) + "$")
@@ -3451,7 +3452,7 @@ class Context(object):
             return None
         return self.types[var]
 
-    def get_doc_var(self, var):
+    def get_doc_var(self, var, search_wildcard=True):
         if (not isinstance(var, basestring)):
             return None
 
@@ -3477,7 +3478,7 @@ class Context(object):
             # with this name.
             log.debug("doc var named " + var + " not found.")
             try:
-                var_value = self.get(var)
+                var_value = self.get(var, search_wildcard=search_wildcard)
                 if ((var_value is not None) and
                     (str(var_value).lower() != str(var).lower())):
                     r = self.get_doc_var(var_value)

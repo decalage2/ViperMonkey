@@ -1147,6 +1147,9 @@ def _process_file (filename,
                 tmp_var_name = var_name + ".Text"
                 vm.doc_vars[tmp_var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                tmp_var_name = var_name + ".Caption"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
                     
             # Pull out custom document properties.
             log.info("Reading custom document properties...")

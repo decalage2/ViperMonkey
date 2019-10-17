@@ -15,7 +15,7 @@ from unotools.component.calc import Calc
 from unotools.unohelper import convert_path_to_url
 
 # Connection information for LibreOffice.
-HOST = "localhost"
+HOST = "127.0.0.1"
 PORT = 2002
 
 def is_excel_file(maldoc):
@@ -47,7 +47,7 @@ def run_soffice():
     cmd = ["/usr/lib/libreoffice/program/soffice.bin", "--headless", "--invisible",
            "--nocrashreport", "--nodefault", "--nofirststartwizard", "--nologo",
            "--norestore", '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"']
-    subprocess.Popen(cmd)
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 def get_component(fname, context):
     """
