@@ -8,6 +8,7 @@ import os
 # sudo pip3 install psutil
 import psutil
 import subprocess
+import time
 
 # sudo pip3 install unotools
 from unotools import Socket, connect
@@ -44,10 +45,11 @@ def run_soffice():
                 return
 
     # soffice is not running. Run it in listening mode.
-    cmd = ["/usr/lib/libreoffice/program/soffice.bin", "--headless", "--invisible",
-           "--nocrashreport", "--nodefault", "--nofirststartwizard", "--nologo",
-           "--norestore", '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"']
-    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    cmd = "/usr/lib/libreoffice/program/soffice.bin --headless --invisible " + \
+          "--nocrashreport --nodefault --nofirststartwizard --nologo " + \
+          "--norestore " + '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"'
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    time.sleep(5)
 
 def get_component(fname, context):
     """
@@ -88,6 +90,7 @@ def convert_csv(fname):
     sheets = component.getSheets()
     enumeration = sheets.createEnumeration()
     r = []
+    pos = 0
     if sheets.getCount() > 0:
         while enumeration.hasMoreElements():
 
@@ -100,7 +103,8 @@ def convert_csv(fname):
             short_name = fname
             if (os.path.sep in short_name):
                 short_name = short_name[short_name.rindex(os.path.sep) + 1:]
-            outfilename =  "/tmp/sheet_%s-%s.csv" % (short_name, name.replace(' ', '_SPACE_'))
+            outfilename =  "/tmp/sheet_%s-%s--%s.csv" % (short_name, str(pos), name.replace(' ', '_SPACE_'))
+            pos += 1
             r.append(outfilename)
             url = convert_path_to_url(outfilename)
 

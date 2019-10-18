@@ -90,6 +90,7 @@ import pyparsing
 #ParserElement.enablePackrat(cache_size_limit=None)
 pyparsing.ParserElement.enablePackrat(cache_size_limit=100000)
 
+import json
 import random
 import tempfile
 import struct
@@ -243,7 +244,6 @@ def _read_doc_text_libreoffice(data):
 
         # Cleanup.
         out.close()
-
 
 def _read_doc_text_strings(data):
     """
@@ -808,6 +808,7 @@ def process_file(container,
     return r
 
 def read_sheet_from_csv(filename):
+
     # Open the CSV file.
     f = None
     try:
@@ -862,82 +863,75 @@ def read_sheet_from_csv(filename):
     return r
 
 def load_excel_libreoffice(data):
+
+    # Don't try this if it is not an Office file.
+    if (not filetype.is_office_file(data, True)):
+        log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
+        return None
     
-    # Discard output.
-    out = open(os.devnull, "w")
+    # Save the Excel data to a temporary file.
+    out_dir = "/tmp/tmp_excel_file_" + str(random.randrange(0, 10000000000))
+    f = open(out_dir, 'wb')
+    f.write(data)
+    f.close()
     
-    # Is LibreOffice installed?
+    # Dump all the sheets as CSV files using soffice.
+    output = None
     try:
-        rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
-    except OSError:
-        rc = -1
-    try:
-        if (rc != 0):
-            rc = subprocess.call(["soffice", "--headless", "-h"], stdout=out, stderr=out)
-        if (rc != 0):
-
-            # Not installed.
-            log.error("Cannot convert Excel file with LibreOffice. LibreOffice not installed.")
-            out.close()
-            return None
-
-    except OSError:
-
-        # Not installed.
-        log.error("Cannot convert Excel file with LibreOffice. LibreOffice not installed.")
-        out.close()
+        output = subprocess.check_output(["export_all_excel_sheets.py", out_dir])
+    except Exception as e:
+        log.error("Running export_all_excel_sheets.py failed. " + str(e))
+        os.remove(out_dir)
         return None
 
-    # LibreOffice is installed.
-
-    # Try to get sheet data.
-    (fd, filename) = tempfile.mkstemp()
+    # Get the names of the sheet files, if there are any.
+    sheet_names = None
     try:
+        sheet_files = json.loads(output.replace("'", '"'))
+    except:
+        os.remove(out_dir)
+        return None
+    if (len(sheet_files) == 0):
+        os.remove(out_dir)
+        return None
+
+    # Load the CSV files into Excel objects.
+    sheet_map = {}
+    for sheet_file in sheet_files:
+
+        # Read the CSV file into a single Excel workbook object.
+        tmp_workbook = read_sheet_from_csv(sheet_file)
+
+        # Pull the cell data for the current sheet.
+        cell_data = tmp_workbook.sheet_by_name("Sheet1").cells
         
-        # Save the possible spreadsheet to a temporary file.
-        tfile = os.fdopen(fd, "wb")
-        tfile.write(data)
-        tfile.close()
+        # Pull out the name of the current sheet.
+        start = sheet_file.index("--") + 2
+        end = sheet_file.rindex(".")
+        sheet_name = sheet_file[start : end]
 
-        # Try to convert the file to a CSV file.
-        log.warning("Converting spreadsheet to CSV...")
-        try:
-            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "csv", "--outdir", tempfile.gettempdir(), filename],
-                                 stdout=out, stderr=out)
-        except OSError:
-            rc = -1
-        try:
-            if (rc != 0):
-                rc = subprocess.call(["soffice", "--headless", "--convert-to", "csv", "--outdir", tempfile.gettempdir(), filename],
-                                     stdout=out, stderr=out)
-            if (rc != 0):
+        # Pull out the index of the current sheet.
+        start = sheet_file.index("-") + 1
+        end = sheet_file[start:].index("-") + start
+        sheet_index = int(sheet_file[start : end])
+        
+        # Make a sheet with the current name and data.
+        tmp_sheet = excel.ExcelSheet(cell_data, sheet_name)
 
-                # Conversion failed.
-                log.error("Cannot convert Excel file with LibreOffice. Conversion failed.")
-                out.close()
-                return None
-            
-        except OSError as e:
-            
-            # Conversion failed.
-            log.error("Cannot convert Excel file with LibreOffice. Conversion failed. " + str(e))
-            out.close()
-            return None
+        # Map the sheet to its index.
+        sheet_map[sheet_index] = tmp_sheet
 
-        # Read the spreadsheet data from the CSV.
-        return read_sheet_from_csv(filename + ".csv")
+    # Save the sheets in the proper order into a workbook.
+    result_book = excel.ExcelBook(None)
+    for index in range(0, len(sheet_map)):
+        result_book.sheets.append(sheet_map[index])
 
-    finally:
-
-        # Delete the temporary Excel files.
-        try:
-            os.remove(filename)
-            os.remove(filename + ".csv")
-        except:
-            pass
-
-        # Cleanup.
-        out.close()
+    # Delete the temp files with the CSV sheet data.
+    for sheet_file in sheet_files:
+        os.remove(sheet_file)
+        
+    # Return the workbook.
+    return result_book
         
 def load_excel_xlrd(data):
     try:
@@ -959,7 +953,12 @@ def load_excel(data):
     return - An xlrd (like) object with the Excel file contents.
     """
 
-    # First try loading the sheet with xlrd.
+    # First try loading the sheets with LibreOffice.
+    wb = load_excel_libreoffice(data)
+    if (wb is not None):
+        return wb
+    
+    # That failed. Fall back to loading the sheet with xlrd.
     wb = load_excel_xlrd(data)
     if (wb is not None):
 
@@ -967,9 +966,9 @@ def load_excel(data):
         if (len(wb.sheet_names()) > 0):
             return wb
 
-    # That failed. Fall back to LibreOffice.
-    return load_excel_libreoffice(data)
-
+    # Nothing worked.
+    return None
+        
 def _remove_duplicate_iocs(iocs):
     """
     Remove IOC strings that are substrings of other IOCs.

@@ -3038,6 +3038,15 @@ class Date(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return date.today()
+
+class DateAdd(VbaLibraryFunc):
+    """
+    DateAdd() function. Currently stubbed to just return the current date as 
+    a Python datetime object.
+    """
+
+    def eval(self, context, params=None):
+        return date.today()
     
 class Year(VbaLibraryFunc):
     """
@@ -3460,7 +3469,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
-               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile):
+               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
