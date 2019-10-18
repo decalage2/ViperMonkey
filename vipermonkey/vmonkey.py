@@ -878,7 +878,7 @@ def load_excel_libreoffice(data):
     # Dump all the sheets as CSV files using soffice.
     output = None
     try:
-        output = subprocess.check_output(["export_all_excel_sheets.py", out_dir])
+        output = subprocess.check_output([_thismodule_dir + "/export_all_excel_sheets.py", out_dir])
     except Exception as e:
         log.error("Running export_all_excel_sheets.py failed. " + str(e))
         os.remove(out_dir)
