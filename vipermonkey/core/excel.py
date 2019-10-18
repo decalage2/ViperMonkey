@@ -54,8 +54,6 @@ class ExcelSheet(object):
         return r
     
     def cell(self, row, col):
-        print "row = " + str(row)
-        print "col = " + str(col)
         if ((row, col) in self.cells):
             return self.cells[(row, col)]
         raise KeyError("Cell (" + str(row) + ", " + str(col) + ") not found.")
