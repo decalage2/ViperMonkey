@@ -187,8 +187,10 @@ def _read_from_excel(arg, context):
     """
 
     # Try handling reading value from an Excel spreadsheet cell.
+    # ThisWorkbook.Sheets('YHRPN').Range('J106').Value
     arg_str = str(arg)
-    if (("sheets(" in arg_str.lower()) and
+    if (("MemberAccessExpression" in str(type(arg))) and
+        ("sheets(" in arg_str.lower()) and
         (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
         log.debug("Try as Excel cell read...")
