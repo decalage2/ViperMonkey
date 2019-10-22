@@ -133,117 +133,56 @@ from core.logger import log
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text_libreoffice(data):
-    
-    # Discard output.
-    out = open(os.devnull, "w")
-    
-    # Is LibreOffice installed?
-    try:
-        rc = subprocess.call(["libreoffice", "--headless", "-h"], stdout=out, stderr=out)
-    except OSError:
-        rc = -1
-    try:
-        if (rc != 0):
-            rc = subprocess.call(["soffice", "--headless", "-h"], stdout=out, stderr=out)
-        if (rc != 0):
-            # Not installed.
-            log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
-            out.close()
-            return None
 
-    except OSError:
-
-        # Not installed.
-        log.error("Cannot read doc text with LibreOffice. LibreOffice not installed.")
-        out.close()
+    # Don't try this if it is not an Office file.
+    if (not filetype.is_office_file(data, True)):
+        log.warning("The file is not an Office file. Not extracting document text with LibreOffice.")
+        return None
+    
+    # Save the Word data to a temporary file.
+    out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+    f = open(out_dir, 'wb')
+    f.write(data)
+    f.close()
+    
+    # Dump all the text using soffice.
+    output = None
+    try:
+        output = subprocess.check_output([_thismodule_dir + "/export_doc_text.py", out_dir])
+    except Exception as e:
+        log.error("Running export_doc_text.py failed. " + str(e))
+        os.remove(out_dir)
         return None
 
-    # LibreOffice is installed.
+    # Read the paragraphs from the converted text file.
+    os.remove(out_dir)
+    r = []
+    for line in output.split("\n"):
+        r.append(line)
 
-    # Try to get sheet data.
-    (fd, filename) = tempfile.mkstemp()
-    try:
-        
-        # Save the possible Word document to a temporary file.
-        tfile = open(filename, "wb")
-        tfile.write(data)
-        tfile.close()
+    # Fix a missing '/' at the start of the text. '/' is inserted if there is an embedded image
+    # in the text, but LibreOffice does not return that.
+    if (len(r) > 0):
 
-        # Try to convert the file to a text file.
-        try:
-            rc = subprocess.call(["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", tempfile.gettempdir(), filename],
-                                 stdout=out, stderr=out)
-        except OSError as e:
-            rc = -1
-        try:
-            if (rc != 0):
-                rc = subprocess.call(["soffice", "--headless", "--convert-to", "txt:Text", "--outdir", tempfile.gettempdir(), filename],
-                                     stdout=out, stderr=out)
-            if (rc != 0):
-
-                # Conversion failed.
-                log.error("Cannot read doc text with LibreOffice. Conversion failed.")
-                out.close()
-                return None
-            
-        except OSError as e:
-            
-            # Conversion failed.
-            log.error("Cannot read doc text with LibreOffice. Conversion failed. " + str(e))
-            out.close()
-            return None
-
-        # Read the paragraphs from the converted text file.
-        r = []
-        f = None
-        try:
-            f = open(filename + ".txt", 'rb')
-        except IOError as e:
-            log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
-            return None
-        for line in f:
-            if (line.endswith("\n")):
-                line = line[:-1]
-            r.append(line)
-
-        # Cleanup.
-        out.close()
-
-        # Fix a missing '/' at the start of the text. '/' is inserted if there is an embedded image
-        # in the text, but LibreOffice does not return that.
-        if (len(r) > 0):
-
-            # Clear unprintable characters from the start of the string.
-            first_line = r[0]
-            good_pos = 0
-            while ((good_pos < 10) and (good_pos < len(first_line))):
-                if (first_line[good_pos] in string.printable):
-                    break
-                good_pos += 1
-            first_line = first_line[good_pos:]
+        # Clear unprintable characters from the start of the string.
+        first_line = r[0]
+        good_pos = 0
+        while ((good_pos < 10) and (good_pos < len(first_line))):
+            if (first_line[good_pos] in string.printable):
+                break
+            good_pos += 1
+        first_line = first_line[good_pos:]
                 
-            # NOTE: This is specific to fixing an unbalanced C-style comment in the 1st line.
-            pat = r'^\*.*\*\/'
-            if (re.match(pat, first_line) is not None):
-                first_line = "/" + first_line
-            if (first_line.startswith("[]*")):
-                first_line = "/*" + first_line
-            r = [first_line] + r[1:]
+        # NOTE: This is specific to fixing an unbalanced C-style comment in the 1st line.
+        pat = r'^\*.*\*\/'
+        if (re.match(pat, first_line) is not None):
+            first_line = "/" + first_line
+        if (first_line.startswith("[]*")):
+            first_line = "/*" + first_line
+        r = [first_line] + r[1:]
                 
-        # Return the paragraph text.
-        return r
-
-    finally:
-
-        # Delete the temporary files.
-        try:
-            os.remove(filename)
-            os.remove(filename + ".txt")
-        except:
-            pass
-
-        # Cleanup.
-        out.close()
+    # Return the paragraph text.
+    return r
 
 def _read_doc_text_strings(data):
     """
