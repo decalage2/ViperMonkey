@@ -507,6 +507,14 @@ class EOF(VbaLibraryFunc):
     def eval(self, context, params=None):
         return True
 
+class Error(VbaLibraryFunc):
+    """
+    Stubbed Error() method.
+    """
+
+    def eval(self, context, params=None):
+        return "Some error message..."
+
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -3469,7 +3477,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
-               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd):
+               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
+               Error):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
