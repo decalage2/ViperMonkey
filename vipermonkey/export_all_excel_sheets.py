@@ -11,6 +11,7 @@ import subprocess
 import time
 
 # sudo pip3 install unotools
+# sudo apt install libreoffice-calc, python3-uno
 from unotools import Socket, connect
 from unotools.component.calc import Calc
 from unotools.unohelper import convert_path_to_url
