@@ -2913,6 +2913,11 @@ class Cells(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if (params is None):
+            log.error("Parameters of Cells() call are None.")
+            return self
+        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
             log.warning("Cannot process Cells() call. No Excel file loaded.")
