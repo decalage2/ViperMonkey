@@ -799,13 +799,15 @@ def int_convert(arg):
     """
     if (arg == "NULL"):
         return 0
+    if (arg == "**MATCH ANY**"):
+        return arg
     arg_str = str(arg)
     if ("." in arg_str):
         arg_str = arg_str[:arg_str.index(".")]
     try:
         return int(arg_str)
     except Exception as e:
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0." + str(e))
+        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
         return 0
 
 def str_convert(arg):

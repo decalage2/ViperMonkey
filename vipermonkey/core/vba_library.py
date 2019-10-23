@@ -133,6 +133,16 @@ class IsEmpty(VbaLibraryFunc):
             return True
         return False
 
+class LanguageID(VbaLibraryFunc):
+    """
+    Stubbed LanguageID() reference.
+    """
+
+    def eval(self, context, params=None):
+        
+        # This is usually used for gating, so have it match anything.
+        return "**MATCH ANY**"
+
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function
@@ -3483,7 +3493,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error):
+               Error, LanguageID):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
