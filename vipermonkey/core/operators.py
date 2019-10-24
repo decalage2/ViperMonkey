@@ -43,6 +43,7 @@ __version__ = '0.03'
 # --- IMPORTS ------------------------------------------------------------------
 
 import sys
+from collections import Iterable
 
 from vba_object import *
 
@@ -77,7 +78,7 @@ class Sum(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
         
         # return the sum of all the arguments:
@@ -123,7 +124,7 @@ class Eqv(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the eqv of all the arguments:
@@ -157,7 +158,7 @@ class Xor(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the xor of all the arguments:
@@ -194,7 +195,7 @@ class And(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the and of all the arguments:
@@ -231,7 +232,7 @@ class Or(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the and of all the arguments:
@@ -269,7 +270,7 @@ class Not(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the and of all the arguments:
@@ -302,7 +303,7 @@ class Neg(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the and of all the arguments:
@@ -336,7 +337,7 @@ class Subtraction(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the subtraction of all the arguments:
@@ -390,7 +391,7 @@ class Multiplication(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the multiplication of all the arguments:
@@ -427,7 +428,7 @@ class Power(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the exponentiation of all the arguments:
@@ -464,7 +465,7 @@ class Division(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the division of all the arguments:
@@ -506,7 +507,7 @@ class MultiOp(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         try:
@@ -569,7 +570,7 @@ class FloorDivision(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the floor division of all the arguments:
@@ -608,7 +609,7 @@ class Concatenation(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the concatenation of all the arguments:
@@ -645,7 +646,7 @@ class Mod(VBA_Object):
 
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
-        if ("**MATCH ANY**" in evaluated_args):
+        if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
             return "**MATCH ANY**"
 
         # return the sum of all the arguments:

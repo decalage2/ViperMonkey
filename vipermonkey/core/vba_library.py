@@ -469,7 +469,7 @@ class Left(VbaLibraryFunc):
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (s == "**MATCH ANY**"):
+        if (str(s).strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."
@@ -537,7 +537,7 @@ class Right(VbaLibraryFunc):
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (s == "**MATCH ANY**"):
+        if (str(s).strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."

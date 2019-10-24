@@ -150,7 +150,7 @@ class Asc(VBA_Object):
         c = eval_arg(self.arg, context)
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (c == "**MATCH ANY**"):
+        if (str(c).strip() == "**MATCH ANY**"):
             return c
         
         # Calling Asc() on int?

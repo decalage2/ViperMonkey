@@ -613,6 +613,10 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
+    try:
+        iterator = iter(args)
+    except TypeError:
+        return args
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
     return r
 
