@@ -96,8 +96,9 @@ def get_ole_textbox_values(obj, vba_code):
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
     form_str = "Microsoft Forms 2.0"
+    form_str_pat = r"Microsoft Forms 2.0 [A-Za-z]{2,30}(?!Form)"
     field_marker = "Forms."
-    if (form_str not in data):
+    if (re.search(form_str_pat, data) is None):
         if debug:
             print "NO FORMS"
             sys.exit(0)
@@ -108,14 +109,15 @@ def get_ole_textbox_values(obj, vba_code):
     r = []
     found_names = set()
     long_strs = []
-    while (form_str in data[index:]):
+    while (re.search(form_str_pat, data[index:]) is not None):
 
         # Break out the data for an embedded OLE textbox form.
 
         # Move to the end of specific versions of the form string.
         # "Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox", etc.
-        index = data[index:].index(form_str) + index
-        start = index + len(form_str)
+        search_r = re.search(form_str_pat, data[index:])
+        index = search_r.start() + index
+        start = index + len(search_r.group(0))
         while ((start < len(data)) and (ord(data[start]) in range(32, 127))):
             start += 1
 
@@ -319,8 +321,11 @@ def get_ole_textbox_values(obj, vba_code):
                 print strs[name_pos + 1]
                 
             # Only used with large text values?
-            if (len(strs[name_pos + 1]) > 20):
+            if (len(strs[name_pos + 1]) > 10):
                 text = strs[name_pos + 1]
+                if debug:
+                    print "Value: 2"
+                    print strs[name_pos + 1]
 
         # Break out the (possible additional) value.
         val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
@@ -329,8 +334,11 @@ def get_ole_textbox_values(obj, vba_code):
             empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
             if (len(re.findall(empty_pat, vals[0])) == 0):
                 poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
-                if (poss_val != text):
+                if ((poss_val != text) and (len(poss_val) > 1)):
                     text += poss_val.replace("\x00", "")
+                    if debug:
+                        print "Value: 3"
+                        print poss_val.replace("\x00", "")
 
         # Pattern 2                    
         val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
@@ -341,7 +349,7 @@ def get_ole_textbox_values(obj, vba_code):
                 poss_val = tmp_text[0]
                 if (poss_val != text):
                     if debug:
-                        print "Value: 3"
+                        print "Value: 4"
                         print poss_val
                     text += poss_val
 
@@ -351,6 +359,9 @@ def get_ole_textbox_values(obj, vba_code):
         if (len(vals) > 0):
             for v in vals:
                 text += v
+                if debug:
+                    print "Value: 5"
+                    print v
 
         # Pattern 4
         val_pat = r"([\x20-\x7e]{5,})\x00{2,4}\x02\x0c"
@@ -358,12 +369,21 @@ def get_ole_textbox_values(obj, vba_code):
         if (len(vals) > 0):
             for v in vals:
                 text += v
+                if debug:
+                    print "Value: 6"
+                    print v
                 
         # Maybe big chunks of text after the name are part of the value?
         for pos in range(name_pos + 2, len(strs)):
             curr_str = strs[pos].replace("\x00", "")
-            if (len(curr_str) > 40):
+            if ((len(curr_str) > 40) and (not curr_str.startswith("Microsoft "))):
                 text += curr_str
+
+        if debug:
+            print "ORIG:"
+            print name
+            print text
+            print len(text)
                 
         # Pull out the size of the text.
         # Try version 1.
@@ -377,14 +397,15 @@ def get_ole_textbox_values(obj, vba_code):
             # Try version 3.
             size_pat = r"\xf8\x00\x28\x00\x00\x00(.{2})"
             tmp = re.findall(size_pat, chunk)
+        if (len(tmp) == 0):
+            # Try version 4.
+            size_pat = r"\x2c\x00\x00\x00\x1d\x00\x00\x00(.{2})"
+            tmp = re.findall(size_pat, chunk)
         if (len(tmp) > 0):
             size_bytes = tmp[0]
             size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
-            if debug:
-                print "ORIG:"
-                print name
-                print text
-                print len(text)
+            if (debug):
+                print "SIZE: "
                 print size
             if (len(text) > size):
                 text = text[:size]
@@ -395,7 +416,9 @@ def get_ole_textbox_values(obj, vba_code):
         # Save long strings. Maybe they are the value of a previous variable?
         longest_str = ""
         for field in strs:
-            if ((len(field) > 30) and (len(field) > len(longest_str))):
+            if ((len(field) > 30) and
+                (len(field) > len(longest_str)) and
+                (not field.startswith("Microsoft "))):
                 longest_str = field
         long_strs.append(longest_str)
 

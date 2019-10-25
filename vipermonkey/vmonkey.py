@@ -915,12 +915,18 @@ def _remove_duplicate_iocs(iocs):
 
     # Track whether to keep an IOC string.
     r = set()
+    skip = set()
+    print("Found " + str(len(iocs)) + " possible IOCs. Stripping duplicates...")
     for ioc1 in iocs:
         keep_curr = True
         for ioc2 in iocs:
+            if (ioc2 in skip):
+                continue
             if ((ioc1 != ioc2) and (ioc1 in ioc2)):
                 keep_curr = False
                 break
+            if ((ioc1 != ioc2) and (ioc2 in ioc1)):
+                skip.add(ioc2)
         if (keep_curr):
             r.add(ioc1)
 

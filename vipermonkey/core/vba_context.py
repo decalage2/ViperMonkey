@@ -3524,9 +3524,10 @@ class Context(object):
         """
 
         # Is there a URL in the data?
+        got_ioc = False
         URL_REGEX = r'.*(http[s]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
         try:
-            value = str(value)
+            value = str(value).strip()
         except:
             return
         tmp_value = value
@@ -3534,17 +3535,38 @@ class Context(object):
             tmp_value = tmp_value[:100] + " ..."
         if (re.match(URL_REGEX, value) is not None):
             if (value not in intermediate_iocs):
-                log.info("Found intermediate IOC (URL): '" + tmp_value + "'")
-                intermediate_iocs.add(value)
+                got_ioc = True
+                log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
 
         # Is there base64 in the data?
         B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
         b64_strs = re.findall(B64_REGEX, value)
         for curr_value in b64_strs:
             if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
-                log.info("Found intermediate IOC (base64): '" + tmp_value + "'")
-                intermediate_iocs.add(value)
-        
+                got_ioc = True
+                log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
+
+        # Did we find anything?
+        if (not got_ioc):
+            return
+
+        # Is this new and interesting?
+        iocs_to_delete = set()
+        got_ioc = True
+        for old_value in intermediate_iocs:
+            if (value.startswith(old_value)):
+                iocs_to_delete.add(old_value)
+            if ((old_value.startswith(value)) and (len(old_value) > len(value))):
+                got_ioc = False
+
+        # Add the new IOC if it is interesting.
+        if (got_ioc):
+            intermediate_iocs.add(value)
+            
+        # Delete old IOCs if needed.
+        for old_ioc in iocs_to_delete:
+            intermediate_iocs.remove(old_ioc)
+            
     def set(self,
             name,
             value,
