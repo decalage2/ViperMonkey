@@ -39,6 +39,8 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.08'
 
+import string
+
 def is_mixed_wide_ascii_str(the_str):
     """
     Test a string to see if it is a mix of wide and ASCII chars.
@@ -247,7 +249,16 @@ class VbStr(object):
         if (isinstance(orig_str, list)):
             self.vb_str = orig_str
             return
-        
+
+        # Make sure we have a string.
+        try:
+            orig_str = str(orig_str)
+        except:
+            if (isinstance(orig_str, unicode)):
+                orig_str = ''.join(filter(lambda x:x in string.printable, orig_str))
+            else:
+                raise ValueError("Given value cannot be converted to a string.")
+                
         # If this is VBScript each character will be a single byte (like the Python
         # string).
         self.vb_str = []
@@ -269,6 +280,12 @@ class VbStr(object):
                     pos = 0
                     for bval in bts:
                         chars += chr(bval)
+                    #print tmp_str
+                    #print type(tmp_str)
+                    #print code
+                    #print type(code)
+                    #print pos
+                    #print type(pos)
                     tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + str(code) + "_" + str(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.

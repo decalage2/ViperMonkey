@@ -1236,16 +1236,18 @@ def _process_file (filename,
                         vm.globals[global_var_name.lower()] = form_string
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name.lower(), form_string))
                         tmp_name = global_var_name_orig.lower() + ".*"
-                        vm.globals[tmp_name] = form_string
-                        log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
-                        # Probably not right, but needed to handle some maldocs that break olefile.
-                        # 16555c7d12dfa6d1d001927c80e24659d683a29cb3cad243c9813536c2f8925e
-                        # 99f4991450003a2bb92aaf5d1af187ec34d57085d8af7061c032e2455f0b3cd3
-                        # 17005731c750286cae8fa61ce89afd3368ee18ea204afd08a7eb978fd039af68
-                        # a0c45d3d8c147427aea94dd15eac69c1e2689735a9fbd316a6a639c07facfbdf
-                        tmp_name = "textbox1"
-                        vm.globals[tmp_name] = form_string
-                        log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                        if ((tmp_name not in vm.globals.keys()) or
+                            (len(form_string) > len(vm.globals[tmp_name]))):
+                            vm.globals[tmp_name] = form_string
+                            log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                            # Probably not right, but needed to handle some maldocs that break olefile.
+                            # 16555c7d12dfa6d1d001927c80e24659d683a29cb3cad243c9813536c2f8925e
+                            # 99f4991450003a2bb92aaf5d1af187ec34d57085d8af7061c032e2455f0b3cd3
+                            # 17005731c750286cae8fa61ce89afd3368ee18ea204afd08a7eb978fd039af68
+                            # a0c45d3d8c147427aea94dd15eac69c1e2689735a9fbd316a6a639c07facfbdf
+                            tmp_name = "textbox1"
+                            vm.globals[tmp_name] = form_string
+                            log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 

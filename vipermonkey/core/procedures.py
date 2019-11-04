@@ -56,6 +56,10 @@ class Sub(VBA_Object):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name
         self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
         self.statements = tokens.statements
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
@@ -318,6 +322,10 @@ class Function(VBA_Object):
             self.return_type = tokens.return_type
         self.name = tokens.function_name
         self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
         self.statements = tokens.statements
         try:
             len(self.statements)
@@ -386,33 +394,34 @@ class Function(VBA_Object):
             
         # Set given parameter values.
         self.byref_params = {}
-        if ((params is not None) and (len(params) <= len(self.params))):
+        defined_param_pos = -1
+        for defined_param in self.params:
 
-            # TODO: handle named parameters
-            for i in range(len(params)):
+            # Get the given parameter at this position, if we have one.
+            defined_param_pos += 1
+            param_value = "NULL"
+            param_name = defined_param.name
+            if ((params is not None) and (defined_param_pos < len(params))):
+                param_value = params[defined_param_pos]
 
-                # Set the parameter value.
-                param_name = self.params[i].name
-                param_value = params[i]
+            # Handle empty string parameters.
+            if (((param_value == 0) or (param_value == "NULL")) and (defined_param.my_type == "String")):
+                param_value = ""
 
-                # Handle empty string parameters.
-                if ((param_value == 0) and (self.params[i].my_type == "String")):
-                    param_value = ""
-
-                # Coerce parameters to String if needed.
-                if (self.params[i].my_type == "String"):
-                    param_value = str(param_value)
+            # Coerce parameters to String if needed.
+            if (defined_param.my_type == "String"):
+                param_value = str(param_value)
                     
-                # Add the parameter value to the local function context.
-                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-                call_info[param_name] = param_value
+            # Add the parameter value to the local function context.
+            log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+            call_info[param_name] = param_value
 
-                # Is this a ByRef parameter?
-                if (self.params[i].mechanism == "ByRef"):
+            # Is this a ByRef parameter?
+            if (defined_param.mechanism == "ByRef"):
 
-                    # Save it so we can pull out the updated value in the Call statement.
-                    self.byref_params[(param_name, i)] = None
-            
+                # Save it so we can pull out the updated value in the Call statement.
+                self.byref_params[(param_name, defined_param_pos)] = None
+                
         # Do we have an obvious recursive loop? Detect this by looking for the current call
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.

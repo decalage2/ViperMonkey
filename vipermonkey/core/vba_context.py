@@ -692,6 +692,7 @@ class Context(object):
         self.globals["Revisions.Count".lower()] = 1 + random.randint(1, 3)
         self.globals["ReadyState".lower()] = "**MATCH ANY**"
         self.globals["Application.Caption".lower()] = "**MATCH ANY**"
+        self.globals["Application.System.Version".lower()] = "**MATCH ANY**"
         
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541

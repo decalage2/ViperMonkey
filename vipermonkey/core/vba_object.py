@@ -56,6 +56,7 @@ from logger import log
 import re
 from curses_ascii import isprint
 import traceback
+import string
 
 from inspect import getouterframes, currentframe
 import sys
@@ -820,7 +821,13 @@ def str_convert(arg):
     """
     if (arg == "NULL"):
         return ''
-    return str(arg)
+    try:
+        return str(arg)
+    except Exception as e:
+        if (isinstance(arg, unicode)):
+            return ''.join(filter(lambda x:x in string.printable, arg))
+        log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
+        return ''
 
 def strip_nonvb_chars(s):
     """

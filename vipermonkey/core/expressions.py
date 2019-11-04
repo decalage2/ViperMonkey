@@ -106,10 +106,11 @@ class SimpleNameExpression(VBA_Object):
                 # TODO: Need to also handle VbaLibraryFunc.
                 if ((isinstance(value, procedures.Function) or
                      isinstance(value, procedures.Sub)) and
-                    (len(value.params) > 0)):
+                    (value.min_param_length > 0)):
                     return "NULL"
 
                 # 0 parameter function. Evaluate it.
+                log.info("calling Function: " + str(value) + "()")
                 log.debug('evaluating function %r' % value)
                 value = value.eval(context)
                 log.debug('evaluated function %r = %r' % (self.name, value))
@@ -1439,9 +1440,12 @@ class Function_Call(VBA_Object):
                         # Set the values of the arguments passed as ByRef parameters.
                         if (hasattr(f, "byref_params")):
                             for byref_param_info in f.byref_params.keys():
-                                arg_var_name = str(self.params[byref_param_info[1]])
-                                if (context.contains(arg_var_name)):
-                                    context.set(arg_var_name, f.byref_params[byref_param_info])
+                                try:
+                                    arg_var_name = str(self.params[byref_param_info[1]])
+                                    if (context.contains(arg_var_name)):
+                                        context.set(arg_var_name, f.byref_params[byref_param_info])
+                                except IndexError:
+                                    break
 
                         # We are out of the called function, so if we exited the called function early
                         # it does not apply to the current function.
