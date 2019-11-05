@@ -47,6 +47,66 @@ import olefile
 from logger import log
 import filetype
 
+def get_msftedit_variables(obj):
+    """
+    Looks for variable/text value pairs stored in an embedded rich edit control.
+    See https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+    """
+
+    # Figure out if we have been given already read in data or a file name.
+    if obj[0:4] == '\xd0\xcf\x11\xe0':
+        #its the data blob
+        data = obj
+    else:
+        fname = obj
+        try:
+            f = open(fname, "rb")
+            data = f.read()
+            f.close()
+        except:
+            data = obj
+
+    # Is this an Office97 file?
+    if (not filetype.is_office97_file(data, True)):
+        return []
+    
+    # Pattern for the object data
+    pat = r"'\x01\xff\xff\x03.+?\x5c\x00\x70\x00\x61\x00\x72\x00\x0d\x00\x0a\x00\x7d"
+    r = []
+    for chunk in re.findall(pat, data, re.DOTALL):
+
+        # Names and values are wide character strings. Strip out the null bytes.
+        chunk = chunk.replace("\x00", "")
+    
+        # Pull out the name of the current thing .
+
+        # Marker 1
+        name_pat = r"'\x01\xff\xff\x03\x92\x03\x04([A-Za-z0-9_]+)"
+        names = re.findall(name_pat, chunk)
+
+        # Punt if no names found and just pull out everything that looks like it might be a name.
+        if (len(names) != 1):
+            name_pat = r"([A-Za-z0-9_]+)"
+            tmp = re.findall(name_pat, chunk)
+            names = []
+            for poss_name in tmp:
+                if (len(poss_name) < 30):
+                    names.append(poss_name)
+        
+        # Pull out the data for the current thing.
+        data_pat = r"\\fs\d{1,3} (.+)\\par"
+        chunk_data = re.findall(data_pat, chunk, re.DOTALL)
+        if (len(chunk_data) != 1):
+            continue
+        chunk_data = chunk_data[0]
+
+        # Save the variable/value pairs.
+        for chunk_name in names:
+            r.append((chunk_name, chunk_data))
+
+    # Done.
+    return r
+
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.

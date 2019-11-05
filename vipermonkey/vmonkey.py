@@ -1081,8 +1081,10 @@ def _process_file (filename,
                 vba_code += macro_code
                     
             # Pull out embedded OLE form textbox text.
-            log.info("Reading TextBox object text fields...")
-            for (var_name, var_val) in read_ole_fields.get_ole_textbox_values(data, vba_code):
+            log.info("Reading TextBox and RichEdit object text fields...")
+            object_data = read_ole_fields.get_ole_textbox_values(data, vba_code)
+            object_data.extend(read_ole_fields.get_msftedit_variables(data))
+            for (var_name, var_val) in object_data:
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
                 tmp_var_name = "ActiveDocument." + var_name
