@@ -47,29 +47,52 @@ import olefile
 from logger import log
 import filetype
 
-def get_msftedit_variables(obj):
+def unzip_data(data):
     """
-    Looks for variable/text value pairs stored in an embedded rich edit control.
+    Unzip zipped data in memory.
+    """
+
+    # Unzip the data.
+    # PKZip magic #: 50 4B 03 04
+    zip_magic = chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)
+    contents = None
+    delete_file = False
+    fname = None
+    if data.startswith(zip_magic):
+        #raise ValueError("_get_shapes_text_values_2007() currently does not support in-memory Office files.")
+        # TODO: Fix this. For now just save to a tmp file.
+        tmp_name = "/tmp/" + str(random.randrange(0, 10000000000)) + ".office"
+        f = open(tmp_name, 'wb')
+        f.write(data)
+        f.close()
+        fname = tmp_name
+        delete_file = True
+    else:
+        return (None, None)
+        
+    # Is this a ZIP file?
+    try:
+        if (not zipfile.is_zipfile(fname)):
+            if (delete_file):
+                os.remove(fname)
+            return (None, None)
+    except:
+        if (delete_file):
+            os.remove(fname)
+        return (None, None)
+        
+    # This is a ZIP file. Unzip it.
+    unzipped_data = zipfile.ZipFile(fname, 'r')
+
+    # Return the unzipped data and temp file name.
+    return (unzipped_data, fname)
+    
+def get_msftedit_variables_97(data):
+    """
+    Looks for variable/text value pairs stored in an embedded rich edit control from an Office 97 doc.
     See https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
     """
 
-    # Figure out if we have been given already read in data or a file name.
-    if obj[0:4] == '\xd0\xcf\x11\xe0':
-        #its the data blob
-        data = obj
-    else:
-        fname = obj
-        try:
-            f = open(fname, "rb")
-            data = f.read()
-            f.close()
-        except:
-            data = obj
-
-    # Is this an Office97 file?
-    if (not filetype.is_office97_file(data, True)):
-        return []
-    
     # Pattern for the object data
     pat = r"'\x01\xff\xff\x03.+?\x5c\x00\x70\x00\x61\x00\x72\x00\x0d\x00\x0a\x00\x7d"
     r = []
@@ -106,6 +129,32 @@ def get_msftedit_variables(obj):
 
     # Done.
     return r
+
+def get_msftedit_variables(obj):
+    """
+    Looks for variable/text value pairs stored in an embedded rich edit control from an Office 97 or 2007+ doc.
+    See https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+    """
+
+    # Figure out if we have been given already read in data or a file name.
+    if obj[0:4] == '\xd0\xcf\x11\xe0':
+        #its the data blob
+        data = obj
+    else:
+        fname = obj
+        try:
+            f = open(fname, "rb")
+            data = f.read()
+            f.close()
+        except:
+            data = obj
+
+    # Is this an Office 97 file?
+    if (filetype.is_office97_file(data, True)):
+        return get_msftedit_variables_97(data)
+
+    # This is an Office 2007+ file.
+    return []
 
 def get_ole_textbox_values(obj, vba_code):
     """
@@ -745,40 +794,86 @@ def _get_shapes_text_values_direct_2007(data):
     r = [(name, val)]
     return r
 
+def _parse_activex_chunk(data):
+    """
+    Parse out ActiveX text values from 2007+ activeXN.bin file contents.
+    """
+
+    # Pull out the text associated with the object.
+    anchor = None
+    pad = 0
+    if (b"\x1a\x00\x00\x00\x23" in data):
+        anchor = b"\x1a\x00\x00\x00\x23"
+        pad = 3
+    elif (b"\x05\x00\x00\x00\x01\x00\x00\x80" in data):
+        anchor = b"\x05\x00\x00\x00\x01\x00\x00\x80"
+        pad = 16
+    elif (b"\x30\x01\x00\x00" in data):
+        anchor = b"\x30\x01\x00\x00"
+    if (anchor is None):
+        return None
+    start = data.rindex(anchor) + len(anchor) + pad
+    pat = r"([\x20-\x7e]+)"
+    text = re.findall(pat, data[start:])
+    if (len(text) == 0):
+        return None
+    text = text[0]
+
+    # Pull out the size of the text.
+    # Try version 1.
+    size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+    tmp = re.findall(size_pat, data)
+    if (len(tmp) == 0):
+        # Try version 2.
+        size_pat = r"\x48\x80\x2c(.{2})"
+        tmp = re.findall(size_pat, data)
+    if (len(tmp) == 0):
+        # Try version 3.
+        size_pat = r"\x00\x01\x00\x00\x80(.{2})"
+        tmp = re.findall(size_pat, data)
+    if (len(tmp) > 0):
+        size_bytes = tmp[0]
+        size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+        #print "size: " + str(size)
+        if (len(text) > size):
+            text = text[:size]
+        
+    # Debug.
+    #print "---------"
+    #print shape
+    #print "^^^^^^^"
+    #print data
+    #print "^^^^^^^"
+    #print text
+
+    return text
+
+def _parse_activex_rich_edit(data):
+    """
+    Parse out Rich Edit control text values from 2007+ activeXN.bin file contents.
+    """
+
+    # No wide char null padding.
+    data = data.replace("\x00", "")
+
+    # Pull out the data.
+    pat = r"\\fs\d{1,4} (.+)\\par"
+    val = re.findall(pat, data)
+    if (len(val) == 0):
+        return None
+    return val[0]
+    
 def _get_shapes_text_values_2007(fname):
     """
     Read in the text associated with Shape objects in a document saved
     in the 2007+ format.
     """
-
-    # Unzip the file.
-    # PKZip magic #: 50 4B 03 04
-    zip_magic = chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)
-    contents = None
-    delete_file = False
-    if fname.startswith(zip_magic):
-        #raise ValueError("_get_shapes_text_values_2007() currently does not support in-memory Office files.")
-        # TODO: Fix this. For now just save to a tmp file.
-        tmp_name = "/tmp/" + str(random.randrange(0, 10000000000)) + ".office"
-        f = open(tmp_name, 'wb')
-        f.write(fname)
-        f.close()
-        fname = tmp_name
-        delete_file = True
-
-    # Is this a ZIP file?
-    try:
-        if (not zipfile.is_zipfile(fname)):
-            if (delete_file):
-                os.remove(fname)
-            return []
-    except:
-        if (delete_file):
-            os.remove(fname)
-        return []
         
-    # This is a 2007+ Office file. Unzip it.
-    unzipped_data = zipfile.ZipFile(fname, 'r')
+    # This might be a 2007+ Office file. Unzip it.
+    unzipped_data, fname = unzip_data(fname)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return []
 
     # Shapes with internal IDs are in word/document.xml. Does that file exist?
     zip_subfile = 'word/document.xml'
@@ -850,53 +945,15 @@ def _get_shapes_text_values_2007(fname):
         data = f1.read()
         f1.close()
 
-        # Pull out the text associated with the object.
-        anchor = None
-        pad = 0
-        if (b"\x1a\x00\x00\x00\x23" in data):
-            anchor = b"\x1a\x00\x00\x00\x23"
-            pad = 3
-        elif (b"\x05\x00\x00\x00\x01\x00\x00\x80" in data):
-            anchor = b"\x05\x00\x00\x00\x01\x00\x00\x80"
-            pad = 16
-        elif (b"\x30\x01\x00\x00" in data):
-            anchor = b"\x30\x01\x00\x00"
-        if (anchor is None):
-            continue
-        start = data.rindex(anchor) + len(anchor) + pad
-        pat = r"([\x20-\x7e]+)"
-        text = re.findall(pat, data[start:])
-        if (len(text) == 0):
-            continue
-        text = text[0]
+        # Is this a regular ActiveX object?
+        text = _parse_activex_chunk(data)
 
-        # Pull out the size of the text.
-        # Try version 1.
-        size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
-        tmp = re.findall(size_pat, data)
-        if (len(tmp) == 0):
-            # Try version 2.
-            size_pat = r"\x48\x80\x2c(.{2})"
-            tmp = re.findall(size_pat, data)
-        if (len(tmp) == 0):
-            # Try version 3.
-            size_pat = r"\x00\x01\x00\x00\x80(.{2})"
-            tmp = re.findall(size_pat, data)
-        if (len(tmp) > 0):
-            size_bytes = tmp[0]
-            size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
-            #print "size: " + str(size)
-            if (len(text) > size):
-                text = text[:size]
-        
-        # Debug.
-        #print "---------"
-        #print shape
-        #print "^^^^^^^"
-        #print data
-        #print "^^^^^^^"
-        #print text
-
+        # Is this a Rich Edit control?
+        if (text is None):
+            text = _parse_activex_rich_edit(data)
+        if (text is None):
+            continue
+            
         # Save the text associated with the variable name.
         r.append((id_name_map[shape], text))
     
@@ -904,6 +961,7 @@ def _get_shapes_text_values_2007(fname):
     unzipped_data.close()
     if (delete_file):
         os.remove(fname)
+    #print r
     #sys.exit(0)
     return r
 
