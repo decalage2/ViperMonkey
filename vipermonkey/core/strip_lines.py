@@ -399,6 +399,7 @@ def fix_difficult_code(vba_code):
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
+        ("^" not in vba_code) and
         ("Rem " not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
@@ -436,7 +437,7 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
         
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]"]
+    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]", r"\^"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -535,6 +536,11 @@ def fix_difficult_code(vba_code):
         # Need to change "!" member access to "."?
         if ((c == "!") and (next_char.isalpha())):
             r += "."
+            continue
+
+        # Add spaces areound "^" operators.
+        if (c == "^"):
+            r += " ^ "
             continue
 
         # Need to eliminate bogus =+ assignments.
@@ -1009,6 +1015,28 @@ def strip_useless_code(vba_code, local_funcs):
             
         # The line is useful. Keep it.
 
+        # Break up things like "Function foo(bar) a = 1 ..." to "Function foo(bar)\na = 1 ...".
+        tmp_line = line.lower().strip()
+        if ((tmp_line.startswith("function ")) and (not tmp_line.endswith(")"))):
+            paren_count = 0
+            got_paren = False
+            pos = -1
+            tmp_line = ""
+            for c in line:
+                pos += 1
+                tmp_line += c
+                if (c == "("):
+                    got_paren = True
+                    paren_count += 1
+                if (c == ")"):
+                    paren_count -= 1
+                if ((got_paren) and (paren_count == 0)):
+                    tmp_line += "\n"
+                    break
+            if ((pos + 1) < len(line)):
+                tmp_line += line[pos + 1:]
+            line = tmp_line
+        
         # At least 1 maldoc builder is not putting a newline before the
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
@@ -1019,7 +1047,7 @@ def strip_useless_code(vba_code, local_funcs):
             r += tmp_line + "\n"
             r += "End Function\n"
             continue
-
+            
         # Fix Application.Run "foo, bar baz" type expressions by removing
         # the quotes.
         if (line.strip().startswith("Application.Run") and
