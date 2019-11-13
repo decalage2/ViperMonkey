@@ -495,7 +495,7 @@ class MemberAccessExpression(VBA_Object):
         # TODO: Should we be actually reading files from the system?
         # Read the file contents.
         try:
-            f = open(read_file, 'r')
+            f = open(read_file, 'rb')
             r = f.read()
             f.close()
             return r
@@ -506,7 +506,7 @@ class MemberAccessExpression(VBA_Object):
                 read_file = read_file.replace("C:\\", "./")
 
             try:
-                f = open(read_file, 'r')
+                f = open(read_file, 'rb')
                 r = f.read()
                 f.close()
                 return r
@@ -1377,7 +1377,7 @@ class Function_Call(VBA_Object):
 
             # Get the (possible) function.
             f = context.get(self.name)
-
+            
             # Is this actually a hash lookup?
             if (isinstance(f, dict)):
 

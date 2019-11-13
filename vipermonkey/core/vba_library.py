@@ -702,6 +702,7 @@ class Execute(VbaLibraryFunc):
         
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
+
         # Why am I doing this?
         #command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
@@ -1273,12 +1274,12 @@ class Replace(VbaLibraryFunc):
         if (string is None):
             string = ''
         pat = str(params[1])
-        if (pat is None):
-            pat = ''
+        if ((pat is None) or (pat == '')):
+            return string
         rep = str(params[2])
         if ((rep is None) or (rep == 0)):
             rep = ''
-
+            
         # regex replacement?
         if (params[-1] == "<-- USE REGEX -->"):
             
@@ -3530,8 +3531,8 @@ for name, value in (
         ('vbBack', '\n'),
         ('vbCr', '\r'),
         # From OleVBA the EOL character is just '\n'.
-        #('vbCrLf', '\r\n'),
-        ('vbCrLf', '\n'),
+        ('vbCrLf', '\r\n'),
+        #('vbCrLf', '\n'),
         ('vbFormFeed', '\f'),
         ('vbLf', '\n'),
         ('vbNewLine', '\r\n'),

@@ -3355,13 +3355,14 @@ class Context(object):
         else:            
             raise KeyError('Library function %r not found' % name)
 
-    def _get(self, name):
+    def __get(self, name, case_insensitive=True, local_only=False):
 
         if (not isinstance(name, basestring)):
             raise KeyError('Object %r not found' % name)
 
-        # convert to lowercase
-        name = name.lower()
+        # convert to lowercase if needed.
+        if (case_insensitive):
+            name = name.lower()
         log.debug("Looking for var '" + name + "'...")
 
         # We will always say that a directory is not accessible.
@@ -3374,15 +3375,15 @@ class Context(object):
             log.debug('Found %r in locals' % name)
             return self.locals[name]
         # second, in globals:
-        elif name in self.globals:
+        elif ((not local_only) and (name in self.globals)):
             log.debug('Found %r in globals' % name)
             return self.globals[name]
         # next, search in the global VBA library:
-        elif name in VBA_LIBRARY:
+        elif ((not local_only) and (name in VBA_LIBRARY)):
             log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]
         # Is it a doc var?
-        elif name in self.doc_vars:
+        elif ((not local_only) and (name in self.doc_vars)):
             log.debug('Found %r in VBA document variables' % name)
             return self.doc_vars[name]
         # Unknown symbol.
@@ -3392,7 +3393,7 @@ class Context(object):
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
 
-    def get(self, name, search_wildcard=True):
+    def _get(self, name, search_wildcard=True, case_insensitive=True, local_only=False):
         
         # See if this is an aliased reference to an objects .Text field.
         name = str(name)
@@ -3404,13 +3405,13 @@ class Context(object):
         # Try to get the item using the current with context.
         tmp_name = str(self.with_prefix) + "." + str(name)
         try:
-            return self._get(tmp_name)
+            return self.__get(tmp_name, case_insensitive=case_insensitive, local_only=local_only)
         except KeyError:
             pass
 
         # Now try it without the current with context.
         try:
-            return self._get(str(name))
+            return self.__get(str(name), case_insensitive=case_insensitive, local_only=local_only)
         except KeyError:
             pass
 
@@ -3420,7 +3421,7 @@ class Context(object):
             # Look for faked object field.
             new_name = "me." + name[name.index(".")+1:]
             try:
-                return self._get(str(new_name))
+                return self.__get(str(new_name), case_insensitive=case_insensitive, local_only=local_only)
             except KeyError:
                 pass
 
@@ -3428,15 +3429,21 @@ class Context(object):
             if (search_wildcard):
                 new_name = name[:name.index(".")] + ".*"
                 try:
-                    r = self._get(str(new_name))
+                    r = self.__get(str(new_name), case_insensitive=case_insensitive, local_only=local_only)
                     log.debug("Found wildcarded field value " + new_name + " = " + str(r))
                     return r
                 except KeyError:
                     pass
             
         # See if the variable was initially defined with a trailing '$'.
-        return self._get(str(name) + "$")
+        return self.__get(str(name) + "$", case_insensitive=case_insensitive, local_only=local_only)
         
+    def get(self, name, search_wildcard=True, local_only=False):
+        try:
+            return self._get(name, search_wildcard=search_wildcard, case_insensitive=False, local_only=local_only)
+        except KeyError:
+            return self._get(name, search_wildcard=search_wildcard, case_insensitive=True, local_only=local_only)
+            
     def contains(self, name, local=False):
         if (local):
             return (str(name).lower() in self.locals)
@@ -3593,7 +3600,7 @@ class Context(object):
         
         # convert to lowercase
         name = name.lower()
-
+        
         # Set the variable
         if (force_global):
             try:

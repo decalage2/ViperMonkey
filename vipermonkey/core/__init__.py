@@ -168,6 +168,10 @@ class ViperMonkey(object):
         else:
             self.is_vbscript = True
             log.info("Emulating a VBScript file.")
+
+        # Olevba uses '\n' as EOL, regular VBScript uses '\r\n'.
+        if (self.is_vbscript == True):
+            vba_library.VBA_LIBRARY['vbCrLf'] = '\r\n'
             
         # Track the loaded Excel spreadsheet (xlrd).
         self.loaded_excel = None
@@ -231,9 +235,11 @@ class ViperMonkey(object):
         for name, _sub in m.subs.items():
             log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
+            self.globals[name] = _sub
         for name, _function in m.functions.items():
             log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
+            self.globals[name] = _function
         for name, _function in m.external_functions.items():
             log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function

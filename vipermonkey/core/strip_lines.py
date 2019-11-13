@@ -639,7 +639,7 @@ def fix_vba_code(vba_code):
     vba_code = re.sub(r"\n:", "\n", vba_code)
 
     # Clear out some garbage characters.
-    vba_code = vba_code.replace('\x0b', '')
+    #vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
 
     # It looks like VBA supports variable and function names containing

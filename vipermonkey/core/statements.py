@@ -848,7 +848,7 @@ class Let_Statement(VBA_Object):
         if ((context.contains(self.name)) and
             (isinstance(context.get(self.name), procedures.Function))):
             log.debug("Adding uninitialized '" + str(self.name) + "' function return var to local context.")
-            context.set(self.name, 'NULL')
+            context.set(self.name, 'NULL', force_local=True)
         
         # evaluate value of right operand:
         log.debug('try eval expression: %s' % self.expression)

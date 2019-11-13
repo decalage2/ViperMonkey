@@ -491,7 +491,7 @@ class Function(VBA_Object):
                     self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
             # Get the return value.
-            return_value = context.get(self.name)
+            return_value = context.get(self.name, local_only=True)
             if ((return_value is None) or (isinstance(return_value, Function))):
                 return_value = ''
             log.debug('Function %s: return value = %r' % (self.name, return_value))
