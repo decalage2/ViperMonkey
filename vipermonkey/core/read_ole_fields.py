@@ -180,8 +180,9 @@ def get_ole_textbox_values1(data):
     # Clear out some cruft that appears in the value chunk.
     ignore_pat = r"\[Host Extender Info\]\x0d\x0a&H\d+={[A-Z0-9\-]+};VBE;&H\d+\x0d\x0a&H\d+={[A-Z0-9\-]+}?"
     chunk = re.sub(ignore_pat, "", chunk)
-    start = chunk.index("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80")
-    chunk = chunk[start+1:]
+    if ("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80" in chunk):
+        start = chunk.index("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80")
+        chunk = chunk[start+1:]
 
     # Pull out the strings from the value chunk.
     ascii_pat = r"(?:[\x20-\x7f]|\x0d\x0a){5,}"
@@ -751,12 +752,15 @@ def get_ole_textbox_values(obj, vba_code):
     # Merge in the variable/value pairs from the alternate method. Override method 2
     # results with method 1 results.
     tmp = []
+    v2_vals = r
     for v1_pair in v1_vals:
         tmp.append(v1_pair)
-        for v2_pair in r:
+        for v2_pair in v2_vals:
             if (v1_pair[0] != v2_pair[0]):
                 tmp.append(v2_pair)
     r = tmp
+    if (len(r) == 0):
+        r = v2_vals
     
     # Return the OLE form textbox information.
     if debug:
