@@ -156,6 +156,107 @@ def get_msftedit_variables(obj):
     # This is an Office 2007+ file.
     return []
 
+def get_ole_textbox_values1(data):
+    """
+    Read in the text associated with embedded OLE form textbox objects.
+    NOTE: This currently is a really NASTY hack.
+    """
+
+    # This handles some form of ActiveX object embedding where the list of object names
+    # appears in a different file location than the text values associated with the
+    # object names.
+
+    # Find the object text values.
+
+    # Pull out the chunk of data with the object values.
+    chunk_pat = r'DPB=".*"\x0d\x0aGC=".*"\x0d\x0a(.*;Word8.0;&H00000000)'
+    chunk = re.findall(chunk_pat, data, re.DOTALL)
+
+    # Did we find the value chunk?
+    if (len(chunk) == 0):
+        return []
+    chunk = chunk[0]
+
+    # Clear out some cruft that appears in the value chunk.
+    ignore_pat = r"\[Host Extender Info\]\x0d\x0a&H\d+={[A-Z0-9\-]+};VBE;&H\d+\x0d\x0a&H\d+={[A-Z0-9\-]+}?"
+    chunk = re.sub(ignore_pat, "", chunk)
+    start = chunk.index("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80")
+    chunk = chunk[start+1:]
+
+    # Pull out the strings from the value chunk.
+    ascii_pat = r"(?:[\x20-\x7f]|\x0d\x0a){5,}"
+    vals = re.findall(ascii_pat, chunk)
+    vals = vals[:-1]
+    tmp_vals = []
+    for val in vals:
+
+        # Skip fonts.
+        if (val.startswith("Taho")):
+            continue
+        tmp_vals.append(val)
+    vals = tmp_vals
+    #print "---------------"
+    #print vals
+    #print len(vals)
+
+    # Pull out the object names.
+
+    # Pull out the data chunk with the object names.
+    name_pat = r"\\MSForms.exd(.*)Microsoft Forms 2.0 Form\x00\x10\x00\x00\x00Embedded Object"
+    chunk = re.findall(name_pat, data, re.DOTALL)
+
+    # Did we find the name chunk?
+    if (len(chunk) == 0):
+        #print "NO NAMES"
+        return []
+    chunk_orig = chunk[0]
+
+    # Narrow the name chunk down.
+    start = chunk_orig.index("C\x00o\x00m\x00p\x00O\x00b\x00j")
+    chunk = chunk_orig[start + len("C\x00o\x00m\x00p\x00O\x00b\x00j"):]
+    #print "---------------"
+    #print chunk
+
+    # Pull the names from the name chunk (ASCII strings).
+    names = re.findall(ascii_pat, chunk)
+    if (len(names) > 0):
+        names = names[:-1]
+    if (len(names) == 0):
+        start = chunk_orig.index("Document")
+        chunk = chunk_orig[start + len("Document"):]
+        names = re.findall(ascii_pat, chunk)
+        names = names[:-1]
+    #print "---------------"
+    #print names
+    #print len(names)
+
+    # If we have more names than values skip the first few names.
+    if (len(names) > len(vals)):
+        #print "NOT SAME # NAMES/VALS"
+        names = names[len(names) - len(vals):]
+
+    # Collect up and return the name -> value mappings.
+    pos = -1
+    r = []
+    for n in names:
+        pos += 1
+        r.append((n, vals[pos]))
+
+        # Some extra characters sometimes are on the end of the names. Brute force this
+        # by just returning multiple name variants with characters chopped off the end.
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, vals[pos]))
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, vals[pos]))
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, vals[pos]))
+
+    # Done.
+    return r
+
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -178,6 +279,9 @@ def get_ole_textbox_values(obj, vba_code):
     # Is this an Office97 file?
     if (not filetype.is_office97_file(data, True)):
         return []
+
+    # First try alternate method of pulling data. These will be merged in later.
+    v1_vals = get_ole_textbox_values1(obj)
     
     # Set to True to print lots of debugging.
     #debug = True
@@ -213,11 +317,12 @@ def get_ole_textbox_values(obj, vba_code):
             sys.exit(0)
         return []
 
-    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
+    pat = r"(?:[\x20-\x7e]{3,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){3,})"
     index = 0
     r = []
     found_names = set()
     long_strs = []
+    end_object_marker = "D\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00S\x00u\x00m\x00m\x00a\x00r\x00y\x00I\x00n\x00f\x00o\x00r\x00m\x00a\x00t\x00i\x00o\x00n"
     while (re.search(form_str_pat, data[index:]) is not None):
 
         # Break out the data for an embedded OLE textbox form.
@@ -231,12 +336,27 @@ def get_ole_textbox_values(obj, vba_code):
             start += 1
 
         # More textbox forms?
-        if (form_str in data[start:]):
+        if ((form_str in data[start:]) and
+            (end_object_marker in data[start:]) and
+            (data[start:].index(end_object_marker) < data[start:].index(form_str))):
+
+            # Other form chunks appear later in the file, but this is the end of
+            # the current group of form chunks.
+            end = data[start:].index(end_object_marker) + start
+
+        # Not at end of current group of form chunks.
+        elif (form_str in data[start:]):
 
             # Just look at the current form chunk.
             end = data[start:].index(form_str) + start
 
-        # No more textbox forms.
+        # No more textbox forms. Look for end object marker.
+        elif (end_object_marker in data[start:]):
+
+            # Just look at the current form chunk.
+            end = data[start:].index(end_object_marker) + start
+
+        # No more textbox forms and no end marker. Punt.
         else:
 
             # Jump an arbitrary amount ahead.
@@ -430,7 +550,7 @@ def get_ole_textbox_values(obj, vba_code):
                 print strs[name_pos + 1]
                 
             # Only used with large text values?
-            if (len(strs[name_pos + 1]) > 10):
+            if (len(strs[name_pos + 1]) > 3):
                 text = strs[name_pos + 1]
                 if debug:
                     print "Value: 2"
@@ -627,12 +747,23 @@ def get_ole_textbox_values(obj, vba_code):
         tmp.append((curr_var, curr_val))
         last_val = curr_val
     r = tmp
+
+    # Merge in the variable/value pairs from the alternate method. Override method 2
+    # results with method 1 results.
+    tmp = []
+    for v1_pair in v1_vals:
+        tmp.append(v1_pair)
+        for v2_pair in r:
+            if (v1_pair[0] != v2_pair[0]):
+                tmp.append(v2_pair)
+    r = tmp
     
     # Return the OLE form textbox information.
     if debug:
         print "" 
         print r
         sys.exit(0)
+
     return r
 
 def _read_form_strings(vba):
