@@ -452,7 +452,7 @@ class MemberAccessExpression(VBA_Object):
         if ("(" in tmp):
             tmp = tmp[:tmp.rindex("(")]
         val = context.get_doc_var(tmp, search_wildcard=False)
-
+        
         # Are we referencing an item by index?
         # zQGGrrccT('0').Caption
         if (("(" in str(self.lhs)) and
@@ -1108,8 +1108,9 @@ class MemberAccessExpression(VBA_Object):
 
             # Do we know what the RHS variable evaluates to?
             tmp_rhs = eval_arg(rhs, context)
+            var_pat = r"[A-za-z_0-9]+"
             if ((tmp_rhs != rhs) and
-                ((tmp_lhs == "NULL") or (str(tmp_lhs).lower().endswith(".application"))) and
+                ((re.match(var_pat, tmp_lhs) is not None) or (str(tmp_lhs).lower().endswith(".application"))) and
                 (tmp_rhs != "NULL") and
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 log.debug("Resolved member access variable.")
@@ -1119,6 +1120,10 @@ class MemberAccessExpression(VBA_Object):
             log.debug("MemberAccess: Return new access object " + str(r))
             return r
 
+        # Try reading as variable.
+        elif (context.contains(rhs)):
+            return context.get(rhs)
+        
         # Punt and just try to eval this as a string.
         else:
             return eval_arg(self.__repr__(), context)

@@ -3505,6 +3505,7 @@ log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
 # TODO: 6.1.1 Predefined Enums => complete the library here
 
 for name, value in (
+        
         # 6.1.1.12 VbMsgBoxStyle
         ('vbAbortRetryIgnore', 2),
         ('vbApplicationModal', 0),
