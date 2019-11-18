@@ -5,6 +5,7 @@
 
 import sys
 import os
+# sudo apt install python3-uno
 # sudo pip3 install psutil
 import psutil
 import subprocess
@@ -29,7 +30,7 @@ def is_word_file(maldoc):
     @return (bool) True if the file is a Word file, False if not.
     """
     typ = subprocess.check_output(["file", maldoc])
-    return (b"Word" in typ)
+    return ((b"Microsoft Office Word" in typ) or (b"Word 2007+" in typ))
 
 def run_soffice():
 
@@ -85,7 +86,7 @@ def get_text(fname):
 
     # Get the text.
     r = str(component.getText().getString())
-
+    
     # Close the doc.
     component.close(True)
 
