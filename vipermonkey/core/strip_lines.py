@@ -1017,22 +1017,13 @@ def strip_useless_code(vba_code, local_funcs):
 
         # Break up things like "Function foo(bar) a = 1 ..." to "Function foo(bar)\na = 1 ...".
         tmp_line = line.lower().strip()
-        if ((tmp_line.startswith("function ")) and (not tmp_line.endswith(")"))):
-            paren_count = 0
-            got_paren = False
-            pos = -1
-            tmp_line = ""
-            for c in line:
-                pos += 1
-                tmp_line += c
-                if (c == "("):
-                    got_paren = True
-                    paren_count += 1
-                if (c == ")"):
-                    paren_count -= 1
-                if ((got_paren) and (paren_count == 0)):
-                    tmp_line += "\n"
-                    break
+        func_ret_pat = r"function\s+\w+\(.*\)(?:\s+as\s+\w+)?"
+        if ((tmp_line.startswith("function ")) and
+            (not tmp_line.endswith(")")) and
+            (re.match(func_ret_pat + r"$", tmp_line) is None)):
+            match_obj = re.match(func_ret_pat, tmp_line)
+            pos = match_obj.span()[1]
+            tmp_line = line[:pos] + "\n"
             if ((pos + 1) < len(line)):
                 tmp_line += line[pos + 1:]
             line = tmp_line
