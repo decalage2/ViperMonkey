@@ -44,13 +44,13 @@ __version__ = '0.08'
 import os
 from hashlib import sha256
 from datetime import datetime
-from logger import log
+from .logger import log
 import base64
 import re
 import random
 import string
 import codecs
-from curses_ascii import isascii
+from .curses_ascii import isascii
 
 def to_hex(s):
     """
@@ -3331,7 +3331,7 @@ class Context(object):
 
     def get_lib_func(self, name):
 
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
         
         # Search in the global VBA library:
@@ -3346,7 +3346,7 @@ class Context(object):
 
     def _get(self, name):
 
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
 
         # convert to lowercase
@@ -3434,7 +3434,7 @@ class Context(object):
         return ((name in self.locals) or (name in self.globals))
         
     def get_type(self, var):
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
         var = var.lower()
         if (var not in self.types):
@@ -3442,7 +3442,7 @@ class Context(object):
         return self.types[var]
 
     def get_doc_var(self, var):
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
 
         # Normalize the variable name to lower case.
@@ -3541,7 +3541,7 @@ class Context(object):
 
         # Does the name make sense?
         orig_name = name
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             log.warning("context.set() " + str(name) + " is improper type. " + str(type(name)))
             name = str(name)
 
@@ -3627,8 +3627,8 @@ class Context(object):
             try:
 
                 # Is this a Microsoft.XMLDOM object?
-                import expressions
-                import vba_object
+                from . import expressions
+                from . import vba_object
                 node_type = orig_name
                 if (isinstance(orig_name, expressions.MemberAccessExpression)):
                     node_type = orig_name.lhs
@@ -3742,7 +3742,7 @@ class Context(object):
         # Strip out bad characters if needed.
         if (strip_null_bytes):
 
-            from vba_object import strip_nonvb_chars
+            from .vba_object import strip_nonvb_chars
 
             action = strip_nonvb_chars(action)
             new_params = strip_nonvb_chars(params)

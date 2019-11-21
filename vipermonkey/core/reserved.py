@@ -43,8 +43,8 @@ __version__ = '0.02'
 
 from pyparsing import *
 
-from logger import log
-from identifiers import *
+from .logger import log
+from .identifiers import *
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 

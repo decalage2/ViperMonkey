@@ -213,10 +213,10 @@ def _get_shapes_text_values_2007(fname):
 
     # Unzip the file.
     # PKZip magic #: 50 4B 03 04
-    zip_magic = chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)
+    zip_magic = b"\x50\x4B\x03\x04"
     contents = None
     delete_file = False
-    if fname.startswith(zip_magic):
+    if isinstance(fname, bytes) and fname.startswith(zip_magic):
         #raise ValueError("_get_shapes_text_values_2007() currently does not support in-memory Office files.")
         # TODO: Fix this. For now just save to a tmp file.
         tmp_name = "/tmp/" + str(random.randrange(0, 10000000000)) + ".office"
@@ -267,7 +267,7 @@ def _get_shapes_text_values_2007(fname):
     id_name_map = {}
     for shape in var_info:
         id_name_map[shape[0]] = shape[1]
-    #print id_name_map
+    #print(id_name_map)
 
     # Get the ID to active X object mapping. This is in word/_rels/document.xml.rels.
     zip_subfile = 'word/_rels/document.xml.rels'
@@ -293,7 +293,7 @@ def _get_shapes_text_values_2007(fname):
         if (shape[0] not in id_name_map):
             continue
         id_activex_map[shape[0]] = shape[1].replace(".xml", ".bin")
-    #print id_activex_map
+    #print(id_activex_map)
 
     # Read in the activeX objects.
     for shape in id_activex_map.keys():
@@ -345,12 +345,12 @@ def _get_shapes_text_values_2007(fname):
                 text = text[:size]
         
         # Debug.
-        #print "---------"
-        #print shape
-        #print "^^^^^^^"
-        #print data
-        #print "^^^^^^^"
-        #print text
+        #print("---------")
+        #print(shape)
+        #print("^^^^^^^")
+        #print(data)
+        #print("^^^^^^^")
+        #print(text)
 
         # Save the text associated with the variable name.
         r.append((id_name_map[shape], text))
@@ -382,12 +382,12 @@ def _get_shapes_text_values(fname, stream):
         
         # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
         # 0x0D bytes. We will look for that.
-        pat = r"\x0d[\x20-\x7e]{100,}\x0d"
+        pat = b"\\x0d[\\x20-\\x7e]{100,}\\x0d"
         strs = re.findall(pat, data)
-        #print "STREAM: " + str(stream)
-        #print data
-        #print "^^^^^^^^^^^"
-        #print strs
+        #print("STREAM: " + str(stream))
+        #print(data)
+        #print("^^^^^^^^^^^")
+        #print(strs)
         
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
@@ -413,7 +413,7 @@ def _get_shapes_text_values(fname, stream):
         # It looks like maybe(?) the shapes text appears as wide char blocks bounded by
         # 0x0D bytes. We will look for that.
         #pat = r"\x0d(?:\x00[\x20-\x7e]){10,}\x00?\x0d"
-        pat = r"(?:\x00[\x20-\x7e]){100,}"
+        pat = b"(?:\\x00[\\x20-\\x7e]){100,}"
         strs = re.findall(pat, data)
         
         # Hope that the Shape() object indexing follows the same order as the strings
@@ -422,7 +422,7 @@ def _get_shapes_text_values(fname, stream):
         for shape_text in strs:
 
             # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text[1:-1].replace("\x00", "")
+            shape_text = shape_text[1:-1].replace(b"\x00", b"")
             var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
@@ -452,5 +452,5 @@ def _get_shapes_text_values(fname, stream):
 ## Main Program
 ###########################################################################
 if __name__ == '__main__':
-    print _get_shapes_text_values(sys.argv[1], "worddocument")
-    print _get_shapes_text_values(sys.argv[1], '1table')
+    print(_get_shapes_text_values(sys.argv[1], "worddocument"))
+    print(_get_shapes_text_values(sys.argv[1], '1table'))

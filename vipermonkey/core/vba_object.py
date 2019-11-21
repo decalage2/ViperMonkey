@@ -52,9 +52,9 @@ __version__ = '0.08'
 # --- IMPORTS ------------------------------------------------------------------
 
 import base64
-from logger import log
+from .logger import log
 import re
-from curses_ascii import isprint
+from curses.ascii import isprint
 import traceback
 
 from inspect import getouterframes, currentframe
@@ -62,7 +62,7 @@ import sys
 from datetime import datetime
 import pyparsing
 
-import expressions
+from . import expressions
 
 max_emulation_time = None
 
@@ -82,7 +82,7 @@ def limits_exceeded(throw_error=False):
     """
 
     # Check to see if we are approaching the recursion limit.
-    level = len(getouterframes(currentframe(1)))
+    level = len(getouterframes(currentframe()))
     recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
@@ -147,7 +147,7 @@ class VBA_Object(object):
         if (self._children is not None):
             return self._children
         r = []
-        for _, value in self.__dict__.iteritems():
+        for _, value in self.__dict__.items():
             if (isinstance(value, VBA_Object)):
                 r.append(value)
             if ((isinstance(value, list)) or
@@ -457,7 +457,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = func
-                    import procedures
+                    from . import procedures
                     if (isinstance(func, procedures.Function) or
                         isinstance(func, procedures.Sub) or
                         ('vipermonkey.core.vba_library.' in str(type(func)))):
@@ -596,7 +596,7 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
-    r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    r = [eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name) for arg in args]
     return r
 
 def coerce_to_str(obj):

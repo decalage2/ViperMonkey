@@ -48,24 +48,24 @@ __version__ = '0.08'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from comments_eol import *
-from expressions import *
-from vba_context import *
-from reserved import *
-from from_unicode_str import *
-from vba_object import int_convert
-import procedures
-from var_in_expr_visitor import *
-from function_call_visitor import *
-import vb_str
+from .comments_eol import *
+from .expressions import *
+from .vba_context import *
+from .reserved import *
+from .from_unicode_str import *
+from .vba_object import int_convert
+from . import procedures
+from .var_in_expr_visitor import *
+from .function_call_visitor import *
+from . import vb_str
 
 import traceback
 import string
-from logger import log
+from .logger import log
 import sys
 import re
 import base64
-from curses_ascii import isprint
+from curses.ascii import isprint
 
 def is_simple_statement(s):
     """
@@ -1405,7 +1405,7 @@ class For_Statement(VBA_Object):
         
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
-        if (isinstance(start, basestring)):
+        if (isinstance(start, str)):
             try:
                 start = int(start)
             except:
@@ -1420,7 +1420,7 @@ class For_Statement(VBA_Object):
 
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
-        if (isinstance(end, basestring)):
+        if (isinstance(end, str)):
             try:
                 if (end == "NULL"):
                     end = 0
@@ -2756,7 +2756,7 @@ class Call_Statement(VBA_Object):
             return
 
         # Save the unresolved argument values.
-        import vba_library
+        from . import vba_library
         vba_library.var_names = self.params
         
         # Reset the called function name if this is an alias for an imported external
@@ -3448,13 +3448,13 @@ class External_Function(VBA_Object):
         self.params = tokens.params
         self.lib_name = str(tokens.lib_info.lib_name)
         # normalize lib name: remove quotes, lowercase, add .dll if no extension
-        if isinstance(self.lib_name, basestring):
+        if isinstance(self.lib_name, str):
             self.lib_name = str(tokens.lib_name).strip('"').lower()
             if '.' not in self.lib_name:
                 self.lib_name += '.dll'
         self.lib_name = str(self.lib_name)
         self.alias_name = str(tokens.lib_info.alias_name)
-        if isinstance(self.alias_name, basestring):
+        if isinstance(self.alias_name, str):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
         if (len(self.alias_name.strip()) == 0):

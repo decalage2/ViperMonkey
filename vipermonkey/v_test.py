@@ -10,4 +10,4 @@ if __name__ == '__main__':
 
     r=process_file('','',x, strip_useless=True)
 
-    print r[0][1]
+    print(r[0][1])

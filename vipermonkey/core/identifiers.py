@@ -46,8 +46,8 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from pyparsing import *
-from reserved import *
-from logger import log
+from .reserved import *
+from .logger import log
 
 # TODO: reduce this list when corresponding statements are implemented
 # Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
