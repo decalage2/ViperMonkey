@@ -83,7 +83,7 @@ strict_reserved_keywords = reserved_keywords | \
 # MS-GRAMMAR: subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
 # MS-GRAMMAR: identifier = expression
 
-general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit) + \
+general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + '?' + alphas8bit) + \
                      Suppress(Optional("^")) + Suppress(Optional("%")) + Suppress(Optional("!..."))
 
 # MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
