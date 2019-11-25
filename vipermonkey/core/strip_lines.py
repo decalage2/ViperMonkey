@@ -106,6 +106,7 @@ def is_useless_dim(line):
     # Done.
     return r
 
+aggressive_strip = True
 def is_interesting_call(line, external_funcs, local_funcs):
 
     # Is this an interesting function call?
@@ -115,9 +116,11 @@ def is_interesting_call(line, external_funcs, local_funcs):
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
                  "Split"]
-    log_funcs.extend(local_funcs)
+    if (not aggressive_strip):
+        log_funcs.extend(local_funcs)
     for func in log_funcs:
         if (func in line):
+            log.debug("Line '" + line + "' contains interesting call (1) ('" + func + "').")
             return True
 
     # Are we calling an external function?
@@ -127,6 +130,7 @@ def is_interesting_call(line, external_funcs, local_funcs):
             end = ext_func_decl.index("Lib")
             ext_func = ext_func_decl[start:end].strip()
             if (ext_func in line):
+                log.debug("Line '" + line + "' contains interesting call (2).")
                 return True
         
     # Not a call we are tracking.
@@ -763,7 +767,8 @@ def strip_useless_code(vba_code, local_funcs):
     change_callbacks = set()    
     
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re2.compile(u"\s*(\w+(\.\w+)*)\s*=\s*")
+    # Dim statements are counted as assignments.
+    assign_re = re2.compile(u"(?:\s*(\w+(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
@@ -771,6 +776,7 @@ def strip_useless_code(vba_code, local_funcs):
     for line in vba_code.split("\n"):
 
         # Skip comment lines.
+        line_num += 1
         if (line.strip().startswith("'")):
             log.debug("SKIP: Comment. Keep it.")
             continue
@@ -793,7 +799,6 @@ def strip_useless_code(vba_code, local_funcs):
             change_callbacks.add(data_name)
         
         # Is there an assignment on this line?
-        line_num += 1
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
@@ -801,7 +806,7 @@ def strip_useless_code(vba_code, local_funcs):
         match = assign_re.findall(uni_tmp_line)
         if (len(match) > 0):
 
-            log.debug("SKIP: Assign line: " + line)
+            log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
                 
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
@@ -881,35 +886,39 @@ def strip_useless_code(vba_code, local_funcs):
                     continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
-            log.debug("SKIP: Assigned vars = " + str(match))
-            for var in match:
+            log.debug("SKIP: Assigned vars = " + str(match) + ". Line # = " + str(line_num))
+            for m in match:
                 
-                # Skip empty.
-                var = var[0]
-                if (len(var.strip()) == 0):
-                    continue
+                # Look at each matched variable.
+                for var in m:
 
-                # Convert to ASCII.
-                var = var.encode("ascii","ignore")
+                    # Skip empty.
+                    if ((var is None) or (len(var.strip()) == 0)):
+                        continue
+
+                    # Convert to ASCII.
+                    var = var.encode("ascii","ignore")
                 
-                # Keep lines where we may be running a command via an object.
-                val = line[line.rindex("=") + 1:]
-                if ("." in val):
-                    continue
+                    # Keep lines where we may be running a command via an object.
+                    val = ""
+                    if ("=" in val):
+                        val = line[line.rindex("=") + 1:]
+                    if ("." in val):
+                        continue
 
-                # Keep object creations.
-                if ("CreateObject" in val):
-                    continue
+                    # Keep object creations.
+                    if ("CreateObject" in val):
+                        continue
 
-                # Keep updates of the LHS where the LHS appears on the RHS
-                # (ex. a = a + 1).
-                if (var.lower() in val.lower()):
-                    continue
+                    # Keep updates of the LHS where the LHS appears on the RHS
+                    # (ex. a = a + 1).
+                    if (var.lower() in val.lower()):
+                        continue
                 
-                # It does not look like we are running something. Track the variable.
-                if (var not in assigns):
-                    assigns[var] = set()
-                assigns[var].add(line_num)
+                    # It does not look like we are running something. Track the variable.
+                    if (var not in assigns):
+                        assigns[var] = set()
+                    assigns[var].add(line_num)
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
@@ -920,19 +929,29 @@ def strip_useless_code(vba_code, local_funcs):
     line_num = 0
     for line in vba_code.split("\n"):
 
-        # Mark all the variables that MIGHT be referenced on this line.
+        # Don't count actions in comments lines.
         line_num += 1
+        if (line.strip().startswith("'")):
+            continue
+        
+        # Mark all the variables that MIGHT be referenced on this line.
         for var in assigns.keys():
-
+            
             # Skip variable references on the lines where the current variable was assigned.
             if (line_num in assigns[var]):
+                log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
                 continue
 
             # Could the current variable be used on this line?
             if (var.lower() in line.lower()):
 
+                # If we are aggressively stripping don't pay attention to debug.print.
+                if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
+                    log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                    continue
+                
                 # Maybe. Count this as a reference.
-                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
+                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
                 refs[var] = True
 
     # Keep assignments that have change callbacks.

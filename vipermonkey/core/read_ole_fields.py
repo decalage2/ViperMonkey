@@ -156,7 +156,7 @@ def get_msftedit_variables(obj):
     # This is an Office 2007+ file.
     return []
 
-def get_ole_textbox_values1(data):
+def get_ole_textbox_values1(data, debug):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a really NASTY hack.
@@ -167,6 +167,8 @@ def get_ole_textbox_values1(data):
     # object names.
 
     # Find the object text values.
+    if debug:
+        print "Looking for other form of ActiveX embedding..."
 
     # Pull out the chunk of data with the object values.
     chunk_pat = r'DPB=".*"\x0d\x0aGC=".*"\x0d\x0a(.*;Word8.0;&H00000000)'
@@ -174,6 +176,8 @@ def get_ole_textbox_values1(data):
 
     # Did we find the value chunk?
     if (len(chunk) == 0):
+        if debug:
+            print "NO VALUES"
         return []
     chunk = chunk[0]
 
@@ -196,9 +200,12 @@ def get_ole_textbox_values1(data):
             continue
         tmp_vals.append(val)
     vals = tmp_vals
-    #print "---------------"
-    #print vals
-    #print len(vals)
+    if debug:
+        print "---------------"
+        print "Values:"
+        print chunk
+        print vals
+        print len(vals)
 
     # Pull out the object names.
 
@@ -208,15 +215,18 @@ def get_ole_textbox_values1(data):
 
     # Did we find the name chunk?
     if (len(chunk) == 0):
-        #print "NO NAMES"
+        if debug:
+            print "NO NAMES"
         return []
     chunk_orig = chunk[0]
 
     # Narrow the name chunk down.
     start = chunk_orig.index("C\x00o\x00m\x00p\x00O\x00b\x00j")
     chunk = chunk_orig[start + len("C\x00o\x00m\x00p\x00O\x00b\x00j"):]
-    #print "---------------"
-    #print chunk
+    if debug:
+        print "---------------"
+        print "Names:"
+        print chunk
 
     # Pull the names from the name chunk (ASCII strings).
     names = re.findall(ascii_pat, chunk)
@@ -227,13 +237,14 @@ def get_ole_textbox_values1(data):
         chunk = chunk_orig[start + len("Document"):]
         names = re.findall(ascii_pat, chunk)
         names = names[:-1]
-    #print "---------------"
-    #print names
-    #print len(names)
+    if debug:
+        print names
+        print len(names)
 
     # If we have more names than values skip the first few names.
     if (len(names) > len(vals)):
-        #print "NOT SAME # NAMES/VALS"
+        if debug:
+            print "NOT SAME # NAMES/VALS"
         names = names[len(names) - len(vals):]
 
     # Collect up and return the name -> value mappings.
@@ -256,6 +267,9 @@ def get_ole_textbox_values1(data):
             r.append((n, vals[pos]))
 
     # Done.
+    if debug:
+        print "\n-----------\nResult:"
+        print r
     return r
 
 def get_ole_textbox_values(obj, vba_code):
@@ -281,15 +295,15 @@ def get_ole_textbox_values(obj, vba_code):
     if (not filetype.is_office97_file(data, True)):
         return []
 
-    # First try alternate method of pulling data. These will be merged in later.
-    v1_vals = get_ole_textbox_values1(obj)
-    
     # Set to True to print lots of debugging.
     #debug = True
     debug = False
     if debug:
         print "Extracting OLE/ActiveX TextBox strings..."
-    
+
+    # First try alternate method of pulling data. These will be merged in later.
+    v1_vals = get_ole_textbox_values1(obj, debug)
+        
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
