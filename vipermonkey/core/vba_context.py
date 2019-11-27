@@ -694,6 +694,9 @@ class Context(object):
         self.globals["Application.Caption".lower()] = "**MATCH ANY**"
         self.globals["Application.System.Version".lower()] = "**MATCH ANY**"
         self.globals["BackStyle".lower()] = "**MATCH ANY**"
+        self.globals["responseText".lower()] = ""
+        self.globals["NumberOfLogicalProcessors".lower()] = 4
+        self.globals[".NumberOfLogicalProcessors".lower()] = 4
         
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
@@ -3404,11 +3407,12 @@ class Context(object):
             return self.get(".Text")
         
         # Try to get the item using the current with context.
-        tmp_name = str(self.with_prefix) + "." + str(name)
-        try:
-            return self.__get(tmp_name, case_insensitive=case_insensitive, local_only=local_only)
-        except KeyError:
-            pass
+        if (name.startswith(".")):
+            tmp_name = str(self.with_prefix) + str(name)
+            try:
+                return self.__get(tmp_name, case_insensitive=case_insensitive, local_only=local_only)
+            except KeyError:
+                pass
 
         # Now try it without the current with context.
         try:
@@ -3416,6 +3420,13 @@ class Context(object):
         except KeyError:
             pass
 
+        # Try to get the item using the current with context, again.
+        tmp_name = str(self.with_prefix) + "." + str(name)
+        try:
+            return self.__get(tmp_name, case_insensitive=case_insensitive, local_only=local_only)
+        except KeyError:
+            pass
+        
         # Are we referencing a field in an object?
         if ("." in name):
 
@@ -3596,6 +3607,10 @@ class Context(object):
             log.debug("context.set() " + str(name) + " failed. Value is None.")
             return
 
+        # More name fixing.
+        if (".." in name):
+            self.set(name.replace("..", "."), value, var_type, do_with_prefix, force_local, force_global, no_conversion)
+        
         # Save IOCs from intermediate values if needed.
         self.save_intermediate_iocs(value)
         
@@ -3650,7 +3665,7 @@ class Context(object):
         # we have one.
         if ((do_with_prefix) and (len(self.with_prefix) > 0)):
             tmp_name = str(self.with_prefix) + "." + str(name)
-            self.set(tmp_name, value, var_type=var_type, do_with_prefix=False)
+            self.set(tmp_name, value, var_type=var_type, do_with_prefix=False, no_conversion=no_conversion)
 
         # Skip automatic data conversion if needed.
         if (no_conversion):
@@ -3702,6 +3717,8 @@ class Context(object):
                     if missing_padding:
                         tmp_str += b'='* (4 - missing_padding)
                     conv_val = base64.b64decode(tmp_str)
+                    val_name = name
+                    self.set(val_name, conv_val, no_conversion=True)
                     val_name = name.replace(".text", ".nodetypedvalue")
                     self.set(val_name, conv_val, no_conversion=True)
                 except Exception as e:

@@ -118,6 +118,40 @@ class MonthName(VbaLibraryFunc):
         months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
         return months[num-1]
 
+class MultiByteToWideChar(VbaLibraryFunc):
+    """
+    MultiByteToWideChar() kernel32.dll function. 
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 5)):
+            return "NULL"
+
+        # We have (hopefully) preprocessed this call so that the entire byte array
+        # is passed as the 3rd parameter.
+        data = params[2]
+        if (not isinstance(data, list)):
+            return "NULL"
+
+        # Convert this to a string. Assume this is a ASCII string represented in wide
+        # chars and skip every 2nd byte (assume these are 0).
+        r = ""
+        skip = True
+        for b in data:
+            skip = (not skip)            
+            if ((not isinstance(b, int)) or (b > 255) or skip):
+                continue
+            r += chr(b)
+
+        # Get the name of the variable where the result is stored.
+        name = params[4]
+
+        # Update the result variable with the converted string.
+        context.set(name, r)
+        return len(r)
+
 class IsEmpty(VbaLibraryFunc):
     """
     IsEmpty() function.
@@ -960,6 +994,15 @@ class StrPtr(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert len(params) > 0
+
+        # Do we have a variable name?
+        arg = str(params[0])
+        if (arg.startswith("&")):
+
+            # Just return the name of the variable being pointed to by the string pointer.
+            return arg[1:]
+
+        # We don't have a variable, so just turn it into a "pointer".
         return ("&" + str(params[0]))
     
 class StrConv(VbaLibraryFunc):
@@ -3494,7 +3537,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error, LanguageID):
+               Error, LanguageID, MultiByteToWideChar):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

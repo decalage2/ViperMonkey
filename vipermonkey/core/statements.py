@@ -3527,10 +3527,15 @@ class External_Function(VBA_Object):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
-        
+
+        # If we emulate an external function we are treating it like a VBA builtin function.
+        # So we won't create a new context.
+        #
         # create a new context for this execution:
-        caller_context = context
-        context = Context(context=caller_context)
+        #caller_context = context
+        #context = Context(context=caller_context)
+
+        # Resolve aliased function names.
         if self.alias_name:
             function_name = self.alias_name
         else:

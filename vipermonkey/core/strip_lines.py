@@ -405,10 +405,18 @@ def fix_difficult_code(vba_code):
         (":" not in vba_code) and
         ("^" not in vba_code) and
         ("Rem " not in vba_code) and
+        ("MultiByteToWideChar" not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
 
+    # Modify MultiByteToWideChar() calls so ViperMonkey can emulate them.
+    # Orig: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue(0), UBound(baValue) + 1, StrPtr(sValue), Len(sValue))
+    # Desired: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue, UBound(baValue) + 1, StrPtr("&sValue"), Len(sValue))
+    if ("MultiByteToWideChar" in vba_code):
+        mbyte_pat = r"(MultiByteToWideChar\(\s*[^,]+,\s*[^,]+,\s+)([A-Za-z0-9_]+)\(\s*[^\)]+\s*\)(,\s*[^,]+,\s*StrPtr\(\s*)([^\)]+)(\s*\),\s*[^\)]+\))"
+        vba_code = re.sub(mbyte_pat, r'\1\2\3"&\4"\5', vba_code)
+    
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
     vba_code = vba_code.replace("#if", "HASH__if")
