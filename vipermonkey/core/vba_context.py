@@ -3609,7 +3609,7 @@ class Context(object):
 
         # More name fixing.
         if (".." in name):
-            self.set(name.replace("..", "."), value, var_type, do_with_prefix, force_local, force_global, no_conversion)
+            self.set(name.replace("..", "."), value, var_type, do_with_prefix, force_local, force_global, no_conversion=no_conversion)
         
         # Save IOCs from intermediate values if needed.
         self.save_intermediate_iocs(value)
@@ -3710,17 +3710,25 @@ class Context(object):
 
                 # Try converting the text from base64.
                 try:
-                    
-                    # Set the typed value of the node to the decoded value.
+
+                    # Make sure this is a potentially valid base64 string
                     tmp_str = filter(isascii, str(value).strip())
-                    missing_padding = len(tmp_str) % 4
-                    if missing_padding:
-                        tmp_str += b'='* (4 - missing_padding)
-                    conv_val = base64.b64decode(tmp_str)
-                    val_name = name
-                    self.set(val_name, conv_val, no_conversion=True)
-                    val_name = name.replace(".text", ".nodetypedvalue")
-                    self.set(val_name, conv_val, no_conversion=True)
+                    b64_pat = r"[A-Za-z0-9+/=]+"
+                    if (re.match(b64_pat, tmp_str) is not None):
+
+                        # Pad out the b64 string if needed.
+                        missing_padding = len(tmp_str) % 4
+                        if missing_padding:
+                            tmp_str += b'='* (4 - missing_padding)
+                    
+                        # Set the typed value of the node to the decoded value.
+                        conv_val = base64.b64decode(tmp_str)
+                        val_name = name
+                        self.set(val_name, conv_val, no_conversion=True)
+                        val_name = name.replace(".text", ".nodetypedvalue")
+                        self.set(val_name, conv_val, no_conversion=True)
+
+                # Base64 conversion error.
                 except Exception as e:
                     log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
 
