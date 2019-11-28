@@ -403,6 +403,7 @@ def fix_difficult_code(vba_code):
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
+        ("&;" not in vba_code) and
         ("^" not in vba_code) and
         ("Rem " not in vba_code) and
         ("MultiByteToWideChar" not in vba_code) and
@@ -449,7 +450,8 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
         
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+", r"\:", "\n", r"[\x7f-\xff]", r"\^"]
+    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+",
+                         r"\:", "\n", r"[\x7f-\xff]", r"\^", ";"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -559,6 +561,12 @@ def fix_difficult_code(vba_code):
         if ((c == "+") and (prev_char == "=")):
 
             # Skip the '+'.
+            continue
+
+        # Need to eliminate bogus &; string concatenations.
+        if ((c == ";") and (prev_char == "&")):
+
+            # Skip the ';'.
             continue
             
         # Non-ASCII character that is not in a string?

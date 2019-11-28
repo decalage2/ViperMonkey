@@ -2555,7 +2555,13 @@ class If_Statement(VBA_Object):
         if ((len(tokens) == 1) and (isinstance(tokens[0], If_Statement))):
             self.pieces = tokens[0].pieces
             return
-            
+
+        # bogus_if_statement parsed?
+        self.is_bogus = False
+        if ((len(tokens) == 1) and (isinstance(tokens[0], BoolExpr))):
+            self.is_bogus = True
+            return
+        
         # Save the boolean guard and body for each case in the if, in order.
         self.pieces = []
         for tok in tokens:
@@ -2579,6 +2585,8 @@ class If_Statement(VBA_Object):
         if (self._children is not None):
             return self._children
         self._children = []
+        if (self.is_bogus):
+            return self._children
         for piece in self.pieces:
             if (isinstance(piece["body"], VBA_Object)):
                 self._children.append(piece["body"])
@@ -2600,6 +2608,8 @@ class If_Statement(VBA_Object):
         return self._to_str(True)
     
     def _to_str(self, full_str):
+        if (self.is_bogus):
+            return "BOGUS IF STATEMENT"
         r = ""
         first = True
         for piece in self.pieces:
@@ -2646,6 +2656,10 @@ class If_Statement(VBA_Object):
             
     def eval(self, context, params=None):
 
+        # Skip this if it is a bogus, do nothing if statement.
+        if (self.is_bogus):
+            return
+        
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
             return
@@ -2707,7 +2721,9 @@ _single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_ex
 single_line_if_statement = _single_line_if_statement
 single_line_if_statement.setParseAction(If_Statement)
 
-simple_if_statement = multi_line_if_statement ^ _single_line_if_statement
+bogus_if_statement = CaselessKeyword("If").suppress() + boolean_expression + Optional(CaselessKeyword("Then")).suppress()
+
+simple_if_statement = multi_line_if_statement ^ _single_line_if_statement ^ bogus_if_statement
 simple_if_statement.setParseAction(If_Statement)
 
 # --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
