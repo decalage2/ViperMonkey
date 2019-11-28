@@ -85,7 +85,7 @@ def get_text(fname):
     component = get_component(fname, context)
 
     # Get the text. Add a character at the start to simulate an embedded image at start.
-    r = "E" + str(component.getText().getString())
+    r = "\x0c" + str(component.getText().getString())
     
     # Close the doc.
     component.close(True)
