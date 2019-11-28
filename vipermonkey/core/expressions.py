@@ -1134,10 +1134,10 @@ l_expression = Forward()
 function_call_limited = Forward()
 func_call_array_access_limited = Forward()
 function_call = Forward()
+excel_expression = Forward()
 
 member_object_limited = (
-    ((Suppress("[") + unrestricted_name + Suppress("]")) |
-     unrestricted_name)
+    ((Suppress("[") + unrestricted_name + Suppress("]")) | unrestricted_name | excel_expression)
     + NotAny("(")
     + NotAny("#")
     + NotAny("$")
@@ -1679,6 +1679,7 @@ expr_item <<= (
         | placeholder
         | typeof_expression
         | addressof_expression
+        | excel_expression
     )
 )
 
@@ -2097,3 +2098,24 @@ class AddressOf_Expression(VBA_Object):
 
 addressof_expression <<= CaselessKeyword("AddressOf") + expression("item")
 addressof_expression.setParseAction(AddressOf_Expression)
+
+# --- EXCEL ROW/COLUMN EXPRESSION --------------------------------------------------------------
+
+class Excel_Expression(VBA_Object):
+
+    def __init__(self, original_str, location, tokens):
+        super(Excel_Expression, self).__init__(original_str, location, tokens)
+        self.row = tokens.row
+        self.col = tokens.col
+        log.debug('parsed %r as Excel_Expression' % self)
+
+    def __repr__(self):
+        return "[" + str(self.row) + ":" + str(self.col) + "]"
+
+    def eval(self, context, params=None):
+        # TODO: Not sure how to handle this. For now do nothing.
+        return "NULL"
+    
+# ex. [A:B]
+excel_expression <<= Suppress(Literal("[")) + lex_identifier("row") + Suppress(Literal(":")) + lex_identifier("col") + Suppress(Literal("]"))
+excel_expression.setParseAction(Excel_Expression)

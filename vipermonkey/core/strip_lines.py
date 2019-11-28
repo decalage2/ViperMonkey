@@ -451,12 +451,15 @@ def fix_difficult_code(vba_code):
         
     # Characters that change how we modify the code.
     interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+",
-                         r"\:", "\n", r"[\x7f-\xff]", r"\^", ";"]
+                         r"\:", "\n", r"[\x7f-\xff]", r"\^", ";",
+                         r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
     in_comment = False
-    in_date = False
+    in_date = False    
+    in_square_bracket = False
+    num_square_brackets = 0
     prev_char = ""
     next_char = ""
     r = ""
@@ -507,6 +510,14 @@ def fix_difficult_code(vba_code):
         # Handle entering/leaving strings.        
         if ((not in_comment) and (c == '"')):
             in_str = not in_str
+
+        # Handle entering/leaving [] expressions.
+        if ((not in_comment) and (not in_str)):
+            if (c == '['):
+                num_square_brackets += 1
+            if (c == ']'):
+                num_square_brackets -= 1
+            in_square_bracket = (num_square_brackets > 0)
             
         # Handle entering/leaving date constants.
         if ((not in_comment) and (not in_str) and (c == '#')):
@@ -579,8 +590,8 @@ def fix_difficult_code(vba_code):
                 r = r[:-1]
                 r += "\n"
 
-            # Replace a single ':' with a line break? Don't do this for labels.
-            elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=")):
+            # Replace a single ':' with a line break? Don't do this for labels. Or for Excel [A:A] expressions.
+            elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=") and (not in_square_bracket)):
                 r += "\n"
             else:
                 r += c

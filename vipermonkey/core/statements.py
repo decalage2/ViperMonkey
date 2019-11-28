@@ -2549,6 +2549,7 @@ class If_Statement(VBA_Object):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
         # Copy constructor?
+        self.is_bogus = False
         if (isinstance(tokens, If_Statement)):
             self.pieces = tokens.pieces
             return
@@ -2557,7 +2558,6 @@ class If_Statement(VBA_Object):
             return
 
         # bogus_if_statement parsed?
-        self.is_bogus = False
         if ((len(tokens) == 1) and (isinstance(tokens[0], BoolExpr))):
             self.is_bogus = True
             return
@@ -3203,7 +3203,7 @@ class Goto_Statement(VBA_Object):
         block.eval(context, params)
 
 # Goto statement
-goto_statement = CaselessKeyword('Goto').suppress() + lex_identifier('label')
+goto_statement = (CaselessKeyword('Goto').suppress() | CaselessKeyword('Gosub').suppress()) + lex_identifier('label')
 goto_statement.setParseAction(Goto_Statement)
 
 # --- GOTO LABEL statement ----------------------------------------------------------
