@@ -697,6 +697,7 @@ class Context(object):
         self.globals["responseText".lower()] = ""
         self.globals["NumberOfLogicalProcessors".lower()] = 4
         self.globals[".NumberOfLogicalProcessors".lower()] = 4
+        self.globals["ActiveWorkbook.Name".lower()] = "**MATCH ANY**"
         
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
@@ -3594,7 +3595,8 @@ class Context(object):
             do_with_prefix=True,
             force_local=False,
             force_global=False,
-            no_conversion=False):
+            no_conversion=False,
+            case_insensitive=True):
 
         # Does the name make sense?
         orig_name = name
@@ -3615,7 +3617,9 @@ class Context(object):
         self.save_intermediate_iocs(value)
         
         # convert to lowercase
-        name = name.lower()
+        if (case_insensitive):
+            tmp_name = name.lower()
+            self.set(tmp_name, value, var_type, do_with_prefix, force_local, force_global, no_conversion, case_insensitive=False)
         
         # Set the variable
         if (force_global):

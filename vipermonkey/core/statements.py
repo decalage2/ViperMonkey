@@ -997,6 +997,30 @@ class Let_Statement(VBA_Object):
         # Set variable, array access.
         else:
 
+            # Handle conversion of strings to integers, if needed.
+            if (((context.get_type(self.name) == "Long Array") or
+                 (context.get_type(self.name) == "Integer Array")) and
+                (isinstance(value, str))):
+
+                # Do we have an actual value to assign?
+                if (value != "NULL"):
+
+                    # Parse the expression to see if it can be resolved to an integer.
+                    num = "not an integer"
+                    try:
+                        expr = expression.parseString(value, parseAll=True)[0]
+                        num = str(expr)
+                        if (hasattr(expr, "eval")):
+                            num = str(expr.eval(context))
+                    except ParseException:
+                        log.error("Cannot parse '" + value + "' to integer.")
+                    if (not num.isdigit()):
+                        log.error("Cannot convert '" + value + "' to integer. Setting to 0.")
+                        num = 0
+                    else:
+                        num = int(num)
+                    value = num
+                        
             # Evaluate the index expression(s).
             index = int_convert(eval_arg(self.index, context=context))
             index1 = None
