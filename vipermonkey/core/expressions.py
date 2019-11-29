@@ -1031,9 +1031,12 @@ class MemberAccessExpression(VBA_Object):
             log.debug('rhs {!r} is a Function_Call'.format(rhs))
 
             # Skip local functions that have a name collision with VBA built in functions.
-            if (context.contains_user_defined(rhs.name)):
+            rhs_name = str(rhs)
+            if (hasattr(rhs, "name")):
+                rhs_name = rhs.name
+            if (context.contains_user_defined(rhs_name)):
                 for func in Function_Call.log_funcs:
-                    if (rhs.name.lower() == func.lower()):
+                    if (rhs_name.lower() == func.lower()):
                         return str(self)
 
             # Handle things like foo.Replace(bar, baz).
