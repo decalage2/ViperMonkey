@@ -2357,7 +2357,18 @@ class Navigate(VbaLibraryFunc):
         if (url.startswith("tp://")):
             url = "ht" + url
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
-        
+
+class IsNull(VbaLibraryFunc):
+    """
+    IsNull() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return False
+        arg = params[0]
+        return ((arg is None) or (arg == "NULL") or (arg == 0) or (arg == ""))
+
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
@@ -3537,7 +3548,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error, LanguageID, MultiByteToWideChar):
+               Error, LanguageID, MultiByteToWideChar, IsNull):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

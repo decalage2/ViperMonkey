@@ -267,8 +267,10 @@ class MemberAccessExpression(VBA_Object):
             (tmp_rhs.name != "Item")):
             return None
         index = eval_arg(tmp_rhs.params[0], context)
-        if ((not isinstance(index, int)) or (index >= len(curr_item))):
+        if (not isinstance(index, int)):
             return None
+        if (index >= len(curr_item)):
+            return "NULL"
 
         # Return the list item.
         return curr_item[index]
@@ -911,14 +913,15 @@ class MemberAccessExpression(VBA_Object):
                 rhs = self.rhs[len(self.rhs) - 2]
 
         # Figure out if we are calling a function.
-        calling_func = False
-        try:
-            func = context.get(str(rhs), search_wildcard=False)
-            log.debug("Member access " + str(self) + " got RHS = " + str(func))
-            calling_func = (isinstance(func, procedures.Function) or isinstance(func, procedures.Sub))
-            log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
-        except KeyError:
-            pass
+        calling_func = isinstance(rhs, Function_Call)
+        if (not calling_func):
+            try:
+                func = context.get(str(rhs), search_wildcard=False)
+                log.debug("Member access " + str(self) + " got RHS = " + str(func))
+                calling_func = (isinstance(func, procedures.Function) or isinstance(func, procedures.Sub))
+                log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
+            except KeyError:
+                pass
                 
         # Handle accessing control values from a form by index..
         call_retval = self._handle_indexed_form_access(context)

@@ -2933,8 +2933,9 @@ class Call_Statement(VBA_Object):
                 # Set the values of the arguments passed as ByRef parameters.
                 if (hasattr(s, "byref_params") and s.byref_params):
                     for byref_param_info in s.byref_params.keys():
-                        arg_var_name = str(self.params[byref_param_info[1]])
-                        context.set(arg_var_name, s.byref_params[byref_param_info])
+                        if (byref_param_info[1] < len(self.params)):
+                            arg_var_name = str(self.params[byref_param_info[1]])
+                            context.set(arg_var_name, s.byref_params[byref_param_info])
 
                 # We are out of the called function, so if we exited the called function early
                 # it does not apply to the current function.
