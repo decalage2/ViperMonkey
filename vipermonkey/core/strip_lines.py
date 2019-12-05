@@ -115,7 +115,7 @@ def is_interesting_call(line, external_funcs, local_funcs):
                  ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
-                 "Split"]
+                 "Split", "Exec"]
     if (not aggressive_strip):
         log_funcs.extend(local_funcs)
     for func in log_funcs:

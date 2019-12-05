@@ -873,7 +873,9 @@ class Let_Statement(VBA_Object):
         if ((str(self.name).endswith(".Arguments")) or
             (str(self.name).endswith(".Path"))):
             context.report_action(self.name, value, 'Possible Scheduled Task Setup', strip_null_bytes=True)
-
+        if (str(self.name).endswith(".CommandLine")):
+            context.report_action('Run Command', value, self.name, strip_null_bytes=True)
+            
         # Modifying a string using something like Mid() on the LHS of the assignment?
         if (self._handle_string_mod(context, value)):
             return
