@@ -450,8 +450,8 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
         
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'\#', r"'", r"\!", r"\+",
-                         r"\:", "\n", r"[\x7f-\xff]", r"\^", ";",
+    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
+                         r":", "\n", r"[\x7f-\xff]", r"\^", ";",
                          r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
@@ -489,7 +489,15 @@ def fix_difficult_code(vba_code):
 
             # We are not. Fast forward to the nearest interesting character.
             next_pos = len(vba_code)
-            for interesting_c in interesting_chars:
+
+            # If we are in a string, we are only interested in getting out of the
+            # string.
+            curr_interesting_chars = interesting_chars
+            if (in_str):
+                curr_interesting_chars = [r'"']
+
+            # Find the next interesting character.
+            for interesting_c in curr_interesting_chars:
                 index = re.search(interesting_c, vba_code[pos:])
                 if (index is None):
                     continue                

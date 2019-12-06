@@ -3253,7 +3253,7 @@ class DeleteFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) > 0):
+        if (len(params) > 1):
             context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
 
 class MoveFile(VbaLibraryFunc):
