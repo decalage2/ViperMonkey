@@ -236,9 +236,53 @@ class MemberAccessExpression(VBA_Object):
         """
         Handle references to the .Comments field of the current doc.
         """
-        if (str(self).lower().endswith(".comments")):
+
+        # Comments reference?
+        me_str = str(self)
+        if (".comments" not in me_str.lower()):
+            return None
+
+        # Simple case, get all the comments.
+        log.debug("Try _handle_comments() eval of " + me_str)
+        if (me_str.lower().endswith(".comments")):
             return context.get("ActiveDocument.Comments".lower())
 
+        # Less simple case. Are we reading a specific comment?
+        ref_pat = r".Comments\(\s*(.+)\s*\)"
+        ids = re.findall(ref_pat, me_str)
+        if (len(ids) == 0):
+            log.debug("No comment index found.")
+            return None
+
+        # We are reading a specific comment.
+
+        # Get the comment index.
+        index = None
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(ids[0], parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            index = obj
+            if (isinstance(index, VBA_Object)):
+                index = index.eval(context)
+            index = int(index.replace("'", "")) - 1
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + index + "'")
+            return None
+        except Exception as e:
+            log.debug("Comment index '" + str(ids[0]) + "' not int. " + str(e))
+            return None
+
+        # We have an index. Return the comment.
+        comments = context.get("ActiveDocument.Comments".lower())
+        if (index >= len(comments)):
+            log.debug("Comment index " + str(ids[0]) + " out of range")
+            return None
+        return comments[index]
+            
     def _handle_count(self, context, curr_item):
         """
         Handle references to the .Count field of the current item.
@@ -1112,6 +1156,11 @@ class MemberAccessExpression(VBA_Object):
                 # in the current context.
                 r = tmp_lhs.eval(context)
                 return r
+
+            # Are we reading the text of an object that we resolved?
+            if ((str(self.rhs) == "['Text']") and (isinstance(tmp_lhs, str))):
+                log.debug("Returning .Text value.")
+                return tmp_lhs
             
             # Construct a new partially resolved member access object.
             r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))

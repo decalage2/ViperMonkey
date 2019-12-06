@@ -1011,7 +1011,91 @@ def _parse_activex_rich_edit(data):
     if (len(val) == 0):
         return None
     return val[0]
-    
+
+def _get_comments_2007(fname):
+    """
+    Read in the comments in a document saved in the 2007+ format.
+    """
+        
+    # This might be a 2007+ Office file. Unzip it.
+    unzipped_data, fname = unzip_data(fname)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return []
+
+    # Comments with are in word/comments.xml. Does that file exist?
+    zip_subfile = 'word/comments.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        zip_subfile = 'word\\comments.xml'
+        if (zip_subfile not in unzipped_data.namelist()):
+            if (delete_file):
+                os.remove(fname)
+            return []
+
+    # Read the contents of comments.xml.
+    r = []
+    f1 = unzipped_data.open(zip_subfile)
+    data = f1.read()
+    f1.close()
+
+    # Read in all the individual comment XML blocks.
+
+    # Comment blocks begin with '<w:comment' and end with '</w:comment>'.
+    comm_pat = r"<w:comment.*</w:comment>"
+    comment_blocks = re.findall(comm_pat, data)
+    if (len(comment_blocks) == 0):
+        unzipped_data.close()
+        if (delete_file):
+            os.remove(fname)
+        return []
+
+    # Process each comment block.
+    r = []
+    for block in comment_blocks:
+
+        # Pull out the ID for this comment block.
+        # <w:comment w:id="1"
+        id_pat = r"<w:comment\s+w:id=\"(\d+)\""
+        ids = re.findall(id_pat, block)
+        if (len(ids) == 0):
+            continue
+        curr_id = ids[0]
+
+        # Pull out the comment text.
+        text_pat = r"<w:t>([^<]+)</w:t>"
+        texts = re.findall(text_pat, block)
+        if (len(texts) == 0):
+            continue
+        text = texts[0]
+        text = text.replace("&amp;", "&")
+        text = text.replace("&gt;", ">")
+        text = text.replace("&lt;", "<")
+        text = text.replace("&apos;", "'")
+        text = text.replace("&quot;", '"')
+
+        # Save the comment.
+        r.append((curr_id, text))
+        
+    # Done.
+    unzipped_data.close()
+    if (delete_file):
+        os.remove(fname)
+    #print r
+    #sys.exit(0)
+    return r
+
+def get_comments(fname):
+    """
+    Read the comments from an Office file.
+    """
+
+    # Currently only 2007+ Office files are supported.
+    if (not filetype.is_office2007_file(fname, (len(fname) > 2000))):
+        return []
+
+    # Read comments from 2007+ file.
+    return _get_comments_2007(fname)
+
 def _get_shapes_text_values_2007(fname):
     """
     Read in the text associated with Shape objects in a document saved

@@ -1043,6 +1043,16 @@ def _process_file (filename,
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
+
+            # Pull text associated with document comments.
+            log.info("Reading document comments...")
+            got_it = False
+            comments = read_ole_fields.get_comments(data)
+            if (len(comments) > 0):
+                vm.comments = []
+                for (comment_id, comment_text) in comments:
+                    # TODO: Order the commens based on the IDs or actually track them.
+                    vm.comments.append(comment_text)
                 
             # Pull text associated with Shapes() objects.
             log.info("Reading Shapes object text fields...")

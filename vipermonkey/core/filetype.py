@@ -82,4 +82,10 @@ def is_office97_file(fname, is_data):
     # See if we have the Office97 magic #.
     return (curr_magic.startswith(magic_nums["office97"]))
 
-    
+def is_office2007_file(fname, is_data):
+
+    # Read the 1st 8 bytes of the file.
+    curr_magic = get_1st_8_bytes(fname, is_data)
+
+    # See if we have the Office 2007 magic #.
+    return (curr_magic.startswith(magic_nums["office2007"]))

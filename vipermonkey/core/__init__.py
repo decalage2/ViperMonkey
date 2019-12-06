@@ -144,6 +144,7 @@ class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
     def __init__(self, filename, data):
+        self.comments = None
         self.metadata = None
         self.filename = filename
         self.data = data
@@ -481,11 +482,14 @@ class ViperMonkey(object):
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
         
-        # Fake up some comments.
-        # TODO: Figure out how to actually read the comments.
-        context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
-        context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
-        
+        # Fake up some comments if needed.
+        if (self.comments is None):
+            context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
+            context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
+        else:
+            context.globals["ActiveDocument.Comments".lower()] = self.comments
+            context.globals["ThisDocument.Comments".lower()] = self.comments
+            
         # reset the actions list, in case it is called several times
         self.actions = []
 
