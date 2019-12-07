@@ -27,23 +27,27 @@ miracles. Any help from you will be very appreciated!
 Download and Install:
 ---------------------
 
-For performance reasons, it is highly recommended to use PyPy, but it is
+For performance reasons, it is highly recommended to use PyPy (5x faster), but it is
 also possible to run Vipermonkey with the normal Python interpreter
-(CPython).
+(CPython) if you cannot use PyPy.
 
-**Installation using PyPy**
+**Installation using PyPy (recommended)**
 
 1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
 2. Check if pip is installed for pypy: run `pypy -m pip`
 3. If pip is not installed yet, run `pypy -m ensurepip` on Windows, or `sudo -H pypy -m ensurepip` on Linux/Mac
-4. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
-5. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
-6. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
-7. Check that Vipermonkey runs without error: `pypy vmonkey.py`
+4. Make sure pip is up-to-date, by running `pypy -m pip install -U pip`
+5. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+6. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
+7. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
+8. Check that Vipermonkey runs without error: `pypy vmonkey.py`
 
 **Installation using CPython**
 
 1. Make sure you have the latest Python 2.7 installed: https://www.python.org/downloads/
+2. If you have both Python 2 and 3 versions installed, use `pip2` instead of `pip` in the 
+   following commands, to install in Python 2 and not 3.
+4. Make sure pip is up-to-date, by running `pip install -U pip`
 2. Use pip to download and install vipermonkey with all its dependencies,
    by running the following command on Windows:
 ```
@@ -219,7 +223,7 @@ License
 This license applies to the ViperMonkey package, apart from the thirdparty folder which contains third-party files
 published with their own license.
 
-The ViperMonkey package is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
+The ViperMonkey package is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 
 All rights reserved.
 
