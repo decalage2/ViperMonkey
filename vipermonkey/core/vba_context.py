@@ -3717,7 +3717,7 @@ class Context(object):
 
                     # Make sure this is a potentially valid base64 string
                     tmp_str = filter(isascii, str(value).strip())
-                    b64_pat = r"[A-Za-z0-9+/=]+"
+                    b64_pat = r"^[A-Za-z0-9+/=]+$"
                     if (re.match(b64_pat, tmp_str) is not None):
 
                         # Pad out the b64 string if needed.
@@ -3731,7 +3731,7 @@ class Context(object):
                         self.set(val_name, conv_val, no_conversion=True)
                         val_name = name.replace(".text", ".nodetypedvalue")
                         self.set(val_name, conv_val, no_conversion=True)
-
+                        
                 # Base64 conversion error.
                 except Exception as e:
                     log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
