@@ -3134,7 +3134,7 @@ class Year(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         t = params[0]
-        r = 0
+        r = "**MATCH ANY**"
         if ((isinstance(t, datetime)) or (isinstance(t, date))):
             r = int(t.year)
         return r
