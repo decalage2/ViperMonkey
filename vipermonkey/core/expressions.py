@@ -1203,7 +1203,7 @@ function_call = Forward()
 excel_expression = Forward()
 
 member_object_limited = (
-    ((Suppress("[") + unrestricted_name + Suppress("]")) | unrestricted_name | excel_expression)
+    ((Suppress("[") + (unrestricted_name | decimal_literal) + Suppress("]")) | unrestricted_name | excel_expression)
     + NotAny("(")
     + NotAny("#")
     + NotAny("$")
@@ -1730,6 +1730,7 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 
 typeof_expression = Forward()
 addressof_expression = Forward()
+literal_list_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -1746,6 +1747,7 @@ expr_item <<= (
         | typeof_expression
         | addressof_expression
         | excel_expression
+        | literal_list_expression
     )
 )
 
@@ -2185,3 +2187,22 @@ class Excel_Expression(VBA_Object):
 # ex. [A:B]
 excel_expression <<= Suppress(Literal("[")) + lex_identifier("row") + Suppress(Literal(":")) + lex_identifier("col") + Suppress(Literal("]"))
 excel_expression.setParseAction(Excel_Expression)
+
+# --- LITERAL LIST EXPRESSION --------------------------------------------------------------
+
+class Literal_List_Expression(VBA_Object):
+
+    def __init__(self, original_str, location, tokens):
+        super(Literal_List_Expression, self).__init__(original_str, location, tokens)
+        self.item = tokens.item
+        log.debug('parsed %r as Literal_List_Expression' % self)
+
+    def __repr__(self):
+        return "[" + str(self.item) + "]"
+
+    def eval(self, context, params=None):
+        return self.item.eval(context)
+    
+literal_list_expression <<= Suppress("[") + (unrestricted_name | decimal_literal)("item") + Suppress("]")
+literal_list_expression.setParseAction(Literal_List_Expression)
+
