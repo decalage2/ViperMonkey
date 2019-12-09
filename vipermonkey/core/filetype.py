@@ -45,6 +45,7 @@ magic_nums = {
 def get_1st_8_bytes(fname, is_data):
 
     info = None
+    is_data = (is_data or (len(fname) > 200))
     if (not is_data):
         with open(fname, 'rb') as f:
             info = f.read(8)
