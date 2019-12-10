@@ -2059,7 +2059,8 @@ class While_Statement(VBA_Object):
 
             # Evaluate the loop guard once in case interesting functions are called in
             # the guard.
-            self.guard.eval(context)
+            if (hasattr(self.guard, "eval")):
+                self.guard.eval(context)
             
             log.info("WHILE loop: empty body. Skipping.")
             return
