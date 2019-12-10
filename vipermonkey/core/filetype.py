@@ -47,6 +47,12 @@ def get_1st_8_bytes(fname, is_data):
     info = None
     is_data = (is_data or (len(fname) > 200))
     if (not is_data):
+        try:
+            tmp = open(fname, 'rb')
+            tmp.close()
+        except:
+            is_data = True
+    if (not is_data):
         with open(fname, 'rb') as f:
             info = f.read(8)
     else:

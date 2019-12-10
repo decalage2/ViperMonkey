@@ -806,6 +806,8 @@ def int_convert(arg):
         return 0
     if (arg == "**MATCH ANY**"):
         return arg
+    if (isinstance(arg, float)):
+        arg = int(round(arg))
     arg_str = str(arg)
     if ("." in arg_str):
         arg_str = arg_str[:arg_str.index(".")]
