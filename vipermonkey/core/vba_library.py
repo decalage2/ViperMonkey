@@ -1231,6 +1231,11 @@ class Int(VbaLibraryFunc):
             if (isinstance(val, str) and (val.lower().startswith("&h"))):
                 val = "0x" + val[2:]
                 r = int(val, 16)
+            elif (isinstance(val, str) and
+                (val.lower().startswith("i")) and
+                (len(val) == 3)):
+                val = "0x" + val[1:]
+                r = int(val, 16)
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
             else:
