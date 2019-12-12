@@ -43,11 +43,11 @@ __version__ = '0.02'
 
 from pyparsing import *
 
-from vba_object import *
-from literals import *
-import vb_str
+from .vba_object import *
+from .literals import *
+from . import vb_str
 
-from logger import log
+from .logger import log
 
 # --- VBA Expressions ---------------------------------------------------------
 
@@ -83,7 +83,7 @@ class Chr(VBA_Object):
         param = eval_arg(self.arg, context)
 
         # Get the ordinal value.
-        if isinstance(param, basestring):
+        if isinstance(param, str):
             try:
                 param = integer.parseString(param.strip())[0]
             except:

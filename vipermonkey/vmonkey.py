@@ -113,7 +113,7 @@ from oletools.olevba import VBA_Parser, filter_vba
 import olefile
 import xlrd
 
-import core.meta
+from .core import meta
 
 # add the vipermonkey folder to sys.path (absolute+normalized path):
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
@@ -200,7 +200,7 @@ def _read_doc_text_libreoffice(data):
             log.error("Cannot read doc text with LibreOffice. Probably not a Word file. " + str(e))
             return None
         for line in f:
-            if (line.endswith("\n")):
+            if (line.endswith(b"\n")):
                 line = line[:-1]
             r.append(line)
 
@@ -215,17 +215,17 @@ def _read_doc_text_libreoffice(data):
             first_line = r[0]
             good_pos = 0
             while ((good_pos < 10) and (good_pos < len(first_line))):
-                if (first_line[good_pos] in string.printable):
+                if (first_line[good_pos:good_pos+1] in string.printable.encode(encoding = "ascii")):
                     break
                 good_pos += 1
             first_line = first_line[good_pos:]
                 
             # NOTE: This is specific to fixing an unbalanced C-style comment in the 1st line.
-            pat = r'^\*.*\*\/'
+            pat = b'^\\*.*\\*\\/'
             if (re.match(pat, first_line) is not None):
-                first_line = "/" + first_line
-            if (first_line.startswith("[]*")):
-                first_line = "/*" + first_line
+                first_line = b"/" + first_line
+            if (first_line.startswith(b"[]*")):
+                first_line = b"/*" + first_line
             r = [first_line] + r[1:]
                 
         # Return the paragraph text.
@@ -314,7 +314,7 @@ def _get_ole_textbox_values(obj, stream):
         return []
     form_str = None
     field_marker = None
-    form_markers = ["Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox"]
+    form_markers = [b"Microsoft Forms 2.0 TextBox", b"Microsoft Forms 2.0 ComboBox"]
     form_strs = ['Forms.TextBox.1', 'Forms.ComboBox.1']
     pos = 0
     for a in form_markers:
@@ -327,7 +327,7 @@ def _get_ole_textbox_values(obj, stream):
         #print("NO FORMS")
         return []
 
-    pat = r"(?:[\x20-\x7e]{5,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){5,})"
+    pat = b"(?:[\\x20-\\x7e]{5,})|(?:(?:(?:\\x00|\\xff)[\\x20-\\x7e]){5,})"
     index = 0
     r = []
     while (form_str in data[index:]):
@@ -390,17 +390,17 @@ def _get_ole_textbox_values(obj, stream):
 
             # No. The name comes after an 'OCXNAME' or 'OCXPROPS' field. Figure out
             # which one.
-            name_marker = "OCXNAME"
+            name_marker = b"OCXNAME"
             for field in strs:
-                if (field.replace("\x00", "") == 'OCXPROPS'):
-                    name_marker = "OCXPROPS"
+                if (field.replace(b"\x00", b"") == b'OCXPROPS'):
+                    name_marker = b"OCXPROPS"
 
             # Now look for the name after the name marker.
             curr_pos = 0
             for field in strs:
 
                 # It might come after the name marker tag.
-                if (field.replace("\x00", "") == name_marker):
+                if (field.replace(b"\x00", b"") == name_marker):
 
                     # If the next field does not look something like '_1619423091' the
                     # next field might be the name.
@@ -524,7 +524,7 @@ def _get_ole_textbox_values(obj, stream):
         last_val = dat[1]
 
     # Add in the final result.
-    if (len(last_var) < 50):
+    if last_var is not None and (len(last_var) < 50):
         tmp.append((last_var, last_val))
     r = tmp
 
@@ -545,7 +545,7 @@ def _get_inlineshapes_text_values(data):
 
         # It looks like maybe(?) the shapes text appears as text blocks starting at
         # ^@p^@i^@x^@e^@l (wide char "pixel") and ended by several null bytes.
-        pat = r"\x00p\x00i\x00x\x00e\x00l\x00*((?:\x00?[\x20-\x7e])+)\x00\x00\x00"
+        pat = b"\\x00p\\x00i\\x00x\\x00e\\x00l\\x00*((?:\\x00?[\\x20-\\x7e])+)\\x00\\x00\\x00"
         strs = re.findall(pat, data)
 
         # Hope that the InlineShapes() object indexing follows the same order as the strings
@@ -554,7 +554,7 @@ def _get_inlineshapes_text_values(data):
         for shape_text in strs:
 
             # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text.replace("\x00", "")
+            shape_text = shape_text.replace(b"\x00", b"")
             var = "InlineShapes('" + str(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
@@ -624,7 +624,7 @@ def _get_embedded_object_values(fname):
             # End
 
             # Pull this text out with a regular expression.
-            pat =  r"Begin \{[A-Z0-9\-]{36}\} (\w{1,50})\s*(?:\r?\n)\s{1,10}Caption\s+\=\s+\"(\w+)\"[\w\s\='\n\r]+Tag\s+\=\s+\"(.+)\"[\w\s\='\n\r]+End"
+            pat =  b"Begin \{[A-Z0-9\\-]{36}\\} (\\w{1,50})\\s*(?:\\r?\\n)\\s{1,10}Caption\\s+\\=\\s+\"(\\w+)\"[\\w\\s\\='\\n\\r]+Tag\\s+\\=\\s+\"(.+)\"[\\w\\s\\='\\n\\r]+End"
             obj_text = re.findall(pat, data)
 
             # Save any information we find.
@@ -665,15 +665,13 @@ def get_doc_var_info(ole):
     # The fcStwUser field holds the offset of the doc var info in the 0Table or 1Table stream. It is preceded
     # by 119 other 4 byte values, hence the 120*4 offset.
     fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4)
-    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
-    doc_var_offset = struct.unpack('!I', tmp)[0]
+    doc_var_offset = struct.unpack('<I', data[fib_offset:fib_offset+4])[0]
 
     # Get the size of the doc vars (lcbStwUser).
     # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
     # offset to lcbStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
     fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4) + 4
-    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
-    doc_var_size = struct.unpack('!I', tmp)[0]
+    doc_var_size = struct.unpack('<I', data[fib_offset:fib_offset+4])[0]
     
     return (doc_var_offset, doc_var_size)
 
@@ -812,7 +810,7 @@ def _read_custom_doc_props(fname):
                 break
         if (data is None):
             return []
-        strs = re.findall("([\w\.\:/]{4,})", data)
+        strs = re.findall(b"([\w\.\:/]{4,})", data)
         
         # Treat each wide character string as a potential variable that has a value
         # of the string 1 positions ahead on the current string. This introduces "variables"
@@ -820,7 +818,7 @@ def _read_custom_doc_props(fname):
         # by valid VBA so emulation will work.
 
         # Skip some strings that look like they may be common.
-        skip_names = set(["Title"])
+        skip_names = set([b"Title"])
         tmp = []
         for s in strs:
             if (s not in skip_names):
@@ -830,7 +828,7 @@ def _read_custom_doc_props(fname):
         # Set up wildcard matching of variable names if we have only one
         # potential variable value.
         if (len(strs) == 1):
-            strs = ["*", strs[0]]
+            strs = [b"*", strs[0]]
 
         # Actually match up the variables with values.
         pos = 0
@@ -858,7 +856,7 @@ def get_vb_contents(vba_code):
     code = re.findall(pat, vba_code, re.DOTALL)
 
     # Did we find any VB code in a script block?
-    #print code
+    #print(code)
     if (len(code) == 0):
 
         # Try a different sort of tag.
@@ -1026,7 +1024,7 @@ def process_file(container,
         colorlog.basicConfig(level=logging.INFO, format='%(log_color)s%(levelname)-8s %(message)s')
         
     if not data:
-        # TODO: replace print by writing to a provided output file (sys.stdout by default)
+        # TODO: replace print(by writing to a provided output file (sys.stdout by default))
         if container:
             display_filename = '%s in %s' % (filename, container)
         else:
@@ -1096,8 +1094,8 @@ def read_sheet_from_csv(filename):
 
     # Make an object with a subset of the xlrd book methods.
     r = excel.make_book(r)
-    #print "EXCEL:\n"
-    #print r
+    #print("EXCEL:\n")
+    #print(r)
     return r
 
 def load_excel_libreoffice(data):
@@ -1379,7 +1377,7 @@ def _process_file (filename, data,
             # Pull out the document text.
             log.info("Reading document text...")
             vm.doc_text = _read_doc_text('', data=data)
-            #print "\n\nDOC TEXT:\n" + str(vm.doc_text)
+            #print("\n\nDOC TEXT:\n" + str(vm.doc_text))
 
             log.info("Reading form variables...")
             try:
@@ -1539,7 +1537,7 @@ def _process_file (filename, data,
             if (entry_points is not None):
                 log.info("Starting emulation from function(s) " + str(entry_points))
             vm.trace()
-            # print table of all recorded actions
+            # print(table of all recorded actions)
             print('\nRecorded Actions:')
             print(vm.dump_actions())
             print('')
@@ -1579,7 +1577,7 @@ def process_file_scanexpr (container, filename, data):
     :param filename: str, path and filename of file on disk, or within the container.
     :param data: bytes, content of the file if it is in a container, None if it is a file on disk.
     """
-    #TODO: replace print by writing to a provided output file (sys.stdout by default)
+    #TODO: replace print(by writing to a provided output file (sys.stdout by default))
     if container:
         display_filename = '%s in %s' % (filename, container)
     else:
@@ -1603,7 +1601,7 @@ def process_file_scanexpr (container, filename, data):
                 log.warning("Reading in metadata failed. Trying fallback. " + str(e))
                 vm.set_metadata(meta.get_metadata_exif(orig_filename))
             
-            #print 'Contains VBA Macros:'
+            #print('Contains VBA Macros:')
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
@@ -1635,8 +1633,8 @@ def process_file_scanexpr (container, filename, data):
             print('No VBA macros found.')
     except: #TypeError:
         #raise
-        #TODO: print more info if debug mode
-        #print sys.exc_value
+        #TODO: print(more info if debug mode)
+        #print(sys.exc_value)
         # display the exception with full stack trace for debugging, but do not stop:
         traceback.print_exc()
     print('')
@@ -1663,7 +1661,7 @@ def main():
     # Increase recursion stack depth.
     sys.setrecursionlimit(13000)
     
-    # print banner with version
+    # print(banner with version)
     # Generated with http://www.patorjk.com/software/taag/#p=display&f=Slant&t=ViperMonkey
     print(''' _    ___                 __  ___            __             
 | |  / (_)___  ___  _____/  |/  /___  ____  / /_____  __  __

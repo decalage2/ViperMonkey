@@ -388,10 +388,10 @@ class Module(CodeBlock):
     def entry_points(self):
         """Yields the entry points. (or None if not found)."""
         # Since the module VBA_Object stores its elements with case intact we can't just hash.
-        for name, sub in self.obj.subs.iteritems():
+        for name, sub in self.obj.subs.items():
             if name.lower() in self._ENTRY_POINTS:
                 yield sub
-        for name, function in self.obj.functions.iteritems():
+        for name, function in self.obj.functions.items():
             if name.lower() in self._ENTRY_POINTS:
                 yield function
 

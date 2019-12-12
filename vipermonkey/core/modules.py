@@ -44,13 +44,13 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from comments_eol import *
-from procedures import *
-from statements import *
-import vba_context
-from function_defn_visitor import *
+from .comments_eol import *
+from .procedures import *
+from .statements import *
+from . import vba_context
+from .function_defn_visitor import *
 
-from logger import log
+from .logger import log
 
 # === VBA MODULE AND STATEMENTS ==============================================
 

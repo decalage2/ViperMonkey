@@ -53,9 +53,9 @@ __version__ = '0.02'
 
 from pyparsing import *
 
-from vba_lines import line_terminator
+from .vba_lines import line_terminator
 
-from logger import log
+from .logger import log
 log.debug('importing comments_eol')
 
 

@@ -69,8 +69,8 @@ https://github.com/decalage2/ViperMonkey
 
 import sys
 import re
-from logger import log
-import vba_context
+from .logger import log
+from . import vba_context
 from random import randint
 
 def is_useless_dim(line):

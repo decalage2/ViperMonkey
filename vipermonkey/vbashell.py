@@ -88,7 +88,7 @@ def eval_expression(e):
     print('Evaluating %s' % e)
     value = vm.eval(e)
     print('Returned value: %s' % value)
-    # print table of all recorded actions
+    # print(table of all recorded actions)
     print('Recorded Actions:')
     print(vm.dump_actions())
 
@@ -97,11 +97,11 @@ def main():
     """
     Main function, called when vbashell is run from the command line
     """
-    # print banner with version
-    print ('vbashell %s - https://github.com/decalage2/ViperMonkey' % __version__)
-    print ('THIS IS WORK IN PROGRESS - Check updates regularly!')
-    print ('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
-    print ('')
+    # print(banner with version)
+    print(('vbashell %s - https://github.com/decalage2/ViperMonkey' % __version__))
+    print(('THIS IS WORK IN PROGRESS - Check updates regularly!'))
+    print(('Please report any issue at https://github.com/decalage2/ViperMonkey/issues'))
+    print((''))
 
     DEFAULT_LOG_LEVEL = "info" # Default log level
     LOG_LEVELS = {
@@ -155,7 +155,7 @@ def main():
                 args = cmd.split()
                 print('Tracing %s' % args[1])
                 vm.trace(entrypoint=args[1])
-                # print table of all recorded actions
+                # print(table of all recorded actions)
                 print('Recorded Actions:')
                 print(vm.dump_actions())
 

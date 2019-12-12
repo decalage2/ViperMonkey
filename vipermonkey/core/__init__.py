@@ -97,13 +97,13 @@ import string
 
 import subprocess
 
-from logger import log
-from procedures import Function
-from procedures import Sub
-from function_call_visitor import *
-from function_defn_visitor import *
-from function_import_visitor import *
-from var_defn_visitor import *
+from .logger import log
+from .procedures import Function
+from .procedures import Sub
+from .function_call_visitor import *
+from .function_defn_visitor import *
+from .function_import_visitor import *
+from .var_defn_visitor import *
 
 # === FUNCTIONS ==============================================================
 
@@ -130,11 +130,11 @@ def list_startswith(_list, lstart):
 
 # === VBA GRAMMAR ============================================================
 
-from vba_lines import *
-from modules import *
+from .vba_lines import *
+from .modules import *
 
 # Make sure we populate the VBA Library:
-from vba_library import *
+from .vba_library import *
 
 # === ViperMonkey class ======================================================
 
@@ -406,7 +406,7 @@ class ViperMonkey(object):
             # Regular local function call.
             r.append(f)
 
-        # Sort and return the fingerprint function list.
+        # Sort and return the fingerprint(function list.)
         r.sort()
         return r
         
@@ -431,35 +431,35 @@ class ViperMonkey(object):
             context.dll_func_true_names[func.name] = func.alias_name
         
         # Save the document text in the proper variable in the context.
-        context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
+        context.globals["ActiveDocument.Content.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["ActiveDocument.Range.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["ActiveDocument.Range".lower()] = b"\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Start".lower()] = 0
-        context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["ActiveDocument.Content.End".lower()] = len(b"\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
-        context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["ThisDocument.Range".lower()] = "\n".join(self.doc_text)
+        context.globals["ThisDocument.Content.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["ThisDocument.Range.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["ThisDocument.Range".lower()] = b"\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Start".lower()] = 0
-        context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["ThisDocument.Content.End".lower()] = len(b"\n".join(self.doc_text))
         context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
-        context.globals["['ActiveDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["['ActiveDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["['ActiveDocument'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Content.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Range.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["['ActiveDocument'].Range".lower()] = b"\n".join(self.doc_text)
         context.globals["['ActiveDocument'].Content.Start".lower()] = 0
-        context.globals["['ActiveDocument'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['ActiveDocument'].Content.End".lower()] = len(b"\n".join(self.doc_text))
         context.globals["['ActiveDocument'].Paragraphs".lower()] = self.doc_text
-        context.globals["['ThisDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["['ThisDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
-        context.globals["['ThisDocument'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Content.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Range.Text".lower()] = b"\n".join(self.doc_text)
+        context.globals["['ThisDocument'].Range".lower()] = b"\n".join(self.doc_text)
         context.globals["['ThisDocument'].Content.Start".lower()] = 0
-        context.globals["['ThisDocument'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['ThisDocument'].Content.End".lower()] = len(b"\n".join(self.doc_text))
         context.globals["['ThisDocument'].Paragraphs".lower()] = self.doc_text
 
         # Fake up some comments.
         # TODO: Figure out how to actually read the comments.
-        context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
-        context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
+        context.globals["ActiveDocument.Comments".lower()] = [b"Comment 1", b"Comment 2"]
+        context.globals["ThisDocument.Comments".lower()] = [b"Comment 1", b"Comment 2"]
         
         # reset the actions list, in case it is called several times
         self.actions = []
@@ -550,19 +550,19 @@ class ViperMonkey(object):
         # store the action for later use:
         try:
             if (isinstance(action, str)):
-                action = unidecode.unidecode(action.decode('unicode-escape'))
+                action = unidecode.unidecode(action)
         except UnicodeDecodeError:
             action = ''.join(filter(lambda x:x in string.printable, action))
         if (isinstance(params, str)):
             try:
-                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
+                decoded = params.replace("\\", "#ESCAPED_SLASH#").replace("#ESCAPED_SLASH#", "\\")
                 params = unidecode.unidecode(decoded)
             except Exception as e:
                 log.warn("Unicode decode of action params failed. " + str(e))
                 params = ''.join(filter(lambda x:x in string.printable, params))
         try:
             if (isinstance(description, str)):
-                description = unidecode.unidecode(description.decode('unicode-escape'))
+                description = unidecode.unidecode(description)
         except UnicodeDecodeError as e:
             log.warn("Unicode decode of action description failed. " + str(e))
             description = ''.join(filter(lambda x:x in string.printable, description))

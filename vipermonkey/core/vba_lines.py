@@ -51,7 +51,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from logger import log
+from .logger import log
 
 from pyparsing import *
 

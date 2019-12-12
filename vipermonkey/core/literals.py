@@ -45,8 +45,8 @@ import re
 
 from pyparsing import *
 
-from logger import log
-from vba_object import VBA_Object
+from .logger import log
+from .vba_object import VBA_Object
 
 # --- BOOLEAN ------------------------------------------------------------
 

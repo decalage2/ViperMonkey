@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 import subprocess
 
-from logger import log
+from .logger import log
 
 class FakeMeta(object):
     pass

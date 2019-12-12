@@ -51,26 +51,26 @@ from hashlib import sha256
 import sys
 import os
 import random
-from from_unicode_str import *
+from .from_unicode_str import *
 import decimal
-from curses_ascii import isprint
+from curses.ascii import isprint
 
 from pyparsing import *
 
-import vb_str
-from vba_context import VBA_LIBRARY
-from vba_object import str_convert
-from vba_object import int_convert
-from vba_object import eval_arg
-from vba_object import VbaLibraryFunc
-from vba_object import VBA_Object
-from vba_object import excel_col_letter_to_index
-from vba_object import strip_nonvb_chars
-import expressions
-import modules
-import strip_lines
+from . import vb_str
+from .vba_context import VBA_LIBRARY
+from .vba_object import str_convert
+from .vba_object import int_convert
+from .vba_object import eval_arg
+from .vba_object import VbaLibraryFunc
+from .vba_object import VBA_Object
+from . import excel_col_letter_to_index
+from .vba_object import strip_nonvb_chars
+from . import expressions
+from . import modules
+from . import strip_lines
 
-from logger import log
+from .logger import log
 
 # === VBA LIBRARY ============================================================
 
@@ -335,7 +335,7 @@ class Mid(VbaLibraryFunc):
         s = params[0]
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:
@@ -406,7 +406,7 @@ class Left(VbaLibraryFunc):
         
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:
@@ -458,7 +458,7 @@ class Right(VbaLibraryFunc):
         
         # "If String contains the data value Null, Null is returned."
         if s == None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = str(s)
         start = 0
         try:

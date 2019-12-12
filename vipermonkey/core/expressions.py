@@ -47,20 +47,20 @@ import os
 import array
 from hashlib import sha256
 
-from identifiers import *
-from reserved import *
-from lib_functions import *
-from literals import *
-from operators import *
-import procedures
-from vba_object import eval_arg
-from vba_object import coerce_to_int
-from vba_object import strip_nonvb_chars
-from vba_object import int_convert
-from vba_object import VbaLibraryFunc
-import vba_context
+from .identifiers import *
+from .reserved import *
+from .lib_functions import *
+from .literals import *
+from .operators import *
+from . import procedures
+from .vba_object import eval_arg
+from .vba_object import coerce_to_int
+from .vba_object import strip_nonvb_chars
+from .vba_object import int_convert
+from .vba_object import VbaLibraryFunc
+from . import vba_context
 
-from logger import log
+from .logger import log
 
 # --- FILE POINTER -------------------------------------------------
 
@@ -482,7 +482,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = rhs[0]
         if (str(rhs) != "Close"):
             return None
-        from vba_library import Close
+        from .vba_library import Close
         file_close = Close()
             
         # File closed.
@@ -1155,7 +1155,7 @@ class Function_Call(VBA_Object):
         # Making a new one.
         self.name = str(tokens.name)
         log.debug('Function_Call.name = %r' % self.name)
-        assert isinstance(self.name, basestring)
+        assert isinstance(self.name, str)
         self.params = tokens.params
         log.debug('Function_Call.params = %r' % self.params)
         log.debug('parsed %r as Function_Call' % self)
@@ -1173,7 +1173,7 @@ class Function_Call(VBA_Object):
     def eval(self, context, params=None):
 
         # Save the unresolved argument values.
-        import vba_library
+        from . import vba_library
         vba_library.var_names = self.params
         
         log.debug("Function_Call: eval params: " + str(self.params))
@@ -1266,8 +1266,7 @@ class Function_Call(VBA_Object):
             log.debug('Calling: %r' % f)
             if (f is not None):
                 if (not(isinstance(f, str)) and
-                    not(isinstance(f, list)) and
-                    not(isinstance(f, unicode))):
+                    not(isinstance(f, list))):
                     try:
 
                         # Call function.

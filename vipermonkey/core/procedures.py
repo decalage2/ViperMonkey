@@ -41,12 +41,12 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from vba_context import *
-from statements import *
-from identifiers import *
+from .vba_context import *
+from .statements import *
+from .identifiers import *
 
-from logger import log
-from tagged_block_finder_visitor import *
+from .logger import log
+from .tagged_block_finder_visitor import *
 
 # --- SUB --------------------------------------------------------------------
 

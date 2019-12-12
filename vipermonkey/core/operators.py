@@ -44,9 +44,9 @@ __version__ = '0.03'
 
 import sys
 
-from vba_object import *
+from .vba_object import *
 
-from logger import log
+from .logger import log
 
 def debug_repr(op, args):
     r = "("
