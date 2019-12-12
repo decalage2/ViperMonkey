@@ -1109,13 +1109,29 @@ def _process_file (filename,
             for (var_name, var_val) in object_data:
                 vm.doc_vars[var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (var_name, var_val))
+
                 tmp_var_name = "ActiveDocument." + var_name
                 vm.doc_vars[tmp_var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+
                 tmp_var_name = var_name + ".Text"
                 vm.doc_vars[tmp_var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
                 tmp_var_name = var_name + ".Caption"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                tmp_var_name = var_name + ".ControlTipText"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+
+                var_name = "me." + var_name
+                tmp_var_name = var_name + ".Text"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                tmp_var_name = var_name + ".Caption"
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                tmp_var_name = var_name + ".ControlTipText"
                 vm.doc_vars[tmp_var_name.lower()] = var_val
                 log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
                     

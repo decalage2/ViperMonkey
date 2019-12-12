@@ -156,6 +156,151 @@ def get_msftedit_variables(obj):
     # This is an Office 2007+ file.
     return []
 
+def get_ole_textbox_values2(data, debug, vba_code):
+    """
+    Read in the text associated with embedded OLE form textbox objects.
+    NOTE: This currently is a really NASTY hack.
+    """
+
+    # Pull out the object text value references from the VBA code.
+    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+(?:\.ControlTipText)?)", vba_code))
+    if debug:
+        print "\nget_ole_textbox_values2()"
+        print "\nNames from VBA code:"
+        print object_names
+    
+    # Break out the variables from which we want control tip text and non-control tip text variables.
+    control_tip_var_names = set()
+    other_var_names = set()
+    for name in object_names:
+
+        # Getting control tip text for this object?
+        if (name.endswith(".ControlTipText")):
+            fields = name.split(".")[:-1]
+            short_name = fields[-1]
+            control_tip_var_names.add(short_name)
+
+        # Not getting control tip text.
+        else:
+            fields = name.split(".")
+            short_name = fields[-1]
+            other_var_names.add(short_name)
+
+    # Read in the large chunk of data with the object names and string values.
+    chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)Microsoft Forms 2.0 Form'
+    chunk = re.findall(chunk_pat, data, re.DOTALL)
+
+    # Did we find the value chunk?
+    if (len(chunk) == 0):
+        if debug:
+            print "NO VALUES"
+        return []
+    chunk = chunk[0]
+
+    # Strip some red herring strings from the chunk.
+    chunk = chunk.replace("\x02$", "").replace("\x01@", "")
+
+    # Pull out the strings from the value chunk.
+    ascii_pat = r"(?:[\x20-\x7f]|\x0d\x0a){4,}"
+    vals = re.findall(ascii_pat, chunk)
+    vals = vals[:-1]
+    tmp_vals = []
+    for val in vals:
+
+        # Skip fonts.
+        if (val.startswith("Taho")):
+            continue
+        tmp_vals.append(val)
+    vals = tmp_vals
+    if debug:
+        print "---------------"
+        print "Values:"
+        print chunk
+        print ""
+        print object_names
+        print vals
+        print len(vals)
+
+    # Looks like control tip text goes right after var names in the string
+    # list.
+    r = []
+    updated_vals = []
+    skip = set()
+    for name in control_tip_var_names:
+        pos = -1
+        for str_val in vals:
+            pos += 1
+            if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
+
+                # Save the current name/value pair.
+                r.append((name, vals[pos + 1]))
+
+                # Some extra characters sometimes are on the end of the names. Brute force this
+                # by just returning multiple name variants with characters chopped off the end.
+                n = name
+                if (len(n) > 2):
+                    n = n[:-1]
+                    r.append((n, vals[pos + 1]))
+                if (len(n) > 2):
+                    n = n[:-1]
+                    r.append((n, vals[pos + 1]))
+                if (len(n) > 2):
+                    n = n[:-1]
+                    r.append((n, vals[pos + 1]))
+                
+                # We've handled with name and value, so skip them.
+                skip.add(pos)
+                skip.add(pos + 1)
+
+    # Strip out the variable names and values we have matched up as control tip text.
+    updated_vals = []
+    pos = -1
+    for v in vals:
+        pos += 1
+        if (pos not in skip):
+            updated_vals.append(v)
+            
+    # It looks like the non-control tip variable values and names are what is
+    # left in the list, with values in the 1st half of the list and the variable
+    # names in the 2nd half of the list.
+    var_names = updated_vals[(-1 * (len(updated_vals)/2)):]
+    var_vals = updated_vals[:(len(updated_vals)/2)]
+    if debug:
+        print "\nNAMES:"
+        print var_names
+        print "\nVALS:"
+        print var_vals
+
+    # Match up the names and values.
+    pos = -1
+    for name in var_names:
+        pos += 1
+        val = var_vals[pos]
+        if (val.endswith('o')):
+            val = val[:-1]
+        elif (val.endswith("oe")):
+            val = val[:-2]
+        r.append((name, val))
+
+        # Some extra characters sometimes are on the end of the names. Brute force this
+        # by just returning multiple name variants with characters chopped off the end.
+        n = name
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, val))
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, val))
+        if (len(n) > 2):
+            n = n[:-1]
+            r.append((n, val))
+
+    # Done.
+    if debug:
+        print "\nRESULTS:"
+        print r
+    return r
+
 def get_ole_textbox_values1(data, debug):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -303,6 +448,9 @@ def get_ole_textbox_values(obj, vba_code):
 
     # First try alternate method of pulling data. These will be merged in later.
     v1_vals = get_ole_textbox_values1(obj, debug)
+
+    # And try another alternate method of pulling data. These will be merged in later.
+    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code)
         
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
@@ -763,7 +911,7 @@ def get_ole_textbox_values(obj, vba_code):
         last_val = curr_val
     r = tmp
 
-    # Merge in the variable/value pairs from the alternate method. Override method 2
+    # Merge in the variable/value pairs from the 1st alternate method. Override method 2
     # results with method 1 results.
     tmp = []
     v2_vals = r
@@ -775,10 +923,23 @@ def get_ole_textbox_values(obj, vba_code):
     r = tmp
     if (len(r) == 0):
         r = v2_vals
+
+    # Merge in the variable/value pairs from the 2nd alternate method. Override method 2
+    # results with method 1 results.
+    tmp = []
+    v2_vals = r
+    for v1_pair in v1_1_vals:
+        tmp.append(v1_pair)
+        for v2_pair in v2_vals:
+            if (v1_pair[0] != v2_pair[0]):
+                tmp.append(v2_pair)
+    r = tmp
+    if (len(r) == 0):
+        r = v2_vals
     
     # Return the OLE form textbox information.
     if debug:
-        print "" 
+        print "\nFINAL RESULTS:" 
         print r
         sys.exit(0)
 
