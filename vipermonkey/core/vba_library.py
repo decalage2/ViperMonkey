@@ -3238,7 +3238,8 @@ class Print(VbaLibraryFunc):
             context.report_action('Write URL', data_str, 'Debug Print')
 
         if (params[0] is not None):
-            context.report_action("Debug Print", str(params[0]), '')
+            if (not context.throttle_logging):
+                context.report_action("Debug Print", str(params[0]), '')
 
 class Debug(Print):
     """

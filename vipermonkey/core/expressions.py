@@ -110,7 +110,8 @@ class SimpleNameExpression(VBA_Object):
                     return "NULL"
 
                 # 0 parameter function. Evaluate it.
-                log.info("calling Function: " + str(value) + "()")
+                if (not context.throttle_logging):
+                    log.info("calling Function: " + str(value) + "()")
                 log.debug('evaluating function %r' % value)
                 value = value.eval(context)
                 log.debug('evaluated function %r = %r' % (self.name, value))
@@ -1436,7 +1437,8 @@ class Function_Call(VBA_Object):
         # We will not report the calls of some functions.
         skip_report_functions = set(["cos", "tan"])
         if (str(self.name).lower() not in skip_report_functions):
-            log.info('calling Function: %s(%s)' % (self.name, str_params))
+            if (not context.throttle_logging):
+                log.info('calling Function: %s(%s)' % (self.name, str_params))
         
         # Actually emulate the function call.
         if (is_external):

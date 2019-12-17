@@ -41,6 +41,7 @@ import re
 import random
 import os
 import sys
+from collections import Counter
 
 import olefile
 
@@ -156,6 +157,51 @@ def get_msftedit_variables(obj):
     # This is an Office 2007+ file.
     return []
 
+def remove_duplicates(lst):
+    """
+    Remove duplicate subsequences from a list.
+    
+    Taken from https://stackoverflow.com/questions/49833528/python-identifying-and-deleting-duplicate-sequences-in-list/49835215
+    """
+
+    # Want to delete all but last subsequence, so reverse list.
+    lst = list(lst)
+    lst.reverse()
+    
+    dropped_indices = set()
+    counter = Counter(tuple(lst[i:i+2]) for i in range(len(lst) - 1))
+
+    for i in range(len(lst) - 2, -1, -1):
+        sub = tuple(lst[i:i+2])
+        if counter[sub] > 1:
+            dropped_indices |= {i, i + 1}
+            counter[sub] -= 1
+
+    r = [x for i, x in enumerate(lst) if i not in dropped_indices]
+    r.reverse()
+    return r
+
+def entropy(text):
+    """
+    Compute the entropy of a string.
+    Taken from https://rosettacode.org/wiki/Entropy#Uses_Python_2
+    """
+    import math
+    log2=lambda x:math.log(x)/math.log(2)
+    exr={}
+    infoc=0
+    for each in text:
+        try:
+            exr[each]+=1
+        except:
+            exr[each]=1
+    textlen=len(text)
+    for k,v in exr.items():
+        freq  =  1.0*v/textlen
+        infoc+=freq*log2(freq)
+    infoc*=-1
+    return infoc
+
 def get_ole_textbox_values2(data, debug, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -187,7 +233,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
             other_var_names.add(short_name)
 
     # Read in the large chunk of data with the object names and string values.
-    chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)Microsoft Forms 2.0 Form'
+    chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
     chunk = re.findall(chunk_pat, data, re.DOTALL)
 
     # Did we find the value chunk?
@@ -199,33 +245,61 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
     # Strip some red herring strings from the chunk.
     chunk = chunk.replace("\x02$", "").replace("\x01@", "")
-
+    chunk = re.sub(r'[\x20-\x7f]{5,}(?:\x00[\x20-\x7f]){5,}', "", chunk)
+    
+    if debug:
+        print "\nChunk:"
+        print chunk
+    
+    # There is some MS cruft strings that should be eliminated from the
+    # strings pulled from the chunk.
+    cruft_pats = [r'Microsoft Forms 2.0 Form',
+                  r'Embedded Object',
+                  r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
+                  r'DEFAULT',
+                  r'MS Sans Serif',
+                  r'\{\\rtf1\\ansi\\ansicpg\d+\\deff\d+\\deflang\d+\{\\fonttbl\{\\f\d+\\f\w+\\fcharset\d+.+;\}\}',
+                  r'{\\\*\\generator [\w\d\. ]+;}\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+ ',
+                  r'\\par'
+    ]
+    
     # Pull out the strings from the value chunk.
-    ascii_pat = r"(?:[\x20-\x7f]|\x0d\x0a){4,}"
+    ascii_pat = r"(?:(?:[\x20-\x7f]|\x0d\x0a){4,})|(?:(?:[\x20-\x7f]\x00){4,})"
     vals = re.findall(ascii_pat, chunk)
     vals = vals[:-1]
     tmp_vals = []
     for val in vals:
 
-        # Skip fonts.
-        if (val.startswith("Taho")):
+        # No wide char strings.
+        val = val.replace("\x00", "")
+        
+        # Eliminate cruft.
+        for cruft_pat in cruft_pats:
+            val = re.sub(cruft_pat, "", val)
+            
+        # Skip strings that were pure cruft.
+        if (len(val) == 0):
             continue
+            
+        # Skip fonts and other things.
+        if ((val.startswith("Taho")) or
+            (val.startswith("PROJECT")) or
+            (val.startswith("_DELETED_NAME_"))):
+            continue
+
+        # Save modified string.
         tmp_vals.append(val)
+
+    # Work with the modified list of strings.
     vals = tmp_vals
-    if debug:
-        print "---------------"
-        print "Values:"
-        print chunk
-        print ""
-        print object_names
-        print vals
-        print len(vals)
 
     # Looks like control tip text goes right after var names in the string
     # list.
     r = []
     updated_vals = []
     skip = set()
+    if debug:
+        print "CONTROL TIP PROCESSING:"
     for name in control_tip_var_names:
         pos = -1
         for str_val in vals:
@@ -233,6 +307,8 @@ def get_ole_textbox_values2(data, debug, vba_code):
             if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
 
                 # Save the current name/value pair.
+                if debug:
+                    print (name, vals[pos + 1])
                 r.append((name, vals[pos + 1]))
 
                 # Some extra characters sometimes are on the end of the names. Brute force this
@@ -252,25 +328,99 @@ def get_ole_textbox_values2(data, debug, vba_code):
                 skip.add(pos)
                 skip.add(pos + 1)
 
-    # Strip out the variable names and values we have matched up as control tip text.
-    updated_vals = []
-    pos = -1
-    for v in vals:
-        pos += 1
-        if (pos not in skip):
-            updated_vals.append(v)
+    # Now use detailed regexes to pull out the var names and values.
+
+    # Get names.
+    name_pat1 = r"\x17\x00(\w{2,})"
+    name_pat = r"(?:" + name_pat1 + ")|("
+    first = True
+    for object_name in object_names:
+        if (not first):
+            name_pat += "|"
+        first = False
+        if ("." in object_name):
+            object_name = object_name[:object_name.index(".")]
+        name_pat += object_name
+    name_pat += ")"
+    names = re.findall(name_pat, chunk)
+
+    # Get values.
+    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|((?:(?:\x00)[\x20-\x7f]){2,})"
+    vals = re.findall(val_pat, chunk)
+
+    tmp_vals = []
+    for val in vals:
+
+        if (len(val[0]) > 0):
+            val = val[0]
+        else:
+            val = val[1]
+        
+        # No wide char strings.
+        val = val.replace("\x00", "")
+        
+        # Eliminate cruft.
+        for cruft_pat in cruft_pats:
+            val = re.sub(cruft_pat, "", val)
             
-    # It looks like the non-control tip variable values and names are what is
-    # left in the list, with values in the 1st half of the list and the variable
-    # names in the 2nd half of the list.
-    var_names = updated_vals[(-1 * (len(updated_vals)/2)):]
-    var_vals = updated_vals[:(len(updated_vals)/2)]
+        # Skip strings that were pure cruft.
+        if (len(val) == 0):
+            continue
+            
+        # Skip fonts and other things.
+        if ((val.startswith("Taho")) or
+            (val.startswith("PROJECT")) or
+            (val.startswith("_DELETED_NAME_"))):
+            continue
+
+        # Save modified string.
+        tmp_vals.append(val)
+
+    # Work with the modified list of values.
+    #var_vals = tmp_vals[1:]
+    var_vals = tmp_vals
+
+    # There may be an extra piece of randomly generated data at the start of the
+    # value list. See if there are 4 strings that appear random at the start of the
+    # list.
+    if (len(var_vals) > 4):
+        num_random = 0
+        for s in var_vals[:5]:
+            if (entropy(s) > 3.0):
+                num_random += 1
+            elif (s[0].isupper() and s[1:].islower()):
+                num_random += 1
+        if (num_random >= 3):
+            var_vals = var_vals[1:]
+
+    # Looks like duplicate subsequences of values can appear in the extracted
+    # strings. Remove those.
+    var_vals = remove_duplicates(var_vals)
+            
+    # Get rid of control tip text names, we have already handled those.
+    tmp_names = []
+    for name in names:
+        if (len(name[0]) > 0):
+            name = name[0]
+        else:
+            name = name[1]
+        if (name in control_tip_var_names):
+            continue
+        tmp_names.append(name)
+    var_names = tmp_names
+
+    # Make sure the # of names = # of values.
+    if (len(var_names) > len(var_vals)):
+        # TODO: How to intelligently pick whether to knock a name off the front or end.
+        #var_names = var_names[-len(var_vals):]
+        var_names = var_names[:len(var_vals)]
+        
     if debug:
-        print "\nNAMES:"
+        print "\nROUND 2:\nNAMES:"
         print var_names
         print "\nVALS:"
         print var_vals
-
+    
     # Match up the names and values.
     pos = -1
     for name in var_names:
@@ -297,8 +447,9 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
     # Done.
     if debug:
-        print "\nRESULTS:"
+        print "\nRESULTS VALUES2:"
         print r
+        sys.exit(0)
     return r
 
 def get_ole_textbox_values1(data, debug):
@@ -942,7 +1093,7 @@ def get_ole_textbox_values(obj, vba_code):
         print "\nFINAL RESULTS:" 
         print r
         sys.exit(0)
-
+        
     return r
 
 def _read_form_strings(vba):

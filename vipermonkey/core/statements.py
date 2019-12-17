@@ -1542,6 +1542,12 @@ class For_Statement(VBA_Object):
         # a loop that is just there for obfuscation.
         num_no_change = 0
         prev_context = None
+
+        # Sometimes I/O from progress printing can slow down emulation in
+        # large loops. Track the # of iterations run to throttle logging if
+        # needed.
+        num_iters_run = 0
+        throttle_io_limit = 10
         
         # Loop until the loop is broken out of or we hit the last index.
         while (((step > 0) and (context.get(self.name) <= end)) or
@@ -1560,6 +1566,15 @@ class For_Statement(VBA_Object):
                     self.is_useless = True
                     break
             prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
+
+            # Throttle logging if this is a long running loop.
+            num_iters_run += 1
+            if ((num_iters_run > throttle_io_limit) and ((num_iters_run % 500) == 0)):
+                log.warning("Long running loop. I/O has been throttled.")
+            if (num_iters_run > throttle_io_limit):
+                context.throttle_logging = True
+            if ((num_iters_run < throttle_io_limit) or ((num_iters_run % 500) == 0)):
+                context.throttle_logging = False
             
             # Execute the loop body.
             log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
@@ -2896,7 +2911,8 @@ class Call_Statement(VBA_Object):
             return None
 
         # Log functions of interest.
-        log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+        if (not context.throttle_logging):
+            log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
         if (is_external):
             context.report_action("External Call", self.name + "(" + str(call_params) + ")", self.name, strip_null_bytes=True)
         if ((self.name.lower() in context._log_funcs) or
@@ -3232,7 +3248,8 @@ class Goto_Statement(VBA_Object):
         block = context.tagged_blocks[self.label]
 
         # Execute the code block.
-        log.info("GOTO " + str(self.label))
+        if (not context.throttle_logging):
+            log.info("GOTO " + str(self.label))
         block.eval(context, params)
 
 # Goto statement
@@ -3589,7 +3606,8 @@ class External_Function(VBA_Object):
             function_name = self.alias_name
         else:
             function_name = self.name
-        log.info('Evaluating external function %s(%r)' % (function_name, params))
+        if (not context.throttle_logging):
+            log.info('Evaluating external function %s(%r)' % (function_name, params))
 
         # Log certain function calls.
         function_name = function_name.lower()

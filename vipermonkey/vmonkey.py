@@ -1206,6 +1206,8 @@ def _process_file (filename,
                         # Maybe the caption is used for the text when the text is not there?
                         if (val == None):
                             val = caption
+                        if ((val == '') and (tag == '') and (caption == '')):
+                            continue
                         vm.globals[name] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
                         vm.globals[name + ".tag"] = tag

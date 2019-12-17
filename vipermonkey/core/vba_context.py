@@ -119,6 +119,9 @@ class Context(object):
 
         # Track whether VBScript or VBA is being analyzed.
         self.is_vbscript = False
+
+        # Track whether logging should be throttled.
+        self.throttle_logging = False
         
         # Allow user to provide extra function names to be reported on.
         if log_funcs:
@@ -187,6 +190,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.throttle_logging = context.throttle_logging
             self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
             self.open_files = context.open_files
