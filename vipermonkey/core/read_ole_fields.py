@@ -233,7 +233,8 @@ def get_ole_textbox_values2(data, debug, vba_code):
             other_var_names.add(short_name)
 
     # Read in the large chunk of data with the object names and string values.
-    chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
+    #chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
+    chunk_pat = r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
     chunk = re.findall(chunk_pat, data, re.DOTALL)
 
     # Did we find the value chunk?
@@ -255,6 +256,8 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # strings pulled from the chunk.
     cruft_pats = [r'Microsoft Forms 2.0 Form',
                   r'Embedded Object',
+                  r'CompObj',
+                  r'VBFrame',
                   r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
                   r'DEFAULT',
                   r'MS Sans Serif',
@@ -331,7 +334,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Now use detailed regexes to pull out the var names and values.
 
     # Get names.
-    name_pat1 = r"\x17\x00(\w{2,})"
+    name_pat1 = r"(?:(?:\x17\x00)|(?:\x00\x80))(\w{2,})"
     name_pat = r"(?:" + name_pat1 + ")|("
     first = True
     for object_name in object_names:
