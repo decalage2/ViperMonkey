@@ -719,7 +719,8 @@ def process_file(container,
                  verbose=False,
                  display_int_iocs=False,
                  set_log=False,
-                 artifact_dir=None):
+                 artifact_dir=None,
+                 out_file_name=None):
 
     if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
@@ -751,7 +752,7 @@ def process_file(container,
             return None
     r = _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
                       entry_points=entry_points, time_limit=time_limit, display_int_iocs=display_int_iocs,
-                      artifact_dir=artifact_dir)
+                      artifact_dir=artifact_dir, out_file_name=out_file_name)
 
     # Reset logging.
     colorlog.basicConfig(level=logging.ERROR, format='%(log_color)s%(levelname)-8s %(message)s')
@@ -972,7 +973,8 @@ def _process_file (filename,
                    entry_points=None,
                    time_limit=None,
                    display_int_iocs=False,
-                   artifact_dir=None):
+                   artifact_dir=None,
+                   out_file_name=None):
     """
     Process a single file
 
@@ -1324,7 +1326,7 @@ def _process_file (filename,
                 form_strings = stream_form_map[stream_name]
                 vm.globals[tmp_name] = form_strings
                 log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
-                
+
             print("")
             print('-'*79)
             print('TRACING VBA CODE (entrypoint = Auto*):')
@@ -1350,6 +1352,31 @@ def _process_file (filename,
             print('VBA Builtins Called: ' + str(vm.external_funcs))
             print('')
             print('Finished analyzing ' + str(orig_filename) + " .\n")
+
+            if out_file_name:
+
+                actions_data = []
+                for action in vm.actions:
+                    actions_data.append({
+                        "action": action[0],
+                        "parameters": action[1],
+                        "description": action[2]
+                    })
+
+                out_data = {
+                    "file_name": orig_filename,
+                    "potential_iocs": list(tmp_iocs),
+                    "vba_builtins": vm.external_funcs,
+                    "actions": actions_data
+                }
+
+                try:
+                    with open(out_file_name, 'w') as out_file:
+                        out_file.write(json.dumps(out_data, indent=4))
+                        log.info("Saved results JSON to output file " + out_file_name)
+                except Exception as exc:
+                    log.error("Failed to output results to output file. " + str(exc))
+
             return (vm.actions, vm.external_funcs, tmp_iocs)
 
         else:
@@ -1483,9 +1510,11 @@ def main():
     parser.add_option("-r", action="store_true", dest="recursive",
                       help='find files recursively in subdirectories.')
     parser.add_option("-z", "--zip", dest='zip_password', type='str', default=None,
-                      help='if the file is a zip archive, open first file from it, using the provided password (requires Python 2.6+)')
+                      help='if the file is a zip archive, open first file from it, using the '
+                           'provided password (requires Python 2.6+)')
     parser.add_option("-f", "--zipfname", dest='zip_fname', type='str', default='*',
-                      help='if the file is a zip archive, file(s) to be opened within the zip. Wildcards * and ? are supported. (default:*)')
+                      help='if the file is a zip archive, file(s) to be opened within the zip. '
+                           'Wildcards * and ? are supported. (default:*)')
     parser.add_option("-e", action="store_true", dest="scan_expressions",
                       help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
@@ -1495,13 +1524,17 @@ def main():
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
                       help='Strip useless VB code from macros prior to parsing.')
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
-                      help="Emulate starting at the given function name(s). Use comma seperated list for multiple entries.")
+                      help="Emulate starting at the given function name(s). Use comma seperated "
+                           "list for multiple entries.")
     parser.add_option('-t', '--time-limit', dest="time_limit", action="store", default=None,
                       type='int', help="Time limit (in minutes) for emulation.")
     parser.add_option("-c", '--iocs', action="store_true", dest="display_int_iocs",
-                      help='Display potential IOCs stored in intermediate VBA variables assigned during emulation (URLs and base64).')
+                      help='Display potential IOCs stored in intermediate VBA variables '
+                           'assigned during emulation (URLs and base64).')
     parser.add_option("-v", '--version', action="store_true", dest="print_version",
                       help='Print version information of packages used by ViperMonkey.')
+    parser.add_option("-o", "--out-file", action="store", default=None, type="str",
+                      help="JSON output file containing resulting IOCs, builtins, and actions")
     
     (options, args) = parser.parse_args()
 
@@ -1540,7 +1573,8 @@ def main():
                          strip_useless=options.strip_useless_code,
                          entry_points=entry_points,
                          time_limit=options.time_limit,
-                         display_int_iocs=options.display_int_iocs)
+                         display_int_iocs=options.display_int_iocs,
+                         out_file_name=options.out_file)
 
 if __name__ == '__main__':
     main()
