@@ -260,6 +260,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
                   r'VBFrame',
                   r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
                   r'DEFAULT',
+                  r'InkEdit\d+',
                   r'MS Sans Serif',
                   r'\{\\rtf1\\ansi\\ansicpg\d+\\deff\d+\\deflang\d+\{\\fonttbl\{\\f\d+\\f\w+\\fcharset\d+.+;\}\}',
                   r'{\\\*\\generator [\w\d\. ]+;}\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+ ',
