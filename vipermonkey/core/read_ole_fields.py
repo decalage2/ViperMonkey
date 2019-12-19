@@ -233,15 +233,21 @@ def get_ole_textbox_values2(data, debug, vba_code):
             other_var_names.add(short_name)
 
     # Read in the large chunk of data with the object names and string values.
-    #chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
     chunk_pat = r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
     chunk = re.findall(chunk_pat, data, re.DOTALL)
 
     # Did we find the value chunk?
     if (len(chunk) == 0):
-        if debug:
-            print "NO VALUES"
-        return []
+
+        # Try a different chunk start marker.
+        chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
+        chunk = re.findall(chunk_pat, data, re.DOTALL)
+
+        # Did we find the value chunk?
+        if (len(chunk) == 0):
+            if debug:
+                print "NO VALUES"
+            return []
     chunk = chunk[0]
 
     # Strip some red herring strings from the chunk.
@@ -353,13 +359,16 @@ def get_ole_textbox_values2(data, debug, vba_code):
     vals = re.findall(val_pat, chunk)
 
     tmp_vals = []
-    for val in vals:
+    rev_vals = list(vals)
+    rev_vals.reverse()
+    seen = set()
+    for val in rev_vals:
 
         if (len(val[0]) > 0):
             val = val[0]
         else:
             val = val[1]
-        
+            
         # No wide char strings.
         val = val.replace("\x00", "")
         
@@ -377,10 +386,16 @@ def get_ole_textbox_values2(data, debug, vba_code):
             (val.startswith("_DELETED_NAME_"))):
             continue
 
+        # Skip duplicates.
+        if (val in seen):
+            continue
+        seen.add(val)
+        
         # Save modified string.
         tmp_vals.append(val)
 
     # Work with the modified list of values.
+    tmp_vals.reverse()
     #var_vals = tmp_vals[1:]
     var_vals = tmp_vals
 
