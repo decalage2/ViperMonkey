@@ -1338,9 +1338,11 @@ def _process_file (filename,
             print('\nRecorded Actions:')
             print(vm.dump_actions())
             print('')
+            full_iocs = vba_context.intermediate_iocs
+            full_iocs = full_iocs.union(read_ole_fields.pull_base64(data))
             tmp_iocs = []
-            if (len(vba_context.intermediate_iocs) > 0):
-                tmp_iocs = _remove_duplicate_iocs(vba_context.intermediate_iocs)
+            if (len(full_iocs) > 0):
+                tmp_iocs = _remove_duplicate_iocs(full_iocs)
                 if (display_int_iocs):
                     print('Intermediate IOCs:')
                     print('')

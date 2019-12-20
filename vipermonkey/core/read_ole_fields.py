@@ -48,6 +48,16 @@ import olefile
 from logger import log
 import filetype
 
+def pull_base64(data):
+    """
+    Pull base64 strings from some data.
+    """
+
+    # Pull out strings that might be base64.
+    base64_pat_loose = r"[A-Za-z0-9+/=]{40,}"
+    r = set(re.findall(base64_pat_loose, data))
+    return r
+
 def unzip_data(data):
     """
     Unzip zipped data in memory.
@@ -225,6 +235,10 @@ cruft_pats = [r'Microsoft Forms 2.0 Form',
               r'&H\d+=\{[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\};Word\d.\d;&H\d+',
               r'\[Workspace\]',
               r'http://schemas.openxmlformats.org/\w+/\w+/\w+',
+              r'Root Entry',
+              r'Data',
+              r'WordDocument',
+              r'ObjectPool',
 ]
     
 def get_ole_textbox_values2(data, debug, vba_code):
@@ -265,7 +279,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
     if (len(chunk) == 0):
 
         # Try a different chunk start marker.
-        chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
+        chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 (?:Form|Frame))|(?:ID="{))'
         chunk = re.findall(chunk_pat, data, re.DOTALL)
 
         # Did we find the value chunk?
@@ -478,7 +492,6 @@ def get_ole_textbox_values2(data, debug, vba_code):
     if debug:
         print "\nRESULTS VALUES2:"
         print r
-        sys.exit(0)
     return r
 
 def get_ole_textbox_values1(data, debug):
