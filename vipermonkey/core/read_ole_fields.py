@@ -202,6 +202,31 @@ def entropy(text):
     infoc*=-1
     return infoc
 
+# There is some MS cruft strings that should be eliminated from the
+# strings pulled from the chunk.
+cruft_pats = [r'Microsoft Forms 2.0 Form',
+              r'Embedded Object',
+              r'CompObj',
+              r'VBFrame',
+              r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
+              r'DEFAULT',
+              r'InkEdit\d+',
+              r'MS Sans Serif',
+              r'\{\\rtf1\\ansi\\ansicpg\d+\\deff\d+\\deflang\d+\{\\fonttbl\{\\f\d+\\f\w+\\fcharset\d+.+;\}\}',
+              r'{\\\*\\generator [\w\d\. ]+;}\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+ ',
+              r'\\par',
+              r'HelpContextID="\d+"',
+              r'VersionCompatible\d+="\d+"',
+              r'CMG="[A-Z0-9]+"',
+              r'DPB="[A-Z0-9]+"',
+              r'GC="[A-Z0-9]+"',
+              r'\[Host Extender Info\]',
+              r'&H\d+=\{[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\};VBE;&H\d+',
+              r'&H\d+=\{[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\-[A-Z0-9]+\};Word\d.\d;&H\d+',
+              r'\[Workspace\]',
+              r'http://schemas.openxmlformats.org/\w+/\w+/\w+',
+]
+    
 def get_ole_textbox_values2(data, debug, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -257,21 +282,6 @@ def get_ole_textbox_values2(data, debug, vba_code):
     if debug:
         print "\nChunk:"
         print chunk
-    
-    # There is some MS cruft strings that should be eliminated from the
-    # strings pulled from the chunk.
-    cruft_pats = [r'Microsoft Forms 2.0 Form',
-                  r'Embedded Object',
-                  r'CompObj',
-                  r'VBFrame',
-                  r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
-                  r'DEFAULT',
-                  r'InkEdit\d+',
-                  r'MS Sans Serif',
-                  r'\{\\rtf1\\ansi\\ansicpg\d+\\deff\d+\\deflang\d+\{\\fonttbl\{\\f\d+\\f\w+\\fcharset\d+.+;\}\}',
-                  r'{\\\*\\generator [\w\d\. ]+;}\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+\\[\d\w]+ ',
-                  r'\\par'
-    ]
     
     # Pull out the strings from the value chunk.
     ascii_pat = r"(?:(?:[\x20-\x7f]|\x0d\x0a){4,})|(?:(?:[\x20-\x7f]\x00){4,})"
@@ -1112,7 +1122,21 @@ def get_ole_textbox_values(obj, vba_code):
     r = tmp
     if (len(r) == 0):
         r = v2_vals
-    
+
+    # Eliminate cruft in values.
+    tmp_r = []
+    for old_pair in r:
+        name = old_pair[0]
+        val = old_pair[1]
+        print "++++++++++++"
+        print val
+        for cruft_pat in cruft_pats:
+            print cruft_pat
+            val = re.sub(cruft_pat, "", val)
+        print val
+        tmp_r.append((name, val))
+    r = tmp_r
+        
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
