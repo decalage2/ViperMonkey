@@ -798,9 +798,11 @@ class MemberAccessExpression(VBA_Object):
         if ("/" in filename):
             filename = filename[filename.rindex("/") + 1:]
         if ("\\" in filename):
-            filename = filename[filename.rindex("\\") + 1:]
+            filename = filename[filename.rindex("\\") + 1:]        
         fname = out_dir + "/" + filename
-        fname = fname.replace("\x00", "")
+        fname = fname.replace("\x00", "").replace("..", "")
+        fname = ''.join(filter(lambda x:x in string.printable, fname))
+        fname = re.sub(r"[^ -~]", "__", fname)
         try:
 
             # Write out the file.

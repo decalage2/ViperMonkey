@@ -3334,7 +3334,12 @@ class Context(object):
         # Dump the file.
         try:
             # Get a unique name for the file.
-            fname = fname.replace("\x00", "")
+            fname = re.sub(r"[^ -~]", "__", fname)
+            if ("/" in fname):
+                fname = fname[fname.rindex("/") + 1:]
+            if ("\\" in fname):
+                fname = fname[fname.rindex("\\") + 1:]
+            fname = fname.replace("\x00", "").replace("..", "")
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
             count = 0
