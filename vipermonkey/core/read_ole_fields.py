@@ -535,6 +535,12 @@ def get_ole_textbox_values1(data, debug):
         return []
     chunk_orig = chunk[0]
 
+    # Can we narrow it down?
+    if ("C\x00o\x00m\x00p\x00O\x00b\x00j" not in chunk_orig):
+        if debug:
+            print "NO NARROWED DOWN CHUNK"
+        return []
+    
     # Narrow the name chunk down.
     start = chunk_orig.index("C\x00o\x00m\x00p\x00O\x00b\x00j")
     chunk = chunk_orig[start + len("C\x00o\x00m\x00p\x00O\x00b\x00j"):]
