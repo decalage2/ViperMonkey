@@ -1128,12 +1128,8 @@ def get_ole_textbox_values(obj, vba_code):
     for old_pair in r:
         name = old_pair[0]
         val = old_pair[1]
-        print "++++++++++++"
-        print val
         for cruft_pat in cruft_pats:
-            print cruft_pat
             val = re.sub(cruft_pat, "", val)
-        print val
         tmp_r.append((name, val))
     r = tmp_r
         
