@@ -1556,7 +1556,7 @@ def main():
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
 
     # remove the output file name if it already exists
-    if os.path.exists(options.out_file):
+    if options.out_file and os.path.exists(options.out_file):
         os.remove(options.out_file)
 
     for container, filename, data in xglob.iter_files(args,
