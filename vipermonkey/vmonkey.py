@@ -148,7 +148,8 @@ def _read_doc_text_libreoffice(data):
     # Dump all the text using soffice.
     output = None
     try:
-        output = subprocess.check_output([_thismodule_dir + "/export_doc_text.py", out_dir])
+        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+                                          "--text", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
         os.remove(out_dir)
@@ -227,6 +228,7 @@ def _read_doc_text(fname, data=None):
     # LibreOffice might not be installed or this is not a Word doc. Punt and
     # just pull strings from the file.
     r = _read_doc_text_strings(data)
+
     return r
 
 def _get_inlineshapes_text_values(data):
@@ -831,7 +833,7 @@ def load_excel_libreoffice(data):
     # Dump all the sheets as CSV files using soffice.
     output = None
     try:
-        output = subprocess.check_output([_thismodule_dir + "/export_all_excel_sheets.py", out_dir])
+        output = subprocess.check_output(["python3", _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
     except Exception as e:
         log.error("Running export_all_excel_sheets.py failed. " + str(e))
         os.remove(out_dir)
@@ -1167,7 +1169,7 @@ def _process_file (filename,
             # Pull out the document text.
             log.info("Reading document text...")
             vm.doc_text = _read_doc_text('', data=data)
-            #print "\n\nDOC TEXT:\n" + str(vm.doc_text)
+            #print("\n\nDOC TEXT:\n" + str(vm.doc_text))
 
             log.info("Reading form variables...")
             try:
@@ -1373,8 +1375,8 @@ def _process_file (filename,
                 }
 
                 try:
-                    with open(out_file_name, 'w') as out_file:
-                        out_file.write(json.dumps(out_data, indent=4))
+                    with open(out_file_name, 'a') as out_file:
+                        out_file.write("\n" + json.dumps(out_data, indent=4))
                         log.info("Saved results JSON to output file " + out_file_name)
                 except Exception as exc:
                     log.error("Failed to output results to output file. " + str(exc))
@@ -1554,7 +1556,11 @@ def main():
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
-    
+
+    # remove the output file name if it already exists
+    if options.out_file and os.path.exists(options.out_file):
+        os.remove(options.out_file)
+
     for container, filename, data in xglob.iter_files(args,
                                                       recursive=options.recursive,
                                                       zip_password=options.zip_password,
