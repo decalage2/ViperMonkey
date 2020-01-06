@@ -9,6 +9,7 @@ import psutil
 import subprocess
 import time
 import argparse
+import json
 
 # sudo pip3 install unotools
 # sudo apt install libreoffice-calc, python3-uno
@@ -140,4 +141,4 @@ document = get_document(args.file, connection)
 if args.text:
     print(get_text(document))
 elif args.tables:
-    print(get_tables(document))
+    print(json.dumps(get_tables(document)))

@@ -226,6 +226,94 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_table_cell(self, context):
+        """
+        Handle reading a value from a table cell.
+        """
+
+        # Pull out the table index and cell indices.
+        # ActiveDocument.Tables(1).Cell(1, 1).Range
+        pat = r"\w+\.Tables\(\s*'(\w+)'\s*\)\.Cell\(\s*'(\w+)\s*,\s*(\w+)'\s*\).*"
+        indices = re.findall(pat, str(self))
+        if (len(indices) == 0):
+            return None
+        indices = indices[0]
+
+        # Evaluate the table and cell indices.
+        table_index = None
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(indices[0], parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            table_index = obj
+            if (isinstance(table_index, VBA_Object)):
+                table_index = table_index.eval(context)
+            if (isinstance(table_index, str)):
+                table_index = int(table_index.replace("'", ""))
+            table_index -= 1
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + indices[0] + "'")
+            return None
+        except Exception as e:
+            log.error("Comment index '" + str(indices[0]) + "' not int. " + str(e))
+            return None
+        cell_index_row = None
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(indices[1], parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            cell_index_row = obj
+            if (isinstance(cell_index_row, VBA_Object)):
+                cell_index_row = cell_index_row.eval(context)
+            if (isinstance(cell_index_row, str)):
+                cell_index_row = int(cell_index_row.replace("'", ""))
+            cell_index_row -= 1
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + indices[1] + "'")
+            return None
+        except Exception as e:
+            log.error("Comment index '" + str(indices[1]) + "' not int. " + str(e))
+            return None
+        cell_index_col = None
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(indices[2], parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            cell_index_col = obj
+            if (isinstance(cell_index_col, VBA_Object)):
+                cell_index_col = cell_index_col.eval(context)
+            if (isinstance(cell_index_row, str)):
+                cell_index_col = int(cell_index_row.replace("'", ""))
+            cell_index_col -= 1
+
+        except ParseException:
+            log.error("Parse error. Cannot evaluate '" + indices[2] + "'")
+            return None
+        except Exception as e:
+            log.error("Comment index '" + str(indices[2]) + "' not int. " + str(e))
+            return None
+
+        # Do we have that cell in a table?
+        tables = context.get("__DOC_TABLE_CONTENTS__")
+        if (table_index >= len(tables)):
+            return None
+        table = tables[table_index]
+        if (cell_index_row >= len(table)):
+            return None
+        row = table[cell_index_row]
+        if (cell_index_col >= len(row)):
+            return None
+        cell = str(row[cell_index_col]) + "  "
+        return cell
+    
     def _handle_paragraphs(self, context):
         """
         Handle references to the .Paragraphs field of the current doc.
@@ -1030,6 +1118,11 @@ class MemberAccessExpression(VBA_Object):
             # is the With context item.
             tmp_lhs = eval_arg(context.with_prefix, context)
 
+        # See if this is reading a table cell value.
+        call_retval = self._handle_table_cell(context)
+        if (call_retval is not None):
+            return call_retval
+            
         # Is the LHS a python dict and are we looking for a field?
         if (isinstance(tmp_lhs, dict)):
 

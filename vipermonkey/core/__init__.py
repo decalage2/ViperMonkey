@@ -182,6 +182,9 @@ class ViperMonkey(object):
 
         # Track document text.
         self.doc_text = ""
+
+        # Track document tables.
+        self.doc_tables = []
         
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
@@ -451,7 +454,10 @@ class ViperMonkey(object):
         for func_name in self.externals.keys():
             func = self.externals[func_name]
             context.dll_func_true_names[func.name] = func.alias_name
-        
+
+        # Save the document tables in the context.
+        context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
+            
         # Save the document text in the proper variable in the context.
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)

@@ -133,7 +133,10 @@ from core.logger import log
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text_libreoffice(data):
-
+    """
+    Returns a tuple containing the doc text and a list of tuples containing dumped tables.
+    """
+    
     # Don't try this if it is not an Office file.
     if (not filetype.is_office_file(data, True)):
         log.warning("The file is not an Office file. Not extracting document text with LibreOffice.")
@@ -156,7 +159,6 @@ def _read_doc_text_libreoffice(data):
         return None
 
     # Read the paragraphs from the converted text file.
-    os.remove(out_dir)
     r = []
     for line in output.split("\n"):
         r.append(line)
@@ -181,19 +183,30 @@ def _read_doc_text_libreoffice(data):
         if (first_line.startswith("[]*")):
             first_line = "/*" + first_line
         r = [first_line] + r[1:]
-                
-    # Return the paragraph text.
-    return r
+
+    # Dump all the tables using soffice.
+    output = None
+    try:
+        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+                                          "--tables", "-f", out_dir])
+    except Exception as e:
+        log.error("Running export_doc_text.py failed. " + str(e))
+        os.remove(out_dir)
+        return None
+
+    # Convert the text to a python list.
+    r1 = []
+    if (len(output.strip()) > 0):
+        r1 = json.loads(output)
+    
+    # Return the paragraph text and table text.
+    os.remove(out_dir)
+    return (r, r1)
 
 def _read_doc_text_strings(data):
     """
-    Use a heuristic to read in the document text. The current
-    heuristic (basically run strings on the document file) is not
-    good, so this function is a placeholder until Python support for
-    reading in the document text is found.
-
-    TODO: Replace this when a real Python solution for reading the doc
-    text is found.
+    Use a heuristic to read in the document text. This is used as a fallback if reading
+    the text with libreoffice fails.
     """
 
     # Pull strings from doc.
@@ -202,8 +215,8 @@ def _read_doc_text_strings(data):
     for s in str_list:
         r.append(s)
     
-    # Return all the strings.
-    return r
+    # Return all the doc text strings and an empty list of table data.
+    return (r, [])
 
 def _read_doc_text(fname, data=None):
     """
@@ -1167,9 +1180,10 @@ def _process_file (filename,
                 log.debug("Added potential VBA object caption text %r = %r to doc_vars." % (caption_name, caption_val))
                 
             # Pull out the document text.
-            log.info("Reading document text...")
-            vm.doc_text = _read_doc_text('', data=data)
+            log.info("Reading document text and tables...")
+            vm.doc_text, vm.doc_tables = _read_doc_text('', data=data)
             #print("\n\nDOC TEXT:\n" + str(vm.doc_text))
+            #print("\n\nDOC TABLES:\n" + str(vm.doc_tables))
 
             log.info("Reading form variables...")
             try:
