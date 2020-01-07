@@ -3628,7 +3628,7 @@ class Context(object):
         # convert to lowercase
         if (case_insensitive):
             tmp_name = name.lower()
-            self.set(tmp_name, value, var_type, do_with_prefix, force_local, force_global, no_conversion, case_insensitive=False)
+            self.set(tmp_name, value, var_type, do_with_prefix, force_local, force_global, no_conversion=no_conversion, case_insensitive=False)
         
         # Set the variable
         if (force_global):
@@ -3746,10 +3746,10 @@ class Context(object):
                     log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
 
         # Handle hex conversion with VBA objects.
-        if (name.endswith(".nodetypedvalue")):
+        if (name.lower().endswith(".nodetypedvalue")):
 
             # Handle doing conversions on the data.
-            node_type = name.replace(".nodetypedvalue", ".datatype")
+            node_type = name[:name.rindex(".")] + ".datatype"
             try:
 
                 # Something set to type "bin.hex"?
