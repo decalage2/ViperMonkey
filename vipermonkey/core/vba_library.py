@@ -1335,9 +1335,12 @@ class Replace(VbaLibraryFunc):
             if (pat.strip() != "."):
                 try:
                     pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                    fix_dash_pat = r"(\[.\w+)\\\-(\w+\])"
+                    pat1 = re.sub(fix_dash_pat, r"\1-\2", pat1)
                     rep = re.sub(r"\$(\d)", r"\\\1", rep)
                     r = re.sub(pat1, rep, string)
-                except:
+                except Exception as e:
+                    log.error("Regex replace " + str(params) + " failed. " + str(e))
                     r = string
 
         # Regular string replacement?
