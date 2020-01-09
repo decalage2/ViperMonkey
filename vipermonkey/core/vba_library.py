@@ -1717,7 +1717,15 @@ class Hex(VbaLibraryFunc):
         r = ''
         try:
             num = int_convert(params[0])
+            # Number treated as an unsigned int by VBA.
+            if (num < 0):
+                num += (1 << 32)
             r = hex(num).replace("0x","").upper()
+            # VBA chops FFs from the start of the string down to 1 FF.
+            if (r.startswith("FF")):
+                r = "FF" + r[r.rindex("FF") + len("FF"):]
+                if ((len(r) % 2) != 0):
+                    r = "F" + r
         except:
             pass
         log.debug("Hex: %r returns %r" % (self, r))
