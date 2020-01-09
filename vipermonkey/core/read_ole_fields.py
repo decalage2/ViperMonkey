@@ -1432,7 +1432,7 @@ def _get_comments_2007(fname):
         curr_id = ids[0]
 
         # Pull out the comment text.
-        text_pat = r"<w:t>([^<]+)</w:t>"
+        text_pat = r"<w:t[^>]*>([^<]+)</w:t>"
         texts = re.findall(text_pat, block)
         if (len(texts) == 0):
             continue
