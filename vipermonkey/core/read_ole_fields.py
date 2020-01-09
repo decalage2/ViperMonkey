@@ -1436,15 +1436,20 @@ def _get_comments_2007(fname):
         texts = re.findall(text_pat, block)
         if (len(texts) == 0):
             continue
-        text = texts[0]
-        text = text.replace("&amp;", "&")
-        text = text.replace("&gt;", ">")
-        text = text.replace("&lt;", "<")
-        text = text.replace("&apos;", "'")
-        text = text.replace("&quot;", '"')
+
+        block_text = ""
+
+        for text in texts:
+            text = text.replace("&amp;", "&")
+            text = text.replace("&gt;", ">")
+            text = text.replace("&lt;", "<")
+            text = text.replace("&apos;", "'")
+            text = text.replace("&quot;", '"')
+            block_text += text
+
 
         # Save the comment.
-        r.append((curr_id, text))
+        r.append((curr_id, block_text))
         
     # Done.
     unzipped_data.close()
