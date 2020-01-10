@@ -3340,6 +3340,8 @@ class Context(object):
             if ("\\" in fname):
                 fname = fname[fname.rindex("\\") + 1:]
             fname = fname.replace("\x00", "").replace("..", "")
+            if (fname.startswith(".")):
+                fname = "_dot_" + fname[1:]
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
             count = 0
