@@ -1389,9 +1389,8 @@ def _process_file (filename,
                 }
 
                 try:
-                    with open(out_file_name, 'a') as out_file:
+                    with open(out_file_name, 'w') as out_file:
                         out_file.write("\n" + json.dumps(out_data, indent=4))
-                        log.info("Saved results JSON to output file " + out_file_name)
                 except Exception as exc:
                     log.error("Failed to output results to output file. " + str(exc))
 
@@ -1571,14 +1570,13 @@ def main():
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
 
-    # remove the output file name if it already exists
-    if options.out_file and os.path.exists(options.out_file):
-        os.remove(options.out_file)
+    json_results = []
 
     for container, filename, data in xglob.iter_files(args,
                                                       recursive=options.recursive,
                                                       zip_password=options.zip_password,
                                                       zip_fname=options.zip_fname):
+
         # ignore directory names stored in zip files:
         if container and filename.endswith('/'):
             continue
@@ -1597,6 +1595,20 @@ def main():
                          time_limit=options.time_limit,
                          display_int_iocs=options.display_int_iocs,
                          out_file_name=options.out_file)
+
+            # add json results to list
+            if (options.out_file):
+                with open(options.out_file, 'r') as json_file:
+                    json_results.append(json.loads(json_file.read()))
+
+    if (options.out_file):
+        with open(options.out_file, 'w') as json_file:
+            if (len(json_results) > 1):
+                json_file.write(json.dumps(json_results, indent=2))
+            else:
+                json_file.write(json.dumps(json_results[0], indent=2))
+
+        log.info("Saved results JSON to output file " + options.out_file)
 
 if __name__ == '__main__':
     main()
