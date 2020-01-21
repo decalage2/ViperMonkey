@@ -105,6 +105,9 @@ class Context(object):
                  expand_env_vars=True,
                  metadata=None):
 
+        # Track whether emulation actions have been reported.
+        self.got_actions = False
+        
         # Track all external functions called by the program.
         self.external_funcs = []
         
@@ -3843,5 +3846,6 @@ class Context(object):
             description = strip_nonvb_chars(description)
             
         # Save the action for reporting.
+        self.got_actions = True
         self.engine.report_action(action, params, description)
 

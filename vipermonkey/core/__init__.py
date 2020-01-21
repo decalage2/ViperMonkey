@@ -509,7 +509,7 @@ class ViperMonkey(object):
         for m in self.modules:
             if (m.eval(context=context)):
                 context.dump_all_files(autoclose=True)
-                done_emulation = True
+                done_emulation = context.got_actions
         
         # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
@@ -543,20 +543,20 @@ class ViperMonkey(object):
         # Did we find an entry point?
         if (not done_emulation):
 
-            # Count the # of subroutines in the document.
-            only_sub = None
-            sub_name = None
-            sub_count = 0
+            # Try heuristics to find possible entry points.
+            log.warn("No entry points found. Using heuristics to find entry points...")
+            
+            # Find any 0 argument subroutines. We will try emulating these as potential entry points.
+            zero_arg_subs = []
             for name in self.globals.keys():
                 item = self.globals[name]
-                if (isinstance(item, Sub)):
-                    only_sub = item
-                    sub_name = name
-                    sub_count += 1
-
-            # If there is only 1 subroutine, emulate that.
-            if (sub_count == 1):
-                context.report_action('Found Entry Point', str(sub_name), '')
+                if ((isinstance(item, Sub)) and (len(item.params) == 0)):
+                    zero_arg_subs.append(item)
+                    
+            # Emulate all 0 argument subroutines as potential entry points.
+            for only_sub in zero_arg_subs:
+                sub_name = only_sub.name
+                context.report_action('Found Heuristic Entry Point', str(sub_name), '')
                 only_sub.eval(context=context)
                 context.dump_all_files(autoclose=True)
                 
