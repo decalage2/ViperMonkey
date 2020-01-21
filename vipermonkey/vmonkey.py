@@ -945,7 +945,7 @@ def _remove_duplicate_iocs(iocs):
     # Track whether to keep an IOC string.
     r = set()
     skip = set()
-    print("Found " + str(len(iocs)) + " possible IOCs. Stripping duplicates...")
+    log.info("Found " + str(len(iocs)) + " possible IOCs. Stripping duplicates...")
     for ioc1 in iocs:
         keep_curr = True
         for ioc2 in iocs:
@@ -1182,8 +1182,6 @@ def _process_file (filename,
             # Pull out the document text.
             log.info("Reading document text and tables...")
             vm.doc_text, vm.doc_tables = _read_doc_text('', data=data)
-            #print("\n\nDOC TEXT:\n" + str(vm.doc_text))
-            #print("\n\nDOC TABLES:\n" + str(vm.doc_tables))
 
             log.info("Reading form variables...")
             try:
@@ -1218,7 +1216,15 @@ def _process_file (filename,
                         if (control_tip_text is None):
                             control_tip_text = ''
                         control_tip_text = control_tip_text.replace('\xb1', '').replace('\x03', '')
-                            
+                        group_name = ''
+                        if 'group_name' in form_variables:
+                            group_name = form_variables['group_name']
+                        if (group_name is None):
+                            group_name = ''
+                        group_name = group_name.replace('\xb1', '').replace('\x03', '')
+                        if (len(group_name) > 10):
+                            group_name = group_name[3:]
+                        
                         # Save full form variable names.
                         name = global_var_name.lower()
                         # Maybe the caption is used for the text when the text is not there?
@@ -1238,6 +1244,8 @@ def _process_file (filename,
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
                         vm.globals[name + ".value"] = val
                         log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Value", val))
+                        vm.globals[name + ".groupname"] = group_name
+                        log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".GroupName", group_name))
 
                         # Save control in a list so it can be accessed by index.
                         if ("." in name):
@@ -1250,10 +1258,11 @@ def _process_file (filename,
                             # Create a dict representing the various data items for the current control.
                             control_data = {}
                             control_data["value"] = val
-                            control_data["tag"] = val
+                            control_data["tag"] = tag
                             control_data["caption"] = caption
                             control_data["controltiptext"] = control_tip_text
                             control_data["text"] = val
+                            control_data["groupname"] = group_name
 
                             # Assuming we are getting these for controls in order, append the current
                             # control information to the list for the form.
@@ -1274,6 +1283,8 @@ def _process_file (filename,
                             log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".ControlTipText", control_tip_text))
                             vm.globals[short_name + ".text"] = val
                             log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Text", val))
+                            vm.globals[short_name + ".groupname"] = group_name
+                            log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".GroupName", group_name))
                 
             except Exception as e:
 
