@@ -79,7 +79,7 @@ rem_keyword = CaselessKeyword("Rem")
 # A <marker-keyword> is a <reserved-identifier> that is used as part of the interior
 # syntactic structure of a statement.
 marker_keyword = caselessKeywordsList(
-    ("Any", "As", "ByRef", "ByVal ", "Case", "For", "Each", "Else", "In", "New",
+    ("As", "ByRef", "ByVal ", "Case", "For", "Each", "Else", "In", "New",
      "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
      "Tab", "Then"))
 

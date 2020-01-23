@@ -919,9 +919,15 @@ def strip_useless_code(vba_code, local_funcs):
 
             # Skip lines where the '=' might be in a string.
             if ('"' in line):
-                eq_index = line.index("=")
-                qu_index1 =  line.index('"')
-                qu_index2 =  line.rindex('"')
+                eq_index = -1
+                if ("=" in line):
+                    eq_index = line.index("=")
+                qu_index1 = -1
+                if ('"' in line):
+                    qu_index1 =  line.index('"')
+                qu_index2 = -1
+                if ('"' in line):
+                    qu_index2 =  line.rindex('"')
                 if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
                     continue
             
