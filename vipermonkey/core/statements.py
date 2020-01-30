@@ -3065,7 +3065,8 @@ class Exit_For_Statement(VBA_Object):
         if (context.exit_func):
             return
         # Update the loop stack to indicate that the current loop should exit.
-        context.loop_stack.pop()
+        if (len(context.loop_stack) > 0):
+            context.loop_stack.pop()
         context.loop_stack.append(False)
 
 class Exit_While_Statement(Exit_For_Statement):
