@@ -1930,7 +1930,8 @@ class Dir(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) == 0)):
+            return ""
         pat = str(params[0])
         attrib = None
         # TODO: Handle multiple attributes.
