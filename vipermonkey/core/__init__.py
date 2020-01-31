@@ -224,6 +224,7 @@ class ViperMonkey(object):
                                   '_TitleChange',
                                   '_Initialize',
                                   '_Click',
+                                  '_OnConnecting',
                                   '_BeforeClose']
                                   
     def set_metadata(self, dat):
