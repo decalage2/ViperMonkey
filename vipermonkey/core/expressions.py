@@ -226,6 +226,28 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _handle_indexed_pages_access(self, context):
+        """
+        Handle getting the caption of a Page object referenced via index.
+        """
+
+        # Do we have an indexed page caption reference?
+        # Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption
+        page_pat = r".+\.Pages\('(\d+)'\)\.Caption"
+        index = re.findall(page_pat, str(self))
+        print "INDEXED_PAGES"
+        print self
+        print index
+        if (len(index) == 0):
+            return None
+        index = int(index[0]) + 1
+
+        # Try to look up a Page object variable with the desired index.
+        var_name = "Page" + str(index) + ".Caption"
+        if (context.contains(var_name)):
+            return context.get(var_name)
+        return None
+    
     def _handle_table_cell(self, context):
         """
         Handle reading a value from a table cell.
@@ -1057,8 +1079,12 @@ class MemberAccessExpression(VBA_Object):
                 log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
             except KeyError:
                 pass
-                
-        # Handle accessing control values from a form by index..
+
+        call_retval = self._handle_indexed_pages_access(context)
+        if (call_retval is not None):
+            return call_retval
+            
+        # Handle accessing control values from a form by index.
         call_retval = self._handle_indexed_form_access(context)
         if (call_retval is not None):
             return call_retval

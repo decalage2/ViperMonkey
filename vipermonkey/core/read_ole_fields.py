@@ -249,11 +249,22 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
     # Pull out the object text value references from the VBA code.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+(?:\.ControlTipText)?)", vba_code))
+
+    # Are we refering to Page objects by index?
+    page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
+    if (re.search(page_pat, vba_code) is not None):
+
+        # Add some Page objects to look for.
+        for i in range(1, 10):
+            object_names.add("Page" + str(i))
+
+    # Eliminate any obviously bad names.
+    object_names = clean_names(object_names)            
     if debug:
         print "\nget_ole_textbox_values2()"
         print "\nNames from VBA code:"
         print object_names
-    
+            
     # Break out the variables from which we want control tip text and non-control tip text variables.
     control_tip_var_names = set()
     other_var_names = set()
@@ -326,6 +337,9 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
     # Work with the modified list of strings.
     vals = tmp_vals
+    if debug:
+        print "ORIG VALS:"
+        print vals
 
     # Looks like control tip text goes right after var names in the string
     # list.
@@ -377,6 +391,9 @@ def get_ole_textbox_values2(data, debug, vba_code):
         name_pat += object_name
     name_pat += ")"
     names = re.findall(name_pat, chunk)
+    if debug:
+        print "ORIG NAMES:"
+        print names
 
     # Get values.
     val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|((?:(?:\x00)[\x20-\x7f]){2,})"
@@ -423,6 +440,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
     #var_vals = tmp_vals[1:]
     var_vals = tmp_vals
 
+    if debug:
+        print "ORIG VAR_VALS:"
+        print var_vals
+    
     # There may be an extra piece of randomly generated data at the start of the
     # value list. See if there are 4 strings that appear random at the start of the
     # list.
@@ -506,7 +527,7 @@ def get_ole_textbox_values1(data, debug):
 
     # Find the object text values.
     if debug:
-        print "Looking for other form of ActiveX embedding..."
+        print "\nget_ole_textbox_values1"
 
     # Pull out the chunk of data with the object values.
     chunk_pat = r'DPB=".*"\x0d\x0aGC=".*"\x0d\x0a(.*;Word8.0;&H00000000)'
@@ -616,6 +637,54 @@ def get_ole_textbox_values1(data, debug):
         print r
     return r
 
+def get_vbaprojectbin(data):
+    """
+    Pull vbaProject.bin from a 2007+ Office file.
+
+    data - Already read in 2007+ file contents.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return None
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return None
+
+    # Pull out word/vbaProject.bin, if it is there.
+    zip_subfile = 'word/vbaProject.bin'
+    if (zip_subfile not in unzipped_data.namelist()):
+        if (delete_file):
+            os.remove(fname)
+        return None
+
+    # Read vbaProject.bin.
+    f1 = unzipped_data.open(zip_subfile)
+    r = f1.read()
+    f1.close()
+
+    # Done.
+    if (delete_file):
+        os.remove(fname)
+    return r
+
+def is_name(poss_name):
+    if (poss_name is None):
+        return False
+    name_pat = r"[a-zA-Z]\w*"
+    return (re.match(name_pat, poss_name) is not None)
+    
+def clean_names(names):
+    r = set()    
+    for poss_name in names:
+        poss_name = poss_name.strip()
+        if (is_name(poss_name)):
+            r.add(poss_name)
+    return r
+
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -637,7 +706,11 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Is this an Office97 file?
     if (not filetype.is_office97_file(data, True)):
-        return []
+
+        # See if we can pul vbaProject.bin from a 2007+ Office file.
+        data = get_vbaprojectbin(data)
+        if (data is None):
+            return []
 
     # Set to True to print lots of debugging.
     #debug = True
@@ -650,10 +723,24 @@ def get_ole_textbox_values(obj, vba_code):
 
     # And try another alternate method of pulling data. These will be merged in later.
     v1_1_vals = get_ole_textbox_values2(data, debug, vba_code)
-        
+
+    if debug:
+        print "\nget_ole_textbox_values()\n"
+    
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
+
+    # Are we refering to Page objects by index?
+    page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
+    if (re.search(page_pat, vba_code) is not None):
+
+        # Add some Page objects to look for.
+        for i in range(1, 10):
+            object_names.add("Page" + str(i))
+
+    # Eliminate any obviously bad names.
+    object_names = clean_names(object_names)
     if debug:
         print "Names from VBA code:"
         print object_names
@@ -734,6 +821,15 @@ def get_ole_textbox_values(obj, vba_code):
             print chunk
             print str(strs).replace("\\x00", "").replace("\\xff", "")
 
+        # Save long strings. Maybe they are the value of a previous variable?
+        longest_str = ""
+        for field in strs:
+            if ((len(field) > 30) and
+                (len(field) > len(longest_str)) and
+                (not field.startswith("Microsoft "))):
+                longest_str = field
+        long_strs.append(longest_str)
+            
         # Easy case first. Does this look like it might be 1 of the objects
         # referenced in the VBA code?
         curr_pos = 0
@@ -886,8 +982,11 @@ def get_ole_textbox_values(obj, vba_code):
                 curr_pos += 1
 
         # Move to the next chunk if we cannot find a name.
-        if (name is None):
+        if (not is_name(name)):
             index = end
+            if debug:
+                print "No name found. Moving to next chunk."
+            r.append(("no name found", "placeholder"))
             continue
 
         # Get a text value after the name if it looks like the following field
@@ -975,7 +1074,7 @@ def get_ole_textbox_values(obj, vba_code):
             print name
             print text
             print len(text)
-                
+            
         # Pull out the size of the text.
         # Try version 1.
         size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
@@ -1001,17 +1100,12 @@ def get_ole_textbox_values(obj, vba_code):
             if (len(text) > size):
                 text = text[:size]
 
+        # Eliminate text values that look like variable names.
+        if (text.strip() in object_names):
+            text = ""
+                
         # Save the form name and text value.
         r.append((name, text))
-
-        # Save long strings. Maybe they are the value of a previous variable?
-        longest_str = ""
-        for field in strs:
-            if ((len(field) > 30) and
-                (len(field) > len(longest_str)) and
-                (not field.startswith("Microsoft "))):
-                longest_str = field
-        long_strs.append(longest_str)
 
         # Move to next chunk.
         index = end

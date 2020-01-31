@@ -1189,6 +1189,8 @@ def _process_file (filename,
                 for (subfilename, stream_path, form_variables) in vba.extract_form_strings_extended():
                     if form_variables is not None:
                         var_name = form_variables['name']
+                        if (var_name is None):
+                            continue
                         macro_name = stream_path
                         if ("/" in macro_name):
                             start = macro_name.rindex("/") + 1
@@ -1291,8 +1293,8 @@ def _process_file (filename,
                 # We are not getting variable names this way. Assign wildcarded names that we can use
                 # later to try to heuristically guess form variables.
                 log.warning("Cannot read form strings. " + str(e) + ". Trying fallback method.")
-                #traceback.print_exc()
-                #sys.exit(0)
+                traceback.print_exc()
+                sys.exit(0)
                 try:
                     count = 0
                     skip_strings = ["Tahoma", "Tahomaz"]
