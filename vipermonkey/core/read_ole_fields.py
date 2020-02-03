@@ -305,7 +305,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
     chunk = re.sub(r'[\x20-\x7f]{5,}(?:\x00[\x20-\x7f]){5,}', "", chunk)
 
     # Normalize Page object naming.
-    page_name_pat = r"Page(\d+)\-\d+"
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
     chunk = re.sub(page_name_pat, r"Page\1", chunk)
     
     if debug:
@@ -552,7 +552,7 @@ def get_ole_textbox_values1(data, debug):
         chunk = chunk[start+1:]
 
     # Normalize Page object naming.
-    page_name_pat = r"Page(\d+)\-\d+"
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
     chunk = re.sub(page_name_pat, r"Page\1", chunk)
         
     # Pull out the strings from the value chunk.
@@ -770,7 +770,7 @@ def get_ole_textbox_values(obj, vba_code):
     data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
 
     # Normalize Page object naming.
-    page_name_pat = r"Page(\d+)\-\d+"
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
     data = re.sub(page_name_pat, r"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
@@ -1123,7 +1123,11 @@ def get_ole_textbox_values(obj, vba_code):
         # Eliminate text values that look like variable names.
         if (strip_name(text) in object_names):
             text = ""
-                
+
+        # Eliminate text values that look like binary chunks.
+        if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
+            text = ""
+            
         # Save the form name and text value.
         r.append((name, text))
 
