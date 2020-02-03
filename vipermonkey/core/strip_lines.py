@@ -677,6 +677,24 @@ def fix_vba_code(vba_code):
     vba_code = "\n" + vba_code
     vba_code = re.sub(r"\n:", "\n", vba_code)
 
+    # Some maldocs have single line member access expressions that end with a '.'.
+    # Comment those out.
+    dumb_member_exps = re.findall(r"\n(?:\w+\.)+\n", vba_code)
+    for dumb_exp in dumb_member_exps:
+        log.warning("Commenting out bad line '" + dumb_exp.replace("\n", "") + "'.")
+        safe_exp = "\n'" + dumb_exp[1:]
+        vba_code = vba_code.replace(dumb_exp, safe_exp)
+
+    # How about maldocs with Subs with spaces in their names?
+    space_subs = re.findall(r"\n\s*Sub\s*\w+\s+\w+\s*\(", vba_code)
+    for space_sub in space_subs:
+        start = space_sub.index("Sub") + len("Sub")
+        end = space_sub.rindex("(")
+        sub_name = space_sub[start:end]
+        new_name = sub_name.replace(" ", "_")
+        log.warning("Replacing bad sub name '" + sub_name + "' with '" + new_name + "'.")
+        vba_code = vba_code.replace(sub_name, new_name)
+    
     # Clear out some garbage characters.
     #vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
