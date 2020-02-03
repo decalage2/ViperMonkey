@@ -303,6 +303,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Strip some red herring strings from the chunk.
     chunk = chunk.replace("\x02$", "").replace("\x01@", "")
     chunk = re.sub(r'[\x20-\x7f]{5,}(?:\x00[\x20-\x7f]){5,}', "", chunk)
+
+    # Normalize Page object naming.
+    page_name_pat = r"Page(\d+)\-\d+"
+    chunk = re.sub(page_name_pat, r"Page\1", chunk)
     
     if debug:
         print "\nChunk:"
@@ -547,6 +551,10 @@ def get_ole_textbox_values1(data, debug):
         start = chunk.index("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80")
         chunk = chunk[start+1:]
 
+    # Normalize Page object naming.
+    page_name_pat = r"Page(\d+)\-\d+"
+    chunk = re.sub(page_name_pat, r"Page\1", chunk)
+        
     # Pull out the strings from the value chunk.
     ascii_pat = r"(?:[\x20-\x7f]|\x0d\x0a){5,}"
     vals = re.findall(ascii_pat, chunk)
@@ -671,6 +679,11 @@ def get_vbaprojectbin(data):
         os.remove(fname)
     return r
 
+def strip_name(poss_name):
+    # Remove sketchy characters from name.
+    name = re.sub(r"[^A-Za-z\d_]", r"", poss_name)
+    return name.strip()
+
 def is_name(poss_name):
     if (poss_name is None):
         return False
@@ -755,6 +768,10 @@ def get_ole_textbox_values(obj, vba_code):
     # Make sure some special fields are seperated.
     data = data.replace("c\x00o\x00n\x00t\x00e\x00n\x00t\x00s", "\x00c\x00o\x00n\x00t\x00e\x00n\x00t\x00s\x00")
     data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
+
+    # Normalize Page object naming.
+    page_name_pat = r"Page(\d+)\-\d+"
+    data = re.sub(page_name_pat, r"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
     form_str = "Microsoft Forms 2.0"
@@ -989,6 +1006,9 @@ def get_ole_textbox_values(obj, vba_code):
             r.append(("no name found", "placeholder"))
             continue
 
+        # Remove sketchy characters from name.
+        name = strip_name(name)
+        
         # Get a text value after the name if it looks like the following field
         # is not a font.
         if debug:
@@ -1101,7 +1121,7 @@ def get_ole_textbox_values(obj, vba_code):
                 text = text[:size]
 
         # Eliminate text values that look like variable names.
-        if (text.strip() in object_names):
+        if (strip_name(text) in object_names):
             text = ""
                 
         # Save the form name and text value.

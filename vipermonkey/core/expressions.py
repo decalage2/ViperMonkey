@@ -235,9 +235,6 @@ class MemberAccessExpression(VBA_Object):
         # Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption
         page_pat = r".+\.Pages\('(\d+)'\)\.Caption"
         index = re.findall(page_pat, str(self))
-        print "INDEXED_PAGES"
-        print self
-        print index
         if (len(index) == 0):
             return None
         index = int(index[0]) + 1

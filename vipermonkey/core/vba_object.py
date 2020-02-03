@@ -845,4 +845,8 @@ def strip_nonvb_chars(s):
     for c in s:
         if ((ord(c) > 8) and (ord(c) < 127)):
             r += c
+
+    # Strip multiple 'NULL' substrings from the string.
+    if (r.count("NULL") > 10):
+        r = r.replace("NULL", "")
     return r
