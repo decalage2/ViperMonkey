@@ -685,10 +685,20 @@ def strip_name(poss_name):
     return name.strip()
 
 def is_name(poss_name):
+
+    # Sanity check.
     if (poss_name is None):
         return False
+
+    # Basic check first. Must start with an alphabetic character and
+    # be followed with regular printable characters.
     name_pat = r"[a-zA-Z]\w*"
-    return (re.match(name_pat, poss_name) is not None)
+    if (re.match(name_pat, poss_name) is None):
+        return False
+
+    # Now see how many non-name garbage characters are in the string.
+    bad_chars = re.findall(r"[^A-Za-z0-9_]", poss_name)
+    return (len(bad_chars) < 5)
     
 def clean_names(names):
     r = set()    
