@@ -2023,7 +2023,7 @@ class Val(VbaLibraryFunc):
         if (params is None):
             return ''
         assert (len(params) == 1)
-
+        
         # Sanity check.
         if ((params[0] is None) or (not isinstance(params[0], str))):
             r = ''

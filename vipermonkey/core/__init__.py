@@ -488,7 +488,18 @@ class ViperMonkey(object):
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
-        
+
+        # Break out document words.
+        doc_words = []
+        for word in re.split(r"[ \n]", "\n".join(self.doc_text)):
+            word = word.strip()
+            if (word.startswith("-")):
+                word = word[1:]
+                doc_words.append("-")
+            doc_words.append(word.strip())
+        context.globals["ActiveDocument.Words".lower()] = doc_words
+        context.globals["ThisDocument.Words".lower()] = doc_words
+            
         # Fake up some comments if needed.
         if (self.comments is None):
             context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
