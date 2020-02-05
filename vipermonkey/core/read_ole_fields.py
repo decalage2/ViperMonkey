@@ -342,7 +342,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Work with the modified list of strings.
     vals = tmp_vals
     if debug:
-        print "ORIG VALS:"
+        print "ORIG RAW VALS:"
         print vals
 
     # Looks like control tip text goes right after var names in the string
@@ -400,9 +400,12 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print names
 
     # Get values.
-    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|((?:(?:\x00)[\x20-\x7f]){2,})"
+    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|((?:(?:\x00)[\x20-\x7f]){2,})|(?:\x15\x00\x80([\x20-\x7f]{2,}))"
     vals = re.findall(val_pat, chunk)
-
+    if debug:
+        print "ORIG SPECIFIC VALS:"
+        print vals
+    
     tmp_vals = []
     rev_vals = list(vals)
     rev_vals.reverse()
@@ -411,8 +414,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
         if (len(val[0]) > 0):
             val = val[0]
+        elif (len(val[1]) > 0):
+            val = val[1]            
         else:
-            val = val[1]
+            val = val[2]
             
         # No wide char strings.
         val = val.replace("\x00", "")
@@ -464,7 +469,13 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Looks like duplicate subsequences of values can appear in the extracted
     # strings. Remove those.
     var_vals = remove_duplicates(var_vals)
-            
+
+    # Find longest value.
+    longest_val = ""
+    for v in var_vals:
+        if (len(v) > len(longest_val)):
+            longest_val = v
+    
     # Get rid of control tip text names, we have already handled those.
     tmp_names = []
     for name in names:
@@ -492,12 +503,21 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Match up the names and values.
     pos = -1
     for name in var_names:
+
+        # Hack for Pages objects.
         pos += 1
-        val = var_vals[pos]
-        if (val.endswith('o')):
-            val = val[:-1]
-        elif (val.endswith("oe")):
-            val = val[:-2]
+        if ((name == "Page1") and (len(longest_val) > 30)):
+            val = longest_val
+
+        # Real processing.
+        else:
+            val = var_vals[pos]
+            if (val.endswith('o')):
+                val = val[:-1]
+            elif (val.endswith("oe")):
+                val = val[:-2]
+
+        # Save name/value mapping.
         r.append((name, val))
 
         # Some extra characters sometimes are on the end of the names. Brute force this
@@ -1273,7 +1293,30 @@ def get_ole_textbox_values(obj, vba_code):
             val = re.sub(cruft_pat, "", val)
         tmp_r.append((name, val))
     r = tmp_r
-        
+
+    # Fix Page1 values.
+    longest_val = ""
+    for pair in r:
+        name = pair[0]
+        val = pair[1]
+        if (name != "Page1"):
+            continue
+        if (len(val) > len(longest_val)):
+            longest_val = val
+    if (longest_val != ""):
+        tmp_r = []
+        updated_page1 = False
+        for pair in r:
+            name = pair[0]
+            val = pair[1]
+            if (name != "Page1"):
+                tmp_r.append(pair)
+                continue
+            if (not updated_page1):
+                tmp_r.append((name, longest_val))
+                updated_page1 = True
+        r = tmp_r
+                
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
