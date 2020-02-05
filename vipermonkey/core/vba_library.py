@@ -1198,7 +1198,11 @@ class Split(VbaLibraryFunc):
             return ""
         assert len(params) > 0
         # TODO: Actually implement this properly.
-        string = str(params[0])
+        string = None
+        try:
+            string = str(params[0])
+        except UnicodeEncodeError:
+            string = filter(isprint, params[0])
         sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
@@ -2875,7 +2879,11 @@ class CreateObject(VbaLibraryFunc):
         assert (len(params) >= 1)
         
         # Track contents of data written to 'ADODB.Stream'.
-        obj_type = str(params[0])
+        obj_type = None
+        try:
+            obj_type = str(params[0])
+        except UnicodeEncodeError:
+            obj_type = filter(isprint, params[0])
         if (obj_type == 'ADODB.Stream'):
             context.open_file('ADODB.Stream')
 

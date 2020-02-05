@@ -1219,6 +1219,7 @@ class For_Statement(VBA_Object):
         if self.step_value != 1:
             self.step_value = self.step_value[0]
         self.statements = tokens.statements
+        self.body = self.statements
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
@@ -1537,6 +1538,7 @@ class For_Statement(VBA_Object):
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
+        context.loop_object_stack.append(self)
 
         # Track the context from the previous loop iteration to see if we have
         # a loop that is just there for obfuscation.
@@ -1586,7 +1588,7 @@ class For_Statement(VBA_Object):
                 s.eval(context=context)
                 
                 # Has 'Exit For' been called?
-                if (not context.loop_stack[-1]):
+                if ((len(context.loop_stack) == 0) or (not context.loop_stack[-1])):
 
                     # Yes we have. Stop this loop.
                     log.debug("FOR loop: exited loop with 'Exit For'")
@@ -1636,7 +1638,10 @@ class For_Statement(VBA_Object):
                 break
         
         # Remove tracking of this loop.
-        context.loop_stack.pop()
+        if (len(context.loop_stack) > 0):
+            context.loop_stack.pop()
+        if (len(context.loop_object_stack) > 0):
+            context.loop_object_stack.pop()
         log.debug('FOR loop: end.')
 
         # Run the error handler if we have one and we broke out of the statement
@@ -1701,6 +1706,7 @@ class For_Each_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(For_Each_Statement, self).__init__(original_str, location, tokens)
         self.statements = tokens.statements
+        self.body = self.statements
         self.item = tokens.clause.item
         self.container = tokens.clause.container
         log.debug('parsed %r as %s' % (self, self.__class__.__name__))
@@ -1716,6 +1722,7 @@ class For_Each_Statement(VBA_Object):
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
+        context.loop_object_stack.append(self)
 
         # Get the container of values we are iterating through.
 
@@ -1780,7 +1787,10 @@ class For_Each_Statement(VBA_Object):
             pass
         
         # Remove tracking of this loop.
-        context.loop_stack.pop()
+        if (len(context.loop_stack) > 0):
+            context.loop_stack.pop()
+        if (len(context.loop_object_stack) > 0):
+            context.loop_object_stack.pop()
         log.debug('FOR EACH loop: end.')
 
         # Run the error handler if we have one and we broke out of the statement
@@ -2099,6 +2109,7 @@ class While_Statement(VBA_Object):
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
+        context.loop_object_stack.append(self)
 
         # Some loop guards check the readystate value on an object. To simulate this
         # will will just go around the loop a small fixed # of times.
@@ -2188,7 +2199,10 @@ class While_Statement(VBA_Object):
                 num_no_change = 0
 
         # Remove tracking of this loop.
-        context.loop_stack.pop()
+        if (len(context.loop_stack) > 0):
+            context.loop_stack.pop()
+        if (len(context.loop_object_stack) > 0):
+            context.loop_object_stack.pop()
         log.debug('WHILE loop: end.')
 
         # Run the error handler if we have one and we broke out of the statement
@@ -2238,6 +2252,7 @@ class Do_Statement(VBA_Object):
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
+        context.loop_object_stack.append(self)
 
         # Assign all const variables first.
         do_const_assignments(self.body, context)
@@ -2315,7 +2330,10 @@ class Do_Statement(VBA_Object):
                 num_no_change = 0
             
         # Remove tracking of this loop.
-        context.loop_stack.pop()
+        if (len(context.loop_stack) > 0):
+            context.loop_stack.pop()
+        if (len(context.loop_object_stack) > 0):
+            context.loop_object_stack.pop()
         log.debug('DO loop: end.')
 
         # Run the error handler if we have one and we broke out of the statement
@@ -3248,6 +3266,43 @@ class Goto_Statement(VBA_Object):
         # We know where to go. Get the code block to execute.
         block = context.tagged_blocks[self.label]
 
+        # Are we in a loop and have we just jumped out of it (grrrr!)?
+        if (len(context.loop_object_stack) > 0):
+
+            # Find which loop (if any) we are jumping to.
+            curr_loop = context.loop_object_stack[-1]
+            jump_loop = None
+            tag_block_txt = str(block).replace(" ", "").replace("\n", "")
+            pos = len(context.loop_stack)
+            for tmp_loop in context.loop_object_stack[::-1]:
+
+                # Is the tagged block in this loop?
+                pos -= 1
+                tmp_loop_txt = str(tmp_loop.body).replace(" ", "").replace("\n", "")
+                if (tag_block_txt in tmp_loop_txt):
+                    jump_loop = tmp_loop
+                    break
+
+            # Did we jump out of ALL the loops?
+            log.debug("GOTO in loop.")
+            log.debug("Jump to: " + tag_block_txt)
+            if (jump_loop is None):
+
+                # Mark all the loops as exited.
+                context.loop_stack = [False] * len(context.loop_stack)
+                log.debug("Jumped out of all loops.")
+                log.debug(context.loop_stack)
+
+            # Did we jump out of SOME of the nested loops?
+            elif (jump_loop != curr_loop):
+
+                # Exit from all the nested loops up to the one we jumped to.
+                tmp_stack = context.loop_stack
+                context.loop_stack = context.loop_stack[:pos+1]
+                context.loop_stack.extend([False] * (len(tmp_stack) - (pos + 1)))
+                log.debug("Jumped out of some loops.")
+                log.debug(context.loop_stack)
+                
         # Execute the code block.
         if (not context.throttle_logging):
             log.info("GOTO " + str(self.label))

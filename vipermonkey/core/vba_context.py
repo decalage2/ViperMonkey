@@ -243,6 +243,10 @@ class Context(object):
         # running its flag will be True.
         self.loop_stack = []
 
+        # Track the actual nested loops that are running on a stack. This is used to
+        # handle GOTOs that jump out of the current loop body.
+        self.loop_object_stack = []
+        
         # Track whether we have exited from the current function.
         self.exit_func = False
 
