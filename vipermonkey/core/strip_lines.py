@@ -1105,11 +1105,12 @@ def strip_useless_code(vba_code, local_funcs):
             (not tmp_line.endswith(")")) and
             (re.match(func_ret_pat + r"$", tmp_line) is None)):
             match_obj = re.match(func_ret_pat, tmp_line)
-            pos = match_obj.span()[1]
-            tmp_line = line[:pos] + "\n"
-            if ((pos + 1) < len(line)):
-                tmp_line += line[pos + 1:]
-            line = tmp_line
+            if (match_obj is not None):
+                pos = match_obj.span()[1]
+                tmp_line = line[:pos] + "\n"
+                if ((pos + 1) < len(line)):
+                    tmp_line += line[pos + 1:]
+                line = tmp_line
         
         # At least 1 maldoc builder is not putting a newline before the
         # 'End Function' closing out functions. Rather than changing the
