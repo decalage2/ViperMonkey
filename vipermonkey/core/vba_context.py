@@ -50,6 +50,8 @@ import re
 import random
 import string
 import codecs
+import struct
+
 from curses_ascii import isascii
 
 def to_hex(s):
@@ -163,6 +165,7 @@ class Context(object):
         
         # Track open files.
         self.open_files = {}
+        self.file_id_map = {}
 
         # Track the final contents of written files.
         self.closed_files = {}
@@ -197,6 +200,7 @@ class Context(object):
             self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
             self.open_files = context.open_files
+            self.file_id_map = context.file_id_map
             self.closed_files = context.closed_files
             self.loaded_excel = context.loaded_excel
             self.dll_func_true_names = context.dll_func_true_names
@@ -3230,16 +3234,19 @@ class Context(object):
         # Punt.
         return None
         
-    def open_file(self, fname):
+    def open_file(self, fname, file_id=""):
         """
         Simulate opening a file.
 
         fname - The name of the file.
+        file_id - The numeric ID of the file.
         """
         # Save that the file is opened.
         fname = str(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
         self.open_files[fname] = b''
+        if (file_id != ""):
+            self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
 
     def write_file(self, fname, data):
@@ -3248,9 +3255,14 @@ class Context(object):
         fname = str(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
-            log.error('File {} not open. Cannot write new data.'.format(fname))
-            return False
 
+            # Are we referencing this by numeric ID.
+            if (fname in self.file_id_map.keys()):
+                fname = self.file_id_map[fname]
+            else:
+                log.error('File {} not open. Cannot write new data.'.format(fname))
+                return False
+            
         # Are we writing a string?
         if isinstance(data, str):
 
@@ -3272,14 +3284,28 @@ class Context(object):
 
         # Are we writing a byte?
         elif isinstance(data, int):
-            self.open_files[fname] += chr(data)
+
+            # Convert the int to a series of bytes to write out.
+            byte_list = struct.pack('<i', data)
+            
+            # Skip 0 bytes at the end of the sequence.
+            pos = len(byte_list) + 1
+            for b in byte_list[::-1]:
+                pos -= 1
+                if (b != '\x00'):
+                    break
+            byte_list = byte_list[:pos]
+
+            # Write out each byte.
+            for b in byte_list:
+                self.open_files[fname] += b
             return True
         
         # Unhandled.
         else:
             log.error("Unhandled data type to write. " + str(type(data)) + ".")
             return False
-
+        
     def dump_all_files(self, autoclose=False):
         for fname in self.open_files.keys():
             self.dump_file(fname, autoclose=autoclose)
@@ -3296,9 +3322,16 @@ class Context(object):
         
         # Make sure the "file" exists.
         fname = str(fname).replace(".\\", "").replace("\\", "/")
+        file_id = None
         if fname not in self.open_files:
-            log.error('File {} not open. Cannot close.'.format(fname))
-            return
+
+            # Are we referencing this by numeric ID.
+            if (fname in self.file_id_map.keys()):
+                file_id = fname
+                fname = self.file_id_map[fname]
+            else:
+                log.error('File {} not open. Cannot close.'.format(fname))
+                return
 
         log.info("Closing file " + fname)
 
@@ -3308,6 +3341,8 @@ class Context(object):
 
         # Clear the file out of the open files.
         del self.open_files[fname]
+        if (file_id is not None):
+            del self.file_id_map[file_id]
 
         if out_dir:
             self.dump_file(fname)

@@ -136,9 +136,9 @@ class Sub(VBA_Object):
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
-            print self
-            print call_info
-            print context.call_stack
+            #print self
+            #print call_info
+            #print context.call_stack
             #sys.exit(0)
             return "NULL"
 
@@ -433,9 +433,9 @@ class Function(VBA_Object):
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
-            print self
-            print call_info
-            print context.call_stack
+            #print self
+            #print call_info
+            #print context.call_stack
             #sys.exit(0)
             return "NULL"
 
@@ -461,7 +461,7 @@ class Function(VBA_Object):
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
-
+                
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):
                 break

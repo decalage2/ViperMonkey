@@ -2971,7 +2971,7 @@ class Call_Statement(VBA_Object):
                 raise KeyError("func not found")
             if (hasattr(s, "eval")):
                 ret = s.eval(context=context, params=call_params)
-
+                
                 # Set the values of the arguments passed as ByRef parameters.
                 if (hasattr(s, "byref_params") and s.byref_params):
                     for byref_param_info in s.byref_params.keys():
@@ -3414,15 +3414,16 @@ class File_Open(VBA_Object):
             pass
 
         # Store file id variable in context.
+        file_id = ""
         if self.file_id:
             file_id = str(self.file_id)
             if not file_id.startswith('#'):
                 file_id = '#' + file_id
-            context.set(file_id, name)
+            context.set(file_id, name, force_global=True)
 
         # Save that the file is opened.
         context.report_action("OPEN", str(name), 'Open File', strip_null_bytes=True)
-        context.open_file(name)
+        context.open_file(name, file_id)
 
 
 file_type = (

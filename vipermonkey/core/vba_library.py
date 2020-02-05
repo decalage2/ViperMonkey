@@ -55,6 +55,7 @@ import random
 from from_unicode_str import *
 import decimal
 from curses_ascii import isprint
+import sys
 
 from pyparsing import *
 
@@ -2555,7 +2556,7 @@ class Put(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert ((len(params) == 2) or (len(params) == 3))
-
+        
         # Get the ID of the file.
         file_id = params[0]
 
@@ -2571,7 +2572,6 @@ class Put(VbaLibraryFunc):
             context.open_file(file_id)
 
         context.write_file(file_id, data)
-
 
 class WriteLine(VbaLibraryFunc):
     """
@@ -3358,8 +3358,13 @@ class CreateTextFile(VbaLibraryFunc):
         except KeyError:
             fname = str(params[0])
 
+        # Do we have a numeric file ID?
+        file_id = ""
+        if (len(params) > 1):
+            file_id = params[1]
+            
         # Save that the file is opened.
-        context.open_file(fname)
+        context.open_file(fname, file_id)
 
         # How about returning the name of the opened file.
         return fname
