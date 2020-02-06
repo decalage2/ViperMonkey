@@ -400,7 +400,9 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print names
 
     # Get values.
-    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|((?:(?:\x00)[\x20-\x7f]){2,})|(?:\x15\x00\x80([\x20-\x7f]{2,}))"
+    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|" + \
+              r"((?:(?:\x00)[\x20-\x7f]){2,})|" + \
+              r"(?:[\x15\x0c\x0b]\x00\x80([\x20-\x7f]{2,}(?:\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j.+[\x20-\x7f]{5,})?))"
     vals = re.findall(val_pat, chunk)
     if debug:
         print "ORIG SPECIFIC VALS:"
@@ -418,6 +420,15 @@ def get_ole_textbox_values2(data, debug, vba_code):
             val = val[1]            
         else:
             val = val[2]
+
+        # Replace any wide char CompObj data items that appear in the middle of a chunk of text.
+        compobj_pat = r"\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j"
+        if (re.search(compobj_pat, val) is not None):
+            tmp_val = ""
+            ascii_pat = r"[\x20-\x7f]{5,}"
+            for s in re.findall(ascii_pat, val):
+                tmp_val += s
+            val = tmp_val
             
         # No wide char strings.
         val = val.replace("\x00", "")
@@ -870,6 +881,7 @@ def get_ole_textbox_values(obj, vba_code):
 
         # Save long strings. Maybe they are the value of a previous variable?
         longest_str = ""
+        orig_strs = strs
         for field in strs:
             if ((len(field) > 30) and
                 (len(field) > len(longest_str)) and
@@ -1152,13 +1164,36 @@ def get_ole_textbox_values(obj, vba_code):
 
         # Eliminate text values that look like variable names.
         if (strip_name(text) in object_names):
-            text = ""
+            if debug:
+                print "BAD: Val is name '" + text + "'"
+
+            # Hack. If the bad value is a Page* name and we have a really long strings from
+            # the chunk, use those as the value.
+            if ((text.startswith("Page")) and (len(longest_str) > 30)):
+                tmp_str = ""
+                for field in orig_strs:
+                    if ((len(field) > 20) and
+                        (not field.startswith("Microsoft "))):
+                        tmp_field = ""
+                        for s in re.findall(r"[\x20-\x7f]{5,}", field):
+                            tmp_field += s
+                        tmp_str += tmp_field
+                text = tmp_str
+            else:
+                text = ""
+            if debug:
+                print len(longest_str)
+                print "BAD: Set Val to '" + text + "'"
 
         # Eliminate text values that look like binary chunks.
         if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
+            if debug:
+                print "BAD: Binary in Val. Set to ''"
             text = ""
             
         # Save the form name and text value.
+        if debug:
+            print "SET '" + name + "' = '" + text + "'"
         r.append((name, text))
 
         # Move to next chunk.

@@ -386,7 +386,8 @@ class Context(object):
         self.globals["xlOuterCenterPoint".lower()] = 2.0
         self.globals["xlPivotLineBlank".lower()] = 2
         self.globals["rgbMaroon".lower()] = 128
-
+        self.globals["NoLineBreakAfter".lower()] = ""
+        
         # vba color constants
         self.add_color_constant_macro("vbBlack",0)
         self.add_color_constant_macro("vbBlue",16711680)
