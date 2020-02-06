@@ -772,8 +772,11 @@ def get_ole_textbox_values(obj, vba_code):
     if debug:
         print "Extracting OLE/ActiveX TextBox strings..."
 
+    # Clear out some troublesome byte sequences.
+    data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
+        
     # First try alternate method of pulling data. These will be merged in later.
-    v1_vals = get_ole_textbox_values1(obj, debug)
+    v1_vals = get_ole_textbox_values1(data, debug)
 
     # And try another alternate method of pulling data. These will be merged in later.
     v1_1_vals = get_ole_textbox_values2(data, debug, vba_code)
