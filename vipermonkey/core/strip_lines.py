@@ -629,6 +629,9 @@ def fix_vba_code(vba_code):
     # Fix dumb typo in some maldocs VBA.
     vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
 
+    # Make "End Try" in try/catch blocks easier to parse.
+    vba_code = re.sub(r"End\s+Try", "##End ##Try", vba_code)
+    
     # We don't handle Line Input constructs for now. Delete them.
     # TODO: Actually handle Line Input consructs.
     linputs = re.findall(r"Line\s+Input\s+#\d+\s*,\s*\w+", vba_code, re.DOTALL)
