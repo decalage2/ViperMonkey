@@ -1563,6 +1563,11 @@ class For_Statement(VBA_Object):
         # needed.
         num_iters_run = 0
         throttle_io_limit = 10
+
+        # Sanity check whether we can find the loop variable.
+        if (not context.contains(self.name)):
+            log.warn("Cannot find loop variable " + str(self.name) + ". Skipping loop.")
+            return
         
         # Loop until the loop is broken out of or we hit the last index.
         while (((step > 0) and (context.get(self.name) <= end)) or
