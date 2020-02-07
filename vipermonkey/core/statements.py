@@ -1341,6 +1341,19 @@ class For_Statement(VBA_Object):
             # Indicate that the loop was short circuited.
             log.info("Short circuited Debug.Print only loop " + str(self))
             return ("N/A", "N/A")
+
+        # Are we just doing 1 "On Error ..." statement in the loop?
+        if (re.search(r"'On', 'Error', 'Goto',", body) is not None):
+
+            # Just run the loop body once.
+            self.statements[0].eval(context)
+
+            # Set the final value of the loop index variable.
+            context.set(self.name, end + step)
+
+            # Indicate that the loop was short circuited.
+            log.info("Short circuited 'On Error' only loop " + str(self))
+            return ("N/A", "N/A")
             
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
