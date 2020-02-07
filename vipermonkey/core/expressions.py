@@ -808,7 +808,12 @@ class MemberAccessExpression(VBA_Object):
                 return False
         
         # Pull out the text to write to the text stream.
-        txt = str(eval_arg(rhs.params[0], context))
+        txt = None
+        rhs_val = eval_arg(rhs.params[0], context)
+        try:
+            txt = str(rhs_val)
+        except UnicodeEncodeError:
+            txt = ''.join(filter(lambda x:x in string.printable, rhs_val))
 
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.
