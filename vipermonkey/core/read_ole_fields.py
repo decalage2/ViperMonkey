@@ -774,7 +774,8 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Clear out some troublesome byte sequences.
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
-        
+    data = data.replace("o" + "\x00" * 40, "\x00" * 40)
+    
     # First try alternate method of pulling data. These will be merged in later.
     v1_vals = get_ole_textbox_values1(data, debug)
 
