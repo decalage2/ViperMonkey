@@ -1854,7 +1854,8 @@ literal_list_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
-        float_literal
+        file_pointer
+        | float_literal
         | named_argument
         | l_expression
         | (chr_ ^ function_call ^ func_call_array_access)
@@ -1862,7 +1863,7 @@ expr_item <<= (
         | asc
         | strReverse
         | literal
-        | file_pointer
+#        | file_pointer
         | placeholder
         | typeof_expression
         | addressof_expression

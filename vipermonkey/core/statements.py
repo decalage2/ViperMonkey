@@ -677,7 +677,7 @@ class Let_Statement(VBA_Object):
 
         # We are making a Let_Statement from parse results.
         self.name = tokens.name
-        string_ops = set(["mid"])
+        string_ops = set(["mid", "mid$"])
         self.string_op = None
         if (hasattr(self.name, "__len__") and
             (len(self.name) > 0) and
