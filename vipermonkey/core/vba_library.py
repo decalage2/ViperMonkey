@@ -136,13 +136,25 @@ class MultiByteToWideChar(VbaLibraryFunc):
         if (not isinstance(data, list)):
             return "NULL"
 
-        # Convert this to a string. Assume this is a ASCII string represented in wide
-        # chars and skip every 2nd byte (assume these are 0).
+        # Is the given string represented in wide chars?
+        is_wide_char = True
+        skip = False
+        for b in data:
+            skip = (not skip)
+            if (skip):
+                continue
+            if (b != 0):
+                is_wide_char = False
+                break
+        
+        # Convert this to a string. If this is a ASCII string represented in wide
+        # chars skip every 2nd byte (assume these are 0).
         r = ""
         skip = True
         for b in data:
             skip = (not skip)            
-            if ((not isinstance(b, int)) or (b > 255) or skip):
+            if (((not isinstance(b, int)) or (b > 255) or skip) and
+                (is_wide_char)):
                 continue
             r += chr(b)
 
@@ -654,8 +666,8 @@ class Shell(VbaLibraryFunc):
         if (not isinstance(command, str)):
 
             # No, Shell() will throw an error.
-            context.got_error = True
-            log.warning("Shell(" + str(command) + ") throws an error.")
+            msg = "Shell(" + str(command) + ") throws an error."
+            context.set_error(msg)
             return 0
 
         # We have a valid shell command. Track it.
@@ -2504,8 +2516,8 @@ class Raise(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.got_error = True
-        log.warning("Raise exception " + str(params))
+        msg = "Raise exception " + str(params)
+        context.set_error(msg)
             
 class Close(VbaLibraryFunc):
     """

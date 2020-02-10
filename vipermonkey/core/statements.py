@@ -908,6 +908,14 @@ class Let_Statement(VBA_Object):
                 # Do we have an actual value to assign?
                 if (value != "NULL"):
 
+                    # Base64 decoded raw data should not be padded with 0 between each
+                    # byte. Try to figure out if this is raw data.
+                    bad_byte_count = 0
+                    for c in value:
+                        if (not isprint(c)):
+                            bad_byte_count += 1
+                    is_raw_data = ((len(value) > 0) and (((bad_byte_count + 0.0)/len(value)) > .2))
+                    
                     # Generate the byte array for the string.
                     tmp = []
                     pos = 0
@@ -920,7 +928,7 @@ class Let_Statement(VBA_Object):
                         #
                         # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
                         # or not (no padding).
-                        if (not isinstance(value, from_unicode_str)):
+                        if ((not isinstance(value, from_unicode_str)) and (not is_raw_data)):
                             tmp.append(0)
 
                     # Got the byte array.
@@ -975,7 +983,10 @@ class Let_Statement(VBA_Object):
                    (context.get_type(self.name) == "Long")) and
                   (isinstance(value, str))):
                 try:
-                    value = int(value)
+                    if (value == "NULL"):
+                        value = 0
+                    else:
+                        value = int(value)
                 except:
                     log.error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
                     value = 0
@@ -1562,7 +1573,7 @@ class For_Statement(VBA_Object):
         # large loops. Track the # of iterations run to throttle logging if
         # needed.
         num_iters_run = 0
-        throttle_io_limit = 10
+        throttle_io_limit = 100
 
         # Sanity check whether we can find the loop variable.
         if (not context.contains(self.name)):
@@ -1592,6 +1603,7 @@ class For_Statement(VBA_Object):
             if ((num_iters_run > throttle_io_limit) and ((num_iters_run % 500) == 0)):
                 log.warning("Long running loop. I/O has been throttled.")
             if (num_iters_run > throttle_io_limit):
+                log.warning("Throttling output logging...")
                 context.throttle_logging = True
             if ((num_iters_run < throttle_io_limit) or ((num_iters_run % 500) == 0)):
                 context.throttle_logging = False

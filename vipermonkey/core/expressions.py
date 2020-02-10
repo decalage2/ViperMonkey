@@ -1512,6 +1512,31 @@ class Function_Call(VBA_Object):
         log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)
         self.params = tokens.params
+
+        # Do some special handling of calls to MultiByteToWideChar. It looks like the
+        # 3rd parameter (the data to convert to wide char) is treated as a C-style array
+        # in this call, so foo(0) of array foo is actually a pointer to the start of
+        # the array.
+        #
+        # Handle that in ViperMonkey by removing the (0) from the end of the 3rd argument
+        # so we get the whole array when emulating.
+        array_pat = r"\w+\(.+\)"
+        if ((self.name.lower() == "multibytetowidechar") and
+            (len(self.params) == 6) and
+            (re.match(array_pat, str(self.params[2])) is not None) and
+            (isinstance(self.params[2], Function_Call))):
+
+            # Turn this into just an access (hopefully) of an array variable.
+            array = None
+            orig_array = self.params[2]
+            try:
+                array = expressions.expression.parseString(self.params[2].name, parseAll=True)[0]
+            except ParseException:
+                pass
+            if (array is not None):
+                self.params[2] = array
+                log.warning("Rewrote MultiByteToWideChar() array reference '" + str(orig_array) + "' to '" + str(array) + "'.")
+
         log.debug('Function_Call.params = %r' % self.params)
         log.debug('parsed %r as Function_Call' % self)
 
@@ -1613,8 +1638,8 @@ class Function_Call(VBA_Object):
                     except:
 
                         # Return error array access result.
-                        log.error('Array Access Failed: %r[%r]' % (tmp, str(params)))
-                        context.got_error = True
+                        msg = 'Array Access Failed: %r[%r]' % (tmp, str(params))
+                        context.set_error(msg)
                         return 0
 
                 # Looks like we want the whole array (ex. foo()).
@@ -1856,6 +1881,7 @@ func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 typeof_expression = Forward()
 addressof_expression = Forward()
 literal_list_expression = Forward()
+literal_range_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -1873,6 +1899,7 @@ expr_item <<= (
         | typeof_expression
         | addressof_expression
         | excel_expression
+        | literal_range_expression
         | literal_list_expression
     )
 )
@@ -2332,3 +2359,7 @@ class Literal_List_Expression(VBA_Object):
 literal_list_expression <<= Suppress("[") + (unrestricted_name | decimal_literal)("item") + Suppress("]")
 literal_list_expression.setParseAction(Literal_List_Expression)
 
+# --- LITERAL RANGE EXPRESSION --------------------------------------------------------------
+
+literal_range_expression <<= Suppress(Literal("[")) + decimal_literal + Suppress(Literal(":")) + decimal_literal + Suppress(Literal("]"))
+literal_range_expression.setParseAction(lambda t: str(t[0]) + ":" + str(t[1]))

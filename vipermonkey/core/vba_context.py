@@ -3184,7 +3184,15 @@ class Context(object):
 
         # The error has now been cleared.
         self.got_error = False
-    
+
+    def set_error(self, reason):
+        """
+        Set that a VBA error has occurred.
+        """
+
+        self.got_error = True
+        log.error("A VB error has occurred. Reason: " + str(reason))
+        
     def get_true_name(self, name):
         """
         Get the true name of an aliased function imported from a DLL.

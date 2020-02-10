@@ -160,7 +160,7 @@ class Sub(VBA_Object):
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
-        context.got_error = False
+        context.clear_error()
         for s in self.statements:
 
             # Emulate the current statement.
@@ -456,7 +456,7 @@ class Function(VBA_Object):
         # Emulate the function.
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
-        context.got_error = False
+        context.clear_error()
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):

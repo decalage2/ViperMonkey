@@ -414,9 +414,15 @@ def fix_difficult_code(vba_code):
     # Modify MultiByteToWideChar() calls so ViperMonkey can emulate them.
     # Orig: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue(0), UBound(baValue) + 1, StrPtr(sValue), Len(sValue))
     # Desired: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue, UBound(baValue) + 1, StrPtr("&sValue"), Len(sValue))
-    if ("MultiByteToWideChar" in vba_code):
-        mbyte_pat = r"(MultiByteToWideChar\(\s*[^,]+,\s*[^,]+,\s+)([A-Za-z0-9_]+)\(\s*[^\)]+\s*\)(,\s*[^,]+,\s*StrPtr\(\s*)([^\)]+)(\s*\),\s*[^\)]+\))"
-        vba_code = re.sub(mbyte_pat, r'\1\2\3"&\4"\5', vba_code)
+    #if ("MultiByteToWideChar" in vba_code):
+    #    mbyte_pat = r"(MultiByteToWideChar\(\s*[^,]+,\s*[^,]+,\s+)([A-Za-z0-9_]+)\(\s*[^\)]+\s*\)(,\s*[^,]+,\s*StrPtr\(\s*)([^\)]+)(\s*\),\s*[^\)]+\))"
+    #    vba_code = re.sub(mbyte_pat, r'\1\2\3"&\4"\5', vba_code)
+    #
+    # We are now handling the 'baValue(0)' part in expressions.Function_Call.__init__()
+    # Now just do a general replace for StrPtr()
+    if ("StrPtr" in vba_code):
+        strptr_pat = r"(StrPtr\s*\(\s*)(\w+)(\s*\))"
+        vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
     
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
