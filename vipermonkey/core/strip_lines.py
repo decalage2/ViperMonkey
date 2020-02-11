@@ -426,7 +426,12 @@ def fix_difficult_code(vba_code):
     if ("StrPtr" in vba_code):
         strptr_pat = r"(StrPtr\s*\(\s*)(\w+)(\s*\))"
         vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
-    
+
+    # Break out labels that are not on their own line.
+    if (":" in vba_code):
+        label_pat = r"(\n\s*\w+:)([^\n])"
+        vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
+        
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
     vba_code = vba_code.replace("#if", "HASH__if")
@@ -609,6 +614,7 @@ def fix_difficult_code(vba_code):
 
             # Replace a single ':' with a line break? Don't do this for labels. Or for Excel [A:A] expressions.
             elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=") and (not in_square_bracket)):
+                print "HERE!!"
                 r += "\n"
             else:
                 r += c
@@ -881,6 +887,11 @@ def strip_useless_code(vba_code, local_funcs):
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
                 log.debug("SKIP: While loop. Keep it.")
+                continue
+
+            # Skip calls to .create()
+            if (".create" in line.strip().lower()):
+                log.debug("SKIP: .Create() call. Keep it.")
                 continue
 
             # Skip multistatement lines.
