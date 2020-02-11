@@ -225,7 +225,8 @@ class ViperMonkey(object):
                                   '_Initialize',
                                   '_Click',
                                   '_OnConnecting',
-                                  '_BeforeClose']
+                                  '_BeforeClose',
+                                  '_OnDisconnected']
                                   
     def set_metadata(self, dat):
         self.metadata = dat
@@ -460,6 +461,12 @@ class ViperMonkey(object):
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
             
         # Save the document text in the proper variable in the context.
+        context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Range".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Content.Start".lower()] = 0
+        context.globals["Me.Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["Me.Paragraphs".lower()] = self.doc_text
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
@@ -472,6 +479,12 @@ class ViperMonkey(object):
         context.globals["ThisDocument.Content.Start".lower()] = 0
         context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["['Me'].Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Content.Start".lower()] = 0
+        context.globals["['Me'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['Me'].Paragraphs".lower()] = self.doc_text
         context.globals["['ActiveDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["['ActiveDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["['ActiveDocument'].Range".lower()] = "\n".join(self.doc_text)
