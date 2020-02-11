@@ -969,7 +969,10 @@ class MemberAccessExpression(VBA_Object):
 
         # We have control values for the form. Get the index being accessed.
         pat = r".+\.Controls\(\s*'([^']+)'\s*\)"
-        index = re.findall(pat, self_str)[0]
+        vals = re.findall(pat, self_str)
+        if (len(vals) == 0):
+            return None
+        index = vals[0]
 
         # Evaluate the index.
         try:
