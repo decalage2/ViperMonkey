@@ -877,7 +877,11 @@ def strip_useless_code(vba_code, local_funcs):
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
-        uni_tmp_line = tmp_line.decode("utf-8")
+        uni_tmp_line = ""
+        try:
+            uni_tmp_line = tmp_line.decode("utf-8")
+        except UnicodeDecodeError:
+            uni_tmp_line = tmp_line.decode("latin-1")
         match = assign_re.findall(uni_tmp_line)
         if (len(match) > 0):
 
