@@ -1297,8 +1297,8 @@ def _process_file (filename,
                 # We are not getting variable names this way. Assign wildcarded names that we can use
                 # later to try to heuristically guess form variables.
                 log.warning("Cannot read form strings. " + str(e) + ". Trying fallback method.")
-                traceback.print_exc()
-                sys.exit(0)
+                #traceback.print_exc()
+                #sys.exit(0)
                 try:
                     count = 0
                     skip_strings = ["Tahoma", "Tahomaz"]

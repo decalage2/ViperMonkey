@@ -2888,7 +2888,8 @@ class CreateObject(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) == 0)):
+            return ""
         
         # Track contents of data written to 'ADODB.Stream'.
         obj_type = None

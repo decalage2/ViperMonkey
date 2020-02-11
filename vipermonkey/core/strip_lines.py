@@ -400,6 +400,9 @@ def fix_difficult_code(vba_code):
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
+    # Targeted fix for some maldocs.
+    vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
+    
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
