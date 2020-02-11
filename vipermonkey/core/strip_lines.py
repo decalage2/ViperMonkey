@@ -614,7 +614,6 @@ def fix_difficult_code(vba_code):
 
             # Replace a single ':' with a line break? Don't do this for labels. Or for Excel [A:A] expressions.
             elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=") and (not in_square_bracket)):
-                print "HERE!!"
                 r += "\n"
             else:
                 r += c
