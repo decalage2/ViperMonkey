@@ -953,7 +953,11 @@ class AscW(VbaLibraryFunc):
         if (isinstance(c, int)):
             r = c
         else:
-            r = ord(str(c)[0])
+            c = str(c)
+            if (len(c) > 0):
+                r = ord(str(c)[0])
+            else:
+                r = 0
         log.debug("AscW: return %r" % r)
         return r
 
