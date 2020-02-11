@@ -417,8 +417,13 @@ class LenB(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return 0
         # TODO: Somehow take the default character set into account.
-        return len(params[0])
+        try:
+            return len(params[0])
+        except TypeError:
+            return 0
 
 class Sleep(VbaLibraryFunc):
     """
