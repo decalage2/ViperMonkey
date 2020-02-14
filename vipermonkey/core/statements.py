@@ -1602,10 +1602,11 @@ class For_Statement(VBA_Object):
             num_iters_run += 1
             if ((num_iters_run > throttle_io_limit) and ((num_iters_run % 500) == 0)):
                 log.warning("Long running loop. I/O has been throttled.")
-            if (num_iters_run > throttle_io_limit):
+            if ((num_iters_run > throttle_io_limit) and (not context.throttle_logging)):
                 log.warning("Throttling output logging...")
                 context.throttle_logging = True
-            if ((num_iters_run < throttle_io_limit) or ((num_iters_run % 500) == 0)):
+            if ((num_iters_run < throttle_io_limit) or ((num_iters_run % 5000) == 0)):
+                log.warning("Output is throttled...")
                 context.throttle_logging = False
             
             # Execute the loop body.
