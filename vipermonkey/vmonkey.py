@@ -588,6 +588,15 @@ def get_vb_contents(vba_code):
             b = b[b.index("<![CDATA[") + len("<![CDATA["):]
             if ("]]>" in b[-10:]):
                 b = b[:b.rindex("]]>")]
+
+        # More tag stripping.
+        pat = r"<!\-\-(.+)/?/?\-\->"
+        tmp_b = re.findall(pat, b, re.DOTALL)
+        if (len(tmp_b) > 0):
+            b = tmp_b[0].strip()
+        if (b.endswith("//")):
+            b = b[:-2]
+                
         r += b + "\n"
     return r
     
