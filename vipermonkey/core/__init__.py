@@ -226,7 +226,8 @@ class ViperMonkey(object):
                                   '_Click',
                                   '_OnConnecting',
                                   '_BeforeClose',
-                                  '_OnDisconnected']
+                                  '_OnDisconnected',
+                                  '_OnEnterFullScreenMode']
                                   
     def set_metadata(self, dat):
         self.metadata = dat
