@@ -634,12 +634,38 @@ def fix_difficult_code(vba_code):
         r = r.replace(if_info[0], if_info[1])
     
     return r
-            
+
+def strip_comments(vba_code):
+    """
+    Strip comment lines from the VBA code.
+    """
+
+    # Sanity check.
+    if ("'" not in vba_code):
+        return vba_code
+
+    # We have comments. Remove them.
+    r = ""
+    for curr_line in vba_code.split("\n"):
+
+        # Save non-comment lines.
+        if (not curr_line.strip().startswith("'")):
+            r += curr_line + "\n"
+
+    # Return extra newlines.
+    r = r.replace("\n\n\n", "\n")
+        
+    # Return stripped code.
+    return r
+
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
     """
 
+    # Strip comment lines from the code.
+    vba_code = strip_comments(vba_code)
+    
     # Fix dumb typo in some maldocs VBA.
     vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
 
