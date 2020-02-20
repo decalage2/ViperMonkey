@@ -111,7 +111,7 @@ import io
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
-from oletools.olevba import VBA_Parser, filter_vba
+from oletools.olevba import VBA_Parser, filter_vba, FileOpenError
 import olefile
 import xlrd
 
@@ -1033,7 +1033,21 @@ def _process_file (filename,
         #TODO: handle olefile errors, when an OLE file is malformed
         if (isinstance(data, Exception)):
             data = None
-        vba = _get_vba_parser(data)
+        vba = None
+        try:
+            vba = _get_vba_parser(data)
+        except FileOpenError as e:
+
+            # Is this an unrecognized format?
+            if ("Failed to open file  is not a supported file type, cannot extract VBA Macros." not in str(e)):
+
+                # No, it is some other problem. Pass on the exception.
+                raise e
+
+            # This may be VBScript with some null characters. Remove those and try again.
+            data = data.replace("\x00", "")
+            vba = _get_vba_parser(data)
+            
         if vba.detect_vba_macros():
 
             # Read in document metadata.

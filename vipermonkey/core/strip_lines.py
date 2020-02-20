@@ -669,6 +669,9 @@ def fix_vba_code(vba_code):
     # Fix dumb typo in some maldocs VBA.
     vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
 
+    # No null bytes in VB to process.
+    vba_code = vba_code.replace("\x00", "")
+    
     # Make "End Try" in try/catch blocks easier to parse.
     vba_code = re.sub(r"End\s+Try", "##End ##Try", vba_code)
     

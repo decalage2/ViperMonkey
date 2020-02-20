@@ -714,6 +714,7 @@ class Context(object):
         self.globals["NumberOfLogicalProcessors".lower()] = 4
         self.globals[".NumberOfLogicalProcessors".lower()] = 4
         self.globals["ActiveWorkbook.Name".lower()] = "**MATCH ANY**"
+        self.globals["me.Status".lower()] = 200
         
         # List of _all_ Excel constants taken from https://www.autohotkey.com/boards/viewtopic.php?t=60538&p=255925 .
         self.globals["_xlDialogChartSourceData".lower()] = 541
