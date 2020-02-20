@@ -566,7 +566,7 @@ def get_vb_contents(vba_code):
     # Pull out the VB code.
     pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
     code = re.findall(pat, vba_code, re.DOTALL)
-
+    
     # Did we find any VB code in a script block?
     if (len(code) == 0):
 
@@ -582,10 +582,10 @@ def get_vb_contents(vba_code):
     r = ""
     for b in code:
         b = b.strip()
-        if ("</script>" in b):
-            b = b[:b.index("</script>")]
-        if ("<![CDATA[" in b):
-            b = b[b.index("<![CDATA[") + len("<![CDATA["):]
+        if ("</script>" in b.lower()):
+            b = b[:b.lower().index("</script>")]
+        if ("<![CDATA[" in b.upper()):
+            b = b[b.upper().index("<![CDATA[") + len("<![CDATA["):]
             if ("]]>" in b[-10:]):
                 b = b[:b.rindex("]]>")]
 
