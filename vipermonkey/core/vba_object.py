@@ -802,12 +802,28 @@ def int_convert(arg):
     """
     Convert a VBA expression to an int, handling VBA NULL.
     """
+
+    # NULLs are 0.
     if (arg == "NULL"):
         return 0
+
+    # Leave the wildcard matching value alone.
     if (arg == "**MATCH ANY**"):
         return arg
+
+    # Convert float to int?
     if (isinstance(arg, float)):
         arg = int(round(arg))
+
+    # Convert hex to int?
+    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
+        hex_str = "0x" + arg.strip()[2:]
+        try:
+            return int(hex_str, 16)
+        except:
+            log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
+            return 0
+            
     arg_str = str(arg)
     if ("." in arg_str):
         arg_str = arg_str[:arg_str.index(".")]

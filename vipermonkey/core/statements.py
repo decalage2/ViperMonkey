@@ -1485,43 +1485,22 @@ class For_Statement(VBA_Object):
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
-            try:
-                start = int(start)
-            except:
-
-                # Is this a single character?
-                if (len(start) == 1):
-
-                    # Looks like this Chr() should be an int.
-                    start = ord(start[0])
+            start = int_convert(start)
 
         log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
-            try:
-                if (end == "NULL"):
-                    end = 0
-                else:
-                    end = int(end)
-            except:
+            end = int_convert(end)
 
-                # Is this a single character?
-                if (len(end) == 1):
-
-                    # Looks like this Chr() should be an int.
-                    end = ord(end[0])
-
-        if (isinstance(end, float)):
-            end = int(end)
-        if (not isinstance(end, int)):
-            end = 0
         log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
         # Get the loop step value.
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
+            if (isinstance(step, basestring)):
+                step = int_convert(step)
             log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
@@ -1605,7 +1584,8 @@ class For_Statement(VBA_Object):
             if ((num_iters_run > throttle_io_limit) and (not context.throttle_logging)):
                 log.warning("Throttling output logging...")
                 context.throttle_logging = True
-            if ((num_iters_run < throttle_io_limit) or ((num_iters_run % 5000) == 0)):
+            if (((num_iters_run < throttle_io_limit) or ((num_iters_run % 5000) == 0)) and
+                context.throttle_logging):
                 log.warning("Output is throttled...")
                 context.throttle_logging = False
             

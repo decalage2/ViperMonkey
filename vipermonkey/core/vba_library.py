@@ -1323,6 +1323,15 @@ class RegWrite(VbaLibraryFunc):
         context.report_action("Registry Write", str(params), "Registry Write", strip_null_bytes=True)
         return "NULL"
 
+class SetStringValue(VbaLibraryFunc):
+    """
+    SetStringValue() function.
+    """
+
+    def eval(self, context, params=None):
+        context.report_action("Registry Write", str(params), "Set String Value", strip_null_bytes=True)
+        return "NULL"
+
 class Replace(VbaLibraryFunc):
     """
     Replace() string function.
@@ -3601,7 +3610,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error, LanguageID, MultiByteToWideChar, IsNull):
+               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
