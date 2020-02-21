@@ -112,6 +112,9 @@ class Context(object):
         
         # Track all external functions called by the program.
         self.external_funcs = []
+
+        # Track a quick lookup of variables that have change handling functions.
+        self.has_change_handler = {}
         
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
@@ -196,6 +199,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.has_change_handler = context.has_change_handler
             self.throttle_logging = context.throttle_logging
             self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
@@ -3428,6 +3432,11 @@ class Context(object):
         if (not isinstance(name, basestring)):
             raise KeyError('Object %r not found' % name)
 
+        # Flag if this is a change handler lookup.
+        is_change_handler = (name.strip().lower().endswith("_change"))
+        change_name = name.strip().lower()
+        if is_change_handler: change_name = change_name[:-len("_change")]
+        
         # convert to lowercase if needed.
         if (case_insensitive):
             name = name.lower()
@@ -3441,22 +3450,27 @@ class Context(object):
         # a system function.
         if name in self.locals:
             log.debug('Found %r in locals' % name)
+            if is_change_handler: self.has_change_handler[change_name] = True
             return self.locals[name]
         # second, in globals:
         elif ((not local_only) and (name in self.globals)):
             log.debug('Found %r in globals' % name)
+            if is_change_handler: self.has_change_handler[change_name] = True
             return self.globals[name]
         # next, search in the global VBA library:
         elif ((not local_only) and (name in VBA_LIBRARY)):
             log.debug('Found %r in VBA Library' % name)
+            if is_change_handler: self.has_change_handler[change_name] = True
             return VBA_LIBRARY[name]
         # Is it a doc var?
         elif ((not local_only) and (name in self.doc_vars)):
             log.debug('Found %r in VBA document variables' % name)
+            if is_change_handler: self.has_change_handler[change_name] = True
             return self.doc_vars[name]
         # Unknown symbol.
         else:
             # Not found.
+            if is_change_handler: self.has_change_handler[change_name] = False
             raise KeyError('Object %r not found' % name)
             # NOTE: if name is unknown, just raise Python dict's exception
             # TODO: raise a custom VBA exception?
@@ -3515,6 +3529,16 @@ class Context(object):
         return self.__get(str(name) + "$", case_insensitive=case_insensitive, local_only=local_only)
         
     def get(self, name, search_wildcard=True, local_only=False):
+
+        # Short circuit looking for variable change handlers if possible.
+        if (name.strip().lower().endswith("_change")):
+
+            # Get the original variable name.
+            orig_name = name.strip().lower()[:-len("_change")]
+            if ((orig_name in self.has_change_handler) and (not self.has_change_handler[orig_name])):
+                log.debug("Short circuited change handler lookup of " + name)
+                raise KeyError('Object %r not found' % name)
+
         try:
             return self._get(name, search_wildcard=search_wildcard, case_insensitive=False, local_only=local_only)
         except KeyError:

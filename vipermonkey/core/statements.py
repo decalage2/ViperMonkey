@@ -1566,16 +1566,22 @@ class For_Statement(VBA_Object):
             # Handle assigning the loop index variable to a constant value
             # in the loop body. This can cause infinite loops.
             last_index = context.get(self.name)
-            
-            # Is the loop body a simple series of atomic statements and has
-            # nothing changed in the program state since the last iteration?
-            if (self._no_state_change(prev_context, context)):
-                num_no_change += 1
-                if (num_no_change >= context.max_static_iters * 5):
-                    log.warn("Possible useless For loop detected. Exiting loop.")
-                    self.is_useless = True
-                    break
-            prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
+
+            # For performance don't check for loops that don't change the state unless it looks like
+            # they may actually be a non-state changing loop.
+            if ((num_iters_run < 10) or (num_no_change > 0)):
+
+                # Is the loop body a simple series of atomic statements and has
+                # nothing changed in the program state since the last iteration?
+                if (self._no_state_change(prev_context, context)):
+                    num_no_change += 1
+                    if (num_no_change >= context.max_static_iters * 5):
+                        log.warn("Possible useless For loop detected. Exiting loop.")
+                        self.is_useless = True
+                        break
+                else:
+                    num_no_change = 0                
+                prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
 
             # Throttle logging if this is a long running loop.
             num_iters_run += 1
@@ -2141,16 +2147,22 @@ class While_Statement(VBA_Object):
         num_iters = 0
         num_no_change = 0
         while (True):
+            
+            # For performance don't check for loops that don't change the state unless it looks like
+            # they may actually be a non-state changing loop.
+            if ((num_iters < 10) or (num_no_change > 0)):
 
-            # Is the loop body a simple series of atomic statements and has
-            # nothing changed in the program state since the last iteration?
-            if (self._no_state_change(prev_context, context)):
-                num_no_change_body += 1
-                if (num_no_change_body >= context.max_static_iters * 500):
-                    log.warn("Possible useless While loop detected. Exiting loop.")
-                    self.is_useless = True
-                    break
-            prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                # Is the loop body a simple series of atomic statements and has
+                # nothing changed in the program state since the last iteration?
+                if (self._no_state_change(prev_context, context)):
+                    num_no_change_body += 1
+                    if (num_no_change_body >= context.max_static_iters * 500):
+                        log.warn("Possible useless While loop detected. Exiting loop.")
+                        self.is_useless = True
+                        break
+                else:
+                    num_no_change = 0
+                prev_context = Context(context=context, _locals=context.locals, copy_globals=True)
             
             # Break infinite loops.
             if (num_iters > max_loop_iters):

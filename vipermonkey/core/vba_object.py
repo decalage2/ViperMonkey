@@ -333,6 +333,36 @@ def _read_from_object_text(arg, context):
         val = context.get_doc_var(doc_var_name.lower())
         return val
     
+constant_expr_cache = {}
+
+def get_cached_value(arg):
+    """
+    Get the cached value of an all constant numeric expression if we have it.
+    """
+
+    arg_str = str(arg)
+    if (arg_str not in constant_expr_cache.keys()):
+        return None
+    return constant_expr_cache[arg_str]
+
+def set_cached_value(arg, val):
+    """
+    Set the cached value of an all constant numeric expression.
+    """
+
+    arg_str = str(arg)
+    log.debug("Cache value of " + arg_str + " = " + str(val))
+    constant_expr_cache[arg_str] = val
+    
+def is_constant_math(arg):
+    """
+    See if a given expression is a simple math expression with all literal numbers.
+    """
+
+    base_pat = r"(?:\s*\d+(?:\.\d+)?\s*[+\-\*/]\s*)*\s*\d+"
+    paren_pat = base_pat + r"|(?:\((?:\s*" + base_pat + "\s*[+\-\*\\]\s*)*\s*" + base_pat + "\))"
+    return (re.match(paren_pat, str(arg).strip()) is not None)
+
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -345,15 +375,26 @@ def eval_arg(arg, context, treat_as_var_name=False):
     limits_exceeded(throw_error=True)
 
     log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
+
+    # Is this a constant math expression?
+    got_constant_math = is_constant_math(arg)
+    
+    # Do we have the cached value of this expression?
+    cached_val = get_cached_value(arg)
+    if (cached_val is not None):
+        log.debug("eval_arg: Got cached value %r = %r" % (arg, cached_val))
+        return cached_val
     
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
+        if got_constant_math: set_cached_value(arg, excel_val)
         return excel_val
 
     # Short circuit the checks and see if we are accessing some object text first.
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
+        if got_constant_math: set_cached_value(arg, obj_text_val)
         return obj_text_val
     
     # Not reading from an Excel cell. Try as a VBA object.
@@ -365,6 +406,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Resolve the run() call.
             if ("MemberAccessExpression" in str(type(arg))):
                 arg_evaled = arg.eval(context)
+                if got_constant_math: set_cached_value(arg, arg_evaled)
                 return arg_evaled
 
         # Handle as a regular VBA object.
@@ -379,9 +421,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
             pass
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
-            return eval_arg(r, context)
+            r = eval_arg(r, context)
+            if got_constant_math: set_cached_value(arg, r)
+            return r
         
         # Regular VBA object.
+        if got_constant_math: set_cached_value(arg, r)
         return r
 
     # Not a VBA object.
@@ -396,6 +441,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 log.debug("eval_arg: Try as variable name: %r" % arg)
                 r = context.get(arg)
                 log.debug("eval_arg: Got %r = %r" % (arg, r))
+                if got_constant_math: set_cached_value(arg, r)
                 return r
             except:
                     
@@ -420,9 +466,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         base64_str = filter(isprint, str(base64_str).strip())
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
                         log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                        if got_constant_math: set_cached_value(arg, val_decode)
                         return val_decode
                     except Exception as e:
                         log.debug("eval_arg: Base64 decode fail. " + str(e))
+                        if got_constant_math: set_cached_value(arg, val)
                         return val
                 except KeyError:
                     log.debug("eval_arg: Not found as .text.")
@@ -434,6 +482,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     tmp = arg.lower().replace(".selecteditem", ".rapt.value")
                     log.debug("eval_arg: Try to get as " + tmp + "...")
                     val = context.get(tmp)
+                    if got_constant_math: set_cached_value(arg, val)
                     return val
 
                 except KeyError:
@@ -446,6 +495,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 # Try easy button first. See if this is just a doc var.
                 doc_var_val = context.get_doc_var(arg)
                 if (doc_var_val is not None):
+                    if got_constant_math: set_cached_value(arg, doc_var_val)
                     return doc_var_val
 
                 # Peel off items seperated by a '.', trying them as functions.
@@ -458,6 +508,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
                         if (val != str(arg)):
+                            if got_constant_math: set_cached_value(arg, val)
                             return val
 
                     except KeyError:
@@ -485,10 +536,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     if (r != func):
 
                         # Yes it did. Return the function result.
+                        if got_constant_math: set_cached_value(arg, r)
                         return r
 
                     # The function did to resolve to a value. Return as the
                     # original string.
+                    if got_constant_math: set_cached_value(arg, arg)
                     return arg
 
                 except KeyError:
@@ -807,6 +860,10 @@ def int_convert(arg):
     if (arg == "NULL"):
         return 0
 
+    # Empty strings are NULL.
+    if (arg == ""):
+        return "NULL"
+    
     # Leave the wildcard matching value alone.
     if (arg == "**MATCH ANY**"):
         return arg

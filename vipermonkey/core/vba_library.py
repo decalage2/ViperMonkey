@@ -454,7 +454,9 @@ class Mid(VbaLibraryFunc):
             return ""
         s = params[0]
         # "If String contains the data value Null, Null is returned."
-        if s == None: return None
+        if ((s is None) or (s == "NULL")): return "\x00"
+        # If start is NULL, NULL is also returned.
+        if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
         if not isinstance(s, basestring):
             s = str(s)
         start = 0

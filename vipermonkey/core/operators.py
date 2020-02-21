@@ -478,12 +478,13 @@ class Division(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) / int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to divide arguments of different types. ' + str(e))
+                if (str(e).strip() != "division by zero"):
+                    log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
         except ZeroDivisionError:
-            log.error("Division by 0 error. Returning ''.")
-            return ''
+            log.error("Division by 0 error. Returning 'NULL'.")
+            return 'NULL'
 
     def __repr__(self):
         return debug_repr("/", self.arg)
@@ -525,12 +526,15 @@ class MultiOp(VBA_Object):
                 for operator, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[operator](ret, arg)
                 return ret
+            except ZeroDivisionError:
+                log.error("Division by 0 error. Returning 'NULL'.")
+                return 'NULL'
             except Exception as e:
                 log.error('Impossible to operate on arguments of different types. ' + str(e))
                 return 0
         except ZeroDivisionError:
-            log.error("Division by 0 error. Returning ''.")
-            return ''
+            log.error("Division by 0 error. Returning 'NULL'.")
+            return 'NULL'
 
     def __repr__(self):
         ret = [str(self.arg[0])]
@@ -583,7 +587,8 @@ class FloorDivision(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) // int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to divide arguments of different types. ' + str(e))
+                if (str(e).strip() != "division by zero"):
+                    log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
 
