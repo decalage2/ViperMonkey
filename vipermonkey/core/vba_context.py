@@ -3433,8 +3433,8 @@ class Context(object):
             raise KeyError('Object %r not found' % name)
 
         # Flag if this is a change handler lookup.
-        is_change_handler = (name.strip().lower().endswith("_change"))
-        change_name = name.strip().lower()
+        is_change_handler = (str(name).strip().lower().endswith("_change"))
+        change_name = str(name).strip().lower()
         if is_change_handler: change_name = change_name[:-len("_change")]
         
         # convert to lowercase if needed.
@@ -3531,10 +3531,10 @@ class Context(object):
     def get(self, name, search_wildcard=True, local_only=False):
 
         # Short circuit looking for variable change handlers if possible.
-        if (name.strip().lower().endswith("_change")):
+        if (str(name).strip().lower().endswith("_change")):
 
             # Get the original variable name.
-            orig_name = name.strip().lower()[:-len("_change")]
+            orig_name = str(name).strip().lower()[:-len("_change")]
             if ((orig_name in self.has_change_handler) and (not self.has_change_handler[orig_name])):
                 log.debug("Short circuited change handler lookup of " + name)
                 raise KeyError('Object %r not found' % name)
