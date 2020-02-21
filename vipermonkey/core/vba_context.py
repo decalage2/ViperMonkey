@@ -3530,6 +3530,11 @@ class Context(object):
         
     def get(self, name, search_wildcard=True, local_only=False):
 
+        # Sanity check.
+        if ((name is None) or
+            (isinstance(name, str) and (len(name.strip()) == 0))):
+            raise KeyError('Object %r not found' % name)
+        
         # Short circuit looking for variable change handlers if possible.
         if (str(name).strip().lower().endswith("_change")):
 

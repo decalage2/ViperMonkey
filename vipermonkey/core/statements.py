@@ -2088,7 +2088,23 @@ class While_Statement(VBA_Object):
         # current state.
         r = (prev_context == curr_context)
         return r
-    
+
+    def _has_constant_loop_guard(self):
+        """
+        Check to see if the loop guard is a literal expression that always evaluates True or False.
+        Return True or False if it does.
+        Return None if it does not.
+        """
+
+        # Evaluate the loop guard with an empty context and see if it gives true or false.
+        empty_context = Context()
+        eval_guard = str(eval_arg(self.guard, empty_context)).strip()
+        if (eval_guard == "True"):
+            return True
+        if (eval_guard == "False"):
+            return False
+        return None
+        
     def eval(self, context, params=None):
 
         if (context.exit_func):
@@ -2123,6 +2139,23 @@ class While_Statement(VBA_Object):
 
             # We short circuited the loop. Done.
             return
+
+        # Some loops have a constant guard expression that always evaluates to True
+        # (infinite loop). Just run those loops a few times.
+        init_guard_val = self._has_constant_loop_guard()
+        max_loop_iters = VBA_Object.loop_upper_bound
+        if (init_guard_val is not None):
+
+            # Always runs?
+            if (init_guard_val):
+                log.warn("Found infinite loop w. constant loop guard. Limiting iterations.")
+                max_loop_iters = 5
+
+            # Never runs?
+            else:
+                log.warn("Found loop that never runs w. constant loop guard. Skipping.")
+                return
+
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -2130,7 +2163,6 @@ class While_Statement(VBA_Object):
 
         # Some loop guards check the readystate value on an object. To simulate this
         # will will just go around the loop a small fixed # of times.
-        max_loop_iters = VBA_Object.loop_upper_bound
         if (".readyState" in str(self.guard)):
             log.info("Limiting # of iterations of a .readyState loop.")
             max_loop_iters = 5
