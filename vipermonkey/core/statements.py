@@ -2583,7 +2583,12 @@ class Case_Clause_Atomic(VBA_Object):
             test_val = 0.0 + test_val
         if (isinstance(test_val, float) and isinstance(expected_val, int)):
             expected_val = 0.0 + expected_val
-        return (str(test_val) == str(expected_val))
+        test_str = str(test_val)
+        expected_str = str(expected_val)
+        if (((test_str == "NULL") and (expected_str == "")) or
+            ((expected_str == "NULL") and (test_str == ""))):
+            return True
+        return (test_str == expected_str)
 
 class Case_Clause(VBA_Object):
 

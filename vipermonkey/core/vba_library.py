@@ -433,6 +433,31 @@ class Sleep(VbaLibraryFunc):
     def eval(self, context, params=None):
         pass
 
+class TypeName(VbaLibraryFunc):
+    """
+    TypeName() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Return VB type.
+        val = params[0]
+        if ((val == "NULL") or (val == "")):
+            return "Empty"
+        if (isinstance(val, bool)):
+            return "Boolean"
+        if (isinstance(val, str)):
+            return "String"
+        if (isinstance(val, int)):
+            return "Integer"
+        if (isinstance(val, float)):
+            return "Double"
+        return "NULL"
+
 class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
@@ -3612,7 +3637,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue):
+               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

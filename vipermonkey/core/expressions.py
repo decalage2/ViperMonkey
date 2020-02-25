@@ -2096,7 +2096,7 @@ class BoolExprItem(VBA_Object):
         
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
-            (self.op.lower() == "is")):
+            (self.op.lower() == "is")):            
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
