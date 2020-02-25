@@ -458,6 +458,33 @@ class TypeName(VbaLibraryFunc):
             return "Double"
         return "NULL"
 
+class VarType(VbaLibraryFunc):
+    """
+    VarType() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return 0
+
+        # Return VB type.
+        val = params[0]
+        if ((val == "NULL") or (val == "")):
+            return 0
+        if (isinstance(val, bool)):
+            return 11
+        if (isinstance(val, str)):
+            return 8
+        if (isinstance(val, int)):
+            return 2
+        if (isinstance(val, float)):
+            return 5
+        if (isinstance(val, long)):
+            return 3
+        return 0
+
 class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
@@ -1260,16 +1287,6 @@ class Split(VbaLibraryFunc):
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
-
-class VarType(VbaLibraryFunc):
-    """
-    VarType() function. NOTE: Currently stubbed.
-    """
-
-    def eval(self, context, params=None):
-        assert len(params) > 0
-        # TODO: Actually implement this properly.
-        return 8
     
 class Int(VbaLibraryFunc):
     """
@@ -3637,7 +3654,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
-               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName):
+               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
+               VarType):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

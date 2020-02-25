@@ -359,9 +359,15 @@ def is_constant_math(arg):
     See if a given expression is a simple math expression with all literal numbers.
     """
 
-    base_pat = r"(?:\s*\d+(?:\.\d+)?\s*[+\-\*/]\s*)*\s*\d+"
-    paren_pat = base_pat + r"|(?:\((?:\s*" + base_pat + "\s*[+\-\*\\]\s*)*\s*" + base_pat + "\))"
-    return (re.match(paren_pat, str(arg).strip()) is not None)
+    # Speed this up with the rure regex library if it is installed.
+    try:
+        import rure as local_re
+    except ImportError:
+        import re as local_re
+    
+    base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
+    paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
+    return (local_re.match(unicode(paren_pat), unicode(str(arg).strip())) is not None)
 
 meta = None
 
