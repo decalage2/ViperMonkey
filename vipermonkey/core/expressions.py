@@ -1653,9 +1653,9 @@ class Function_Call(VBA_Object):
                     
             log.debug('Calling: %r' % f)
             if (f is not None):
-                if (not(isinstance(f, str)) and
-                    not(isinstance(f, list)) and
-                    not(isinstance(f, unicode))):
+                if (isinstance(f, procedures.Function) or
+                    isinstance(f, procedures.Sub) or
+                    isinstance(f, VbaLibraryFunc)):
                     try:
 
                         # Call function.
@@ -1684,6 +1684,13 @@ class Function_Call(VBA_Object):
                         log.error(str(f) + " has no eval() method. " + str(e))
                         return f
 
+                # Misparsed addition?
+                elif ((isinstance(f, int)) and
+                      (len(params) == 1) and
+                      (isinstance(params[0], int))):
+                    return (f + params[0])
+
+                # Array access?
                 elif (len(params) > 0):
 
                     # Looks like this is actually an array access.
@@ -1731,6 +1738,20 @@ class Function_Call(VBA_Object):
                     return s.eval(context=context, params=new_params)
                 except KeyError:
                     pass
+
+            # Could this be a misparsed addition to a variable (thanks VB grammar... :( )?
+            if (context.contains(self.name) and
+                (len(params) == 1) and
+                (isinstance(params[0], int))):
+
+                # Get the variable value.
+                var_val = context.get(self.name)
+
+                # Can we add an int to this?
+                if (isinstance(var_val, int)):
+
+                    # Treat this as a misparsed int addition.
+                    return (var_val + params[0])
                 
             # Return result.                
             log.warning('Function %r not found' % self.name)

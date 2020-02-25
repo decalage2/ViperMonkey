@@ -503,6 +503,9 @@ class ViperMonkey(object):
         context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters.Count".lower()] = long(len(self.doc_text))
+        context.globals["Count".lower()] = 1
+        context.globals[".Pages.Count".lower()] = 1
+        context.globals["me.Pages.Count".lower()] = 1
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
 
