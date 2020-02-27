@@ -2651,8 +2651,8 @@ case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() +
                       (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
-# TODO: Don't ignore '<' and '>'.
-case_clause = CaselessKeyword("Case").suppress() + Suppress(Optional(CaselessKeyword("Is") + (Literal('=') | Literal('<') | Literal('>')))) + \
+case_clause = CaselessKeyword("Case").suppress() + \
+              Suppress(Optional(CaselessKeyword("Is") + (Literal('=') ^ Literal('<') ^ Literal('>') ^ Literal('<=') ^ Literal('>=')))) + \
               case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
@@ -2840,8 +2840,8 @@ _single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_ex
                                               Group(simple_statements_line('statements')))
                                    ) + \
                                    Optional(
-                                       Group(CaselessKeyword("Else").suppress() + \
-                                             Group(simple_statements_line('statements')))
+                                       (Group(CaselessKeyword("Else").suppress() + Group(simple_statements_line('statements'))) ^
+                                        Group(CaselessKeyword("Else").suppress()))
                                    ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
 single_line_if_statement = _single_line_if_statement
 single_line_if_statement.setParseAction(If_Statement)

@@ -364,7 +364,7 @@ def is_constant_math(arg):
         import rure as local_re
     except ImportError:
         import re as local_re
-    
+
     base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
     return (local_re.match(unicode(paren_pat), unicode(str(arg).strip())) is not None)
