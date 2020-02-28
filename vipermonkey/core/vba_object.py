@@ -367,7 +367,13 @@ def is_constant_math(arg):
 
     base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
-    return (local_re.match(unicode(paren_pat), unicode(str(arg).strip())) is not None)
+    arg_str = str(arg).strip()
+    try:
+        arg_str = unicode(arg_str)
+    except UnicodeDecodeError:
+        arg_str = filter(isprint, arg_str)
+        arg_str = unicode(arg_str)
+    return (local_re.match(unicode(paren_pat), arg_str) is not None)
 
 meta = None
 
