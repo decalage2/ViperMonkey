@@ -388,6 +388,24 @@ def fix_skipped_1st_arg(vba_code):
     # Return the modified code.
     return vba_code
     
+def fix_unhandled_array_assigns(vba_code):
+    """
+    Currently things like 'foo(1, 2, 3) = 1' are not handled.
+    Comment them out.
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "\n(\s*\w+\((?:\w+\s*,\s*){2,}\w+\)\s*=)"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        vba_code = re.sub(pat, r"\n' UNHANDLED ARRAY ASSIGNMENT \1", vba_code)
+    return vba_code
+
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -402,6 +420,7 @@ def fix_difficult_code(vba_code):
 
     # Targeted fix for some maldocs.
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
+    vba_code = fix_unhandled_array_assigns(vba_code)
     
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
