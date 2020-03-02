@@ -473,7 +473,7 @@ def fix_difficult_code(vba_code):
     single_line_ifs = []
     pos = 0
     for curr_if in re.findall(pat, vba_code):
-        if_name = "HIDE_THIS_IF_" + str(pos)
+        if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
         pos += 1
         vba_code = vba_code.replace(curr_if, if_name + "\n")
         single_line_ifs.append((if_name, curr_if))
@@ -651,7 +651,7 @@ def fix_difficult_code(vba_code):
     # Put the single line ifs back.
     for if_info in single_line_ifs:
         r = r.replace(if_info[0], if_info[1])
-    
+
     return r
 
 def strip_comments(vba_code):
