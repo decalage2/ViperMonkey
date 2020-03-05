@@ -784,8 +784,8 @@ class Let_Statement(VBA_Object):
                 return False
             the_str = eval_arg(args[0], context)
             the_str_var = args[0]
-            start = eval_arg(args[1], context)
-            size = eval_arg(args[2], context)
+            start = int_convert(eval_arg(args[1], context), leave_alone=True)
+            size = int_convert(eval_arg(args[2], context), leave_alone=True)
             
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
@@ -793,6 +793,12 @@ class Let_Statement(VBA_Object):
                 return False
             if (type(the_str) != type(rhs)):
                 log.error("Assigning " + str(self.name) + " failed. " + str(type(the_str)) + " != " + str(type(rhs)))
+                return False
+            if (not isinstance(start, int)):
+                log.error("Assigning " + str(self.name) + " failed. Start is not int (" + str(type(start)) + ").")
+                return False
+            if (not isinstance(size, int)):
+                log.error("Assigning " + str(self.name) + " failed. Size is not int (" + str(type(size)) + ").")
                 return False
             if (((start-1 + size) > len(the_str)) or (start < 1)):
                 log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")

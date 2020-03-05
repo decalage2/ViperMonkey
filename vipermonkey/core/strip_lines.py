@@ -403,7 +403,9 @@ def fix_unhandled_array_assigns(vba_code):
     
     pat = "\n(\s*\w+\((?:\w+\s*,\s*){2,}\w+\)\s*=)"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
-        vba_code = re.sub(pat, r"\n' UNHANDLED ARRAY ASSIGNMENT \1", vba_code)
+        vba_code = re.sub(pat, r"\n' UNHANDLED ARRAY ASSIGNMENT \1", vba_code) + "\n"
+        fix_pat = r"' UNHANDLED ARRAY ASSIGNMENT\s+Mid\("
+        vba_code = re.sub(fix_pat, r"Mid(", vba_code)
     return vba_code
 
 def fix_difficult_code(vba_code):

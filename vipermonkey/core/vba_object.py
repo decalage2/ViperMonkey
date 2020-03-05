@@ -871,11 +871,15 @@ def coerce_args(orig_args, preferred_type=None):
         log.debug("Coerce to int " + str(new_args))
         return coerce_args_to_int(new_args)
 
-def int_convert(arg):
+def int_convert(arg, leave_alone=False):
     """
     Convert a VBA expression to an int, handling VBA NULL.
     """
 
+    # Easy case.
+    if (isinstance(arg, int)):
+        return arg
+    
     # NULLs are 0.
     if (arg == "NULL"):
         return 0
@@ -907,8 +911,11 @@ def int_convert(arg):
     try:
         return int(arg_str)
     except Exception as e:
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
-        return 0
+        if (not leave_alone):
+            log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
+            return 0
+        log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
+        return arg_str
 
 def str_convert(arg):
     """
