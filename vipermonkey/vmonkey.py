@@ -138,8 +138,14 @@ def safe_print(text):
     try:
         print(text)
     except Exception as e:
-        print("ERROR: Printing text failed (len text = " + str(len(text)) + ". " + str(e))
-        
+        msg = "ERROR: Printing text failed (len text = " + str(len(text)) + ". " + str(e)
+        if (len(msg) > 100):
+            msg = msg[:100]
+        try:
+            print(msg)
+        except:
+            pass
+            
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text_libreoffice(data):
