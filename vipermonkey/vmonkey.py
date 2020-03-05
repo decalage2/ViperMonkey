@@ -130,6 +130,16 @@ import core.read_ole_fields as read_ole_fields
 # for logging
 from core.logger import log
 
+def safe_print(text):
+    """
+    Sometimes printing large strings when running in a Docker container triggers exceptions.
+    This function just wraps a print in a try/except block to not crash ViperMonkey when this happens.
+    """
+    try:
+        print(text)
+    except Exception as e:
+        print("ERROR: Printing text failed (len text = " + str(len(text)) + ". " + str(e))
+        
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text_libreoffice(data):
@@ -633,34 +643,31 @@ def parse_stream(subfilename,
     # Strip out code that does not affect the end result of the program.
     if (strip_useless):
         vba_code = strip_lines.strip_useless_code(vba_code, local_funcs)
-    print('-'*79)
-    print('VBA MACRO %s ' % vba_filename)
-    print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
-    print('- '*39)
+    safe_print('-'*79)
+    safe_print('VBA MACRO %s ' % vba_filename)
+    safe_print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
+    safe_print('- '*39)
     
     # Parse the macro.
     m = None
     if vba_code.strip() == '':
-        print('(empty macro)')
+        safe_print('(empty macro)')
         m = "empty"
     else:
-        print('-'*79)
-        print('VBA CODE (with long lines collapsed):')
-        try:
-            print(vba_code)
-        except IOError as e:
-            print("ERROR: Code too big to print. " + str(e))
-        print('-'*79)
+        safe_print('-'*79)
+        safe_print('VBA CODE (with long lines collapsed):')
+        safe_print(vba_code)
+        safe_print('-'*79)
         #sys.exit(0)
-        print('PARSING VBA CODE:')
+        safe_print('PARSING VBA CODE:')
         try:
             m = module.parseString(vba_code + "\n", parseAll=True)[0]
             ParserElement.resetCache()
             m.code = vba_code
         except ParseException as err:
-            print(err.line)
-            print(" "*(err.column-1) + "^")
-            print(err)
+            safe_print(err.line)
+            safe_print(" "*(err.column-1) + "^")
+            safe_print(err)
             log.error("Parse Error. Processing Aborted.")
             return None
 
@@ -770,8 +777,8 @@ def process_file(container,
             display_filename = '%s in %s' % (filename, container)
         else:
             display_filename = filename
-        print('='*79)
-        print('FILE:', display_filename)
+        safe_print('='*79)
+        safe_print('FILE: ' + str(display_filename))
         # FIXME: the code below only works if the file is on disk and not in a zip archive
         # TODO: merge process_file and _process_file
         try:
@@ -1386,36 +1393,33 @@ def _process_file (filename,
                 vm.globals[tmp_name] = form_strings
                 log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
-            print("")
-            print('-'*79)
-            print('TRACING VBA CODE (entrypoint = Auto*):')
+            safe_print("")
+            safe_print('-'*79)
+            safe_print('TRACING VBA CODE (entrypoint = Auto*):')
             if (entry_points is not None):
                 log.info("Starting emulation from function(s) " + str(entry_points))
             vm.vba = vba
             vm.trace()
             # print table of all recorded actions
-            print('\nRecorded Actions:')
-            print(vm.dump_actions())
-            print('')
+            safe_print('\nRecorded Actions:')
+            safe_print(vm.dump_actions())
+            safe_print('')
             full_iocs = vba_context.intermediate_iocs
             full_iocs = full_iocs.union(read_ole_fields.pull_base64(data))
             tmp_iocs = []
             if (len(full_iocs) > 0):
                 tmp_iocs = _remove_duplicate_iocs(full_iocs)
                 if (display_int_iocs):
-                    print('Intermediate IOCs:')
-                    print('')
+                    safe_print('Intermediate IOCs:')
+                    safe_print('')
                     for ioc in tmp_iocs:
-                        print("+---------------------------------------------------------+")
-                        try:
-                            print(ioc)
-                        except IOError as e:
-                            print("ERROR: IOC too big to print. " + str(e))
-                    print("+---------------------------------------------------------+")
-                    print('')
-            print('VBA Builtins Called: ' + str(vm.external_funcs))
-            print('')
-            print('Finished analyzing ' + str(orig_filename) + " .\n")
+                        safe_print("+---------------------------------------------------------+")
+                        safe_print(ioc)
+                    safe_print("+---------------------------------------------------------+")
+                    safe_print('')
+            safe_print('VBA Builtins Called: ' + str(vm.external_funcs))
+            safe_print('')
+            safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
 
             if out_file_name:
 
@@ -1443,9 +1447,9 @@ def _process_file (filename,
             return (vm.actions, vm.external_funcs, tmp_iocs)
 
         else:
-            print('Finished analyzing ' + str(orig_filename) + " .\n")
-            print('No VBA macros found.')
-            print('')
+            safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
+            safe_print('No VBA macros found.')
+            safe_print('')
             return ([], [], [])
     except Exception as e:
         if (("SystemExit" not in str(e)) and (". Aborting analysis." not in str(e))):
@@ -1467,8 +1471,8 @@ def process_file_scanexpr (container, filename, data):
         display_filename = '%s in %s' % (filename, container)
     else:
         display_filename = filename
-    print('='*79)
-    print('FILE:', display_filename)
+    safe_print('='*79)
+    safe_print('FILE: ' + str(display_filename))
     all_code = ''
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
@@ -1491,57 +1495,51 @@ def process_file_scanexpr (container, filename, data):
                 # hide attribute lines:
                 #TODO: option to disable attribute filtering
                 vba_code = filter_vba(vba_code)
-                print('-'*79)
-                print('VBA MACRO %s ' % vba_filename)
-                print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
-                print('- '*39)
+                safe_print('-'*79)
+                safe_print('VBA MACRO %s ' % vba_filename)
+                safe_print('in file: %s - OLE stream: %s' % (subfilename, repr(stream_path)))
+                safe_print('- '*39)
                 # detect empty macros:
                 if vba_code.strip() == '':
-                    print('(empty macro)')
+                    safe_print('(empty macro)')
                 else:
                     # TODO: option to display code
-                    try:
-                        print(vba_code)
-                    except IOError as e:
-                        print("ERROR: Code too big to print. " + str(e))
+                    safe_print(vba_code)
                     vba_code = vba_collapse_long_lines(vba_code)
                     all_code += '\n' + vba_code
-            print('-'*79)
-            print('EVALUATED VBA EXPRESSIONS:')
+            safe_print('-'*79)
+            safe_print('EVALUATED VBA EXPRESSIONS:')
             t = prettytable.PrettyTable(('Obfuscated expression', 'Evaluated value'))
             t.align = 'l'
             t.max_width['Obfuscated expression'] = 36
             t.max_width['Evaluated value'] = 36
             for expression, expr_eval in scan_expressions(all_code):
                 t.add_row((repr(expression), repr(expr_eval)))
-            try:
-                print(t)
-            except IOError as e:
-                print("ERROR: Table too big to print. " + str(e))
+                safe_print(t)
 
         else:
-            print('No VBA macros found.')
+            safe_print('No VBA macros found.')
     except: #TypeError:
         #raise
         #TODO: print more info if debug mode
         #print sys.exc_value
         # display the exception with full stack trace for debugging, but do not stop:
         traceback.print_exc()
-    print('')
+    safe_print('')
 
 def print_version():
     """
     Print version information.
     """
 
-    print("Version Information:\n")
-    print("Python:\t\t\t" + str(sys.version_info))
+    safe_print("Version Information:\n")
+    safe_print("Python:\t\t\t" + str(sys.version_info))
     import pyparsing
-    print("pyparsing:\t\t" + str(pyparsing.__version__))
+    safe_print("pyparsing:\t\t" + str(pyparsing.__version__))
     import olefile
-    print("olefile:\t\t" + str(olefile.__version__))
+    safe_print("olefile:\t\t" + str(olefile.__version__))
     import oletools.olevba
-    print("olevba:\t\t\t" + str(oletools.olevba.__version__))
+    safe_print("olevba:\t\t\t" + str(oletools.olevba.__version__))
     
 def main():
     """
@@ -1553,16 +1551,16 @@ def main():
     
     # print banner with version
     # Generated with http://www.patorjk.com/software/taag/#p=display&f=Slant&t=ViperMonkey
-    print(''' _    ___                 __  ___            __             
+    safe_print(''' _    ___                 __  ___            __             
 | |  / (_)___  ___  _____/  |/  /___  ____  / /_____  __  __
 | | / / / __ \/ _ \/ ___/ /|_/ / __ \/ __ \/ //_/ _ \/ / / /
 | |/ / / /_/ /  __/ /  / /  / / /_/ / / / / ,< /  __/ /_/ / 
 |___/_/ .___/\___/_/  /_/  /_/\____/_/ /_/_/|_|\___/\__, /  
      /_/                                           /____/   ''')
-    print('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
-    print('THIS IS WORK IN PROGRESS - Check updates regularly!')
-    print('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
-    print('')
+    safe_print('vmonkey %s - https://github.com/decalage2/ViperMonkey' % __version__)
+    safe_print('THIS IS WORK IN PROGRESS - Check updates regularly!')
+    safe_print('Please report any issue at https://github.com/decalage2/ViperMonkey/issues')
+    safe_print('')
 
     DEFAULT_LOG_LEVEL = "info" # Default log level
     LOG_LEVELS = {
@@ -1613,7 +1611,7 @@ def main():
     
     # Print help if no arguments are passed
     if len(args) == 0:
-        print(__doc__)
+        safe_print(__doc__)
         parser.print_help()
         sys.exit(0)
         
