@@ -646,7 +646,10 @@ def parse_stream(subfilename,
     else:
         print('-'*79)
         print('VBA CODE (with long lines collapsed):')
-        print(vba_code)
+        try:
+            print(vba_code)
+        except IOError as e:
+            print("ERROR: Code too big to print. " + str(e))
         print('-'*79)
         #sys.exit(0)
         print('PARSING VBA CODE:')
@@ -1404,7 +1407,10 @@ def _process_file (filename,
                     print('')
                     for ioc in tmp_iocs:
                         print("+---------------------------------------------------------+")
-                        print(ioc)
+                        try:
+                            print(ioc)
+                        except IOError as e:
+                            print("ERROR: IOC too big to print. " + str(e))
                     print("+---------------------------------------------------------+")
                     print('')
             print('VBA Builtins Called: ' + str(vm.external_funcs))
@@ -1494,7 +1500,10 @@ def process_file_scanexpr (container, filename, data):
                     print('(empty macro)')
                 else:
                     # TODO: option to display code
-                    print(vba_code)
+                    try:
+                        print(vba_code)
+                    except IOError as e:
+                        print("ERROR: Code too big to print. " + str(e))
                     vba_code = vba_collapse_long_lines(vba_code)
                     all_code += '\n' + vba_code
             print('-'*79)
@@ -1505,8 +1514,10 @@ def process_file_scanexpr (container, filename, data):
             t.max_width['Evaluated value'] = 36
             for expression, expr_eval in scan_expressions(all_code):
                 t.add_row((repr(expression), repr(expr_eval)))
-            print(t)
-
+            try:
+                print(t)
+            except IOError as e:
+                print("ERROR: Table too big to print. " + str(e))
 
         else:
             print('No VBA macros found.')
