@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 ViperMonkey: VBA Library
 
@@ -14,7 +15,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2020 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
