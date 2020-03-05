@@ -240,7 +240,15 @@ cruft_pats = [r'Microsoft Forms 2.0 Form',
               r'WordDocument',
               r'ObjectPool',
 ]
-    
+
+def _read_chunk(anchor, pat, data):
+    if (anchor not in data):
+        return None
+    data = data[data.index(anchor):]
+    if (re.search(pat, data, re.DOTALL) is not None):
+        return re.findall(pat, data, re.DOTALL)
+    return None
+
 def get_ole_textbox_values2(data, debug, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -249,7 +257,8 @@ def get_ole_textbox_values2(data, debug, vba_code):
 
     # Pull out the object text value references from the VBA code.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+(?:\.ControlTipText)?)", vba_code))
-
+    object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
+    
     # Are we refering to Page objects by index?
     page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
     if (re.search(page_pat, vba_code) is not None):
@@ -283,28 +292,38 @@ def get_ole_textbox_values2(data, debug, vba_code):
             other_var_names.add(short_name)
 
     # Read in the large chunk of data with the object names and string values.
-    chunk_pat = r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'
-    chunk = re.findall(chunk_pat, data, re.DOTALL)
+    print "HERE!!"
+    print len(data)
+    #chunk_pats = [r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))',
+    #              r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 (?:Form|Frame))|(?:ID="\{))',
+    #              r'ID="\{.{20,10000}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,20}(.+)Microsoft Forms ']
+    chunk_pats = [('ID="{',
+                   r'ID="\{.{20,}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,10}(.+?)Microsoft Forms '),
+                  ('\xd7\x8c\xfe\xfb',
+                   r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'),
+                  ('\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00',
+                   r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 (?:Form|Frame))|(?:ID="\{))')]
+    for anchor, chunk_pat in chunk_pats:
+        chunk = _read_chunk(anchor, chunk_pat, data)
+        if (chunk is not None):
+            break
 
     # Did we find the value chunk?
-    if (len(chunk) == 0):
+    if (chunk is None):                
+        if debug:
+            print "NO VALUES"
+        return []
 
-        # Try a different chunk start marker.
-        chunk_pat = r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 (?:Form|Frame))|(?:ID="{))'
-        chunk = re.findall(chunk_pat, data, re.DOTALL)
-
-        # Did we find the value chunk?
-        if (len(chunk) == 0):
-            if debug:
-                print "NO VALUES"
-            return []
+    # Get the actual chunk.
     chunk = chunk[0]
 
     # Strip some red herring strings from the chunk.
     chunk = chunk.replace("\x02$", "").replace("\x01@", "")
-    chunk = re.sub(r'[\x20-\x7f]{5,}(?:\x00[\x20-\x7f]){5,}', "", chunk)
+    #if (re.search(r'[\x20-\x7f]{5,}(?:\x00[\x20-\x7f]){5,}', chunk) is not None):
+    #    chunk = re.sub(r'[\x20-\x7f]{5,1000}(?:\x00[\x20-\x7f]){5,1000}', "", chunk, re.IGNORECASE)
 
     # Normalize Page object naming.
+    print "HERE: 3"
     page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
     chunk = re.sub(page_name_pat, r"Page\1", chunk)
     
@@ -313,7 +332,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print chunk
     
     # Pull out the strings from the value chunk.
-    ascii_pat = r"(?:(?:[\x20-\x7f]|\x0d\x0a){4,})|(?:(?:[\x20-\x7f]\x00){4,})"
+    ascii_pat = r"(?:(?:[\x09\x20-\x7f]|\x0d\x0a){4,})|(?:(?:[\x09\x20-\x7f]\x00){4,})"
     vals = re.findall(ascii_pat, chunk)
     vals = vals[:-1]
     tmp_vals = []
@@ -400,9 +419,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print names
 
     # Get values.
-    val_pat = r"(?:\x02\x00\x00([\x20-\x7f]{2,}))|" + \
-              r"((?:(?:\x00)[\x20-\x7f]){2,})|" + \
-              r"(?:[\x15\x0c\x0b]\x00\x80([\x20-\x7f]{2,}(?:\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j.+[\x20-\x7f]{5,})?))"
+    val_pat = r"(?:\x02\x00\x00([\x09\x20-\x7f]{2,}))|" + \
+              r"((?:(?:\x00)[\x09\x20-\x7f]){2,})|" + \
+              r"(?:\x05\x80([\x09\x20-\x7f]{2,}))|" + \
+              r"(?:[\x15\x0c\x0b]\x00\x80([\x09\x20-\x7f]{2,}(?:\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j.+[\x09\x20-\x7f]{5,})?))"
     vals = re.findall(val_pat, chunk)
     if debug:
         print "ORIG SPECIFIC VALS:"
@@ -480,13 +500,17 @@ def get_ole_textbox_values2(data, debug, vba_code):
     # Looks like duplicate subsequences of values can appear in the extracted
     # strings. Remove those.
     var_vals = remove_duplicates(var_vals)
-
+    
     # Find longest value.
     longest_val = ""
+    tmp_vals = []
     for v in var_vals:
+        if (v not in tmp_vals):
+            tmp_vals.append(v)
         if (len(v) > len(longest_val)):
             longest_val = v
-    
+    var_vals = tmp_vals
+            
     # Get rid of control tip text names, we have already handled those.
     tmp_names = []
     for name in names:
@@ -495,6 +519,9 @@ def get_ole_textbox_values2(data, debug, vba_code):
         else:
             name = name[1]
         if (name in control_tip_var_names):
+            continue
+        # Skip duplicates.
+        if (name in tmp_names):
             continue
         tmp_names.append(name)
     var_names = tmp_names
@@ -775,6 +802,7 @@ def get_ole_textbox_values(obj, vba_code):
     # Clear out some troublesome byte sequences.
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
     data = data.replace("o" + "\x00" * 40, "\x00" * 40)
+    data = re.sub("Tahoma\w{0,5}", "\x00", data)
     
     # First try alternate method of pulling data. These will be merged in later.
     v1_vals = get_ole_textbox_values1(data, debug)
@@ -788,7 +816,8 @@ def get_ole_textbox_values(obj, vba_code):
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
-
+    object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
+    
     # Are we refering to Page objects by index?
     page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
     if (re.search(page_pat, vba_code) is not None):

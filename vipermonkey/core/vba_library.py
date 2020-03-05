@@ -2943,7 +2943,18 @@ class WinExec(VbaLibraryFunc):
         cmd = params[0]
         context.report_action("Run", cmd, 'Interesting Command Execution', strip_null_bytes=True)
         return ''
-        
+
+class CreateShortcut(VbaLibraryFunc):
+    """
+    CreateShortcut() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        path = params[0]
+        context.report_action("Shortcut Creation", path, 'Shortcut Created', strip_null_bytes=True)
+    
 class CreateObject(VbaLibraryFunc):
     """
     CreateObject() function (stubbed).
@@ -3315,6 +3326,17 @@ class CDbl(VbaLibraryFunc):
             log.error("CDbl(" + str(params[0]) + ") failed. " + str(e))
             return 0
 
+class Popup(VbaLibraryFunc):
+    """
+    Popup() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        msg = params[0]
+        context.report_action("Popup", str(msg), '')
+        
 class Print(VbaLibraryFunc):
     """
     Debug.Print function.
@@ -3655,7 +3677,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
-               VarType):
+               VarType, Send, CreateShortcut, Popup):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

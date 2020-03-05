@@ -883,7 +883,8 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Don't strip lines if Execute() is called since the stripped variables
     # could be used in the execed code strings.
-    if ("Execute(" in vba_code):
+    exec_pat = r"execute(?:global)?\s*\("
+    if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
         return vba_code
     
     # Track data change callback function names.
