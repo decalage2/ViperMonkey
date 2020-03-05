@@ -56,6 +56,7 @@ from logger import log
 import re
 from curses_ascii import isprint
 import traceback
+import string
 
 from inspect import getouterframes, currentframe
 import sys
@@ -63,6 +64,7 @@ from datetime import datetime
 import pyparsing
 
 import expressions
+from var_in_expr_visitor import *
 
 max_emulation_time = None
 
@@ -134,6 +136,9 @@ class VBA_Object(object):
         log.debug(self)
         # raise NotImplementedError
 
+    def full_str(self):
+        return str(self)
+        
     def get_children(self):
         """
         Return the child VBA objects of the current object.
@@ -144,7 +149,7 @@ class VBA_Object(object):
         
         # The default behavior is to count any VBA_Object attribute as
         # a child.
-        if (self._children is not None):
+        if ((hasattr(self, "_children")) and (self._children is not None)):
             return self._children
         r = []
         for _, value in self.__dict__.iteritems():
@@ -184,11 +189,11 @@ def _read_from_excel(arg, context):
     """
 
     # Try handling reading value from an Excel spreadsheet cell.
+    # ThisWorkbook.Sheets('YHRPN').Range('J106').Value
     arg_str = str(arg)
-    if (("thisworkbook." in arg_str.lower()) and
-        ('("thisworkbook.' not in arg_str.lower()) and
+    if (("MemberAccessExpression" in str(type(arg))) and
         ("sheets(" in arg_str.lower()) and
-        ("range(" in arg_str.lower())):
+        (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
         log.debug("Try as Excel cell read...")
         
@@ -199,7 +204,11 @@ def _read_from_excel(arg, context):
         sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         
         # Pull out the cell index.
-        start = tmp_arg_str.index("range(") + len("range(")
+        start = None
+        if ("range(" in arg_str.lower()):
+            start = tmp_arg_str.index("range(") + len("range(")
+        else:
+            start = tmp_arg_str.index("cells(") + len("cells(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
         log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
@@ -210,17 +219,27 @@ def _read_from_excel(arg, context):
             sheet = context.loaded_excel.sheet_by_name(sheet_name)
             
             # Pull out the cell column and row.
-            col = ""
-            row = ""
-            for c in cell_index:
-                if (c.isalpha()):
-                    col += c
-                else:
-                    row += c
+
+            # Do we have something like '10, 30'?
+            index_pat = r"(\d+)\s*,\s*(\d+)"
+            if (re.search(index_pat, cell_index) is not None):
+                indices = re.findall(index_pat, cell_index)[0]
+                row = int(indices[0]) - 1
+                col = int(indices[1]) - 1
+
+            # Maybe something like 'A4:B7' ?
+            else:
+                col = ""
+                row = ""
+                for c in cell_index:
+                    if (c.isalpha()):
+                        col += c
+                    else:
+                        row += c
                     
-            # Convert the row and column to numeric indices for xlrd.
-            row = int(row) - 1
-            col = excel_col_letter_to_index(col)
+                # Convert the row and column to numeric indices for xlrd.
+                row = int(row) - 1
+                col = excel_col_letter_to_index(col)
             
             # Pull out the cell value.
             val = str(sheet.cell_value(row, col))
@@ -315,6 +334,55 @@ def _read_from_object_text(arg, context):
         val = context.get_doc_var(doc_var_name.lower())
         return val
     
+constant_expr_cache = {}
+
+def get_cached_value(arg):
+    """
+    Get the cached value of an all constant numeric expression if we have it.
+    """
+
+    arg_str = str(arg)
+    if (arg_str not in constant_expr_cache.keys()):
+        return None
+    return constant_expr_cache[arg_str]
+
+def set_cached_value(arg, val):
+    """
+    Set the cached value of an all constant numeric expression.
+    """
+
+    arg_str = str(arg)
+    log.debug("Cache value of " + arg_str + " = " + str(val))
+    constant_expr_cache[arg_str] = val
+    
+def is_constant_math(arg):
+    """
+    See if a given expression is a simple math expression with all literal numbers.
+    """
+
+    # Sanity check. If there are variables in the expression it is not all literals.
+    if (isinstance(arg, VBA_Object)):
+        var_visitor = var_in_expr_visitor()
+        arg.accept(var_visitor)
+        if (len(var_visitor.variables) > 0):
+            return False
+    
+    # Speed this up with the rure regex library if it is installed.
+    try:
+        import rure as local_re
+    except ImportError:
+        import re as local_re
+
+    base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
+    paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
+    arg_str = str(arg).strip()
+    try:
+        arg_str = unicode(arg_str)
+    except UnicodeDecodeError:
+        arg_str = filter(isprint, arg_str)
+        arg_str = unicode(arg_str)
+    return (local_re.match(unicode(paren_pat), arg_str) is not None)
+
 meta = None
 
 def eval_arg(arg, context, treat_as_var_name=False):
@@ -327,15 +395,26 @@ def eval_arg(arg, context, treat_as_var_name=False):
     limits_exceeded(throw_error=True)
 
     log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
+
+    # Is this a constant math expression?
+    got_constant_math = is_constant_math(arg)
+    
+    # Do we have the cached value of this expression?
+    cached_val = get_cached_value(arg)
+    if (cached_val is not None):
+        log.debug("eval_arg: Got cached value %r = %r" % (arg, cached_val))
+        return cached_val
     
     # Try handling reading value from an Excel spreadsheet cell.
     excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
+        if got_constant_math: set_cached_value(arg, excel_val)
         return excel_val
 
     # Short circuit the checks and see if we are accessing some object text first.
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
+        if got_constant_math: set_cached_value(arg, obj_text_val)
         return obj_text_val
     
     # Not reading from an Excel cell. Try as a VBA object.
@@ -347,6 +426,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # Resolve the run() call.
             if ("MemberAccessExpression" in str(type(arg))):
                 arg_evaled = arg.eval(context)
+                if got_constant_math: set_cached_value(arg, arg_evaled)
                 return arg_evaled
 
         # Handle as a regular VBA object.
@@ -361,9 +441,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
             pass
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
-            return eval_arg(r, context)
+            r = eval_arg(r, context)
+            if got_constant_math: set_cached_value(arg, r)
+            return r
         
         # Regular VBA object.
+        if got_constant_math: set_cached_value(arg, r)
         return r
 
     # Not a VBA object.
@@ -378,6 +461,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 log.debug("eval_arg: Try as variable name: %r" % arg)
                 r = context.get(arg)
                 log.debug("eval_arg: Got %r = %r" % (arg, r))
+                if got_constant_math: set_cached_value(arg, r)
                 return r
             except:
                     
@@ -390,9 +474,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
-            if (".nodetypedvalue" in arg.lower()):
+            if ("nodetypedvalue" in arg.lower()):
                 try:
-                    tmp = arg.lower().replace(".nodetypedvalue", ".text")
+                    tmp = arg.lower().replace("nodetypedvalue", "text")
                     log.debug("eval_arg: Try to get as " + tmp + "...")
                     val = context.get(tmp)
     
@@ -402,9 +486,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         base64_str = filter(isprint, str(base64_str).strip())
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
                         log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                        if got_constant_math: set_cached_value(arg, val_decode)
                         return val_decode
                     except Exception as e:
                         log.debug("eval_arg: Base64 decode fail. " + str(e))
+                        if got_constant_math: set_cached_value(arg, val)
                         return val
                 except KeyError:
                     log.debug("eval_arg: Not found as .text.")
@@ -416,6 +502,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     tmp = arg.lower().replace(".selecteditem", ".rapt.value")
                     log.debug("eval_arg: Try to get as " + tmp + "...")
                     val = context.get(tmp)
+                    if got_constant_math: set_cached_value(arg, val)
                     return val
 
                 except KeyError:
@@ -428,6 +515,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 # Try easy button first. See if this is just a doc var.
                 doc_var_val = context.get_doc_var(arg)
                 if (doc_var_val is not None):
+                    if got_constant_math: set_cached_value(arg, doc_var_val)
                     return doc_var_val
 
                 # Peel off items seperated by a '.', trying them as functions.
@@ -440,6 +528,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
                         if (val != str(arg)):
+                            if got_constant_math: set_cached_value(arg, val)
                             return val
 
                     except KeyError:
@@ -467,10 +556,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     if (r != func):
 
                         # Yes it did. Return the function result.
+                        if got_constant_math: set_cached_value(arg, r)
                         return r
 
                     # The function did to resolve to a value. Return as the
                     # original string.
+                    if got_constant_math: set_cached_value(arg, arg)
                     return arg
 
                 except KeyError:
@@ -596,6 +687,10 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
+    try:
+        iterator = iter(args)
+    except TypeError:
+        return args
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
     return r
 
@@ -780,15 +875,39 @@ def int_convert(arg):
     """
     Convert a VBA expression to an int, handling VBA NULL.
     """
+
+    # NULLs are 0.
     if (arg == "NULL"):
         return 0
+
+    # Empty strings are NULL.
+    if (arg == ""):
+        return "NULL"
+    
+    # Leave the wildcard matching value alone.
+    if (arg == "**MATCH ANY**"):
+        return arg
+
+    # Convert float to int?
+    if (isinstance(arg, float)):
+        arg = int(round(arg))
+
+    # Convert hex to int?
+    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
+        hex_str = "0x" + arg.strip()[2:]
+        try:
+            return int(hex_str, 16)
+        except:
+            log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
+            return 0
+            
     arg_str = str(arg)
     if ("." in arg_str):
         arg_str = arg_str[:arg_str.index(".")]
     try:
         return int(arg_str)
     except Exception as e:
-        log.error("Cannot convert '" + str(arg_str) + "' to int. " + str(e))
+        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
         return 0
 
 def str_convert(arg):
@@ -797,7 +916,13 @@ def str_convert(arg):
     """
     if (arg == "NULL"):
         return ''
-    return str(arg)
+    try:
+        return str(arg)
+    except Exception as e:
+        if (isinstance(arg, unicode)):
+            return ''.join(filter(lambda x:x in string.printable, arg))
+        log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
+        return ''
 
 def strip_nonvb_chars(s):
     """
@@ -813,4 +938,8 @@ def strip_nonvb_chars(s):
     for c in s:
         if ((ord(c) > 8) and (ord(c) < 127)):
             r += c
+
+    # Strip multiple 'NULL' substrings from the string.
+    if (r.count("NULL") > 10):
+        r = r.replace("NULL", "")
     return r

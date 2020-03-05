@@ -42,6 +42,7 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 from datetime import datetime
+from datetime import date
 import time
 import array
 import math
@@ -54,6 +55,7 @@ import random
 from from_unicode_str import *
 import decimal
 from curses_ascii import isprint
+import sys
 
 from pyparsing import *
 
@@ -80,6 +82,113 @@ from logger import log
 
 # Track the unresolved arguments to the current call.
 var_names = None
+
+class GetSpecialFolder(VbaLibraryFunc):
+    """
+    GetSpecialFolder() function
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "UNKNOWN_FOLDER"
+        try:
+            typ = int(params[0])
+            if (typ == 0):
+                return "C:\\Windows"
+            elif (typ == 1):
+                return "C:\\Windows\\system32"
+            elif (typ == 2):
+                return "C:\\Documents and Settings\\admin\\Local Settings\\Temp"
+            else:
+                return "UNKNOWN_FOLDER"
+        except:
+            return "UNKNOWN_FOLDER"
+            
+class MonthName(VbaLibraryFunc):
+    """
+    MonthName() function. Currently only returns results in Italian.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        num = params[0]
+        if ((not isinstance(num, int)) or (num > 12) or (num < 1)):
+            return "NULL"
+        # TODO: Somehow specify the language for the months.
+        months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+        return months[num-1]
+
+class MultiByteToWideChar(VbaLibraryFunc):
+    """
+    MultiByteToWideChar() kernel32.dll function. 
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 5)):
+            return "NULL"
+
+        # We have (hopefully) preprocessed this call so that the entire byte array
+        # is passed as the 3rd parameter.
+        data = params[2]
+        if (not isinstance(data, list)):
+            return "NULL"
+
+        # Is the given string represented in wide chars?
+        is_wide_char = True
+        skip = False
+        for b in data:
+            skip = (not skip)
+            if (skip):
+                continue
+            if (b != 0):
+                is_wide_char = False
+                break
+        
+        # Convert this to a string. If this is a ASCII string represented in wide
+        # chars skip every 2nd byte (assume these are 0).
+        r = ""
+        skip = True
+        for b in data:
+            skip = (not skip)            
+            if (((not isinstance(b, int)) or (b > 255) or skip) and
+                (is_wide_char)):
+                continue
+            r += chr(b)
+
+        # Get the name of the variable where the result is stored.
+        name = params[4]
+
+        # Update the result variable with the converted string.
+        context.set(name, r)
+        return len(r)
+
+class IsEmpty(VbaLibraryFunc):
+    """
+    IsEmpty() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return True
+        item = params[0]
+        if ((item is None) or (item == "NULL")):
+            return True
+        if ((hasattr(item, '__len__')) and (len(item) == 0)):
+            return True
+        return False
+
+class LanguageID(VbaLibraryFunc):
+    """
+    Stubbed LanguageID() reference.
+    """
+
+    def eval(self, context, params=None):
+        
+        # This is usually used for gating, so have it match anything.
+        return "**MATCH ANY**"
 
 class URLDownloadToFile(VbaLibraryFunc):
     """
@@ -136,13 +245,19 @@ class Format(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        # Fake up a date if needed.
-        # TODO: Currently this fake date is specific to a campaign targeting Italy.
+        # Are we faking a value for this particular format call?
         r = params[0]
         if (len(params) > 1):
             typ = str(params[1])
+
+            # Fake up a date if needed.
+            # TODO: Currently this fake date is specific to a campaign targeting Italy.
             if (typ.lower() == "long date"):
-                r = "giovedì 27 giugno 2019"
+                r = "gioved\xc3\xac 27 giugno 2019"
+
+            # Let's match any currency checks.
+            if (typ.lower() == "currency"):
+                r = "**MATCH ANY**"
 
         # Done.
         log.debug("Format(%r): return %r" % (self, r))
@@ -278,7 +393,7 @@ class Len(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
-            return 2
+            return len(str(params[0]))
         val = str_convert(params[0])
         if (hasattr(params[0], '__len__')):
 
@@ -302,8 +417,13 @@ class LenB(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return 0
         # TODO: Somehow take the default character set into account.
-        return len(params[0])
+        try:
+            return len(params[0])
+        except TypeError:
+            return 0
 
 class Sleep(VbaLibraryFunc):
     """
@@ -312,6 +432,58 @@ class Sleep(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         pass
+
+class TypeName(VbaLibraryFunc):
+    """
+    TypeName() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Return VB type.
+        val = params[0]
+        if ((val == "NULL") or (val == "")):
+            return "Empty"
+        if (isinstance(val, bool)):
+            return "Boolean"
+        if (isinstance(val, str)):
+            return "String"
+        if (isinstance(val, int)):
+            return "Integer"
+        if (isinstance(val, float)):
+            return "Double"
+        return "NULL"
+
+class VarType(VbaLibraryFunc):
+    """
+    VarType() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return 0
+
+        # Return VB type.
+        val = params[0]
+        if ((val == "NULL") or (val == "")):
+            return 0
+        if (isinstance(val, bool)):
+            return 11
+        if (isinstance(val, str)):
+            return 8
+        if (isinstance(val, int)):
+            return 2
+        if (isinstance(val, float)):
+            return 5
+        if (isinstance(val, long)):
+            return 3
+        return 0
 
 class Mid(VbaLibraryFunc):
     """
@@ -334,7 +506,9 @@ class Mid(VbaLibraryFunc):
             return ""
         s = params[0]
         # "If String contains the data value Null, Null is returned."
-        if s == None: return None
+        if ((s is None) or (s == "NULL")): return "\x00"
+        # If start is NULL, NULL is also returned.
+        if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
         if not isinstance(s, basestring):
             s = str(s)
         start = 0
@@ -401,7 +575,7 @@ class Left(VbaLibraryFunc):
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (s == "**MATCH ANY**"):
+        if (str(s).strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."
@@ -441,6 +615,22 @@ class PrivateProfileString(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "**MATCH ANY**"
 
+class EOF(VbaLibraryFunc):
+    """
+    Stubbed EOF file method.
+    """
+
+    def eval(self, context, params=None):
+        return True
+
+class Error(VbaLibraryFunc):
+    """
+    Stubbed Error() method.
+    """
+
+    def eval(self, context, params=None):
+        return "Some error message..."
+
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -453,7 +643,7 @@ class Right(VbaLibraryFunc):
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (s == "**MATCH ANY**"):
+        if (str(s).strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."
@@ -535,8 +725,8 @@ class Shell(VbaLibraryFunc):
         if (not isinstance(command, str)):
 
             # No, Shell() will throw an error.
-            context.got_error = True
-            log.warning("Shell(" + str(command) + ") throws an error.")
+            msg = "Shell(" + str(command) + ") throws an error."
+            context.set_error(msg)
             return 0
 
         # We have a valid shell command. Track it.
@@ -618,6 +808,7 @@ class Execute(VbaLibraryFunc):
         
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
+
         # Why am I doing this?
         #command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
@@ -816,7 +1007,11 @@ class AscW(VbaLibraryFunc):
         if (isinstance(c, int)):
             r = c
         else:
-            r = ord(str(c)[0])
+            c = str(c)
+            if (len(c) > 0):
+                r = ord(str(c)[0])
+            else:
+                r = 0
         log.debug("AscW: return %r" % r)
         return r
 
@@ -875,6 +1070,15 @@ class StrPtr(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert len(params) > 0
+
+        # Do we have a variable name?
+        arg = str(params[0])
+        if (arg.startswith("&")):
+
+            # Just return the name of the variable being pointed to by the string pointer.
+            return arg[1:]
+
+        # We don't have a variable, so just turn it into a "pointer".
         return ("&" + str(params[0]))
     
 class StrConv(VbaLibraryFunc):
@@ -1070,7 +1274,11 @@ class Split(VbaLibraryFunc):
             return ""
         assert len(params) > 0
         # TODO: Actually implement this properly.
-        string = str(params[0])
+        string = None
+        try:
+            string = str(params[0])
+        except UnicodeEncodeError:
+            string = filter(isprint, params[0])
         sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
@@ -1079,16 +1287,6 @@ class Split(VbaLibraryFunc):
         r = string.split(sep)
         log.debug("Split: return %r" % r)
         return r
-
-class VarType(VbaLibraryFunc):
-    """
-    VarType() function. NOTE: Currently stubbed.
-    """
-
-    def eval(self, context, params=None):
-        assert len(params) > 0
-        # TODO: Actually implement this properly.
-        return 8
     
 class Int(VbaLibraryFunc):
     """
@@ -1102,6 +1300,11 @@ class Int(VbaLibraryFunc):
         try:
             if (isinstance(val, str) and (val.lower().startswith("&h"))):
                 val = "0x" + val[2:]
+                r = int(val, 16)
+            elif (isinstance(val, str) and
+                (val.lower().startswith("i")) and
+                (len(val) == 3)):
+                val = "0x" + val[1:]
                 r = int(val, 16)
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
@@ -1146,8 +1349,11 @@ class StrReverse(VbaLibraryFunc):
         assert len(params) > 0
         # TODO: Actually implement this properly.
         string =''
-        if (params[0] is not None):
-            string = str(params[0])
+        if ((params[0] is not None) and (len(params) > 0)):
+            string = params[0]
+            if ((not isinstance(params[0], str)) and
+                (not isinstance(params[0], unicode))):
+                string = str(params[0])
         r = string[::-1]
         log.debug("StrReverse: return %r" % r)
         return r
@@ -1159,6 +1365,15 @@ class RegWrite(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         context.report_action("Registry Write", str(params), "Registry Write", strip_null_bytes=True)
+        return "NULL"
+
+class SetStringValue(VbaLibraryFunc):
+    """
+    SetStringValue() function.
+    """
+
+    def eval(self, context, params=None):
+        context.report_action("Registry Write", str(params), "Set String Value", strip_null_bytes=True)
         return "NULL"
 
 class Replace(VbaLibraryFunc):
@@ -1176,18 +1391,30 @@ class Replace(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 3
+        if (len(params) < 3):
+            if (len(params) > 0):
+                return params[0]
+            else:
+                return ""
         # TODO: Handle start, count, and compare parameters.
         string = str(params[0])
         if (string is None):
             string = ''
         pat = str(params[1])
-        if (pat is None):
-            pat = ''
+        if ((pat is None) or (pat == '')):
+            return string
         rep = str(params[2])
         if ((rep is None) or (rep == 0)):
             rep = ''
 
+        # Wide string to change and not wide char pattern/replacement?
+        if (vb_str.is_wide_str(string) and
+            ((not vb_str.is_wide_str(pat)) or (not vb_str.is_wide_str(rep)))):
+
+            # Convert the string to change to ASCII.
+            log.warning("Replace() called on wide string w. ASCII pattern and replacement. Converting to ASCII ...")
+            string = vb_str.convert_wide_to_ascii(string)
+            
         # regex replacement?
         if (params[-1] == "<-- USE REGEX -->"):
             
@@ -1195,8 +1422,12 @@ class Replace(VbaLibraryFunc):
             if (pat.strip() != "."):
                 try:
                     pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+                    fix_dash_pat = r"(\[.\w+)\\\-(\w+\])"
+                    pat1 = re.sub(fix_dash_pat, r"\1-\2", pat1)
+                    rep = re.sub(r"\$(\d)", r"\\\1", rep)
                     r = re.sub(pat1, rep, string)
-                except:
+                except Exception as e:
+                    log.error("Regex replace " + str(params) + " failed. " + str(e))
                     r = string
 
         # Regular string replacement?
@@ -1573,7 +1804,15 @@ class Hex(VbaLibraryFunc):
         r = ''
         try:
             num = int_convert(params[0])
+            # Number treated as an unsigned int by VBA.
+            if (num < 0):
+                num += (1 << 32)
             r = hex(num).replace("0x","").upper()
+            # VBA chops FFs from the start of the string down to 1 FF.
+            if (r.startswith("FF")):
+                r = "FF" + r[r.rindex("FF") + len("FF"):]
+                if ((len(r) % 2) != 0):
+                    r = "F" + r
         except:
             pass
         log.debug("Hex: %r returns %r" % (self, r))
@@ -1778,13 +2017,19 @@ class Dir(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
-        pat = params[0]
+        if ((params is None) or (len(params) == 0)):
+            return ""
+        pat = str(params[0])
         attrib = None
         # TODO: Handle multiple attributes.
         if (len(params) > 1):
             attrib = params[1]
 
+        # Handle a special case for a maldoc that looks for things
+        # not existing in a certain directory.
+        if ("\\Microsoft\\Corporation\\" in pat):
+            return ""
+            
         # Just act like we found something always.
         r = pat.replace("*", "foo")
 
@@ -1865,7 +2110,7 @@ class Val(VbaLibraryFunc):
         if (params is None):
             return ''
         assert (len(params) == 1)
-
+        
         # Sanity check.
         if ((params[0] is None) or (not isinstance(params[0], str))):
             r = ''
@@ -2216,14 +2461,26 @@ class Navigate(VbaLibraryFunc):
         if (url.startswith("tp://")):
             url = "ht" + url
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
-        
+
+class IsNull(VbaLibraryFunc):
+    """
+    IsNull() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return False
+        arg = params[0]
+        return ((arg is None) or (arg == "NULL") or (arg == 0) or (arg == ""))
+
 class IIf(VbaLibraryFunc):
     """
     IIf() if-like function.
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 3)
+        if ((params is None) or (len(params) < 3)):
+            return "NULL"
         guard = params[0]
         true_part = params[1]
         false_part = params[2]
@@ -2284,7 +2541,12 @@ class CallByName(VbaLibraryFunc):
         # CallByName(([DoBas, 'Arguments', VbLet, aas], {}))
         if ((cmd == "Arguments") or (cmd == "Path")):
             context.report_action("CallByName", args, 'Possible Scheduled Task Setup', strip_null_bytes=True)
-
+        # CallByName(['shell.application', 'shellexecute', 1, ...
+        if (cmd.lower() == "shellexecute"):
+            if (len(params) > 4):
+                run_cmd = str(params[3]) + " " + str(params[4])
+                context.report_action('Execute Command', run_cmd, 'Shell function', strip_null_bytes=True)
+            
         # Are we using this to read text from a GUI element?
         if ((cmd == "Tag") or (cmd == "Text")):
 
@@ -2324,8 +2586,8 @@ class Raise(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.got_error = True
-        log.warning("Raise exception " + str(params))
+        msg = "Raise exception " + str(params)
+        context.set_error(msg)
             
 class Close(VbaLibraryFunc):
     """
@@ -2376,7 +2638,7 @@ class Put(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         assert ((len(params) == 2) or (len(params) == 3))
-
+        
         # Get the ID of the file.
         file_id = params[0]
 
@@ -2392,7 +2654,6 @@ class Put(VbaLibraryFunc):
             context.open_file(file_id)
 
         context.write_file(file_id, data)
-
 
 class WriteLine(VbaLibraryFunc):
     """
@@ -2616,7 +2877,8 @@ class Run(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) == 0)):
+            return
 
         # Get the name of the function to call.
         func_name = str(params[0])
@@ -2668,6 +2930,13 @@ class ExecQuery(VbaLibraryFunc):
         cmd = str(params[0])
         context.report_action("Execute Query", cmd, 'Query', strip_null_bytes=True)
 
+        # Return some data for some queries.
+        if (cmd.lower() == "select * from win32_process"):
+            return [{"name" : "wscript.exe"},
+                    {"name" : "cscript.exe"},
+                    {"name" : "word.exe"},
+                    {"name" : "excel.exe"},]
+        
         # Say it was successful.
         return ["", ""]
         
@@ -2682,17 +2951,33 @@ class WinExec(VbaLibraryFunc):
         cmd = params[0]
         context.report_action("Run", cmd, 'Interesting Command Execution', strip_null_bytes=True)
         return ''
-        
+
+class CreateShortcut(VbaLibraryFunc):
+    """
+    CreateShortcut() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        path = params[0]
+        context.report_action("Shortcut Creation", path, 'Shortcut Created', strip_null_bytes=True)
+    
 class CreateObject(VbaLibraryFunc):
     """
     CreateObject() function (stubbed).
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) == 0)):
+            return ""
         
         # Track contents of data written to 'ADODB.Stream'.
-        obj_type = str(params[0])
+        obj_type = None
+        try:
+            obj_type = str(params[0])
+        except UnicodeEncodeError:
+            obj_type = filter(isprint, params[0])
         if (obj_type == 'ADODB.Stream'):
             context.open_file('ADODB.Stream')
 
@@ -2812,6 +3097,11 @@ class Cells(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if (params is None):
+            log.error("Parameters of Cells() call are None.")
+            return self
+        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
             log.warning("Cannot process Cells() call. No Excel file loaded.")
@@ -2936,7 +3226,25 @@ class Range(VbaLibraryFunc):
             # Failed to read cell.
             log.warning("Failed to read Range(" + str(params[0]) + "). " + str(e))
             return "NULL"
-        
+
+class Date(VbaLibraryFunc):
+    """
+    Date() function. Currently stubbed to just return the current date as 
+    a Python datetime object.
+    """
+
+    def eval(self, context, params=None):
+        return date.today()
+
+class DateAdd(VbaLibraryFunc):
+    """
+    DateAdd() function. Currently stubbed to just return the current date as 
+    a Python datetime object.
+    """
+
+    def eval(self, context, params=None):
+        return date.today()
+    
 class Year(VbaLibraryFunc):
     """
     Year() function. Currently stubbed.
@@ -2945,8 +3253,8 @@ class Year(VbaLibraryFunc):
     def eval(self, context, params=None):
         assert (len(params) == 1)
         t = params[0]
-        r = 0
-        if (isinstance(t, datetime)):
+        r = "**MATCH ANY**"
+        if ((isinstance(t, datetime)) or (isinstance(t, date))):
             r = int(t.year)
         return r
 
@@ -3026,6 +3334,17 @@ class CDbl(VbaLibraryFunc):
             log.error("CDbl(" + str(params[0]) + ") failed. " + str(e))
             return 0
 
+class Popup(VbaLibraryFunc):
+    """
+    Popup() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        msg = params[0]
+        context.report_action("Popup", str(msg), '')
+        
 class Print(VbaLibraryFunc):
     """
     Debug.Print function.
@@ -3043,7 +3362,9 @@ class Print(VbaLibraryFunc):
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'Debug Print')
 
-        context.report_action("Debug Print", str(params[0]), '')
+        if (params[0] is not None):
+            if (not context.throttle_logging):
+                context.report_action("Debug Print", str(params[0]), '')
 
 class Debug(Print):
     """
@@ -3056,7 +3377,26 @@ class Echo(Print):
     WScript.Echo() debugging function.
     """
     pass
-        
+
+class DeleteFile(VbaLibraryFunc):
+    """
+    File delete DeleteFile() call.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) > 1):
+            context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
+
+class MoveFile(VbaLibraryFunc):
+    """
+    File move MoveFile() call.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) > 1):
+            context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
+                                  'MoveFile() Call', strip_null_bytes=True)
+
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function.
@@ -3123,8 +3463,13 @@ class CreateTextFile(VbaLibraryFunc):
         except KeyError:
             fname = str(params[0])
 
+        # Do we have a numeric file ID?
+        file_id = ""
+        if (len(params) > 1):
+            file_id = params[1]
+            
         # Save that the file is opened.
-        context.open_file(fname)
+        context.open_file(fname, file_id)
 
         # How about returning the name of the opened file.
         return fname
@@ -3273,6 +3618,14 @@ class CreateElement(VbaLibraryFunc):
 
         # Assume that this is something like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
         return "Microsoft.XMLDOM"
+
+class Send(VbaLibraryFunc):
+    """
+    Faked emulation of HTTP send(). Always returns 200.
+    """
+
+    def eval(self, context, params=None):
+        return 200
     
 class Write(VbaLibraryFunc):
     """
@@ -3329,7 +3682,10 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                FreeFile, GetByteCount_2, GetBytes_4, TransformFinalBlock, Add, Raise, Echo,
                AddFromString, Not, PrivateProfileString, GetCursorPos, CreateElement,
                IsObject, NumPut, GetLocale, URLDownloadToFile, URLDownloadToFileA,
-               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir):
+               URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
+               MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
+               Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
+               VarType, Send, CreateShortcut, Popup):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
@@ -3340,6 +3696,7 @@ log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
 # TODO: 6.1.1 Predefined Enums => complete the library here
 
 for name, value in (
+        
         # 6.1.1.12 VbMsgBoxStyle
         ('vbAbortRetryIgnore', 2),
         ('vbApplicationModal', 0),
@@ -3366,8 +3723,8 @@ for name, value in (
         ('vbBack', '\n'),
         ('vbCr', '\r'),
         # From OleVBA the EOL character is just '\n'.
-        #('vbCrLf', '\r\n'),
-        ('vbCrLf', '\n'),
+        ('vbCrLf', '\r\n'),
+        #('vbCrLf', '\n'),
         ('vbFormFeed', '\f'),
         ('vbLf', '\n'),
         ('vbNewLine', '\r\n'),

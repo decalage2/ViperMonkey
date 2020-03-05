@@ -131,12 +131,7 @@ class String(VBA_Object):
                      replace("\a", "\\a").\
                      replace("\b", "\\b").\
                      replace("\r", "\\r").\
-                     replace("\v", "\\v")
-        """
-        # Some maldocs use the above characters in strings to decode. Replacing
-        # them breaks decoding, so they are commented out until something else
-        # breaks.
-        self.value = self.value.\
+                     replace("\v", "\\v").\
                      replace("\0","\\0").\
                      replace("\n", "\\n").\
                      replace("\t", "\\t").\
@@ -144,6 +139,10 @@ class String(VBA_Object):
                      replace("\b", "\\b").\
                      replace("\r", "\\r").\
                      replace("\v", "\\v")
+        """
+        # Some maldocs use the above characters in strings to decode. Replacing
+        # them breaks decoding, so they are commented out until something else
+        # breaks.
         
         log.debug('parsed "%r" as String' % self)
 

@@ -39,8 +39,9 @@ also possible to run Vipermonkey with the normal Python interpreter
 4. Make sure pip is up-to-date, by running `pypy -m pip install -U pip`
 5. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
 6. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
-7. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
-8. Check that Vipermonkey runs without error: `pypy vmonkey.py`
+7. Under Ubuntu install pypy-dev (sudo apt-get install pypy-dev).
+8. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
+9. Check that Vipermonkey runs without error: `pypy vmonkey.py`
 
 **Installation using CPython**
 

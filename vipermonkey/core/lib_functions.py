@@ -149,14 +149,25 @@ class Asc(VBA_Object):
         # Eval the argument.
         c = eval_arg(self.arg, context)
 
+        # Don't modify the "**MATCH ANY**" special value.
+        if (str(c).strip() == "**MATCH ANY**"):
+            return c
+        
         # Calling Asc() on int?
         if (isinstance(c, int)):
             r = c
         else:
 
             # Got a string.
+
+            # Should this match anything?
             c = str(c)
-            r = vb_str.get_ms_ascii_value(c)
+            if (c == "**MATCH ANY**"):
+                r = "**MATCH ANY**"
+
+            # This is an unmodified Asc() call.
+            else:
+                r = vb_str.get_ms_ascii_value(c)
 
         # Return the result.
         log.debug("Asc: return %r" % r)

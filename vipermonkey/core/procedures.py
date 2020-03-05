@@ -41,6 +41,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import sys
+
 from vba_context import *
 from statements import *
 from identifiers import *
@@ -56,6 +58,10 @@ class Sub(VBA_Object):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name
         self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
         self.statements = tokens.statements
         self.bogus_if = None
         if (len(tokens.bogus_if) > 0):
@@ -76,7 +82,10 @@ class Sub(VBA_Object):
         caller_context = context
         # Looks like local variables from the calling context can be accessed in the called
         # function, so keep those.
-        context = Context(context=caller_context, _locals=context.locals)
+        #context = Context(context=caller_context, _locals=context.locals)
+        # TODO: Local variable inheritence needs to be investigated more...
+        context = Context(context=caller_context)
+        context.in_procedure = True
 
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -127,6 +136,10 @@ class Sub(VBA_Object):
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            #print self
+            #print call_info
+            #print context.call_stack
+            #sys.exit(0)
             return "NULL"
 
         # Add the current call to the call stack.
@@ -147,7 +160,7 @@ class Sub(VBA_Object):
         log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
-        context.got_error = False
+        context.clear_error()
         for s in self.statements:
 
             # Emulate the current statement.
@@ -315,6 +328,10 @@ class Function(VBA_Object):
             self.return_type = tokens.return_type
         self.name = tokens.function_name
         self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
         self.statements = tokens.statements
         try:
             len(self.statements)
@@ -341,7 +358,10 @@ class Function(VBA_Object):
         caller_context = context
         # Looks like local variables from the calling context can be accessed in the called
         # function, so keep those.
-        context = Context(context=caller_context, _locals=context.locals)
+        #context = Context(context=caller_context, _locals=context.locals)
+        # TODO: Local variable inheritence needs to be investigated more...
+        context = Context(context=caller_context)        
+        context.in_procedure = True
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -380,38 +400,43 @@ class Function(VBA_Object):
             
         # Set given parameter values.
         self.byref_params = {}
-        if ((params is not None) and (len(params) <= len(self.params))):
+        defined_param_pos = -1
+        for defined_param in self.params:
 
-            # TODO: handle named parameters
-            for i in range(len(params)):
+            # Get the given parameter at this position, if we have one.
+            defined_param_pos += 1
+            param_value = "NULL"
+            param_name = defined_param.name
+            if ((params is not None) and (defined_param_pos < len(params))):
+                param_value = params[defined_param_pos]
 
-                # Set the parameter value.
-                param_name = self.params[i].name
-                param_value = params[i]
+            # Handle empty string parameters.
+            if (((param_value == 0) or (param_value == "NULL")) and (defined_param.my_type == "String")):
+                param_value = ""
 
-                # Handle empty string parameters.
-                if ((param_value == 0) and (self.params[i].my_type == "String")):
-                    param_value = ""
-
-                # Coerce parameters to String if needed.
-                if (self.params[i].my_type == "String"):
-                    param_value = str(param_value)
+            # Coerce parameters to String if needed.
+            if (defined_param.my_type == "String"):
+                param_value = str(param_value)
                     
-                # Add the parameter value to the local function context.
-                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-                call_info[param_name] = param_value
+            # Add the parameter value to the local function context.
+            log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+            call_info[param_name] = param_value
 
-                # Is this a ByRef parameter?
-                if (self.params[i].mechanism == "ByRef"):
+            # Is this a ByRef parameter?
+            if (defined_param.mechanism == "ByRef"):
 
-                    # Save it so we can pull out the updated value in the Call statement.
-                    self.byref_params[(param_name, i)] = None
-            
+                # Save it so we can pull out the updated value in the Call statement.
+                self.byref_params[(param_name, defined_param_pos)] = None
+                
         # Do we have an obvious recursive loop? Detect this by looking for the current call
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            #print self
+            #print call_info
+            #print context.call_stack
+            #sys.exit(0)
             return "NULL"
 
         # Add the current call to the call stack.
@@ -431,12 +456,12 @@ class Function(VBA_Object):
         # Emulate the function.
         log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
-        context.got_error = False
+        context.clear_error()
         for s in self.statements:
             log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
-
+                
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):
                 break
@@ -476,7 +501,7 @@ class Function(VBA_Object):
                     self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
             # Get the return value.
-            return_value = context.get(self.name)
+            return_value = context.get(self.name, local_only=True)
             if ((return_value is None) or (isinstance(return_value, Function))):
                 return_value = ''
             log.debug('Function %s: return value = %r' % (self.name, return_value))

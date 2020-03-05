@@ -69,6 +69,11 @@ https://github.com/decalage2/ViperMonkey
 
 import sys
 import re
+try:
+    # sudo pypy -m pip install rure
+    import rure as re2
+except:
+    import re as re2
 from logger import log
 import vba_context
 from random import randint
@@ -101,6 +106,7 @@ def is_useless_dim(line):
     # Done.
     return r
 
+aggressive_strip = True
 def is_interesting_call(line, external_funcs, local_funcs):
 
     # Is this an interesting function call?
@@ -109,10 +115,12 @@ def is_interesting_call(line, external_funcs, local_funcs):
                  ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", "Eval", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "URLDownloadToFile", "Print",
-                 "Split"]
-    log_funcs.extend(local_funcs)
+                 "Split", "Exec"]
+    if (not aggressive_strip):
+        log_funcs.extend(local_funcs)
     for func in log_funcs:
         if (func in line):
+            log.debug("Line '" + line + "' contains interesting call (1) ('" + func + "').")
             return True
 
     # Are we calling an external function?
@@ -122,6 +130,7 @@ def is_interesting_call(line, external_funcs, local_funcs):
             end = ext_func_decl.index("Lib")
             ext_func = ext_func_decl[start:end].strip()
             if (ext_func in line):
+                log.debug("Line '" + line + "' contains interesting call (2).")
                 return True
         
     # Not a call we are tracking.
@@ -223,6 +232,10 @@ def collapse_macro_if_blocks(vba_code):
         # We have a block line. Save it.
         curr_block.append(line)
 
+    # Handle nested macro blocks.
+    if (r.strip() != vba_code.strip()):
+        r = collapse_macro_if_blocks(r)
+        
     # Return the stripped VBA.
     return r
 
@@ -232,9 +245,19 @@ def fix_unbalanced_quotes(vba_code):
     """
 
     # Fix invalid string assignments.
-    vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
-    vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
-    vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+
+    if (re2.search(u"(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
+        vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", uni_vba_code) is not None):
+        vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+    if (re2.search(u"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", uni_vba_code) is not None):
+        vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
     
     # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
     # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
@@ -253,10 +276,10 @@ def fix_unbalanced_quotes(vba_code):
     # See if we have lines with unbalanced double quotes.
     r = ""
     for line in vba_code.split("\n"):
-        num_quotes = 0
-        for c in line:
-            if (c == '"'):
-                num_quotes += 1
+        if ('"' not in line):
+            r += line + "\n"
+            continue
+        num_quotes = line.count('"')
         if ((num_quotes % 2) != 0):
             last_quote = line.rindex('"')
             line = line[:last_quote] + '"' + line[last_quote:]
@@ -364,26 +387,70 @@ def fix_skipped_1st_arg(vba_code):
 
     # Return the modified code.
     return vba_code
+    
+def fix_unhandled_array_assigns(vba_code):
+    """
+    Currently things like 'foo(1, 2, 3) = 1' are not handled.
+    Comment them out.
+    """
 
-def fix_non_ascii_names(vba_code):
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "\n(\s*\w+\((?:\w+\s*,\s*){2,}\w+\)\s*=)"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        vba_code = re.sub(pat, r"\n' UNHANDLED ARRAY ASSIGNMENT \1", vba_code)
+    return vba_code
+
+def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
     is the ordinal value.
 
-    Also change things like "a!b!.c" to "a.b.c".
+    Also change things like "a!b!c" to "a.b.c".
 
     Also break up multiple statements seperated with '::' or ':' onto different lines.
 
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
+    # Targeted fix for some maldocs.
+    vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
+    vba_code = fix_unhandled_array_assigns(vba_code)
+    
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
+        ("&;" not in vba_code) and
+        ("^" not in vba_code) and
+        ("Rem " not in vba_code) and
+        ("MultiByteToWideChar" not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
 
+    # Modify MultiByteToWideChar() calls so ViperMonkey can emulate them.
+    # Orig: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue(0), UBound(baValue) + 1, StrPtr(sValue), Len(sValue))
+    # Desired: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue, UBound(baValue) + 1, StrPtr("&sValue"), Len(sValue))
+    #if ("MultiByteToWideChar" in vba_code):
+    #    mbyte_pat = r"(MultiByteToWideChar\(\s*[^,]+,\s*[^,]+,\s+)([A-Za-z0-9_]+)\(\s*[^\)]+\s*\)(,\s*[^,]+,\s*StrPtr\(\s*)([^\)]+)(\s*\),\s*[^\)]+\))"
+    #    vba_code = re.sub(mbyte_pat, r'\1\2\3"&\4"\5', vba_code)
+    #
+    # We are now handling the 'baValue(0)' part in expressions.Function_Call.__init__()
+    # Now just do a general replace for StrPtr()
+    if ("StrPtr" in vba_code):
+        strptr_pat = r"(StrPtr\s*\(\s*)(\w+)(\s*\))"
+        vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
+
+    # Break out labels that are not on their own line.
+    if (":" in vba_code):
+        label_pat = r"(\n\s*\w+:)([^\n])"
+        vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
+        
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
     vba_code = vba_code.replace("#if", "HASH__if")
@@ -392,22 +459,134 @@ def fix_non_ascii_names(vba_code):
     vba_code = vba_code.replace("#Else", "HASH__else")
     vba_code = vba_code.replace("#end if", "HASH__endif")
     vba_code = vba_code.replace("#End If", "HASH__endif")
+
+    # Same thing with Put and Close of file descriptors.
+    vba_code = re.sub(r"[Aa]s\s+#", "as__HASH", vba_code)
+    vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
+    vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
+    vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
+
+    # Replace the ':' in single line if statements so they don't get broken up.
+    # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
+    # If op < OLen Then Out(op) = o1: op = op + 1
+    pat = r"(?i)If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
+    single_line_ifs = []
+    pos = 0
+    for curr_if in re.findall(pat, vba_code):
+        if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
+        pos += 1
+        vba_code = vba_code.replace(curr_if, if_name + "\n")
+        single_line_ifs.append((if_name, curr_if))
+
+    # Replace 'Rem fff' style comments with "' fff" comments.
+    vba_code = vba_code.replace("\nRem ", "\n' ")
+    vba_code = vba_code.replace(" Rem ", " ' ")
+        
+    # Characters that change how we modify the code.
+    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
+                         r":", "\n", r"[\x7f-\xff]", r"\^", ";",
+                         r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
     in_comment = False
-    in_date = False
+    in_date = False    
+    in_square_bracket = False
+    num_square_brackets = 0
     prev_char = ""
+    next_char = ""
     r = ""
-    for c in vba_code:
+    pos = -1
+    while (pos < (len(vba_code) - 1)):
 
-        # Handle entering/leaving strings.
-        if (c == '"'):
+        # Are we looking at an interesting character?
+        pos += 1
+        c = vba_code[pos]
+        if (pos > 1):
+            prev_char = vba_code[pos - 1]
+        if (pos < (len(vba_code) - 1)):
+            next_char = vba_code[pos + 1]
+        got_interesting = False
+        for interesting_c in interesting_chars:
+            index = re.search(interesting_c, c)
+            if (index is None):
+                continue
+            got_interesting = True
+            break
+        #print "--------"
+        #print pos
+        #print c
+        #print prev_char
+        #print next_char
+        if (not got_interesting):
+
+            # We are not. Fast forward to the nearest interesting character.
+            next_pos = len(vba_code)
+
+            # If we are in a string, we are only interested in getting out of the
+            # string.
+            curr_interesting_chars = interesting_chars
+            if (in_str):
+                curr_interesting_chars = [r'"']
+
+            # Find the next interesting character.
+            for interesting_c in curr_interesting_chars:
+                index = re.search(interesting_c, vba_code[pos:])
+                if (index is None):
+                    continue                
+                poss_pos = index.start() + pos
+                #print interesting_c
+                #print pos
+                #print poss_pos
+                if (poss_pos < next_pos):
+                    next_pos = poss_pos
+
+            # Add in the chunk of characters that don't affect what we are doing.
+            r += vba_code[pos:next_pos]
+
+            # Jump to the position of the interesting character.
+            pos = next_pos - 1
+            continue
+        
+        # Handle entering/leaving strings.        
+        if ((not in_comment) and (c == '"')):
             in_str = not in_str
 
+        # Handle entering/leaving [] expressions.
+        if ((not in_comment) and (not in_str)):
+            if (c == '['):
+                num_square_brackets += 1
+            if (c == ']'):
+                num_square_brackets -= 1
+            in_square_bracket = (num_square_brackets > 0)
+            
         # Handle entering/leaving date constants.
-        if ((not in_str) and (c == '#')):
-            in_date = not in_date
+        if ((not in_comment) and (not in_str) and (c == '#')):
+
+            # Entering date constant?
+            if (not in_date):
+
+                # Is this a # at the end of a variable decl?
+                end = pos + 1
+                if ((end < len(vba_code)) and (vba_code[end] != ",") and (vba_code[end] != "\n")):
+
+                    # A date should be relatively short. See if the matching # is close.
+                    end = pos + 60
+                    if (end > len(vba_code)):
+                        end = len(vba_code)
+                    got_hash = False
+                    for i in range(pos + 1, end):
+                        if (vba_code[i] == "#"):
+                            got_hash = True
+                            break
+
+                    # Only count entering a date constant if the closing # is close.
+                    if (got_hash):
+                        in_date = True
+
+            # Leaving date constant?
+            else:
+                in_date = False
 
         # Handle entering/leaving comments.
         if ((not in_str) and (c == "'")):
@@ -418,23 +597,33 @@ def fix_non_ascii_names(vba_code):
         # Don't change things in strings or comments or dates.
         if (in_str or in_comment or in_date):
             r += c
-            prev_char = c
             continue
 
         # Need to change "!" member access to "."?
-        if ((prev_char == "!") and (c.isalpha())):
-            r = r[:len(r)-1] + "."
+        if ((c == "!") and (next_char.isalpha())):
+            r += "."
+            continue
+
+        # Add spaces areound "^" operators.
+        if (c == "^"):
+            r += " ^ "
+            continue
 
         # Need to eliminate bogus =+ assignments.
         if ((c == "+") and (prev_char == "=")):
 
             # Skip the '+'.
             continue
+
+        # Need to eliminate bogus &; string concatenations.
+        if ((c == ";") and (prev_char == "&")):
+
+            # Skip the ';'.
+            continue
             
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
             r += "d" + str(ord(c))
-            prev_char = "d"
         else:
 
             # Replace a '::' with a line break?
@@ -442,29 +631,80 @@ def fix_non_ascii_names(vba_code):
                 r = r[:-1]
                 r += "\n"
 
-            # Replace a single ':' with a line break? Don't do this for labels.
-            elif ((prev_char == ':') and (c != "\n") and (c != '"') and (c != "=")):
-                r = r[:-1]
-                r += "\n" + c
+            # Replace a single ':' with a line break? Don't do this for labels. Or for Excel [A:A] expressions.
+            elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=") and (not in_square_bracket)):
+                r += "\n"
             else:
                 r += c
-            prev_char = c
 
     # Put the #if macros back.
     r = r.replace("HASH__if", "#If")
     r = r.replace("HASH__else", "#Else")
     r = r.replace("HASH__endif", "#End If")
-            
+
+    # Put the As, Put and Close statements back.
+    r = r.replace("as__HASH", "As #")
+    r = r.replace("put__HASH", "Put #")
+    r = r.replace("get__HASH", "Get #")
+    r = r.replace("close__HASH", "Close #")
+
+    # Put the single line ifs back.
+    for if_info in single_line_ifs:
+        r = r.replace(if_info[0], if_info[1])
+
     return r
-            
+
+def strip_comments(vba_code):
+    """
+    Strip comment lines from the VBA code.
+    """
+
+    # Sanity check.
+    if ("'" not in vba_code):
+        return vba_code
+
+    # We have comments. Remove them.
+    r = ""
+    for curr_line in vba_code.split("\n"):
+
+        # Save non-comment lines.
+        if (not curr_line.strip().startswith("'")):
+            r += curr_line + "\n"
+
+    # Return extra newlines.
+    r = r.replace("\n\n\n", "\n")
+        
+    # Return stripped code.
+    return r
+
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
     """
 
+    # Strip comment lines from the code.
+    vba_code = strip_comments(vba_code)
+    
+    # Fix dumb typo in some maldocs VBA.
+    vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
+
+    # No null bytes in VB to process.
+    vba_code = vba_code.replace("\x00", "")
+    
+    # Make "End Try" in try/catch blocks easier to parse.
+    vba_code = re.sub(r"End\s+Try", "##End ##Try", vba_code)
+    
+    # We don't handle Line Input constructs for now. Delete them.
+    # TODO: Actually handle Line Input consructs.
+    linputs = re.findall(r"Line\s+Input\s+#\d+\s*,\s*\w+", vba_code, re.DOTALL)
+    if (len(linputs) > 0):
+        log.warning("VB Line Input constructs are not currently handled. Stripping them from code...")
+    for linput in linputs:
+        vba_code = vba_code.replace(linput, "")
+    
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
-    props = re.findall(r"(?:Public\s+|Private\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    props = re.findall(r"(?:Public\s+|Private\s+|Friend\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
     if (len(props) > 0):
         log.warning("VB Property constructs are not currently handled. Stripping them from code...")
     for prop in props:
@@ -502,14 +742,34 @@ def fix_vba_code(vba_code):
     vba_code = "\n" + vba_code
     vba_code = re.sub(r"\n:", "\n", vba_code)
 
+    # Some maldocs have single line member access expressions that end with a '.'.
+    # Comment those out.
+    dumb_member_exps = re.findall(r"\n(?:\w+\.)+\n", vba_code)
+    for dumb_exp in dumb_member_exps:
+        log.warning("Commenting out bad line '" + dumb_exp.replace("\n", "") + "'.")
+        safe_exp = "\n'" + dumb_exp[1:]
+        vba_code = vba_code.replace(dumb_exp, safe_exp)
+
+    # How about maldocs with Subs with spaces in their names?
+    space_subs = re.findall(r"\n\s*Sub\s*\w+\s+\w+\s*\(", vba_code)
+    for space_sub in space_subs:
+        start = space_sub.index("Sub") + len("Sub")
+        end = space_sub.rindex("(")
+        sub_name = space_sub[start:end]
+        new_name = sub_name.replace(" ", "_")
+        log.warning("Replacing bad sub name '" + sub_name + "' with '" + new_name + "'.")
+        vba_code = vba_code.replace(sub_name, new_name)
+    
     # Clear out some garbage characters.
-    vba_code = vba_code.replace('\x0b', '')
+    #vba_code = vba_code.replace('\x0b', '')
     #vba_code = vba_code.replace('\x88', '')
 
     # It looks like VBA supports variable and function names containing
     # non-ASCII characters. Parsing these with pyparsing would be difficult
     # (or impossible), so convert the non-ASCII names to ASCII.
-    vba_code = fix_non_ascii_names(vba_code)
+    #
+    # Break up lines with multiple statements onto their own lines.
+    vba_code = fix_difficult_code(vba_code)
 
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)
@@ -517,12 +777,22 @@ def fix_vba_code(vba_code):
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # For each const integer defined, replace it inline in the code to reduce lookups
+    vba_code = replace_constant_int_inline(vba_code)
+    
     # Skip the next part if unnneeded.
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    got_multassign = (re2.search(u"(?:\w+\s*=\s*){2}", uni_vba_code) is not None)
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
         ("\nif+" not in vba_code) and
         ("\nIf+" not in vba_code) and
-        (len(re.findall(MULT_ASSIGN_RE, vba_code)) == 0)):
+        (not got_multassign)):
         return vba_code
     
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
@@ -568,6 +838,25 @@ def fix_vba_code(vba_code):
     # Return the updated code.
     return r
 
+def replace_constant_int_inline(vba_code):
+    """
+    Replace constant integer definitions inline, but leave the definition
+    behind in case the regex fails.
+    """
+
+    const_pattern = re.compile("(?i)const ([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
+    d_const = dict()
+
+    for const in re.findall(const_pattern, vba_code):
+        d_const[const[0]] = const[1]
+        
+    if len(d_const) > 0:
+        log.info("Found constant integer definitions, replacing them.")
+    for const in d_const:
+        this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))(?!\s*=)')
+        vba_code = re.sub(this_const, str(d_const[const]), vba_code)
+    return(vba_code)
+
 def strip_line_nums(line):
     """
     Strip line numbers from the start of a line.
@@ -581,6 +870,7 @@ def strip_line_nums(line):
         pos += 1
     return line[pos:]
 
+external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """
     Strip statements that have no usefull effect from the given VB. The
@@ -588,20 +878,29 @@ def strip_useless_code(vba_code, local_funcs):
     """
 
     # Preprocess the code to make it easier to parse.
+    log.info("Modifying VB code...")
     vba_code = fix_vba_code(vba_code)
+
+    # Don't strip lines if Execute() is called since the stripped variables
+    # could be used in the execed code strings.
+    exec_pat = r"execute(?:global)?\s*\("
+    if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
+        return vba_code
     
     # Track data change callback function names.
     change_callbacks = set()    
     
     # Find all assigned variables and track what line the variable was assigned on.
-    assign_re = re.compile("\s*(\w+(\.\w+)*)\s*=\s*")
+    # Dim statements are counted as assignments.
+    assign_re = re2.compile(u"(?:\s*(\w+(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
-    external_funcs = []
+    global external_funcs
     for line in vba_code.split("\n"):
 
         # Skip comment lines.
+        line_num += 1
         if (line.strip().startswith("'")):
             log.debug("SKIP: Comment. Keep it.")
             continue
@@ -624,18 +923,27 @@ def strip_useless_code(vba_code, local_funcs):
             change_callbacks.add(data_name)
         
         # Is there an assignment on this line?
-        line_num += 1
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
-        match = assign_re.findall(tmp_line)
+        uni_tmp_line = ""
+        try:
+            uni_tmp_line = tmp_line.decode("utf-8")
+        except UnicodeDecodeError:
+            uni_tmp_line = tmp_line.decode("latin-1")
+        match = assign_re.findall(uni_tmp_line)
         if (len(match) > 0):
 
-            log.debug("SKIP: Assign line: " + line)
+            log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
                 
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
                 log.debug("SKIP: While loop. Keep it.")
+                continue
+
+            # Skip calls to .create()
+            if (".create" in line.strip().lower()):
+                log.debug("SKIP: .Create() call. Keep it.")
                 continue
 
             # Skip multistatement lines.
@@ -679,6 +987,11 @@ def strip_useless_code(vba_code, local_funcs):
                 log.debug("SKIP: GetObject()/Shell() call. Keep it.")
                 continue
 
+            # Skip Loop statements.
+            if ("Loop " in line):
+                log.debug("SKIP: Loop statement. Keep it.")
+                continue
+
             # Skip calls to various interesting calls.
             if (is_interesting_call(line, external_funcs, local_funcs)):
                 continue
@@ -699,39 +1012,52 @@ def strip_useless_code(vba_code, local_funcs):
 
             # Skip lines where the '=' might be in a string.
             if ('"' in line):
-                eq_index = line.index("=")
-                qu_index1 =  line.index('"')
-                qu_index2 =  line.rindex('"')
+                eq_index = -1
+                if ("=" in line):
+                    eq_index = line.index("=")
+                qu_index1 = -1
+                if ('"' in line):
+                    qu_index1 =  line.index('"')
+                qu_index2 = -1
+                if ('"' in line):
+                    qu_index2 =  line.rindex('"')
                 if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
                     continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
-            log.debug("SKIP: Assigned vars = " + str(match))
-            for var in match:
-
-                # Skip empty.
-                var = var[0]
-                if (len(var.strip()) == 0):
-                    continue
+            log.debug("SKIP: Assigned vars = " + str(match) + ". Line # = " + str(line_num))
+            for m in match:
                 
-                # Keep lines where we may be running a command via an object.
-                val = line[line.rindex("=") + 1:]
-                if ("." in val):
-                    continue
+                # Look at each matched variable.
+                for var in m:
 
-                # Keep object creations.
-                if ("CreateObject" in val):
-                    continue
+                    # Skip empty.
+                    if ((var is None) or (len(var.strip()) == 0)):
+                        continue
 
-                # Keep updates of the LHS where the LHS appears on the RHS
-                # (ex. a = a + 1).
-                if (var.lower() in val.lower()):
-                    continue
+                    # Convert to ASCII.
+                    var = var.encode("ascii","ignore")
                 
-                # It does not look like we are running something. Track the variable.
-                if (var not in assigns):
-                    assigns[var] = set()
-                assigns[var].add(line_num)
+                    # Keep lines where we may be running a command via an object.
+                    val = ""
+                    if ("=" in val):
+                        val = line[line.rindex("=") + 1:]
+                    if ("." in val):
+                        continue
+
+                    # Keep object creations.
+                    if ("CreateObject" in val):
+                        continue
+
+                    # Keep updates of the LHS where the LHS appears on the RHS
+                    # (ex. a = a + 1).
+                    if (var.lower() in val.lower()):
+                        continue
+                
+                    # It does not look like we are running something. Track the variable.
+                    if (var not in assigns):
+                        assigns[var] = set()
+                    assigns[var].add(line_num)
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
@@ -742,19 +1068,29 @@ def strip_useless_code(vba_code, local_funcs):
     line_num = 0
     for line in vba_code.split("\n"):
 
-        # Mark all the variables that MIGHT be referenced on this line.
+        # Don't count actions in comments lines.
         line_num += 1
+        if (line.strip().startswith("'")):
+            continue
+        
+        # Mark all the variables that MIGHT be referenced on this line.
         for var in assigns.keys():
-
+            
             # Skip variable references on the lines where the current variable was assigned.
             if (line_num in assigns[var]):
+                log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
                 continue
 
             # Could the current variable be used on this line?
             if (var.lower() in line.lower()):
 
+                # If we are aggressively stripping don't pay attention to debug.print.
+                if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
+                    log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                    continue
+                
                 # Maybe. Count this as a reference.
-                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'.")
+                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
                 refs[var] = True
 
     # Keep assignments that have change callbacks.
@@ -780,7 +1116,7 @@ def strip_useless_code(vba_code, local_funcs):
         if (l not in keep_lines):
             tmp.add(l)
     comment_lines = tmp
-    
+        
     # Now strip out all useless assignments.
     r = ""
     line_num = 0
@@ -802,15 +1138,6 @@ def strip_useless_code(vba_code, local_funcs):
         if (line.strip().startswith("If ")):
             if_count += 1
 
-        # Do we have an unmatched 'end if'? If so, replace it with an
-        # 'end function' to handle some Carbanak maldocs.
-        #if (line.strip().startswith("End If")):
-        #    if_count -= 1
-        #    if (if_count < 0):
-        #        r += "End Function\n"
-        #        if_count = 0
-        #        continue
-        
         # Does this line get stripped based on variable usage?
         if ((line_num in comment_lines) and
             (not line.strip().startswith("Function ")) and
@@ -827,14 +1154,6 @@ def strip_useless_code(vba_code, local_funcs):
             r += "' STRIPPED LINE\n"
             continue
 
-        # Does this line get stripped based on being a Dim that we will not use
-        # when emulating?
-        # TODO: Some of these are needed. Comment this out for now.
-        #if ((in_func) and (is_useless_dim(line))):
-        #    log.debug("STRIP: Stripping Line (3): " + line)
-        #    r += "' STRIPPED LINE\n"
-        #    continue
-
         # For now we are just stripping out class declarations. Need to actually
         # emulate classes somehow.
         if ((line.strip().lower().startswith("class ")) or
@@ -846,9 +1165,28 @@ def strip_useless_code(vba_code, local_funcs):
         if (line.strip().startswith("Attribute ")):
             log.warning("Attribute statements not handled. Stripping '" + line.strip() + "'.")
             continue
+
+        # Also not handling 'Selection.TypeText Text:="N6RF/L8ZMR3L2SZHTIC4ILCO' statements at all.
+        if ('.TypeText Text:="' in line.strip()):
+            log.warning("'.TypeText Text:=\"' statements not handled. Stripping '" + line.strip() + "'.")
+            continue
             
         # The line is useful. Keep it.
 
+        # Break up things like "Function foo(bar) a = 1 ..." to "Function foo(bar)\na = 1 ...".
+        tmp_line = line.lower().strip()
+        func_ret_pat = r"function\s+\w+\(.*\)(?:\s+as\s+\w+)?"
+        if ((tmp_line.startswith("function ")) and
+            (not tmp_line.endswith(")")) and
+            (re.match(func_ret_pat + r"$", tmp_line) is None)):
+            match_obj = re.match(func_ret_pat, tmp_line)
+            if (match_obj is not None):
+                pos = match_obj.span()[1]
+                tmp_line = line[:pos] + "\n"
+                if ((pos + 1) < len(line)):
+                    tmp_line += line[pos + 1:]
+                line = tmp_line
+        
         # At least 1 maldoc builder is not putting a newline before the
         # 'End Function' closing out functions. Rather than changing the
         # parser to deal with this we just fix those lines here.
@@ -859,7 +1197,7 @@ def strip_useless_code(vba_code, local_funcs):
             r += tmp_line + "\n"
             r += "End Function\n"
             continue
-
+            
         # Fix Application.Run "foo, bar baz" type expressions by removing
         # the quotes.
         if (line.strip().startswith("Application.Run") and

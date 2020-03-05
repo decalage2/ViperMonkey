@@ -83,7 +83,7 @@ strict_reserved_keywords = reserved_keywords | \
 # MS-GRAMMAR: subsequent-Latin-identifier-character = first-Latin-identifier-character / DIGIT / %x5F ; underscore
 # MS-GRAMMAR: identifier = expression
 
-general_identifier = Word(initChars=alphas + alphas8bit, bodyChars=alphanums + '_' + alphas8bit) + \
+general_identifier = Word(initChars=alphas + alphas8bit + '?', bodyChars=alphanums + '_' + '?' + alphas8bit) + \
                      Suppress(Optional("^")) + Suppress(Optional("%")) + Suppress(Optional("!..."))
 
 # MS-GRAMMAR: lex-identifier = Latin-identifier / codepage-identifier / Japanese-identifier /
@@ -145,19 +145,21 @@ unrestricted_name = entity_name | reserved_identifier
 
 # --- TODO IDENTIFIER OR OBJECT.ATTRIB ----------------------------------------
 
-test = NotAny(reserved_keywords) + lex_identifier
-
-TODO_identifier_or_object_attrib = Combine(
+base_attrib = Combine(
     NotAny(reserved_keywords)
     + (Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier)))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
-) 
+)
 
-TODO_identifier_or_object_attrib_loose = Combine(
+TODO_identifier_or_object_attrib = base_attrib ^ Suppress(Literal("{")) + base_attrib + Suppress(Literal("}"))
+
+base_attrib_loose = Combine(
     Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
 )
+
+TODO_identifier_or_object_attrib_loose = base_attrib_loose ^ Suppress(Literal("{")) + base_attrib_loose + Suppress(Literal("}"))

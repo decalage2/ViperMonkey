@@ -104,6 +104,8 @@ from function_call_visitor import *
 from function_defn_visitor import *
 from function_import_visitor import *
 from var_defn_visitor import *
+import filetype
+import read_ole_fields
 
 # === FUNCTIONS ==============================================================
 
@@ -141,29 +143,36 @@ from vba_library import *
 class ViperMonkey(object):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self, filename):
+    def __init__(self, filename, data):
+        self.comments = None
         self.metadata = None
         self.filename = filename
+        self.data = data
         self.modules = []
         self.modules_code = []
         self.globals = {}
         self.externals = {}
         # list of actions (stored as tuples by report_action)
         self.actions = []
+        self.vba = None
 
         # Figure out whether this is VBScript or VBA.
-        # TODO: vmonkey should not call file as an external process to check the file type, use olevba instead
-        # This check should happen later, when the file is loaded by olevba
-        # For now, VBS is disabled:
+        vba_pointer = self.filename
+        is_data = False
+        if ((self.filename is None) or (len(self.filename.strip()) == 0)):
+            vba_pointer = self.data
+            is_data = True
         self.is_vbscript = False
-        log.info("Emulating an Office (VBA) file. VBScript support is temporarily disabled in this version.")
-        # file_info = subprocess.check_output(["file", self.filename]).strip()
-        # if (("Microsoft" in file_info) or ("Composite" in file_info) or ("Zip" in file_info)):
-        #     self.is_vbscript = False
-        #     log.info("Emulating an Office (VBA) file.")
-        # else:
-        #     self.is_vbscript = True
-        #     log.info("Emulating a VBScript file.")
+        if (filetype.is_office_file(vba_pointer, is_data)):
+            self.is_vbscript = False
+            log.info("Emulating an Office (VBA) file.")
+        else:
+            self.is_vbscript = True
+            log.info("Emulating a VBScript file.")
+
+        # Olevba uses '\n' as EOL, regular VBScript uses '\r\n'.
+        if (self.is_vbscript == True):
+            vba_library.VBA_LIBRARY['vbCrLf'] = '\r\n'
             
         # Track the loaded Excel spreadsheet (xlrd).
         self.loaded_excel = None
@@ -173,13 +182,17 @@ class ViperMonkey(object):
 
         # Track document text.
         self.doc_text = ""
+
+        # Track document tables.
+        self.doc_tables = []
         
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
                              'autoexit', 'document_beforeclose', 'workbook_open',
                              'workbook_activate', 'auto_close', 'workbook_close',
-                             'workbook_deactivate', 'documentopen', 'app_documentopen']
+                             'workbook_deactivate', 'documentopen', 'app_documentopen',
+                             'main']
 
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
@@ -211,7 +224,12 @@ class ViperMonkey(object):
                                   '_TitleChange',
                                   '_Initialize',
                                   '_Click',
-                                  '_BeforeClose']
+                                  '_OnConnecting',
+                                  '_BeforeClose',
+                                  '_OnDisconnected',
+                                  '_OnEnterFullScreenMode',
+                                  '_Zoom',
+                                  '_Scroll']
                                   
     def set_metadata(self, dat):
         self.metadata = dat
@@ -226,9 +244,11 @@ class ViperMonkey(object):
         for name, _sub in m.subs.items():
             log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
+            self.globals[name] = _sub
         for name, _function in m.functions.items():
             log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
+            self.globals[name] = _function
         for name, _function in m.external_functions.items():
             log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
@@ -414,7 +434,7 @@ class ViperMonkey(object):
 
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
-
+        
         # TODO: use the provided entrypoint
         # Create the global context for the engine
         context = Context(_globals=self.globals,
@@ -425,12 +445,31 @@ class ViperMonkey(object):
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
 
+        # Add any URLs we can pull directly from the file being analyzed.
+        fname = self.filename
+        is_data = False
+        if ((fname is None) or (len(fname.strip()) == 0)):
+            fname = self.data
+            is_data = True
+        direct_urls = read_ole_fields.pull_urls_office97(fname, is_data, self.vba)
+        for url in direct_urls:
+            context.save_intermediate_iocs(url)
+        
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():
             func = self.externals[func_name]
             context.dll_func_true_names[func.name] = func.alias_name
-        
+
+        # Save the document tables in the context.
+        context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
+            
         # Save the document text in the proper variable in the context.
+        context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Range".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Content.Start".lower()] = 0
+        context.globals["Me.Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["Me.Paragraphs".lower()] = self.doc_text
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
@@ -443,6 +482,12 @@ class ViperMonkey(object):
         context.globals["ThisDocument.Content.Start".lower()] = 0
         context.globals["ThisDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ThisDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["['Me'].Content.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Range".lower()] = "\n".join(self.doc_text)
+        context.globals["['Me'].Content.Start".lower()] = 0
+        context.globals["['Me'].Content.End".lower()] = len("\n".join(self.doc_text))
+        context.globals["['Me'].Paragraphs".lower()] = self.doc_text
         context.globals["['ActiveDocument'].Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["['ActiveDocument'].Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["['ActiveDocument'].Range".lower()] = "\n".join(self.doc_text)
@@ -455,12 +500,34 @@ class ViperMonkey(object):
         context.globals["['ThisDocument'].Content.Start".lower()] = 0
         context.globals["['ThisDocument'].Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["['ThisDocument'].Paragraphs".lower()] = self.doc_text
+        context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
+        context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
+        context.globals["ActiveDocument.Characters.Count".lower()] = long(len(self.doc_text))
+        context.globals["Count".lower()] = 1
+        context.globals[".Pages.Count".lower()] = 1
+        context.globals["me.Pages.Count".lower()] = 1
+        context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
+        context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
 
-        # Fake up some comments.
-        # TODO: Figure out how to actually read the comments.
-        context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
-        context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
-        
+        # Break out document words.
+        doc_words = []
+        for word in re.split(r"[ \n]", "\n".join(self.doc_text)):
+            word = word.strip()
+            if (word.startswith("-")):
+                word = word[1:]
+                doc_words.append("-")
+            doc_words.append(word.strip())
+        context.globals["ActiveDocument.Words".lower()] = doc_words
+        context.globals["ThisDocument.Words".lower()] = doc_words
+            
+        # Fake up some comments if needed.
+        if (self.comments is None):
+            context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
+            context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
+        else:
+            context.globals["ActiveDocument.Comments".lower()] = self.comments
+            context.globals["ThisDocument.Comments".lower()] = self.comments
+            
         # reset the actions list, in case it is called several times
         self.actions = []
 
@@ -474,7 +541,7 @@ class ViperMonkey(object):
         for m in self.modules:
             if (m.eval(context=context)):
                 context.dump_all_files(autoclose=True)
-                done_emulation = True
+                done_emulation = context.got_actions
         
         # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
@@ -508,20 +575,20 @@ class ViperMonkey(object):
         # Did we find an entry point?
         if (not done_emulation):
 
-            # Count the # of subroutines in the document.
-            only_sub = None
-            sub_name = None
-            sub_count = 0
+            # Try heuristics to find possible entry points.
+            log.warn("No entry points found. Using heuristics to find entry points...")
+            
+            # Find any 0 argument subroutines. We will try emulating these as potential entry points.
+            zero_arg_subs = []
             for name in self.globals.keys():
                 item = self.globals[name]
-                if (isinstance(item, Sub)):
-                    only_sub = item
-                    sub_name = name
-                    sub_count += 1
-
-            # If there is only 1 subroutine, emulate that.
-            if (sub_count == 1):
-                context.report_action('Found Entry Point', str(sub_name), '')
+                if ((isinstance(item, Sub)) and (len(item.params) == 0)):
+                    zero_arg_subs.append(item)
+                    
+            # Emulate all 0 argument subroutines as potential entry points.
+            for only_sub in zero_arg_subs:
+                sub_name = only_sub.name
+                context.report_action('Found Heuristic Entry Point', str(sub_name), '')
                 only_sub.eval(context=context)
                 context.dump_all_files(autoclose=True)
                 

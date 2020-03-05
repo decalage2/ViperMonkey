@@ -69,7 +69,7 @@ statement_keyword = caselessKeywordsList(
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
      "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "EndIf",
      "Enum", "Event", "Exit", "Friend", "Function",
-     "GoSub", "GoTo", "If", "Implements", "Let", "Lock", "Loop", "LSet", "Next",
+     "GoSub", "GoTo", "If", "Implements", "Let", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "RSet", "Select", "Set", "Static", "Stop", "Sub",
      "Unlock", "Wend", "While", "With", "Write"))
@@ -79,7 +79,7 @@ rem_keyword = CaselessKeyword("Rem")
 # A <marker-keyword> is a <reserved-identifier> that is used as part of the interior
 # syntactic structure of a statement.
 marker_keyword = caselessKeywordsList(
-    ("Any", "As", "ByRef", "ByVal ", "Case", "For", "Each", "Else", "In", "New",
+    ("As", "ByRef", "ByVal ", "Case", "For", "Each", "Else", "In", "New",
      "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
      "Tab", "Then"))
 
