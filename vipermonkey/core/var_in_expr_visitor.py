@@ -49,6 +49,7 @@ class var_in_expr_visitor(visitor):
         self.visited = set()
     
     def visit(self, item):
+        from expressions import SimpleNameExpression
         if (item in self.visited):
             return False
         self.visited.add(item)        

@@ -64,6 +64,7 @@ from datetime import datetime
 import pyparsing
 
 import expressions
+from var_in_expr_visitor import *
 
 max_emulation_time = None
 
@@ -148,7 +149,7 @@ class VBA_Object(object):
         
         # The default behavior is to count any VBA_Object attribute as
         # a child.
-        if (self._children is not None):
+        if ((hasattr(self, "_children")) and (self._children is not None)):
             return self._children
         r = []
         for _, value in self.__dict__.iteritems():
@@ -359,6 +360,13 @@ def is_constant_math(arg):
     See if a given expression is a simple math expression with all literal numbers.
     """
 
+    # Sanity check. If there are variables in the expression it is not all literals.
+    if (isinstance(arg, VBA_Object)):
+        var_visitor = var_in_expr_visitor()
+        arg.accept(var_visitor)
+        if (len(var_visitor.variables) > 0):
+            return False
+    
     # Speed this up with the rure regex library if it is installed.
     try:
         import rure as local_re

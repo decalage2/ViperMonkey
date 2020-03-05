@@ -2114,7 +2114,7 @@ class BoolExprItem(VBA_Object):
         lhs_str = str(lhs)
         if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
             return True
-        
+
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):            

@@ -2089,19 +2089,27 @@ class While_Statement(VBA_Object):
         r = (prev_context == curr_context)
         return r
 
-    def _has_constant_loop_guard(self):
+    def _has_constant_loop_guard(self, context):
         """
         Check to see if the loop guard is a literal expression that always evaluates True or False.
         Return True or False if it does.
         Return None if it does not.
         """
 
-        # Evaluate the loop guard with an empty context and see if it gives true or false.
+        # If the guard contains variables it may not be infinite.
+        var_visitor = var_in_expr_visitor()
+        self.guard.accept(var_visitor)
+        if (len(var_visitor.variables) > 0):
+            return None
+
+        # We have no variables. See if the guard evaluates to a constant expression.
+        
+        # Evaluate the loop guard with an empty context.
         empty_context = Context()
-        eval_guard = str(eval_arg(self.guard, empty_context)).strip()
-        if (eval_guard == "True"):
+        eval_guard_empty = str(eval_arg(self.guard, empty_context)).strip()
+        if (eval_guard_empty == "True"):
             return True
-        if (eval_guard == "False"):
+        if (eval_guard_empty == "False"):
             return False
         return None
         
@@ -2142,7 +2150,7 @@ class While_Statement(VBA_Object):
 
         # Some loops have a constant guard expression that always evaluates to True
         # (infinite loop). Just run those loops a few times.
-        init_guard_val = self._has_constant_loop_guard()
+        init_guard_val = self._has_constant_loop_guard(context)
         max_loop_iters = VBA_Object.loop_upper_bound
         if (init_guard_val is not None):
 
