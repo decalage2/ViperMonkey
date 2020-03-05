@@ -41,6 +41,33 @@ __version__ = '0.08'
 
 import string
 
+def is_wide_str(the_str):
+    """
+    Test to see if the given string is a simple wide char string (every other
+    character is a null byte).
+    """
+    if (len(the_str) < 2):
+        return False
+    if ((len(the_str) % 2) != 0):
+        return False
+    is_wide = True
+    for i in range(1, len(the_str)/2 + 1):
+        if (the_str[i * 2 - 1] != '\x00'):
+            is_wide = False
+            break
+    return is_wide
+
+def convert_wide_to_ascii(the_str):
+    """
+    Convert a simple wide string to ASCII.
+    """
+    if (not is_wide_str(the_str)):
+        return the_str
+    r = ""
+    for i in range(0, len(the_str)/2):
+        r += the_str[i * 2]
+    return r
+    
 def is_mixed_wide_ascii_str(the_str):
     """
     Test a string to see if it is a mix of wide and ASCII chars.

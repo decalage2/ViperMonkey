@@ -1406,6 +1406,14 @@ class Replace(VbaLibraryFunc):
         rep = str(params[2])
         if ((rep is None) or (rep == 0)):
             rep = ''
+
+        # Wide string to change and not wide char pattern/replacement?
+        if (vb_str.is_wide_str(string) and
+            ((not vb_str.is_wide_str(pat)) or (not vb_str.is_wide_str(rep)))):
+
+            # Convert the string to change to ASCII.
+            log.warning("Replace() called on wide string w. ASCII pattern and replacement. Converting to ASCII ...")
+            string = vb_str.convert_wide_to_ascii(string)
             
         # regex replacement?
         if (params[-1] == "<-- USE REGEX -->"):
