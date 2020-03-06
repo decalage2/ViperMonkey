@@ -423,7 +423,27 @@ def fix_difficult_code(vba_code):
     # Targeted fix for some maldocs.
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
-    
+
+    # We don't handle boolean expressions treated as integers. Comment them out.
+    uni_vba_code = ""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)[^\n:']+[<>=]"
+    if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
+        bad_exps = re.findall(bad_bool_pat, vba_code)
+        for bad_exp in bad_exps:
+            vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION: " + bad_exp[1:])
+
+    # Comments like 'ddffd' at the end of an Else line are hard to parse.
+    # Get rid of them.
+    bad_else_pat = r"\n\s*Else\s*'.*\n"
+    if (re2.search(unicode(bad_else_pat), uni_vba_code) is not None):
+        bad_exps = re.findall(bad_else_pat, vba_code)
+        for bad_exp in bad_exps:
+            vba_code = vba_code.replace(bad_exp, "\nElse\n")
+        
     # Skip this if it is not needed.
     if (("!" not in vba_code) and
         (":" not in vba_code) and
