@@ -430,10 +430,14 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         pass
-    bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)[^\n:']+[<>=]"
+    bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)\s*[^" + r'"' + r"][^\n:']+[<>=]"
     if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_bool_pat, vba_code)
         for bad_exp in bad_exps:
+            if ('"' in bad_exp):
+                str_pat = r'\w+\s*=\s*"'
+                if (re.search(str_pat, bad_exp) is not None):
+                    continue
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION: " + bad_exp[1:])
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
