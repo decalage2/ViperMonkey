@@ -408,6 +408,25 @@ def fix_unhandled_array_assigns(vba_code):
         vba_code = re.sub(fix_pat, r"Mid(", vba_code)
     return vba_code
 
+def hide_string_content(s):
+    """
+    Replace contents of string literals with '____'.
+    """
+    if (not isinstance(s, str)):
+        return s
+    r = ""
+    in_str = False
+    for c in s:
+        if (in_str):
+            r += "_"
+        else:
+            r += c
+        if (c == '"'):
+            if (in_str):
+                r += '"'
+            in_str = not in_str
+    return r
+
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -434,10 +453,15 @@ def fix_difficult_code(vba_code):
     if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_bool_pat, vba_code)
         for bad_exp in bad_exps:
+
+            # Don't count matches where the [<>=] is in a string literal.
             if ('"' in bad_exp):
-                str_pat = r'\w+\s*=\s*"'
-                if (re.search(str_pat, bad_exp) is not None):
+                tmp_exp = hide_string_content(bad_exp)
+                if (re.search(bad_bool_pat, tmp_exp) is None):
                     continue
+
+            # This is actually an integer expression with boolean logic.
+            # Not handled.
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION: " + bad_exp[1:])
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
