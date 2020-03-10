@@ -1424,6 +1424,8 @@ class Replace(VbaLibraryFunc):
                     pat1 = pat.replace("$", "\\$").replace("-", "\\-")
                     fix_dash_pat = r"(\[.\w+)\\\-(\w+\])"
                     pat1 = re.sub(fix_dash_pat, r"\1-\2", pat1)
+                    fix_dash_pat1 = r"\((\w+)\\\-(\w+)\)"
+                    pat1 = re.sub(fix_dash_pat1, r"[\1-\2]", pat1)
                     rep = re.sub(r"\$(\d)", r"\\\1", rep)
                     r = re.sub(pat1, rep, string)
                 except Exception as e:
