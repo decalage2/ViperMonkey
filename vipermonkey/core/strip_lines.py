@@ -408,6 +408,44 @@ def fix_unhandled_array_assigns(vba_code):
         vba_code = re.sub(fix_pat, r"Mid(", vba_code)
     return vba_code
 
+def fix_unhandled_event_statements(vba_code):
+    """
+    Currently things like 'Event ...' are not handled.
+    Comment them out.
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = u"\n" + vba_code.decode("utf-8") + u"\n"
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "\n( *Event[^\n]{10,})"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        vba_code = "\n" + vba_code + "\n"
+        vba_code = re.sub(pat, r"\n' UNHANDLED EVENT STATEMENT \1", vba_code) + "\n"
+    return vba_code
+
+def fix_unhandled_raiseevent_statements(vba_code):
+    """
+    Currently things like 'RaiseEvent ...' are not handled.
+    Comment them out.
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = u"\n" + vba_code.decode("utf-8") + u"\n"
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "\n( *RaiseEvent[^\n]{10,})"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        vba_code = "\n" + vba_code + "\n"
+        vba_code = re.sub(pat, r"\n' UNHANDLED RAISEEVENT STATEMENT \1", vba_code) + "\n"
+    return vba_code
+
 def hide_string_content(s):
     """
     Replace contents of string literals with '____'.
@@ -442,6 +480,8 @@ def fix_difficult_code(vba_code):
     # Targeted fix for some maldocs.
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
+    vba_code = fix_unhandled_event_statements(vba_code)
+    vba_code = fix_unhandled_raiseevent_statements(vba_code)
 
     # We don't handle boolean expressions treated as integers. Comment them out.
     uni_vba_code = ""

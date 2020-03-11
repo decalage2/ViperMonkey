@@ -3790,6 +3790,7 @@ class External_Function(VBA_Object):
         return 1
 
 function_type2 = CaselessKeyword('As').suppress() + lex_identifier('return_type') \
+                 + Optional(Literal(".") + lex_identifier) \
                  + Optional(Literal('(') + Literal(')')).suppress()
 
 public_private <<= Optional(CaselessKeyword('Public') | CaselessKeyword('Private') | CaselessKeyword('Global') | CaselessKeyword('Friend')) + \
