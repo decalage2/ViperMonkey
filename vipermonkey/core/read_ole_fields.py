@@ -97,6 +97,41 @@ def unzip_data(data):
 
     # Return the unzipped data and temp file name.
     return (unzipped_data, fname)
+
+def get_defaulttargetframe_text(data):
+    """
+    Read custom DefaultTargetFrame value from an Office 2007+ file.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return None
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return None
+
+    # Pull out docProps/custom.xml, if it is there.
+    zip_subfile = 'docProps/custom.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        if (delete_file):
+            os.remove(fname)
+        return None
+
+    # Read docProps/custom.xml.
+    f1 = unzipped_data.open(zip_subfile)
+    contents = f1.read()
+    f1.close()
+
+    # <vt:lpwstr>custom value</vt:lpwstr>
+    # Pull out the DefaultTargetFrame string value. This assumes that DefaultTargetFrame
+    # is the only value stored in custom.xml.
+    pat = r"<vt:lpwstr>([^<]+)</vt:lpwstr>"
+    if (re.search(pat, contents) is None):
+        return None
+    return re.findall(pat, contents)[0]
     
 def get_msftedit_variables_97(data):
     """

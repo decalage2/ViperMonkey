@@ -1399,6 +1399,12 @@ def _process_file (filename,
                 vm.globals[tmp_name] = form_strings
                 log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
+            # Save DefaultTargetFrame value. This only works for 200+ files.
+            def_targ_frame_val = read_ole_fields.get_defaulttargetframe_text(data)
+            if (def_targ_frame_val is not None):
+                vm.globals["DefaultTargetFrame"] = def_targ_frame_val
+                log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
+                
             safe_print("")
             safe_print('-'*79)
             safe_print('TRACING VBA CODE (entrypoint = Auto*):')
