@@ -851,8 +851,10 @@ def fix_vba_code(vba_code):
         vba_code = vba_code.replace(sub_name, new_name)
     
     # Clear out some garbage characters.
-    #vba_code = vba_code.replace('\x0b', '')
-    #vba_code = vba_code.replace('\x88', '')
+    if (vba_code.count('\x0b') > 20):
+        vba_code = vba_code.replace('\x0b', '')
+    if (vba_code.count('\x88') > 20):
+        vba_code = vba_code.replace('\x88', '')
 
     # It looks like VBA supports variable and function names containing
     # non-ASCII characters. Parsing these with pyparsing would be difficult

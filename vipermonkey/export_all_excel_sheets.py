@@ -98,6 +98,8 @@ def convert_csv(fname):
             # Move to next sheet.
             sheet = enumeration.nextElement()
             name = sheet.getName()
+            if (name.count(" ") > 10):
+                name = name.replace(" ", "")
             controller.setActiveSheet(sheet)
 
             # Set up the output URL.

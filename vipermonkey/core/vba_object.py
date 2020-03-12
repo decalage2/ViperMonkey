@@ -352,7 +352,10 @@ def set_cached_value(arg, val):
     """
 
     arg_str = str(arg)
-    log.debug("Cache value of " + arg_str + " = " + str(val))
+    try:
+        log.debug("Cache value of " + arg_str + " = " + str(val))
+    except UnicodeEncodeError:
+        pass
     constant_expr_cache[arg_str] = val
     
 def is_constant_math(arg):
