@@ -48,6 +48,8 @@ __version__ = '0.08'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
+
 from comments_eol import *
 from expressions import *
 from vba_context import *

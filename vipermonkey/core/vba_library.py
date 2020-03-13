@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 from datetime import datetime
 from datetime import date
 import time
@@ -234,7 +235,8 @@ class WeekDay(VbaLibraryFunc):
             r = date_obj.weekday()
             # Looks like VBA week day is off by 2 from Python week day.
             r += 2
-            log.debug("WeekDay(%r): return %r" % (date_str, r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("WeekDay(%r): return %r" % (date_str, r))
             return r
         return 1
 
@@ -260,7 +262,8 @@ class Format(VbaLibraryFunc):
                 r = "**MATCH ANY**"
 
         # Done.
-        log.debug("Format(%r): return %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Format(%r): return %r" % (self, r))
         return r
 
 class MsgBox(VbaLibraryFunc):
@@ -379,7 +382,8 @@ class Switch(VbaLibraryFunc):
         pos = 0
         while (pos < (len(params) - 1)):
             if (params[pos] == True):
-                log.debug("Switch(%r): return %r" % (self, params[pos + 1]))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Switch(%r): return %r" % (self, params[pos + 1]))
                 return params[pos + 1]
             pos += 2
 
@@ -523,7 +527,8 @@ class Mid(VbaLibraryFunc):
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
         if (start > vb_s.len()):
-            log.debug('Mid: start>len(s) => return ""')
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Mid: start>len(s) => return ""')
             return ''
 
         # What to do when start<=0 is not specified:
@@ -532,7 +537,8 @@ class Mid(VbaLibraryFunc):
 
         # If length not specified, return up to the end of the string:
         if (len(params) == 2):
-            log.debug('Mid: no length specified, return s[%d:]=%r' % (start-1, s[start-1:]))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Mid: no length specified, return s[%d:]=%r' % (start-1, s[start-1:]))
             return s[start-1:]
         length = 0
         try:
@@ -544,7 +550,8 @@ class Mid(VbaLibraryFunc):
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
         if start+length-1 > vb_s.len():
-            log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
             #return s[start-1:]
             return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
 
@@ -557,7 +564,8 @@ class Mid(VbaLibraryFunc):
         r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
 
         # Done.
-        log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
         return r
 
 class MidB(Mid):
@@ -594,7 +602,8 @@ class Left(VbaLibraryFunc):
         # "If Start is greater than the number of characters in String,
         # Left returns the whole string.
         if (start > vb_s.len()):
-            log.debug('Left: start>len(s) => return s')
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Left: start>len(s) => return s')
             return s
 
         # Return empty string if start <= 0.
@@ -604,7 +613,8 @@ class Left(VbaLibraryFunc):
         # Return characters from start of string.
         #r = s[:start]
         r = vb_s.get_chunk(0, start).to_python_str()
-        log.debug('Left: return s[0:%d]=%r' % (start, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
 class PrivateProfileString(VbaLibraryFunc):
@@ -662,7 +672,8 @@ class Right(VbaLibraryFunc):
         # "If Start is greater than the number of characters in String,
         # Right returns the whole string.
         if (start > vb_s.len()):
-            log.debug('Right: start>len(s) => return s')
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Right: start>len(s) => return s')
             return s
 
         # Return empty string if start <= 0.
@@ -672,7 +683,8 @@ class Right(VbaLibraryFunc):
         # Return characters from end of string.
         #r = s[(len(s) - start):]
         r = vb_s.get_chunk(vb_s.len() - start, vb_s.len()).to_python_str()
-        log.debug('Right: return s[%d:]=%r' % (start, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Right: return s[%d:]=%r' % (start, r))
         return r
 
 class BuiltInDocumentProperties(VbaLibraryFunc):
@@ -730,7 +742,8 @@ class Shell(VbaLibraryFunc):
             return 0
 
         # We have a valid shell command. Track it.
-        log.debug("Shell command type: " + str(type(command)))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Shell command type: " + str(type(command)))
         log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
@@ -916,7 +929,8 @@ class Array(VbaLibraryFunc):
             return []        
         for v in params:
             r.append(v)
-        log.debug("Array: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Array: return %r" % r)
         return r
 
 class UBound(VbaLibraryFunc):
@@ -932,7 +946,8 @@ class UBound(VbaLibraryFunc):
             log.error("UBound(" + str(arr) + ") cannot be computed.")
             return 0
         r = len(arr) - 1
-        log.debug("UBound: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("UBound: return %r" % r)
         return r
 
 class LBound(VbaLibraryFunc):
@@ -945,7 +960,8 @@ class LBound(VbaLibraryFunc):
         arr = params[0]
         # TODO: Handle multidimensional arrays.
         r = 0
-        log.debug("LBound: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("LBound: return %r" % r)
         return r
 
 class Trim(VbaLibraryFunc):
@@ -962,7 +978,8 @@ class Trim(VbaLibraryFunc):
 
         # Trim the string.
         r = str(params[0]).strip()
-        log.debug("Trim: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Trim: return %r" % r)
         return r
 
 class RTrim(VbaLibraryFunc):
@@ -977,7 +994,8 @@ class RTrim(VbaLibraryFunc):
             r = str(params[0])
         else:
             r = params[0].rstrip()
-        log.debug("RTrim: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("RTrim: return %r" % r)
         return r
 
 class LTrim(VbaLibraryFunc):
@@ -993,7 +1011,8 @@ class LTrim(VbaLibraryFunc):
             r = str(params[0])
         else:
             r = params[0].lstrip()
-        log.debug("LTrim: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("LTrim: return %r" % r)
         return r
 
 class AscW(VbaLibraryFunc):
@@ -1012,7 +1031,8 @@ class AscW(VbaLibraryFunc):
                 r = ord(str(c)[0])
             else:
                 r = 0
-        log.debug("AscW: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("AscW: return %r" % r)
         return r
 
 class AscB(AscW):
@@ -1143,7 +1163,8 @@ class StrConv(VbaLibraryFunc):
                 log.error("StrConv: Unhandled type.")
                 r = ''
                         
-        log.debug("StrConv: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("StrConv: return %r" % r)
         return r
 
 class Assert(VbaLibraryFunc):
@@ -1253,15 +1274,19 @@ class TransformFinalBlock(VbaLibraryFunc):
         # Decode the base64 encoded string.
         r = "NULL"
         try:
-            log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
             base64_str = filter(isprint, str(base64_str).strip())
             r = base64.b64decode(base64_str).replace(chr(0), "")
-            log.debug("eval_arg: Base64 decode success.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Base64 decode success.")
         except Exception as e:
-            log.debug("eval_arg: Base64 decode fail. " + str(e))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Base64 decode fail. " + str(e))
 
         # Return the decoded string.
-        log.debug("Decoded string: " + r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Decoded string: " + r)
         return r
             
 class Split(VbaLibraryFunc):
@@ -1285,7 +1310,8 @@ class Split(VbaLibraryFunc):
             (len(params[1]) > 0)):
             sep = str(params[1])
         r = string.split(sep)
-        log.debug("Split: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Split: return %r" % r)
         return r
     
 class Int(VbaLibraryFunc):
@@ -1312,7 +1338,8 @@ class Int(VbaLibraryFunc):
                 r = int_convert(val)
             if ((r > 2147483647) or (r < -2147483647)):
                 r = "ERROR"
-            log.debug("Int: return %r" % r)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Int: return %r" % r)
             return r
         except Exception as e:
             log.error("Int(): Invalid call int(%r) [%s]. Returning ''." % (val, str(e)))
@@ -1334,7 +1361,8 @@ class Oct(VbaLibraryFunc):
         val = params[0]
         try:
             r = oct(val)
-            log.debug("Oct: return %r" % r)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Oct: return %r" % r)
             return r
         except:
             log.error("Oct(): Invalid call oct(%r). Returning ''." % val)
@@ -1355,7 +1383,8 @@ class StrReverse(VbaLibraryFunc):
                 (not isinstance(params[0], unicode))):
                 string = str(params[0])
         r = string[::-1]
-        log.debug("StrReverse: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("StrReverse: return %r" % r)
         return r
 
 class RegWrite(VbaLibraryFunc):
@@ -1437,7 +1466,8 @@ class Replace(VbaLibraryFunc):
             r = string.replace(pat, rep)
 
         # Done.
-        log.debug("Replace: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Replace: return %r" % r)
         return r
 
 class SaveToFile(VbaLibraryFunc):
@@ -1529,11 +1559,14 @@ class LoadXML(VbaLibraryFunc):
 
             # It looks like maybe this magically does base64 decode? Try that.
             try:
-                log.debug("eval_arg: Try base64 decode of '" + xml + "'...")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Try base64 decode of '" + xml + "'...")
                 xml = base64.b64decode(xml).replace(chr(0), "")
-                log.debug("eval_arg: Base64 decode success.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Base64 decode success.")
             except Exception as e:
-                log.debug("eval_arg: Base64 decode fail. " + str(e))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Base64 decode fail. " + str(e))
 
         # Return the XML or base64 string.
         return xml
@@ -1575,7 +1608,8 @@ class Join(VbaLibraryFunc):
                 r += str(s) + sep
         else:
             r = str(strings)
-        log.debug("Join: return %r" % r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Join: return %r" % r)
         return r
 
 class InStr(VbaLibraryFunc):
@@ -1629,7 +1663,8 @@ class InStr(VbaLibraryFunc):
                 r = s1[start:].index(s2) + start + 1
             else:
                 r = 0
-        log.debug("InStr: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("InStr: %r returns %r" % (self, r))
         return r
 
 class CVar(VbaLibraryFunc):
@@ -1705,7 +1740,8 @@ class InStrRev(VbaLibraryFunc):
                 r = s1[start:].rindex(s2) + start + 1
             else:
                 r = 0
-        log.debug("InStr: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("InStr: %r returns %r" % (self, r))
         return r
 
     
@@ -1726,7 +1762,8 @@ class Sgn(VbaLibraryFunc):
                 r = int(math.copysign(1, n))
         except:
             pass
-        log.debug("Sgn: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Sgn: %r returns %r" % (self, r))
         return r
         
 class Sqr(VbaLibraryFunc):
@@ -1742,7 +1779,8 @@ class Sqr(VbaLibraryFunc):
             r = math.sqrt(num)
         except:
             pass
-        log.debug("Sqr: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Sqr: %r returns %r" % (self, r))
         return r
 
 class Abs(VbaLibraryFunc):
@@ -1758,7 +1796,8 @@ class Abs(VbaLibraryFunc):
             r = abs(num)
         except:
             pass
-        log.debug("Abs: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Abs: %r returns %r" % (self, r))
         return r
 
 class Fix(VbaLibraryFunc):
@@ -1774,7 +1813,8 @@ class Fix(VbaLibraryFunc):
             r = math.floor(num)
         except:
             pass
-        log.debug("Fix: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Fix: %r returns %r" % (self, r))
         return r
 
 class Round(VbaLibraryFunc):
@@ -1793,7 +1833,8 @@ class Round(VbaLibraryFunc):
             r = round(num, sig)
         except:
             pass
-        log.debug("Round: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Round: %r returns %r" % (self, r))
         return r
 
 class Hex(VbaLibraryFunc):
@@ -1817,7 +1858,8 @@ class Hex(VbaLibraryFunc):
                     r = "F" + r
         except:
             pass
-        log.debug("Hex: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Hex: %r returns %r" % (self, r))
         return r
 
 class CByte(VbaLibraryFunc):
@@ -1839,7 +1881,8 @@ class CByte(VbaLibraryFunc):
                 r = 255
         except:
             pass 
-        log.debug("CByte: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CByte: %r returns %r" % (self, r))
         return r
 
 class CLng(VbaLibraryFunc):
@@ -1871,7 +1914,8 @@ class CLng(VbaLibraryFunc):
             r = int(tmp)
         except:
             pass 
-        log.debug("CLng: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CLng: %r returns %r" % (self, r))
         return r
     
 class CBool(VbaLibraryFunc):
@@ -1885,7 +1929,8 @@ class CBool(VbaLibraryFunc):
         r = 0
         if ((val == True) or (val == 1)):
             r = 1
-        log.debug("CBool: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CBool: %r returns %r" % (self, r))
         return r
 
 class CDate(VbaLibraryFunc):
@@ -1897,7 +1942,8 @@ class CDate(VbaLibraryFunc):
         assert (len(params) == 1)
         # TODO: For now this is stubbed out. Handling dates correctly is hard.
         r = 12345
-        log.debug("CDate: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CDate: %r returns %r" % (self, r))
         return r
 
 class CStr(VbaLibraryFunc):
@@ -1909,7 +1955,8 @@ class CStr(VbaLibraryFunc):
         assert (len(params) == 1)
         val = params[0]
         r = str(val)
-        log.debug("CStr: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CStr: %r returns %r" % (self, r))
         return r
 
 class CSng(VbaLibraryFunc):
@@ -1928,7 +1975,8 @@ class CSng(VbaLibraryFunc):
             r = float(tmp)
         except:
             pass 
-        log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
     
 class Atn(VbaLibraryFunc):
@@ -1944,7 +1992,8 @@ class Atn(VbaLibraryFunc):
             r = math.atan(num)
         except:
             pass
-        log.debug("Atn: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Atn: %r returns %r" % (self, r))
         return r
 
 class Tan(VbaLibraryFunc):
@@ -1960,7 +2009,8 @@ class Tan(VbaLibraryFunc):
             r = math.tan(num)
         except:
             pass
-        log.debug("Tan: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Tan: %r returns %r" % (self, r))
         return r
         
 class Cos(VbaLibraryFunc):
@@ -1976,7 +2026,8 @@ class Cos(VbaLibraryFunc):
             r = math.cos(num)
         except:
             pass
-        log.debug("Cos: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Cos: %r returns %r" % (self, r))
         return r
         
 class Log(VbaLibraryFunc):
@@ -1993,7 +2044,8 @@ class Log(VbaLibraryFunc):
         except ValueError as e:
             log.error("Log(" + str(params[0]) + ") failed. " + str(e))
             pass
-        log.debug("Log: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Log: %r returns %r" % (self, r))
         return r
     
 class String(VbaLibraryFunc):
@@ -2010,7 +2062,8 @@ class String(VbaLibraryFunc):
             r = char * num
         except:
             pass
-        log.debug("String: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("String: %r returns %r" % (self, r))
         return r
 
 class Dir(VbaLibraryFunc):
@@ -2036,7 +2089,8 @@ class Dir(VbaLibraryFunc):
         r = pat.replace("*", "foo")
 
         # TODO: Figure out how to simulate actual file searches.            
-        log.debug("Dir: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Dir: %r returns %r" % (self, r))
         return r
 
 class RGB(VbaLibraryFunc):
@@ -2054,7 +2108,8 @@ class RGB(VbaLibraryFunc):
             r = red + (green * 256) + (blue * 65536)
         except:
             pass
-        log.debug("RGB: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("RGB: %r returns %r" % (self, r))
         return r
 
 class Exp(VbaLibraryFunc):
@@ -2071,7 +2126,8 @@ class Exp(VbaLibraryFunc):
         except Exception as e:
             log.error("Exp(" + str(params[0]) + ") failed. " + str(e))
             pass
-        log.debug("Exp: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Exp: %r returns %r" % (self, r))
         return r
             
 class Sin(VbaLibraryFunc):
@@ -2087,7 +2143,8 @@ class Sin(VbaLibraryFunc):
             r = math.sin(num)
         except:
             pass
-        log.debug("Sin: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Sin: %r returns %r" % (self, r))
         return r
             
 class Str(VbaLibraryFunc):
@@ -2099,7 +2156,8 @@ class Str(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return ""
         r = str(params[0])
-        log.debug("Str: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Str: %r returns %r" % (self, r))
         return r
 
 class Val(VbaLibraryFunc):
@@ -2116,7 +2174,8 @@ class Val(VbaLibraryFunc):
         # Sanity check.
         if ((params[0] is None) or (not isinstance(params[0], str))):
             r = ''
-            log.debug("Str: %r returns %r" % (self, r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Str: %r returns %r" % (self, r))
             return r
         
         # Ignore whitespace.
@@ -2128,7 +2187,8 @@ class Val(VbaLibraryFunc):
         if (hasattr(matches, "group")):
             tmp = nums.search(tmp).group(0).replace("&H", "0x").replace("&h", "0x")
             r = float(int(tmp, 16))
-            log.debug("Val: %r returns %r" % (self, r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Val: %r returns %r" % (self, r))
             return r
         
         # The VB Val() function is ugly. Try to use a regular expression to pick out
@@ -2144,12 +2204,14 @@ class Val(VbaLibraryFunc):
                 r = float(tmp)
             else:
                 r = int(tmp)
-            log.debug("Val: %r returns %r" % (self, r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Val: %r returns %r" % (self, r))
             return r
 
         # Can't find a valid number to convert. This is probably incorrect behavior.
         r = 0
-        log.debug("Val: Invalid Value: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Val: Invalid Value: %r returns %r" % (self, r))
         return r
     
 class Base64Decode(VbaLibraryFunc):
@@ -2163,7 +2225,8 @@ class Base64Decode(VbaLibraryFunc):
         if (txt is None):
             txt = ''
         r = base64.b64decode(txt)
-        log.debug("Base64Decode: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
 
 class Base64DecodeString(Base64Decode):
@@ -2202,7 +2265,8 @@ class CleanString(VbaLibraryFunc):
         else:
             # punt for things like CleanString(99), which shows up as an integer
             r = txt
-        log.debug("CleanString: %r returns %r" % (self,r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CleanString: %r returns %r" % (self,r))
         return r
 
 class Pmt(VbaLibraryFunc):
@@ -2297,7 +2361,8 @@ class Pmt(VbaLibraryFunc):
         except:
             pass
         
-        log.debug("Pmt: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Pmt: %r returns %r" % (self, r))
         return r
 
 class Day(VbaLibraryFunc):
@@ -2321,7 +2386,8 @@ class Day(VbaLibraryFunc):
             except:
                 pass
 
-        log.debug("Day: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Day: %r returns %r" % (self, r))
         return r
 
 class Space(VbaLibraryFunc):
@@ -2341,7 +2407,8 @@ class UCase(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         r = str(params[0]).upper()
-        log.debug("UCase: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("UCase: %r returns %r" % (self, r))
         return r
 
 class LCase(VbaLibraryFunc):
@@ -2351,7 +2418,8 @@ class LCase(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         r = str(params[0]).lower()
-        log.debug("LCase: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("LCase: %r returns %r" % (self, r))
         return r
 
 class Randomize(VbaLibraryFunc):
@@ -2360,7 +2428,8 @@ class Randomize(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        log.debug("Randomize(): Stubbed out as NOP")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Randomize(): Stubbed out as NOP")
         return ''
 
 class Rnd(VbaLibraryFunc):
@@ -2432,7 +2501,8 @@ class Environ(VbaLibraryFunc):
             r = "%{}%".format(var_name.upper())
 
         # Done.
-        log.debug("Environ: %r returns %r" % (self, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Environ: %r returns %r" % (self, r))
         return r
 
 class ExpandEnvironmentStrings(Environ):
@@ -2870,7 +2940,8 @@ class KeyString(VbaLibraryFunc):
             if (v2 in key_vals):
                 r += key_vals[v2]
 
-        log.debug("KeyString: args = " + str(params) + ", return " + r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("KeyString: args = " + str(params) + ", return " + r)
         return r
         
 class Run(VbaLibraryFunc):
@@ -3148,7 +3219,8 @@ class Cells(VbaLibraryFunc):
                 r = str(sheet.cell(row, col)).replace("text:", "").replace("'", "")
                 if (r.startswith('u')):
                     r = r[1:]
-                log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
                 return r
 
             except Exception as e:
@@ -3220,7 +3292,8 @@ class Range(VbaLibraryFunc):
             
             # Return the cell value.
             log.info("Read cell (" + str(cell_index) + ") from sheet 1")
-            log.debug("Cell value = '" + val + "'")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cell value = '" + val + "'")
             return val            
 
         except Exception as e:
@@ -3308,7 +3381,8 @@ class Variable(VbaLibraryFunc):
         r = context.get_doc_var(var)
         if (r is None):
             r = ""
-        log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
         return r
 
 class Variables(Variable):
@@ -3388,6 +3462,8 @@ class DeleteFile(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (len(params) > 1):
             context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
+        if (len(params) == 1):
+            context.report_action('Delete File', str(params[0]), 'DeleteFile() Call', strip_null_bytes=True)
 
 class MoveFile(VbaLibraryFunc):
     """
@@ -3691,7 +3767,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
-log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
+if (log.getEffectiveLevel() == logging.DEBUG):
+    log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
 
 # --- VBA CONSTANTS ----------------------------------------------------------
 

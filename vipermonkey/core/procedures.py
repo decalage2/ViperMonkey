@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import sys
 
 from vba_context import *
@@ -122,7 +123,8 @@ class Sub(VBA_Object):
                     param_value = str(param_value)
                     
                 # Add the parameter value to the local function context.
-                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
@@ -157,14 +159,16 @@ class Sub(VBA_Object):
         context.global_scope = False
                     
         # Emulate the function.
-        log.debug('evaluating Sub %s(%s)' % (self.name, params))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
         context.clear_error()
         for s in self.statements:
 
             # Emulate the current statement.
-            log.debug('Sub %s eval statement: %s' % (self.name, s))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Sub %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
 
@@ -176,7 +180,8 @@ class Sub(VBA_Object):
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (isinstance(s, Goto_Statement)):
-                log.debug("GOTO executed. Go to next loop iteration.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                 break
             
         # Reset variable update scoping.
@@ -419,7 +424,8 @@ class Function(VBA_Object):
                 param_value = str(param_value)
                     
             # Add the parameter value to the local function context.
-            log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
             call_info[param_name] = param_value
 
             # Is this a ByRef parameter?
@@ -454,11 +460,13 @@ class Function(VBA_Object):
         context.global_scope = False
         
         # Emulate the function.
-        log.debug('evaluating Function %s(%s)' % (self.name, params))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
         context.clear_error()
         for s in self.statements:
-            log.debug('Function %s eval statement: %s' % (self.name, s))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
                 
@@ -474,7 +482,8 @@ class Function(VBA_Object):
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (isinstance(s, Goto_Statement)):
-                log.debug("GOTO executed. Go to next loop iteration.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                 break
             
         # Reset variable update scoping.
@@ -504,7 +513,8 @@ class Function(VBA_Object):
             return_value = context.get(self.name, local_only=True)
             if ((return_value is None) or (isinstance(return_value, Function))):
                 return_value = ''
-            log.debug('Function %s: return value = %r' % (self.name, return_value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s: return value = %r' % (self.name, return_value))
 
             # Convert the return value to a String if needed.
             if ((self.return_type == "String") and (not isinstance(return_value, str))):

@@ -51,12 +51,16 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
+
 from pyparsing import *
 
 from vba_lines import line_terminator
 
 from logger import log
-log.debug('importing comments_eol')
+
+if (log.getEffectiveLevel() == logging.DEBUG ):
+    log.debug('importing comments_eol')
 
 
 # --- COMMENT ----------------------------------------------------------------

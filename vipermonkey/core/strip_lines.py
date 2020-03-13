@@ -67,6 +67,7 @@ https://github.com/decalage2/ViperMonkey
 # TODO later:
 # - add VBS support (two modes?)
 
+import logging
 import sys
 import re
 try:
@@ -120,7 +121,8 @@ def is_interesting_call(line, external_funcs, local_funcs):
         log_funcs.extend(local_funcs)
     for func in log_funcs:
         if (func in line):
-            log.debug("Line '" + line + "' contains interesting call (1) ('" + func + "').")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Line '" + line + "' contains interesting call (1) ('" + func + "').")
             return True
 
     # Are we calling an external function?
@@ -130,7 +132,8 @@ def is_interesting_call(line, external_funcs, local_funcs):
             end = ext_func_decl.index("Lib")
             ext_func = ext_func_decl[start:end].strip()
             if (ext_func in line):
-                log.debug("Line '" + line + "' contains interesting call (2).")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Line '" + line + "' contains interesting call (2).")
                 return True
         
     # Not a call we are tracking.
@@ -168,7 +171,8 @@ def collapse_macro_if_blocks(vba_code):
     """
 
     # Pick out the largest #if blocks.
-    log.debug("Collapsing macro blocks...")
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        log.debug("Collapsing macro blocks...")
     curr_blocks = None
     curr_block = None
     r = ""
@@ -182,7 +186,8 @@ def collapse_macro_if_blocks(vba_code):
             if (strip_line.startswith("#If")):
 
                 # Yes, start tracking blocks.
-                log.debug("Start block " + strip_line)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Start block " + strip_line)
                 curr_blocks = []
                 curr_block = []
                 r += "' STRIPPED LINE\n"
@@ -199,8 +204,10 @@ def collapse_macro_if_blocks(vba_code):
 
             # Save the current block.
             curr_blocks.append(curr_block)
-            log.debug("Else if " + strip_line)
-            log.debug("Save block " + str(curr_block))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Else if " + strip_line)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Save block " + str(curr_block))
 
             # Start a new block.
             curr_block = []
@@ -210,7 +217,8 @@ def collapse_macro_if_blocks(vba_code):
         # Have we finished the #if?
         if (strip_line.startswith("#End")):
 
-            log.debug("End if " + strip_line)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("End if " + strip_line)
 
             # Save the current block.
             curr_blocks.append(curr_block)
@@ -222,7 +230,8 @@ def collapse_macro_if_blocks(vba_code):
                     biggest_block = block
             for block_line in biggest_block:
                 r += block_line + "\n"
-            log.debug("Pick block " + str(biggest_block))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Pick block " + str(biggest_block))
                 
             # Done processing #if.
             curr_blocks = None
@@ -994,7 +1003,8 @@ def strip_useless_code(vba_code, local_funcs):
         # Skip comment lines.
         line_num += 1
         if (line.strip().startswith("'")):
-            log.debug("SKIP: Comment. Keep it.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("SKIP: Comment. Keep it.")
             continue
         
         # Save external function declarations lines so we can avoid stripping
@@ -1026,62 +1036,74 @@ def strip_useless_code(vba_code, local_funcs):
         match = assign_re.findall(uni_tmp_line)
         if (len(match) > 0):
 
-            log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
                 
             # Skip starts of while loops.
             if (line.strip().startswith("While ")):
-                log.debug("SKIP: While loop. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: While loop. Keep it.")
                 continue
 
             # Skip calls to .create()
             if (".create" in line.strip().lower()):
-                log.debug("SKIP: .Create() call. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: .Create() call. Keep it.")
                 continue
 
             # Skip multistatement lines.
             if (":" in line):
-                log.debug("SKIP: Multi-statement line. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Multi-statement line. Keep it.")
                 continue
 
             # Skip function definitions.
             if ((line.strip().lower().startswith("if ")) or
                 (line.strip().lower().startswith("elseif "))):
-                log.debug("SKIP: If statement. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: If statement. Keep it.")
                 continue
             
             # Skip function definitions.
             if (line.strip().lower().startswith("function ")):
-                log.debug("SKIP: Function decl. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Function decl. Keep it.")
                 continue
 
             # Skip const definitions.
             if (line.strip().lower().startswith("const ")):
-                log.debug("SKIP: Const decl. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Const decl. Keep it.")
                 continue
                 
             # Skip lines that end with a continuation character.
             if (line.strip().endswith("_")):
-                log.debug("SKIP: Continuation line. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Continuation line. Keep it.")
                 continue
 
             # Skip lines that are a macro line.
             if (line.strip().startswith("#")):
-                log.debug("SKIP: macro line. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: macro line. Keep it.")
                 continue
 
             # Skip function definitions.
             if (("sub " in line.lower()) or ("function " in line.lower())):
-                log.debug("SKIP: Function definition. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Function definition. Keep it.")
                 continue
 
             # Skip calls to GetObject() or Shell().
             if (("GetObject" in line) or ("Shell" in line)):
-                log.debug("SKIP: GetObject()/Shell() call. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: GetObject()/Shell() call. Keep it.")
                 continue
 
             # Skip Loop statements.
             if ("Loop " in line):
-                log.debug("SKIP: Loop statement. Keep it.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Loop statement. Keep it.")
                 continue
 
             # Skip calls to various interesting calls.
@@ -1117,7 +1139,8 @@ def strip_useless_code(vba_code, local_funcs):
                     continue
             
             # Yes, there is an assignment. Save the assigned variable and line #
-            log.debug("SKIP: Assigned vars = " + str(match) + ". Line # = " + str(line_num))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("SKIP: Assigned vars = " + str(match) + ". Line # = " + str(line_num))
             for m in match:
                 
                 # Look at each matched variable.
@@ -1170,7 +1193,8 @@ def strip_useless_code(vba_code, local_funcs):
             
             # Skip variable references on the lines where the current variable was assigned.
             if (line_num in assigns[var]):
-                log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
                 continue
 
             # Could the current variable be used on this line?
@@ -1178,11 +1202,13 @@ def strip_useless_code(vba_code, local_funcs):
 
                 # If we are aggressively stripping don't pay attention to debug.print.
                 if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
-                    log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
                     continue
                 
                 # Maybe. Count this as a reference.
-                log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
                 refs[var] = True
 
     # Keep assignments that have change callbacks.
@@ -1236,13 +1262,15 @@ def strip_useless_code(vba_code, local_funcs):
             (not line.strip().startswith("Sub ")) and
             (not line.strip().startswith("End Sub")) and
             (not line.strip().startswith("End Function"))):
-            log.debug("STRIP: Stripping Line (1): " + line)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("STRIP: Stripping Line (1): " + line)
             r += "' STRIPPED LINE\n"
             continue
 
         # Does this line get stripped based on a useless function call?
         if (is_useless_call(line)):
-            log.debug("STRIP: Stripping Line (2): " + line)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("STRIP: Stripping Line (2): " + line)
             r += "' STRIPPED LINE\n"
             continue
 

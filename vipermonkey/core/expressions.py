@@ -41,6 +41,7 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import re
 import sys
 import os
@@ -87,16 +88,19 @@ class SimpleNameExpression(VBA_Object):
             self.name = name
         else:
             self.name = tokens.name
-        log.debug('parsed "%r" as SimpleNameExpression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed "%r" as SimpleNameExpression' % self)
 
     def __repr__(self):
         return '%s' % self.name
 
     def eval(self, context, params=None):
-        log.debug('try eval variable/function %r' % self.name)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('try eval variable/function %r' % self.name)
         try:
             value = context.get(self.name)
-            log.debug('get variable %r = %r' % (self.name, value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('get variable %r = %r' % (self.name, value))
             if (isinstance(value, procedures.Function) or
                 isinstance(value, procedures.Sub) or
                 isinstance(value, VbaLibraryFunc)):
@@ -112,9 +116,11 @@ class SimpleNameExpression(VBA_Object):
                 # 0 parameter function. Evaluate it.
                 if (not context.throttle_logging):
                     log.info("calling Function: " + str(value) + "()")
-                log.debug('evaluating function %r' % value)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug('evaluating function %r' % value)
                 value = value.eval(context)
-                log.debug('evaluated function %r = %r' % (self.name, value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug('evaluated function %r = %r' % (self.name, value))
             return value
         except KeyError:
 
@@ -154,7 +160,8 @@ class InstanceExpression(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(InstanceExpression, self).__init__(original_str, location, tokens)
-        log.debug('parsed %r as InstanceExpression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as InstanceExpression' % self)
 
     def __repr__(self):
         return 'Me'
@@ -203,7 +210,8 @@ class MemberAccessExpression(VBA_Object):
             self.lhs = raw_fields[0]
             self.rhs = raw_fields[1]
             self.rhs1 = raw_fields[2]
-            log.debug('Manually created MemberAccessExpression %r' % self)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Manually created MemberAccessExpression %r' % self)
 
         # Make a member access object from parse results.
         else:
@@ -216,7 +224,8 @@ class MemberAccessExpression(VBA_Object):
             self.rhs1 = ""
             if (hasattr(tokens, "rhs1")):
                 self.rhs1 = tokens.rhs1
-            log.debug('parsed %r as MemberAccessExpression' % self)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
         r = str(self.lhs)
@@ -351,7 +360,8 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Simple case, get all the comments.
-        log.debug("Try _handle_comments() eval of " + me_str)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Try _handle_comments() eval of " + me_str)
         if (me_str.lower().endswith(".comments")):
             return context.get("ActiveDocument.Comments".lower())
 
@@ -359,7 +369,8 @@ class MemberAccessExpression(VBA_Object):
         ref_pat = r".Comments\(\s*(.+)\s*\)"
         ids = re.findall(ref_pat, me_str)
         if (len(ids) == 0):
-            log.debug("No comment index found.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("No comment index found.")
             return None
 
         # We are reading a specific comment.
@@ -381,13 +392,15 @@ class MemberAccessExpression(VBA_Object):
             log.error("Parse error. Cannot evaluate '" + index + "'")
             return None
         except Exception as e:
-            log.debug("Comment index '" + str(ids[0]) + "' not int. " + str(e))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Comment index '" + str(ids[0]) + "' not int. " + str(e))
             return None
 
         # We have an index. Return the comment.
         comments = context.get("ActiveDocument.Comments".lower())
         if (index >= len(comments)):
-            log.debug("Comment index " + str(ids[0]) + " out of range")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Comment index " + str(ids[0]) + " out of range")
             return None
         return comments[index]
             
@@ -462,7 +475,8 @@ class MemberAccessExpression(VBA_Object):
             func_args = eval_args(func_args, context)
 
         # See if we can run the other function.
-        log.debug("Try indirect run of function '" + func_name + "'")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Try indirect run of function '" + func_name + "'")
         try:
             s = func_name
             while (isinstance(s, str)):
@@ -499,7 +513,8 @@ class MemberAccessExpression(VBA_Object):
         val = str(eval_arg(val, context))
 
         # Set the clipboard value in a synthetic variable.
-        log.debug("Save clipboard text '" + val + "'")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Save clipboard text '" + val + "'")
         context.set("** CLIPBOARD **", val, force_global=True)
         return True
 
@@ -754,7 +769,8 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Sanity check.
-        log.debug("_handle_add(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_add(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         if (not isinstance(rhs, Function_Call)):
@@ -771,7 +787,8 @@ class MemberAccessExpression(VBA_Object):
         for p in new_add.params:
             tmp.append(p)
         new_add.params = tmp
-        log.debug("Add() func = " + str(new_add))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Add() func = " + str(new_add))
         
         # Evaluate the dictionary add.
         new_add.eval(context)
@@ -783,19 +800,23 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this a .Write() call?
-        log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
         rhs_str = str(rhs).strip()
         if (("write(" not in rhs_str.lower()) and ("writetext(" not in rhs_str.lower())):
-            log.debug("Not a Write() call.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Not a Write() call.")
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
         if (lhs.lower() != "ADODB.Stream".lower()):
 
             # Maybe we need a sub field? Do we have a subfield?
-            log.debug(str(lhs) + " is not an ADODB.Stream")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug(str(lhs) + " is not an ADODB.Stream")
             if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
-                log.debug("Done (1).")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Done (1).")
                 return False
 
             # Look for ADODB.Stream in a variable from a subfield.
@@ -804,7 +825,8 @@ class MemberAccessExpression(VBA_Object):
 
             # Are we referencing a stream contained in a variable?        
             if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
-                log.debug("Done (2).")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Done (2).")
                 return False
         
         # Pull out the text to write to the text stream.
@@ -849,9 +871,11 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # 0 parameter function. Evaluate it.
-        log.debug('evaluating function %r' % func)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluating function %r' % func)
         r = func.eval(context)
-        log.debug('evaluated function %r = %r' % (func.name, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluated function %r = %r' % (func.name, r))
         return r
 
     def _handle_loadxml(self, context, load_xml_result):
@@ -885,14 +909,16 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this a call to SaveToFile()?
-        log.debug("_handle_savetofile(): filename = " + str(filename) + ", self = " + str(self))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_savetofile(): filename = " + str(filename) + ", self = " + str(self))
         memb_str = str(self)
         if (".savetofile(" not in memb_str.lower()):
             return False
 
         # We have a call to SaveToFile(). Get the value to save from .ReadText
         var_name = memb_str[:memb_str.lower().index(".savetofile")] + ".ReadText"
-        log.debug("var_name = " + var_name)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("var_name = " + var_name)
         val = None
         try:
             val = context.get(var_name)
@@ -1054,12 +1080,14 @@ class MemberAccessExpression(VBA_Object):
         
     def eval(self, context, params=None):
 
-        log.debug("MemberAccess eval of " + str(self))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("MemberAccess eval of " + str(self))
 
         # Easy case. Do we have this saved as a variable?
         try:
             r = context.get(str(self), search_wildcard=False)
-            log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Member access " + str(self) + " stored as variable = " + str(r))
             return r
         except KeyError:
             pass
@@ -1079,9 +1107,11 @@ class MemberAccessExpression(VBA_Object):
         if (not calling_func):
             try:
                 func = context.get(str(rhs), search_wildcard=False)
-                log.debug("Member access " + str(self) + " got RHS = " + str(func))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Member access " + str(self) + " got RHS = " + str(func))
                 calling_func = (isinstance(func, procedures.Function) or isinstance(func, procedures.Sub))
-                log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
             except KeyError:
                 pass
 
@@ -1202,7 +1232,8 @@ class MemberAccessExpression(VBA_Object):
         # the result should be the result of the function call. Otherwise treat
         # it as a fancy variable access.
         if (calling_func):
-            log.debug('rhs {!r} is a Function_Call'.format(rhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('rhs {!r} is a Function_Call'.format(rhs))
 
             # Skip local functions that have a name collision with VBA built in functions.
             rhs_name = str(rhs)
@@ -1246,7 +1277,8 @@ class MemberAccessExpression(VBA_Object):
         elif (isinstance(rhs, Function_Call_Array_Access)):
 
             # Just evaluate and return the array access.
-            log.debug('rhs {!r} is a Function_Call_Array_Access'.format(rhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('rhs {!r} is a Function_Call_Array_Access'.format(rhs))
             tmp_rhs = eval_arg(rhs, context)
             return tmp_rhs
             
@@ -1286,7 +1318,8 @@ class MemberAccessExpression(VBA_Object):
 
             # Are we reading the text of an object that we resolved?
             if ((str(self.rhs) == "['Text']") and (isinstance(tmp_lhs, str))):
-                log.debug("Returning .Text value.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Returning .Text value.")
                 return tmp_lhs
             
             # Construct a new partially resolved member access object.
@@ -1295,7 +1328,8 @@ class MemberAccessExpression(VBA_Object):
             # See if we can now resolve this to a doc var read.
             call_retval = r._handle_docvars_read(context)
             if (call_retval is not None):
-                log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
                 return call_retval
 
             # Do we know what the RHS variable evaluates to?
@@ -1306,11 +1340,13 @@ class MemberAccessExpression(VBA_Object):
                  (str(tmp_lhs).lower().endswith(".application"))) and
                 (tmp_rhs != "NULL") and
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
-                log.debug("Resolved member access variable.")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Resolved member access variable.")
                 return tmp_rhs        
             
             # Cannot resolve directly. Return the member access object.
-            log.debug("MemberAccess: Return new access object " + str(r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("MemberAccess: Return new access object " + str(r))
             return r
 
         # Try reading as variable.
@@ -1511,7 +1547,8 @@ class Function_Call(VBA_Object):
 
         # Making a new one.
         self.name = str(tokens.name)
-        log.debug('Function_Call.name = %r' % self.name)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)
         self.params = tokens.params
 
@@ -1539,8 +1576,10 @@ class Function_Call(VBA_Object):
                 self.params[2] = array
                 log.warning("Rewrote MultiByteToWideChar() array reference '" + str(orig_array) + "' to '" + str(array) + "'.")
 
-        log.debug('Function_Call.params = %r' % self.params)
-        log.debug('parsed %r as Function_Call' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Function_Call.params = %r' % self.params)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Function_Call' % self)
 
     def __repr__(self):
         parms = ""
@@ -1558,7 +1597,8 @@ class Function_Call(VBA_Object):
         import vba_library
         vba_library.var_names = self.params
         
-        log.debug("Function_Call: eval params: " + str(self.params))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Function_Call: eval params: " + str(self.params))
 
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
@@ -1606,7 +1646,8 @@ class Function_Call(VBA_Object):
 
                 # Are we accessing an element?
                 if (len(params) > 0):
-                    log.debug('Dict Access: %r[%r]' % (f, params[0]))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug('Dict Access: %r[%r]' % (f, params[0]))
                     index = params[0]
                     if (index in f):
                         return f[index]
@@ -1623,7 +1664,8 @@ class Function_Call(VBA_Object):
                     # TODO: Revisit this.
                     #if ((len(f) == 1) and (isinstance(f[0], str))):
                     #    tmp = f[0]
-                    log.debug('Array Access: %r[%r]' % (tmp, str(params)))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug('Array Access: %r[%r]' % (tmp, str(params)))
                     index = int_convert(params[0])
                     index1 = None
                     if (len(params) > 1):
@@ -1635,7 +1677,8 @@ class Function_Call(VBA_Object):
                             r = tmp[index]
                         else:
                             r = tmp[index][index1]
-                        log.debug('Returning: %r' % r)
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug('Returning: %r' % r)
                         return r
                     except:
 
@@ -1650,7 +1693,8 @@ class Function_Call(VBA_Object):
                     # Return whole array result.
                     return f
                     
-            log.debug('Calling: %r' % f)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Calling: %r' % f)
             if (f is not None):
                 if (isinstance(f, procedures.Function) or
                     isinstance(f, procedures.Sub) or
@@ -1693,7 +1737,8 @@ class Function_Call(VBA_Object):
                 elif (len(params) > 0):
 
                     # Looks like this is actually an array access.
-                    log.debug("Looks like array access.")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Looks like array access.")
                     try:
 
                         # Return result.
@@ -1701,7 +1746,8 @@ class Function_Call(VBA_Object):
                         r = f[i]
                         if (isinstance(f, str)):
                             r = ord(r)
-                        log.debug("Return " + str(r))
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("Return " + str(r))
                         return r
 
                     except:
@@ -1729,7 +1775,8 @@ class Function_Call(VBA_Object):
                 new_params = params[1:]
 
                 # See if we can run the other function.
-                log.debug("Try indirect run of function '" + new_func + "'")
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Try indirect run of function '" + new_func + "'")
                 try:
 
                     # Return result.
@@ -1858,7 +1905,8 @@ class Function_Call_Array_Access(VBA_Object):
         super(Function_Call_Array_Access, self).__init__(original_str, location, tokens)
         self.array = tokens.array
         self.index = tokens.index
-        log.debug('parsed %r as Function_Call_Array_Access' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Function_Call_Array_Access' % self)
 
     def __repr__(self):
         r = str(self.array) + "(" + str(self.index) + ")"
@@ -2020,7 +2068,8 @@ class BoolExprItem(VBA_Object):
         if (len(tokens) == 3):
             self.op = tokens[1]
             self.rhs = tokens[2]        
-        log.debug('parsed %r as BoolExprItem' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as BoolExprItem' % self)
 
     def __repr__(self):
         if (self.op is not None):
@@ -2061,14 +2110,16 @@ class BoolExprItem(VBA_Object):
             else:
                 rhs = 0
             context.set(self.rhs, rhs)
-            log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
         if ((lhs == "NULL") or (lhs is None)):
             if (isinstance(rhs, str)):
                 lhs = ''
             else:
                 lhs = 0
             context.set(self.lhs, lhs)
-            log.debug("Set unitialized " + str(self.lhs) + " = " + str(lhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Set unitialized " + str(self.lhs) + " = " + str(lhs))
 
         # Ugh. VBA autoconverts strings and ints.
         if (isinstance(lhs, str) and isinstance(rhs, int)):
@@ -2137,7 +2188,8 @@ class BoolExprItem(VBA_Object):
             try:
                 rhs = rhs.replace("*", ".*")
                 r = (re.match(rhs, lhs) is not None)
-                log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
                 return r
             except Exception as e:
 
@@ -2187,7 +2239,8 @@ class BoolExpr(VBA_Object):
         if (isinstance(self.rhs, pyparsing.ParseResults)):
             self.rhs = BoolExpr(None, None, [self.rhs])
 
-        log.debug('parsed %r as BoolExpr' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as BoolExpr' % self)
 
     def __repr__(self):
         if (self.op is not None):
@@ -2216,7 +2269,8 @@ class BoolExpr(VBA_Object):
 
             # Bitwise operation?
             if ((isinstance(rhs, int)) and (not isinstance(rhs, bool))):
-                log.debug("Bitwise boolean operation: " + str(self))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Bitwise boolean operation: " + str(self))
                 if (self.op.lower() == "not"):
                     return (~ rhs)
                 else:
@@ -2254,7 +2308,8 @@ class BoolExpr(VBA_Object):
         if ((isinstance(lhs, int) and isinstance(rhs, int)) and
             (not isinstance(lhs, bool) and not isinstance(rhs, bool))):
 
-            log.debug("Bitwise boolean operation: " + str(self))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Bitwise boolean operation: " + str(self))
             if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
                 return lhs & rhs
             elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
@@ -2293,7 +2348,8 @@ class New_Expression(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(New_Expression, self).__init__(original_str, location, tokens)
         self.obj = tokens.expression
-        log.debug('parsed %r' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r' % self)
 
     def __repr__(self):
         return ('New %r' % self.obj)
@@ -2314,7 +2370,8 @@ class TypeOf_Expression(VBA_Object):
         super(TypeOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
         self.the_type = tokens.the_type
-        log.debug('parsed %r as TypeOf_Expression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as TypeOf_Expression' % self)
 
     def __repr__(self):
         return "TypeOf " + str(self.item) + " Is " + str(self.the_type)
@@ -2332,7 +2389,8 @@ class AddressOf_Expression(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(AddressOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
-        log.debug('parsed %r as AddressOf_Expression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as AddressOf_Expression' % self)
 
     def __repr__(self):
         return "AddressOf " + str(self.item)
@@ -2352,7 +2410,8 @@ class Excel_Expression(VBA_Object):
         super(Excel_Expression, self).__init__(original_str, location, tokens)
         self.row = tokens.row
         self.col = tokens.col
-        log.debug('parsed %r as Excel_Expression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Excel_Expression' % self)
 
     def __repr__(self):
         return "[" + str(self.row) + ":" + str(self.col) + "]"
@@ -2372,7 +2431,8 @@ class Literal_List_Expression(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Literal_List_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
-        log.debug('parsed %r as Literal_List_Expression' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Literal_List_Expression' % self)
 
     def __repr__(self):
         return "[" + str(self.item) + "]"
