@@ -493,7 +493,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
 
     # We don't handle boolean expressions treated as integers. Comment them out.
-    uni_vba_code = ""
+    uni_vba_code = u""
     try:
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
