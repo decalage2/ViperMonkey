@@ -416,7 +416,8 @@ external_function = Forward()
 # NOTE: statements should NOT include EOS
 block_statement = rem_statement | external_function | (statement ^ statements_line_no_eos)
 # tagged_block broken out so it does not consume the final EOS in the statement block.
-statement_block = ZeroOrMore(tagged_block ^ (block_statement + EOS.suppress()))
+simple_call_list = Forward()
+statement_block = ZeroOrMore(simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()))
 statement_block_not_empty = OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))
 tagged_block <<= label_statement('label') + Suppress(EOS) + statement_block('block')
 tagged_block.setParseAction(TaggedBlock)
@@ -2985,8 +2986,15 @@ class Call_Statement(VBA_Object):
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
     
-    def __init__(self, original_str, location, tokens):
+    def __init__(self, original_str, location, tokens, name=None, params=None):
         super(Call_Statement, self).__init__(original_str, location, tokens)
+
+        # Direct creation.
+        if ((name is not None) and (params is not None)):
+            self.name = name
+            self.params = params
+            return
+
         self.name = tokens.name
         if (str(self.name).endswith("@")):
             self.name = str(self.name).replace("@", "")
@@ -4013,6 +4021,71 @@ line_input_statement = CaselessKeyword('Line').suppress() + CaselessKeyword('Inp
                        Literal("#").suppress() + expression("file_id") + Literal(",") + \
                        expression("var")
 line_input_statement.setParseAction(Line_Input_Statement)
+
+# --- Large block of simple function calls. ----------------------------------------------------------
+
+def quick_parse_simple_call(tokens):
+    text = str(tokens[0]).strip()
+    r = []
+    for i in text.split("\n"):
+        i = i.strip()
+        if (len(i) == 0):
+            continue
+
+        # Try to directly create the parsed call.
+        name = None
+        params = None
+
+        # Pull out name and paramaters of call like foo(1,2,3).
+        if ("(" in i):
+            name = i[:i.index("(")].strip()
+            params_str = i[i.index("(") + 1:].strip()
+            if (params_str.endswith(")")):
+                params_str = params_str[:-1]
+                params = params_str.split(",")
+
+        # Pull out name and paramaters of call like foo 1,2,3).
+        elif (" " in i):
+            name = i[:i.index(" ")].strip()
+            params_str = i[i.index(" ") + 1:].strip()
+            params = params_str.split(",")
+
+        # Do we have 1 of the 2 handled call forms?
+        if ((name is not None) and (params is not None)):
+
+            # See if we can directly generate the parsed parameters.
+            tmp_params = []
+            for p in params:
+
+                # Integer parameter?
+                param = None
+                if (p.isdigit()):
+                    tmp_params.append(int(p))
+
+                # Variable parameter?
+                elif (re.match(r"[_a-zA-Z][_a-zA-Z\d]*", p) is not None):
+                    tmp_params.append(SimpleNameExpression(None, None, None, p))
+
+                # Unhandled parameter type.
+                else:
+                    tmp_params = None
+                    break
+            params = tmp_params
+
+        # Directly create the call statement?
+        print i
+        if ((name is not None) and (params is not None)):
+            r.append(Call_Statement(None, None, None, name=name, params=params))
+
+        # Parse out the call statement
+        else:
+            r.append(call_statement0.parseString(i, parseAll=True)[0])
+
+    # Done. Return the list of call statements.
+    return r
+
+simple_call_list = Regex(re.compile("(?:\w+\s*\(?(?:\w+\s*,\s*)*\s*\w+\)?\n){100,}"))
+simple_call_list.setParseAction(quick_parse_simple_call)
 
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are

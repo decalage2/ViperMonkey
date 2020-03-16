@@ -294,7 +294,7 @@ class LooseLines(VBA_Object):
         # loop with an error.
         context.handle_error(params)
             
-loose_lines <<= OneOrMore(tagged_block ^ (block_statement + EOS.suppress()))('block')
+loose_lines <<= OneOrMore(simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()))('block')
 loose_lines.setParseAction(LooseLines)
 
 # TODO: add optional empty lines after each sub/function?
