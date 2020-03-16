@@ -474,6 +474,58 @@ def hide_string_content(s):
             in_str = not in_str
     return r
 
+def convert_colons_to_linefeeds(vba_code):
+    """
+    Convert things like 'a=1:b=2' to 'a=1\n:b=2'
+    """
+
+    # Track the characters that start and end blocks of text we won't change.
+    marker_chars = [('"', '"'), ('[', ']'), ("'", '\n')]
+
+    # Loop through the text leaving some blocks unchanged and others with ':' changed to '\n'.
+    pos = 0
+    r = ""
+    while (pos < (len(vba_code) - 1)):
+
+        # Do we have any blocks of text coming up that we should not change?
+        found_marker = False
+        for marker, end_marker in marker_chars:
+
+            # Do we have an unchangeable block?
+            if (marker in vba_code[pos:]):
+                
+                # Find the chunk of text we should modify.
+                found_marker = True
+                marker_pos1 = vba_code[pos:].index(marker) + pos
+                change_chunk = vba_code[pos:marker_pos1+1].replace(":", "\n")
+
+                # Find the chunk of text to leave alone.
+                marker_pos2 = len(vba_code)
+                if (end_marker in vba_code[marker_pos1+1:]):
+                    marker_pos2 = vba_code[marker_pos1+1:].index(end_marker) + marker_pos1 + 2
+                leave_chunk = vba_code[marker_pos1+1:marker_pos2]
+
+                # Save the modified chunk and the unmodified chunk.
+                r += change_chunk + leave_chunk
+                pos = marker_pos2
+
+        # If the whole remaining text string is modifiable just do the ':' -> '\n' on the
+        # whole remaining string.
+        if (not found_marker):
+            r += vba_code[pos:].replace(":", "\n")
+            pos = len(vba_code)
+
+    # If the whole text string is modifiable just do the ':' -> '\n' on the
+    # whole string.
+    if (r == ""):
+        r = vba_code
+
+    # Done
+    #print "******************"
+    #print r
+    #print "******************"
+    return r
+    
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -549,6 +601,10 @@ def fix_difficult_code(vba_code):
     if (":" in vba_code):
         label_pat = r"(\n\s*\w+:)([^\n])"
         vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
+
+        # Replace colons in labels so they don't get broken up.
+        label_pat = r"(\n\s*\w+):\s*\n"
+        vba_code = re.sub(label_pat, r'\1__LABEL_COLON__\n', vba_code)
         
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
@@ -580,10 +636,18 @@ def fix_difficult_code(vba_code):
     # Replace 'Rem fff' style comments with "' fff" comments.
     vba_code = vba_code.replace("\nRem ", "\n' ")
     vba_code = vba_code.replace(" Rem ", " ' ")
-        
+
+    # Replace ':' with new lines.
+    vba_code = convert_colons_to_linefeeds(vba_code)
+    
     # Characters that change how we modify the code.
+    """
     interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
-                         r":", "\n", r"[\x7f-\xff]", r"\^", ";",
+                         "\n", r"PAT:[\x7f-\xff]", r"\^", ";",
+                         r"\[", r"\]"]
+    """
+    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
+                         r"PAT:[\x7f-\xff]", r"\^", ";",
                          r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
@@ -598,6 +662,7 @@ def fix_difficult_code(vba_code):
     pos = -1
     while (pos < (len(vba_code) - 1)):
 
+        #print "DONE: " + str((0.0 + pos)/len(vba_code)*100)
         # Are we looking at an interesting character?
         pos += 1
         c = vba_code[pos]
@@ -606,12 +671,32 @@ def fix_difficult_code(vba_code):
         if (pos < (len(vba_code) - 1)):
             next_char = vba_code[pos + 1]
         got_interesting = False
-        for interesting_c in interesting_chars:
-            index = re.search(interesting_c, c)
+        curr_interesting_chars = interesting_chars
+        if (in_comment):
+            curr_interesting_chars.append("\n")
+        for interesting_c in curr_interesting_chars:
+
+            # Regex comparison?
+            index = None
+            if (interesting_c.startswith("PAT:")):
+                interesting_c = interesting_c[len("PAT:") + 1:]
+                index = re.search(interesting_c, c)
+
+            # Regular character comparison.
+            else:
+                if (c == interesting_c):
+                    index = 0
+
+            # Do we have an interesting character?
             if (index is None):
+
+                # No, try the next one.
                 continue
+
+            # If we get here we have an interesting character.
             got_interesting = True
             break
+
         #print "--------"
         #print pos
         #print c
@@ -627,13 +712,34 @@ def fix_difficult_code(vba_code):
             curr_interesting_chars = interesting_chars
             if (in_str):
                 curr_interesting_chars = [r'"']
+            if (in_comment):
+                curr_interesting_chars = ["\n"]
 
             # Find the next interesting character.
             for interesting_c in curr_interesting_chars:
-                index = re.search(interesting_c, vba_code[pos:])
+
+                # Regex comparison?
+                index = None
+                if (interesting_c.startswith("PAT:")):
+                    interesting_c = interesting_c[len("PAT:") + 1:]
+                    index = re.search(interesting_c, vba_code[pos:])
+                    if (index is not None):
+                        index = index.start()
+                    
+                # Looking for a single character.
+                else:
+                    if (interesting_c in vba_code[pos:]):
+                        index = vba_code[pos:].index(interesting_c)
+
+                # Is there an interesting character in the part of the string
+                # left to process?
                 if (index is None):
-                    continue                
-                poss_pos = index.start() + pos
+
+                    # No, try the next interesting character.
+                    continue
+
+                # Process the string starting at the interesting character we found.
+                poss_pos = index + pos
                 #print interesting_c
                 #print pos
                 #print poss_pos
@@ -642,6 +748,7 @@ def fix_difficult_code(vba_code):
 
             # Add in the chunk of characters that don't affect what we are doing.
             r += vba_code[pos:next_pos]
+            #print "ADDED: '" + vba_code[pos:next_pos] + "'"
 
             # Jump to the position of the interesting character.
             pos = next_pos - 1
@@ -649,6 +756,8 @@ def fix_difficult_code(vba_code):
         
         # Handle entering/leaving strings.        
         if ((not in_comment) and (c == '"')):
+            if (in_str):
+                r += '"'
             in_str = not in_str
 
         # Handle entering/leaving [] expressions.
@@ -695,6 +804,7 @@ def fix_difficult_code(vba_code):
 
         # Don't change things in strings or comments or dates.
         if (in_str or in_comment or in_date):
+            #print "ADDED: '" + c + "'"
             r += c
             continue
 
@@ -723,18 +833,6 @@ def fix_difficult_code(vba_code):
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
             r += "d" + str(ord(c))
-        else:
-
-            # Replace a '::' with a line break?
-            if ((c == ':') and (prev_char == ':')):
-                r = r[:-1]
-                r += "\n"
-
-            # Replace a single ':' with a line break? Don't do this for labels. Or for Excel [A:A] expressions.
-            elif ((c == ':') and (next_char != "\n") and (next_char != '"') and (next_char != "=") and (not in_square_bracket)):
-                r += "\n"
-            else:
-                r += c
 
     # Put the #if macros back.
     r = r.replace("HASH__if", "#If")
@@ -751,6 +849,12 @@ def fix_difficult_code(vba_code):
     for if_info in single_line_ifs:
         r = r.replace(if_info[0], if_info[1])
 
+    # Put the colons for label statements back.
+    r = r.replace("__LABEL_COLON__", ":")
+
+    #print "******************"
+    #print r
+    #print "******************"
     return r
 
 def strip_comments(vba_code):
