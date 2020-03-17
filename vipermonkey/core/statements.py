@@ -1866,12 +1866,16 @@ for_each_clause = CaselessKeyword("For").suppress() \
                   + CaselessKeyword("In").suppress() \
                   + expression("container") \
 
-simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') \
-                            + CaselessKeyword("Next").suppress() \
-                            + Optional(lex_identifier) \
-                            + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
+real_simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') \
+                                 + CaselessKeyword("Next").suppress() \
+                                 + Optional(lex_identifier) \
+                                 + FollowedBy(EOS)  # NOTE: the statement should NOT include EOS!
+real_simple_for_each_statement.setParseAction(For_Each_Statement)
 
-simple_for_each_statement.setParseAction(For_Each_Statement)
+bogus_simple_for_each_statement = for_each_clause('clause') + Suppress(EOS) + statement_block('statements') + ~CaselessKeyword("Next") + \
+                                  CaselessKeyword("End") + (CaselessKeyword("Sub") | CaselessKeyword("Function"))
+bogus_simple_for_each_statement.setParseAction(For_Each_Statement)
+
 
 # --- WHILE statement -----------------------------------------------------------
 
@@ -4102,10 +4106,10 @@ def extend_statement_grammar():
     global statement
     global statement_restricted
 
-    statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+    statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement
-    statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | simple_for_each_statement | simple_if_statement | \
+    statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                              line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub | \
                              stop_statement

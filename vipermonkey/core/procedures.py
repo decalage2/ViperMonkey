@@ -295,7 +295,8 @@ sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(Case
             + Optional(params_list_paren) + EOS.suppress()
 sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
-sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress() | \
+          bogus_simple_for_each_statement
 simple_sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function'))).suppress()
 sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
 multiline_sub = (sub_start + \
@@ -563,7 +564,8 @@ function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_pr
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
-function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
+function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress() | \
+               (bogus_simple_for_each_statement + Suppress(EOS))
 simple_function_end = (CaselessKeyword('End') + CaselessKeyword('Function')).suppress()
 function_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
