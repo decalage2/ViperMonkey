@@ -544,6 +544,12 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_event_statements(vba_code)
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
 
+    # Not handling this weird CopyHere() call.
+    # foo.NameSpace(bar).CopyHere(baz), fubar
+    namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
+    if (re.search(namespace_pat, vba_code) is not None):
+        vba_code = re.sub(namespace_pat, r"\1", vba_code)
+    
     # We don't handle boolean expressions treated as integers. Comment them out.
     uni_vba_code = u""
     try:
