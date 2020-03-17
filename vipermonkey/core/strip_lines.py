@@ -641,11 +641,6 @@ def fix_difficult_code(vba_code):
     vba_code = convert_colons_to_linefeeds(vba_code)
     
     # Characters that change how we modify the code.
-    """
-    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
-                         "\n", r"PAT:[\x7f-\xff]", r"\^", ";",
-                         r"\[", r"\]"]
-    """
     interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
                          r"PAT:[\x7f-\xff]", r"\^", ";",
                          r"\[", r"\]"]
@@ -852,6 +847,12 @@ def fix_difficult_code(vba_code):
     # Put the colons for label statements back.
     r = r.replace("__LABEL_COLON__", ":")
 
+    # Replace function calls being treated as labels.
+    vba_code = "\n" + vba_code
+    known_funcs = ["Randomize"]
+    for func in known_funcs:
+        r = r.replace("\n" + func + ":", "\n" + func)
+    
     #print "******************"
     #print r
     #print "******************"
