@@ -508,6 +508,7 @@ def convert_colons_to_linefeeds(vba_code):
                 # Save the modified chunk and the unmodified chunk.
                 r += change_chunk + leave_chunk
                 pos = marker_pos2
+                break
 
         # If the whole remaining text string is modifiable just do the ':' -> '\n' on the
         # whole remaining string.
@@ -547,6 +548,14 @@ def fix_difficult_code(vba_code):
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
+    if (re.search(namespace_pat, vba_code) is not None):
+        vba_code = re.sub(namespace_pat, r"\1", vba_code)
+    # CreateObject(foo).Namespace(bar).CopyHere baz, fubar
+    namespace_pat = r"(CreateObject\(.+\).[Nn]ame[Ss]pace\(.+\)\.CopyHere\s+.+),\s*[^\n]+"
+    if (re.search(namespace_pat, vba_code) is not None):
+        vba_code = re.sub(namespace_pat, r"\1", vba_code)
+    # foo.Run(bar) & baz, fubar    
+    namespace_pat = r"(\w+\.Run\(.+\)[^,]*),\s*[^\n]+"
     if (re.search(namespace_pat, vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
@@ -639,6 +648,9 @@ def fix_difficult_code(vba_code):
         vba_code = vba_code.replace(curr_if, if_name + "\n")
         single_line_ifs.append((if_name, curr_if))
 
+    # Replace ':=' so they don't get modified.
+    vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
+        
     # Replace 'Rem fff' style comments with "' fff" comments.
     vba_code = vba_code.replace("\nRem ", "\n' ")
     vba_code = vba_code.replace(" Rem ", " ' ")
@@ -760,6 +772,7 @@ def fix_difficult_code(vba_code):
             if (in_str):
                 r += '"'
             in_str = not in_str
+            #print "IN_STR: " + str(in_str)
 
         # Handle entering/leaving [] expressions.
         if ((not in_comment) and (not in_str)):
@@ -799,9 +812,12 @@ def fix_difficult_code(vba_code):
 
         # Handle entering/leaving comments.
         if ((not in_str) and (c == "'")):
+            #print "IN COMMENT"
             in_comment = True
         if (c == "\n"):
+            #print "OUT COMMENT"
             in_comment = False
+            r += "\n"
 
         # Don't change things in strings or comments or dates.
         if (in_str or in_comment or in_date):
@@ -853,6 +869,9 @@ def fix_difficult_code(vba_code):
     # Put the colons for label statements back.
     r = r.replace("__LABEL_COLON__", ":")
 
+    # Put ':=' back.
+    r = r.replace("__COLON_EQUAL__", ":=")
+    
     # Replace function calls being treated as labels.
     vba_code = "\n" + vba_code
     known_funcs = ["Randomize"]
@@ -862,6 +881,7 @@ def fix_difficult_code(vba_code):
     #print "******************"
     #print r
     #print "******************"
+    #sys.exit(0)
     return r
 
 def strip_comments(vba_code):
