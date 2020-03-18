@@ -544,6 +544,10 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_array_assigns(vba_code)
     vba_code = fix_unhandled_event_statements(vba_code)
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
+    # Bad double quotes.
+    vba_code = vba_code.replace("\xe2\x80", '"')
+    vba_code = vba_code.replace('\234"', '"')
+    vba_code = vba_code.replace('"\235', '"')
 
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar
@@ -664,7 +668,6 @@ def fix_difficult_code(vba_code):
                          r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
-    print vba_code
     in_str = False
     in_comment = False
     in_date = False    
