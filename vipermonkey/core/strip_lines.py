@@ -664,6 +664,7 @@ def fix_difficult_code(vba_code):
                          r"\[", r"\]"]
     
     # Replace bad characters unless they appear in a string.
+    print vba_code
     in_str = False
     in_comment = False
     in_date = False    

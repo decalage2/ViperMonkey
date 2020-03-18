@@ -158,7 +158,8 @@ class String(VBA_Object):
         return r
 
 # NOTE: QuotedString creates a regex, so speed should not be an issue.
-quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
+#quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
+quoted_string = QuotedString('"', escQuote='""')('value')
 quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
