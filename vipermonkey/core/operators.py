@@ -608,7 +608,9 @@ class FloorDivision(VBA_Object):
                     log.error('Impossible to divide arguments of different types. ' + str(e))
                 # TODO
                 return 0
-
+        except ZeroDivisionError as e:
+            context.set_error(str(e))
+            
     def __repr__(self):
         return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
