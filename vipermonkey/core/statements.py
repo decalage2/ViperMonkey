@@ -408,13 +408,14 @@ label_statement = Forward()
         
 # need to declare statement beforehand:
 statement = Forward()
+statement_no_orphan = Forward()
 statements_line = Forward()
 statements_line_no_eos = Forward()
 statement_restricted = Forward()
 external_function = Forward()
 
 # NOTE: statements should NOT include EOS
-block_statement = rem_statement | external_function | (statement ^ statements_line_no_eos)
+block_statement = rem_statement | external_function | (statement_no_orphan ^ statements_line_no_eos)
 # tagged_block broken out so it does not consume the final EOS in the statement block.
 simple_call_list = Forward()
 statement_block = ZeroOrMore(simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()))
@@ -4117,13 +4118,17 @@ def extend_statement_grammar():
     # statement has to be declared beforehand using Forward(), so here we use
     # the "<<=" operator:
     global statement
+    global statement_no_orphan
     global statement_restricted
 
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | \
                   (procedures.simple_function ^ orphaned_marker) | (procedures.simple_sub ^ orphaned_marker) | \
-                  name_statement | stop_statement 
+                  name_statement | stop_statement
+    statement_no_orphan <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
+                            line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
+                            with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement 
     statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                              line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | \
