@@ -4087,6 +4087,23 @@ def quick_parse_simple_call(tokens):
 simple_call_list = Regex(re.compile("(?:\w+\s*\(?(?:\w+\s*,\s*)*\s*\w+\)?\n){100,}"))
 simple_call_list.setParseAction(quick_parse_simple_call)
 
+# --- Orphaned Statement Closing Markers ----------------------------------------------------------
+
+class Orphaned_Marker(VBA_Object):
+    def __init__(self, original_str, location, tokens):
+        super(Orphaned_Marker, self).__init__(original_str, location, tokens)
+        log.warning("Orphaned statement marker found.")
+
+    def __repr__(self):
+        return "' ORPHANED MARKER"
+
+    def eval(self, context, params=None):
+        pass
+        
+orphaned_marker = Suppress((CaselessKeyword("End") + CaselessKeyword("Function")) ^ \
+                           (CaselessKeyword("End") + CaselessKeyword("Sub")))
+orphaned_marker.setParseAction(Orphaned_Marker)
+
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -4104,9 +4121,11 @@ def extend_statement_grammar():
 
     statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-                  with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement
+                  with_statement| simple_statement | rem_statement | \
+                  (procedures.simple_function ^ orphaned_marker) | (procedures.simple_sub ^ orphaned_marker) | \
+                  name_statement | stop_statement 
     statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                              line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
-                             with_statement| simple_statement_restricted | rem_statement | procedures.simple_function | procedures.simple_sub | \
-                             stop_statement
+                             with_statement| simple_statement_restricted | rem_statement | \
+                             procedures.simple_function | procedures.simple_sub | stop_statement
 
