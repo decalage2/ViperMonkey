@@ -60,7 +60,6 @@ reserved_keywords = CaselessKeyword("ChrB") | \
                     CaselessKeyword("Sub") | \
                     CaselessKeyword("If") | \
                     CaselessKeyword("Then") | \
-                    CaselessKeyword("Kill") | \
                     CaselessKeyword("For") | \
                     CaselessKeyword("Next") | \
                     CaselessKeyword("Public") | \

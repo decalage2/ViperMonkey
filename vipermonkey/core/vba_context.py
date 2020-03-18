@@ -3426,6 +3426,7 @@ class Context(object):
         # Search in the global VBA library:
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Looking for library function '" + name + "'...")
+        name = name.lower()
         if name in VBA_LIBRARY:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Found %r in VBA Library' % name)

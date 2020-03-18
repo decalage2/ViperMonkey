@@ -1632,7 +1632,23 @@ class Function_Call(VBA_Object):
         
         # Actually emulate the function call.
         if (is_external):
+
+            # Save the call as a reportable action.
             context.report_action("External Call", self.name + "(" + str(params) + ")", self.name, strip_null_bytes=True)
+
+            # Emulate the call.
+            try:
+                s = context.get_lib_func(self.name)
+                if (s is None):
+                    raise KeyError("func not found")
+                r = s.eval(context=context, params=params)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("External function " + str(s.name) + " returns " + str(r))
+                return r
+            except KeyError:
+                log.warning("External function " + str(self.name) + " not found.")
+                return "NULL"
+            
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)

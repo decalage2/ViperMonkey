@@ -549,6 +549,11 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace('\234"', '"')
     vba_code = vba_code.replace('"\235', '"')
 
+    # Not handling array accesses more than 2 deep.
+    array_acc_pat = r"(\w+\([\d\w_\+\*/\-\"]+\))(?:\([\d\w_\+\*/\-\"]+\)){2,50}"
+    if (re.search(array_acc_pat, vba_code) is not None):
+        vba_code = re.sub(array_acc_pat, r"\1", vba_code)
+    
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
@@ -640,6 +645,13 @@ def fix_difficult_code(vba_code):
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
     vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
 
+    # Rewrite some weird single line if statements.
+    # If utc_NegativeOffset Then: utc_Offset = -utc_Offset
+    pat = r"(?i)If\s+.{1,100}\s+Then\s*:[^\n]{1,100}\n"
+    for curr_if in re.findall(pat, vba_code):
+        new_if = curr_if.replace("Then:", "Then ")
+        vba_code = vba_code.replace(curr_if, new_if)
+    
     # Replace the ':' in single line if statements so they don't get broken up.
     # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
     # If op < OLen Then Out(op) = o1: op = op + 1
@@ -651,7 +663,7 @@ def fix_difficult_code(vba_code):
         pos += 1
         vba_code = vba_code.replace(curr_if, if_name + "\n")
         single_line_ifs.append((if_name, curr_if))
-
+        
     # Replace ':=' so they don't get modified.
     vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
         
@@ -696,9 +708,9 @@ def fix_difficult_code(vba_code):
             # Regex comparison?
             index = None
             if (interesting_c.startswith("PAT:")):
-                interesting_c = interesting_c[len("PAT:") + 1:]
+                interesting_c = interesting_c[len("PAT:"):]
                 index = re.search(interesting_c, c)
-
+                
             # Regular character comparison.
             else:
                 if (c == interesting_c):
@@ -738,7 +750,7 @@ def fix_difficult_code(vba_code):
                 # Regex comparison?
                 index = None
                 if (interesting_c.startswith("PAT:")):
-                    interesting_c = interesting_c[len("PAT:") + 1:]
+                    interesting_c = interesting_c[len("PAT:"):]
                     index = re.search(interesting_c, vba_code[pos:])
                     if (index is not None):
                         index = index.start()
