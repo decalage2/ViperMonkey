@@ -580,18 +580,17 @@ def get_vb_contents(vba_code):
     Pull out Visual Basic code from .hta file contents.
     """
 
-    # Pull out the VB code.
-    pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
-    code = re.findall(pat, vba_code, re.DOTALL)
-    
-    # Did we find any VB code in a script block?
+    # Try several regexes to pull out HTA script contents.
+    hta_regexes = [r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
+                   r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
+                   r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})$"]
+    code = []
+    for pat in hta_regexes:
+        code = re.findall(pat, vba_code.strip(), re.DOTALL)
+        if (len(code) > 0):
+            break
     if (len(code) == 0):
-
-        # Try a different sort of tag.
-        pat = r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
-        code = re.findall(pat, vba_code, re.DOTALL)
-        if (len(code) == 0):
-            return vba_code
+        return vba_code        
 
     # We have script block VB code.    
     
