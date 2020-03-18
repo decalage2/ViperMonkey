@@ -1182,7 +1182,8 @@ def _process_file (filename,
             # Get the VBA code.
             vba_code = ""
             for (subfilename, stream_path, vba_filename, macro_code) in vba.extract_macros():
-                vba_code += macro_code
+                if (macro_code is not None):
+                    vba_code += macro_code
                     
             # Pull out embedded OLE form textbox text.
             log.info("Reading TextBox and RichEdit object text fields...")
