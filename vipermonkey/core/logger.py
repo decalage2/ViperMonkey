@@ -61,7 +61,6 @@ class CappedFileHandler(logging.FileHandler):
     # log file is put in the working directory with the same name
     def __init__(self, filename, sizecap, mode='w', encoding=None, delay=False):
         self.size_cap = sizecap
-        print("SIZE CAP -- " + str(self.size_cap))
         self.current_size = 0
         self.cap_exceeded = False
         super(CappedFileHandler, self).__init__(filename, mode, encoding, delay)
