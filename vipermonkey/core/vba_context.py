@@ -41,6 +41,7 @@ __version__ = '0.08'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import os
 from hashlib import sha256
 from datetime import datetime
@@ -230,7 +231,8 @@ class Context(object):
         else:
             self.engine = None
 
-        log.debug("Have xlrd loaded Excel file = " + str(self.loaded_excel is not None))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Have xlrd loaded Excel file = " + str(self.loaded_excel is not None))
             
         # Track data saved in document variables.
         if doc_vars is not None:
@@ -3128,7 +3130,8 @@ class Context(object):
 
         # We have the attribute. Return it.
         r = getattr(self.metadata, var)
-        log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
         return r
             
     def get_error_handler(self):
@@ -3421,9 +3424,12 @@ class Context(object):
             raise KeyError('Object %r not found' % name)
         
         # Search in the global VBA library:
-        log.debug("Looking for library function '" + name + "'...")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Looking for library function '" + name + "'...")
+        name = name.lower()
         if name in VBA_LIBRARY:
-            log.debug('Found %r in VBA Library' % name)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Found %r in VBA Library' % name)
             return VBA_LIBRARY[name]
 
         # Unknown symbol.
@@ -3443,7 +3449,8 @@ class Context(object):
         # convert to lowercase if needed.
         if (case_insensitive):
             name = name.lower()
-        log.debug("Looking for var '" + name + "'...")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Looking for var '" + name + "'...")
 
         # We will always say that a directory is not accessible.
         if (name.strip().endswith(".subfolders.count")):
@@ -3452,22 +3459,26 @@ class Context(object):
         # First, search in locals. This handles variables whose name overrides
         # a system function.
         if name in self.locals:
-            log.debug('Found %r in locals' % name)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Found %r in locals' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
             return self.locals[name]
         # second, in globals:
         elif ((not local_only) and (name in self.globals)):
-            log.debug('Found %r in globals' % name)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Found %r in globals' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
             return self.globals[name]
         # next, search in the global VBA library:
         elif ((not local_only) and (name in VBA_LIBRARY)):
-            log.debug('Found %r in VBA Library' % name)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Found %r in VBA Library' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
             return VBA_LIBRARY[name]
         # Is it a doc var?
         elif ((not local_only) and (name in self.doc_vars)):
-            log.debug('Found %r in VBA document variables' % name)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Found %r in VBA document variables' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
             return self.doc_vars[name]
         # Unknown symbol.
@@ -3523,7 +3534,8 @@ class Context(object):
                 new_name = name[:name.index(".")] + ".*"
                 try:
                     r = self.__get(str(new_name), case_insensitive=case_insensitive, local_only=local_only)
-                    log.debug("Found wildcarded field value " + new_name + " = " + str(r))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Found wildcarded field value " + new_name + " = " + str(r))
                     return r
                 except KeyError:
                     pass
@@ -3544,7 +3556,8 @@ class Context(object):
             # Get the original variable name.
             orig_name = str(name).strip().lower()[:-len("_change")]
             if ((orig_name in self.has_change_handler) and (not self.has_change_handler[orig_name])):
-                log.debug("Short circuited change handler lookup of " + name)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Short circuited change handler lookup of " + name)
                 raise KeyError('Object %r not found' % name)
 
         try:
@@ -3586,7 +3599,8 @@ class Context(object):
                     replace('@','').\
                     replace('#','').\
                     replace('$','')
-        log.debug("Looking up doc var " + var)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Looking up doc var " + var)
 
         # Are we pulling out all the doc vars?
         if (var == "activedocument.variables"):
@@ -3596,7 +3610,8 @@ class Context(object):
 
             # Can't find a doc var with this name. See if we have an internal variable
             # with this name.
-            log.debug("doc var named " + var + " not found.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("doc var named " + var + " not found.")
             try:
                 var_value = self.get(var, search_wildcard=search_wildcard)
                 if ((var_value is not None) and
@@ -3623,7 +3638,8 @@ class Context(object):
 
                     # Found it.
                     r = self.doc_vars[var]
-                    log.debug("Found doc var " + var + " = " + str(r))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Found doc var " + var + " = " + str(r))
                     return r
                 
             # No variable. Return nothing.
@@ -3631,7 +3647,8 @@ class Context(object):
 
         # Found it.
         r = self.doc_vars[var]
-        log.debug("Found doc var " + var + " = " + str(r))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Found doc var " + var + " = " + str(r))
         return r
             
     def save_intermediate_iocs(self, value):
@@ -3701,7 +3718,8 @@ class Context(object):
 
         # Does the value make sense?
         if (value is None):
-            log.debug("context.set() " + str(name) + " failed. Value is None.")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("context.set() " + str(name) + " failed. Value is None.")
             return
 
         # More name fixing.
@@ -3719,42 +3737,49 @@ class Context(object):
         # Set the variable
         if (force_global):
             try:
-                log.debug("Set global var " + str(name) + " = " + str(value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Set global var " + str(name) + " = " + str(value))
             except:
                 pass
             self.globals[name] = value
         elif ((name in self.locals) or force_local):
             try:
-                log.debug("Set local var " + str(name) + " = " + str(value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Set local var " + str(name) + " = " + str(value))
             except:
                 pass
             self.locals[name] = value
         # check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
             self.globals[name] = value
-            log.debug("Set global var " + name + " = " + str(value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Set global var " + name + " = " + str(value))
             if ("." in name):
                 text_name = name + ".text"
                 self.globals[text_name] = value
-                log.debug("Set global var " + text_name + " = " + str(value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Set global var " + text_name + " = " + str(value))
         else:
             # new name, typically store in local scope.
             if (not self.global_scope):
                 try:
-                    log.debug("Set local var " + str(name) + " = " + str(value))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Set local var " + str(name) + " = " + str(value))
                 except:
                     pass
                 self.locals[name] = value
             else:
                 self.globals[name] = value
                 try:
-                    log.debug("Set global var " + name + " = " + str(value))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Set global var " + name + " = " + str(value))
                 except:
                     pass
                 if ("." in name):
                     text_name = name + ".text"
                     self.globals[text_name] = value
-                    log.debug("Set global var " + text_name + " = " + str(value))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Set global var " + text_name + " = " + str(value))
                 
         # If we know the type of the variable, save it.
         if (var_type is not None):

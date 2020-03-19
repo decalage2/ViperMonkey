@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import re
 
 from pyparsing import *
@@ -144,18 +145,21 @@ class String(VBA_Object):
         # them breaks decoding, so they are commented out until something else
         # breaks.
         
-        log.debug('parsed "%r" as String' % self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
         return str(self.value)
 
     def eval(self, context, params=None):
         r = self.value
-        log.debug("String.eval: return " + r)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("String.eval: return " + r)
         return r
 
 # NOTE: QuotedString creates a regex, so speed should not be an issue.
-quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
+#quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
+quoted_string = QuotedString('"', escQuote='""')('value')
 quoted_string.setParseAction(String)
 
 quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
