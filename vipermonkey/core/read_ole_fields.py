@@ -576,11 +576,12 @@ def get_ole_textbox_values2(data, debug, vba_code):
     
     # Match up the names and values.
     pos = -1
+    hack_names = set(["Page1", "Label1"])
     for name in var_names:
 
         # Hack for Pages objects.
         pos += 1
-        if ((name == "Page1") and (len(longest_val) > 30)):
+        if ((name in hack_names) and (len(longest_val) > 30)):
             val = longest_val
 
         # Real processing.
