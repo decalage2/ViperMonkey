@@ -497,14 +497,15 @@ def convert_colons_to_linefeeds(vba_code):
                 # Find the chunk of text we should modify.
                 found_marker = True
                 marker_pos1 = vba_code[pos:].index(marker) + pos
-                change_chunk = vba_code[pos:marker_pos1+1].replace(":", "\n")
+                change_chunk = vba_code[pos:marker_pos1+1]
+                change_chunk = change_chunk.replace(":", "\n")
 
                 # Find the chunk of text to leave alone.
                 marker_pos2 = len(vba_code)
                 if (end_marker in vba_code[marker_pos1+1:]):
                     marker_pos2 = vba_code[marker_pos1+1:].index(end_marker) + marker_pos1 + 2
                 leave_chunk = vba_code[marker_pos1+1:marker_pos2]
-
+                
                 # Save the modified chunk and the unmodified chunk.
                 r += change_chunk + leave_chunk
                 pos = marker_pos2
@@ -525,6 +526,7 @@ def convert_colons_to_linefeeds(vba_code):
     #print "******************"
     #print r
     #print "******************"
+    #sys.exit(0)
     return r
     
 def fix_difficult_code(vba_code):
@@ -707,16 +709,17 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    pat = r"(?i)If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
+    #pat = r"(?i)^(?:Print)\s*If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
+    pat = r"(?i)\n\s*If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s*Else.{1,100})?\n"
     single_line_ifs = []
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         pos = 0
         for curr_if in re.findall(pat, vba_code):
             if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
             pos += 1
-            vba_code = vba_code.replace(curr_if, if_name + "\n")
+            vba_code = vba_code.replace(curr_if, "\n" + if_name + "\n")
             single_line_ifs.append((if_name, curr_if))
-        
+            
     # Replace ':=' so they don't get modified.
     #print "HERE: 16"
     vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
