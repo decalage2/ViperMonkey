@@ -786,6 +786,10 @@ def process_file(container,
     elif set_log:
         colorlog.basicConfig(level=logging.INFO, format='%(log_color)s%(levelname)-8s %(message)s')
 
+    # assume they want a tee'd file if they give bytes for it
+    if tee_bytes > 0:
+        tee_log = True
+
     # add handler for tee'd log file
     if tee_log:
 
@@ -1702,10 +1706,6 @@ def main():
         safe_print(__doc__)
         parser.print_help()
         sys.exit(0)
-
-    # assume they want a tee'd file if they give bytes for it
-    if options.tee_bytes > 0:
-        options.tee_log = True
 
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
