@@ -550,22 +550,42 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace('"\235', '"')
 
     # Not handling array accesses more than 2 deep.
-    array_acc_pat = r"(\w+\([\d\w_\+\*/\-\"]+\))(?:\([\d\w_\+\*/\-\"]+\)){2,50}"
-    if (re.search(array_acc_pat, vba_code) is not None):
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
+    array_acc_pat = r'(\w+\([\d\w_\+\*/\-"]+\))(?:\([\d\w_\+\*/\-"]+\)){2,50}'
+    if (re2.search(unicode(array_acc_pat), uni_vba_code) is not None):
         vba_code = re.sub(array_acc_pat, r"\1", vba_code)
     
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
-    if (re.search(namespace_pat, vba_code) is not None):
+    if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     # CreateObject(foo).Namespace(bar).CopyHere baz, fubar
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     namespace_pat = r"(CreateObject\(.+\).[Nn]ame[Ss]pace\(.+\)\.CopyHere\s+.+),\s*[^\n]+"
-    if (re.search(namespace_pat, vba_code) is not None):
+    if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     # foo.Run(bar) & baz, fubar    
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     namespace_pat = r"(\w+\.Run\(.+\)[^,]*),\s*[^\n]+"
-    if (re.search(namespace_pat, vba_code) is not None):
+    if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
     # We don't handle boolean expressions treated as integers. Comment them out.
@@ -573,7 +593,7 @@ def fix_difficult_code(vba_code):
     try:
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
-        pass
+        log.warning("Converting VB code to unicode failed.")
     bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)\s*[^" + r'"' + r"][^\n:']+[<>=]"
     if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_bool_pat, vba_code)
@@ -591,6 +611,11 @@ def fix_difficult_code(vba_code):
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
     # Get rid of them.
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     bad_else_pat = r"\n\s*Else\s*'.*\n"
     if (re2.search(unicode(bad_else_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_else_pat, vba_code)
@@ -647,22 +672,34 @@ def fix_difficult_code(vba_code):
 
     # Rewrite some weird single line if statements.
     # If utc_NegativeOffset Then: utc_Offset = -utc_Offset
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     pat = r"(?i)If\s+.{1,100}\s+Then\s*:[^\n]{1,100}\n"
-    for curr_if in re.findall(pat, vba_code):
-        new_if = curr_if.replace("Then:", "Then ")
-        vba_code = vba_code.replace(curr_if, new_if)
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        for curr_if in re.findall(pat, vba_code):
+            new_if = curr_if.replace("Then:", "Then ")
+            vba_code = vba_code.replace(curr_if, new_if)
     
     # Replace the ':' in single line if statements so they don't get broken up.
     # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
     # If op < OLen Then Out(op) = o1: op = op + 1
+    uni_vba_code = u""
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        log.warning("Converting VB code to unicode failed.")
     pat = r"(?i)If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
     single_line_ifs = []
-    pos = 0
-    for curr_if in re.findall(pat, vba_code):
-        if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
-        pos += 1
-        vba_code = vba_code.replace(curr_if, if_name + "\n")
-        single_line_ifs.append((if_name, curr_if))
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        pos = 0
+        for curr_if in re.findall(pat, vba_code):
+            if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
+            pos += 1
+            vba_code = vba_code.replace(curr_if, if_name + "\n")
+            single_line_ifs.append((if_name, curr_if))
         
     # Replace ':=' so they don't get modified.
     vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
