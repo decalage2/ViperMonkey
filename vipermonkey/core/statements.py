@@ -173,29 +173,13 @@ class Option_Statement(VBA_Object):
         super(Option_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
+            log.debug('parsed %r as Option_Statement' % self)
 
     def __repr__(self):
         return 'Option %s' % (self.name)
 
 option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
 option_statement.setParseAction(Option_Statement)
-
-# --- NAME nnn AS yyy statement ----------------------------------------------------------
-
-class Name_As_Statement(VBA_Object):
-    def __init__(self, original_str, location, tokens):
-        super(Name_As_Statement, self).__init__(original_str, location, tokens)
-        self.old_name = tokens.old_name
-        self.new_name = tokens.new_name
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
-
-    def __repr__(self):
-        return "Name " + str(self.old_name) + " As " + str(self.new_name)
-    
-name_as_statement = CaselessKeyword('Name').suppress() + lex_identifier('old_name') + CaselessKeyword('As').suppress() + lex_identifier('new_name')
-name_as_statement.setParseAction(Name_As_Statement)
 
 # --- TYPE EXPRESSIONS -------------------------------------------------------
 
@@ -3953,7 +3937,7 @@ try_catch = Suppress(CaselessKeyword('Try')) + Suppress(EOS) + statement_block('
             Suppress(EOS) + statement_block('catch_block') + Suppress(CaselessKeyword('##End')) + Suppress(CaselessKeyword('##Try'))
 try_catch.setParseAction(TryCatch)
 
-# --- TRY/CATCH STATEMENT ------------------------------------------------------
+# --- NAME nnn AS yyy statement ----------------------------------------------------------
 
 class NameStatement(VBA_Object):
     """
@@ -3965,7 +3949,7 @@ class NameStatement(VBA_Object):
         self.old_name = tokens.old_name
         self.new_name = tokens.new_name
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
+            log.debug('parsed %r as NameStatement' % self)
 
     def __repr__(self):
         return "Name " + str(self.old_name) + " As " + str(self.new_name)
@@ -4121,15 +4105,15 @@ def extend_statement_grammar():
     global statement_no_orphan
     global statement_restricted
 
-    statement <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
+    statement <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | \
                   (procedures.simple_function ^ orphaned_marker) | (procedures.simple_sub ^ orphaned_marker) | \
                   name_statement | stop_statement
-    statement_no_orphan <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
+    statement_no_orphan <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                             line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                             with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement 
-    statement_restricted <<= try_catch | type_declaration | name_as_statement | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
+    statement_restricted <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                              line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | \
                              procedures.simple_function | procedures.simple_sub | stop_statement

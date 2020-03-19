@@ -334,6 +334,8 @@ def get_ole_textbox_values2(data, debug, vba_code):
     #              r'ID="\{.{20,10000}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,20}(.+)Microsoft Forms ']
     chunk_pats = [('ID="{',
                    r'ID="\{.{20,}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,10}(.+?)Microsoft Forms '),
+                  ('\x05\x00\x00\x00\x17\x00',
+                   r'\x05\x00\x00\x00\x17\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'),
                   ('\xd7\x8c\xfe\xfb',
                    r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'),
                   ('\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00',
@@ -358,7 +360,6 @@ def get_ole_textbox_values2(data, debug, vba_code):
     #    chunk = re.sub(r'[\x20-\x7f]{5,1000}(?:\x00[\x20-\x7f]){5,1000}', "", chunk, re.IGNORECASE)
 
     # Normalize Page object naming.
-    print "HERE: 3"
     page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
     chunk = re.sub(page_name_pat, r"Page\1", chunk)
     
@@ -454,7 +455,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print names
 
     # Get values.
-    val_pat = r"(?:\x02\x00\x00([\x09\x20-\x7f]{2,}))|" + \
+    val_pat = r"(?:[\x02\x10]\x00\x00([\x09\x20-\x7f]{2,}))|" + \
               r"((?:(?:\x00)[\x09\x20-\x7f]){2,})|" + \
               r"(?:\x05\x80([\x09\x20-\x7f]{2,}))|" + \
               r"(?:[\x15\x0c\x0b]\x00\x80([\x09\x20-\x7f]{2,}(?:\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j.+[\x09\x20-\x7f]{5,})?))"
@@ -756,8 +757,13 @@ def get_vbaprojectbin(data):
         return None
 
     # Pull out word/vbaProject.bin, if it is there.
-    zip_subfile = 'word/vbaProject.bin'
-    if (zip_subfile not in unzipped_data.namelist()):
+    subfile_names = ['word/vbaProject.bin', 'xl/vbaProject.bin']
+    zip_subfile = None
+    for subfile in subfile_names:
+        if (subfile in unzipped_data.namelist()):
+            zip_subfile = subfile
+            break
+    if (zip_subfile is None):
         if (delete_file):
             os.remove(fname)
         return None
