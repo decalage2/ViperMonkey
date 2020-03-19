@@ -129,6 +129,9 @@ import core.read_ole_fields as read_ole_fields
 
 # for logging
 from core.logger import log
+from core.logger import CappedFileHandler
+from logging import LogRecord
+from logging import FileHandler
 
 def safe_print(text):
     """
@@ -145,7 +148,16 @@ def safe_print(text):
             print(msg)
         except:
             pass
-            
+
+    # if our logger has a FileHandler, we need to tee this print to a file as well
+    for handler in log.handlers:
+        if type(handler) is FileHandler or type(handler) is CappedFileHandler:
+            # set the format to be like a print, not a log, then set it back
+            handler.setFormatter(logging.Formatter("%(message)s"))
+            handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
+            handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
+
+
 # === MAIN (for tests) ===============================================================================================
 
 def _read_doc_text_libreoffice(data):
@@ -763,13 +775,30 @@ def process_file(container,
                  verbose=False,
                  display_int_iocs=False,
                  set_log=False,
+                 tee_log=False,
+                 tee_bytes=0,
                  artifact_dir=None,
                  out_file_name=None):
 
+    # set logging level
     if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
     elif set_log:
         colorlog.basicConfig(level=logging.INFO, format='%(log_color)s%(levelname)-8s %(message)s')
+
+    # add handler for tee'd log file
+    if tee_log:
+
+        tee_filename = "./" + filename[filename.rindex("/") + 1:]
+
+        if tee_bytes > 0:
+            capped_handler = CappedFileHandler(tee_filename + ".log", sizecap=tee_bytes)
+            capped_handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
+            log.addHandler(capped_handler)
+        else:
+            file_handler = FileHandler(tee_filename, mode="w")
+            file_handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
+            log.addHandler(file_handler)
 
     # Check for files that do not exist.
     if (isinstance(data, Exception)):
@@ -1552,7 +1581,7 @@ def print_version():
     safe_print("olefile:\t\t" + str(olefile.__version__))
     import oletools.olevba
     safe_print("olevba:\t\t\t" + str(oletools.olevba.__version__))
-    
+
 def main():
     """
     Main function, called when vipermonkey is run from the command line
@@ -1613,7 +1642,11 @@ def main():
                       help='Print version information of packages used by ViperMonkey.')
     parser.add_option("-o", "--out-file", action="store", default=None, type="str",
                       help="JSON output file containing resulting IOCs, builtins, and actions")
-    
+    parser.add_option("-p", "--tee-log", action="store_true", default=False,
+                      help="output also to a file in addition to standard out")
+    parser.add_option("-b", "--tee-bytes", action="store", default=0, type="int",
+                      help="number of bytes to limit the tee'd log to")
+
     (options, args) = parser.parse_args()
 
     # Print version information and exit?
@@ -1626,7 +1659,11 @@ def main():
         safe_print(__doc__)
         parser.print_help()
         sys.exit(0)
-        
+
+    # assume they want a tee'd file if they give bytes for it
+    if options.tee_bytes > 0:
+        options.tee_log = True
+
     # setup logging to the console
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
@@ -1655,6 +1692,8 @@ def main():
                          entry_points=entry_points,
                          time_limit=options.time_limit,
                          display_int_iocs=options.display_int_iocs,
+                         tee_log=options.tee_log,
+                         tee_bytes=options.tee_bytes,
                          out_file_name=options.out_file)
 
             # add json results to list

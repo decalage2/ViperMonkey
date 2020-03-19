@@ -55,6 +55,27 @@ import logging
 
 # === LOGGING =================================================================
 
+class CappedFileHandler(logging.FileHandler):
+
+    # default size cap of 30M
+    # log file is put in the working directory with the same name
+    def __init__(self, filename, sizecap, mode='w', encoding=None, delay=False):
+        self.size_cap = sizecap
+        print("SIZE CAP -- " + str(self.size_cap))
+        self.current_size = 0
+        self.cap_exceeded = False
+        super(CappedFileHandler, self).__init__(filename, mode, encoding, delay)
+
+    def emit(self, record):
+        if not self.cap_exceeded:
+            new_size = self.current_size + len(self.formatter.format(record))
+            if new_size <= self.size_cap:
+                self.current_size = new_size
+                super(CappedFileHandler, self).emit(record)
+            # regardless of whether or not a future log could be within the size cap, cut it off here
+            else:
+                self.cap_exceeded = True
+
 class DuplicateFilter(logging.Filter):
 
     def filter(self, record):
