@@ -540,11 +540,13 @@ def fix_difficult_code(vba_code):
     """
 
     # Targeted fix for some maldocs.
+    #print "HERE: 1"
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
     vba_code = fix_unhandled_event_statements(vba_code)
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
     # Bad double quotes.
+    #print "HERE: 2"
     vba_code = vba_code.replace("\xe2\x80", '"')
     vba_code = vba_code.replace('\234"', '"')
     vba_code = vba_code.replace('"\235', '"')
@@ -555,6 +557,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 3"
     array_acc_pat = r'(\w+\([\d\w_\+\*/\-"]+\))(?:\([\d\w_\+\*/\-"]+\)){2,50}'
     if (re2.search(unicode(array_acc_pat), uni_vba_code) is not None):
         vba_code = re.sub(array_acc_pat, r"\1", vba_code)
@@ -566,6 +569,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 4"
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
@@ -575,6 +579,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 5"
     namespace_pat = r"(CreateObject\(.+\).[Nn]ame[Ss]pace\(.+\)\.CopyHere\s+.+),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
@@ -584,8 +589,10 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 6"
     namespace_pat = r"(\w+\.Run\(.+\)[^,]*),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
+        #print "HERE: 6.1"
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
     # We don't handle boolean expressions treated as integers. Comment them out.
@@ -594,6 +601,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 7"
     bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)\s*[^" + r'"' + r"][^\n:']+[<>=]"
     if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_bool_pat, vba_code)
@@ -616,6 +624,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 8"
     bad_else_pat = r"\n\s*Else\s*'.*\n"
     if (re2.search(unicode(bad_else_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_else_pat, vba_code)
@@ -623,6 +632,7 @@ def fix_difficult_code(vba_code):
             vba_code = vba_code.replace(bad_exp, "\nElse\n")
         
     # Skip this if it is not needed.
+    #print "HERE: 9"
     if (("!" not in vba_code) and
         (":" not in vba_code) and
         ("&;" not in vba_code) and
@@ -642,11 +652,13 @@ def fix_difficult_code(vba_code):
     #
     # We are now handling the 'baValue(0)' part in expressions.Function_Call.__init__()
     # Now just do a general replace for StrPtr()
+    #print "HERE: 10"
     if ("StrPtr" in vba_code):
         strptr_pat = r"(StrPtr\s*\(\s*)(\w+)(\s*\))"
         vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
 
     # Break out labels that are not on their own line.
+    #print "HERE: 11"
     if (":" in vba_code):
         label_pat = r"(\n\s*\w+:)([^\n])"
         vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
@@ -657,6 +669,7 @@ def fix_difficult_code(vba_code):
         
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
+    #print "HERE: 12"
     vba_code = vba_code.replace("#if", "HASH__if")
     vba_code = vba_code.replace("#If", "HASH__if")
     vba_code = vba_code.replace("#else", "HASH__else")    
@@ -665,6 +678,7 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace("#End If", "HASH__endif")
 
     # Same thing with Put and Close of file descriptors.
+    #print "HERE: 13"
     vba_code = re.sub(r"[Aa]s\s+#", "as__HASH", vba_code)
     vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
@@ -677,6 +691,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
+    #print "HERE: 14"
     pat = r"(?i)If\s+.{1,100}\s+Then\s*:[^\n]{1,100}\n"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         for curr_if in re.findall(pat, vba_code):
@@ -686,6 +701,7 @@ def fix_difficult_code(vba_code):
     # Replace the ':' in single line if statements so they don't get broken up.
     # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
     # If op < OLen Then Out(op) = o1: op = op + 1
+    #print "HERE: 15"
     uni_vba_code = u""
     try:
         uni_vba_code = vba_code.decode("utf-8")
@@ -702,6 +718,7 @@ def fix_difficult_code(vba_code):
             single_line_ifs.append((if_name, curr_if))
         
     # Replace ':=' so they don't get modified.
+    #print "HERE: 16"
     vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
         
     # Replace 'Rem fff' style comments with "' fff" comments.
@@ -709,6 +726,7 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
 
     # Replace ':' with new lines.
+    #print "HERE: 17"
     vba_code = convert_colons_to_linefeeds(vba_code)
     
     # Characters that change how we modify the code.
@@ -726,6 +744,7 @@ def fix_difficult_code(vba_code):
     next_char = ""
     r = ""
     pos = -1
+    #print "HERE: 18"
     while (pos < (len(vba_code) - 1)):
 
         #print "DONE: " + str((0.0 + pos)/len(vba_code)*100)
@@ -935,6 +954,7 @@ def fix_difficult_code(vba_code):
     #print r
     #print "******************"
     #sys.exit(0)
+    #print "HERE: 19"
     return r
 
 def strip_comments(vba_code):
