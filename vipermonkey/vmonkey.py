@@ -796,7 +796,7 @@ def process_file(container,
             capped_handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
             log.addHandler(capped_handler)
         else:
-            file_handler = FileHandler(tee_filename, mode="w")
+            file_handler = FileHandler(tee_filename + ".log", mode="w")
             file_handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
             log.addHandler(file_handler)
 
