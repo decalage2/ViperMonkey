@@ -335,6 +335,17 @@ class QBColor(VbaLibraryFunc):
         }
         return lookup[val]
 
+class MakeSureDirectoryPathExists(VbaLibraryFunc):
+    """
+    MakeSureDirectoryPathExists() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return 1
+        context.report_action("Create Folder", params[0], 'Interesting Function Call', strip_null_bytes=True)
+        return 1
+        
 class FolderExists(VbaLibraryFunc):
     """
     FolderExists() VB function (stubbed).
@@ -3763,7 +3774,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
-               VarType, Send, CreateShortcut, Popup):
+               VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -1412,14 +1412,24 @@ def _process_file (filename,
                     count = 0
                     skip_strings = ["Tahoma", "Tahomaz"]
                     for (subfilename, stream_path, form_string) in vba.extract_form_strings():
+
+                        # Skip strings that are large and almost all the same character.
+                        if ((len(form_string) > 100) and (read_ole_fields.entropy(form_string) < 1)):
+                            continue
                         # Skip default strings.
                         if (form_string.startswith("\x80")):
                             form_string = form_string[1:]
                         if (form_string in skip_strings):
                             continue
-                        # Skip unprintable strings.
-                        if (not all((ord(c) > 31 and ord(c) < 127) for c in form_string)):
+                        # Skip unprintable strings. Accept < 10% bad chars.
+                        bad_char_count = 0
+                        for c in form_string:
+                            if (not (ord(c) > 31 and ord(c) < 127)):
+                                bad_char_count += 1
+                        if (((bad_char_count + 0.0) / len(form_string)) > .1):
                             continue
+
+                        # String looks good. Keep it.
                         global_var_name = stream_path
                         if ("/" in global_var_name):
                             tmp = global_var_name.split("/")
@@ -1445,6 +1455,10 @@ def _process_file (filename,
                             # 17005731c750286cae8fa61ce89afd3368ee18ea204afd08a7eb978fd039af68
                             # a0c45d3d8c147427aea94dd15eac69c1e2689735a9fbd316a6a639c07facfbdf
                             tmp_name = "textbox1"
+                            vm.globals[tmp_name] = form_string
+                            if (log.getEffectiveLevel() == logging.DEBUG):
+                                log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                            tmp_name = "label1"
                             vm.globals[tmp_name] = form_string
                             if (log.getEffectiveLevel() == logging.DEBUG):
                                 log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
