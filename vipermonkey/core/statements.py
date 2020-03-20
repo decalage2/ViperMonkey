@@ -1507,7 +1507,10 @@ class For_Statement(VBA_Object):
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
             end = int_convert(end)
-
+        if (end is None):
+            log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
+            return
+            
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
@@ -2715,7 +2718,7 @@ case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() +
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
 case_clause = CaselessKeyword("Case").suppress() + \
-              Suppress(Optional(CaselessKeyword("Is") + (Literal('=') ^ Literal('<') ^ Literal('>') ^ Literal('<=') ^ Literal('>=')))) + \
+              Suppress(Optional(CaselessKeyword("Is") + (Literal('=') ^ Literal('<') ^ Literal('>') ^ Literal('<=') ^ Literal('>=') ^ Literal('<>')))) + \
               case_clause_atomic + ZeroOrMore(Suppress(",") + case_clause_atomic)
 case_clause.setParseAction(Case_Clause)
 
@@ -3463,7 +3466,7 @@ class Goto_Statement(VBA_Object):
         block.eval(context, params)
 
 # Goto statement
-goto_statement = (CaselessKeyword('Goto').suppress() | CaselessKeyword('Gosub').suppress()) + lex_identifier('label')
+goto_statement = (CaselessKeyword('Goto').suppress() | CaselessKeyword('Gosub').suppress()) + (lex_identifier('label') | decimal_literal('label'))
 goto_statement.setParseAction(Goto_Statement)
 
 # --- GOTO LABEL statement ----------------------------------------------------------

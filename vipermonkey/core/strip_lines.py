@@ -1078,7 +1078,7 @@ def fix_vba_code(vba_code):
     #
     # Break up lines with multiple statements onto their own lines.
     vba_code = fix_difficult_code(vba_code)
-
+    
     # Fix function calls with a skipped 1st argument.
     vba_code = fix_skipped_1st_arg(vba_code)
 
@@ -1174,6 +1174,9 @@ def strip_line_nums(line):
     pos = 0
     for c in line:
         if (not c.isdigit()):
+            # Don't delete numeric labels.
+            if (c == ':'):
+                return line
             break
         pos += 1
     return line[pos:]
@@ -1188,7 +1191,7 @@ def strip_useless_code(vba_code, local_funcs):
     # Preprocess the code to make it easier to parse.
     log.info("Modifying VB code...")
     vba_code = fix_vba_code(vba_code)
-
+    
     # Don't strip lines if Execute() is called since the stripped variables
     # could be used in the execed code strings.
     exec_pat = r"execute(?:global)?\s*\("
@@ -1545,5 +1548,5 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Now collapse down #if blocks.
     r = collapse_macro_if_blocks(r)
-
+    
     return r
