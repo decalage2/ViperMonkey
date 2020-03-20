@@ -1468,6 +1468,14 @@ def _process_file (filename,
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
                                     log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                tmp_name = specific_name + ".text"
+                                vm.globals[tmp_name] = form_string
+                                if (log.getEffectiveLevel() == logging.DEBUG):
+                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                tmp_name = global_var_name_orig.lower() + "." + specific_name + ".text"
+                                vm.globals[tmp_name] = form_string
+                                if (log.getEffectiveLevel() == logging.DEBUG):
+                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 
