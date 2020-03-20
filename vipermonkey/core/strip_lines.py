@@ -549,9 +549,9 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
-    vba_code = vba_code.replace("\xe2\x80", '"')
-    vba_code = vba_code.replace('\234"', '"')
-    vba_code = vba_code.replace('"\235', '"')
+    #vba_code = vba_code.replace("\xe2\x80", '"')
+    #vba_code = vba_code.replace('\234"', '"')
+    #vba_code = vba_code.replace('"\235', '"')
 
     # Not handling array accesses more than 2 deep.
     uni_vba_code = u""
