@@ -144,12 +144,23 @@ class Asc(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Asc, self).__init__(original_str, location, tokens)
-        # extract argument from the tokens:
-        # Here the arg is expected to be either a character or a VBA_Object
-        self.arg = tokens[0]
+
+        # This could be a asc(...) call or a reference to a variable called asc.
+        # If there are parsed arguments it is a call.
+        self.arg = None
+        if (len(tokens) > 0):
+            # Here the arg is expected to be either a character or a VBA_Object        
+            self.arg = tokens[0]
 
     def eval(self, context, params=None):
 
+        # Are we just looking up a variable called 'asc'?
+        if (self.arg is None):
+            try:
+                return context.get("asc")
+            except KeyError:
+                return "NULL"
+        
         # Eval the argument.
         c = eval_arg(self.arg, context)
 
@@ -184,7 +195,7 @@ class Asc(VBA_Object):
 
 # Asc()
 # TODO: see MS-VBAL 6.1.2.11.1.1 page 240 => AscB, AscW
-asc = Suppress((CaselessKeyword('Asc') | CaselessKeyword('AscW'))  + '(') + expression + Suppress(')')
+asc = Suppress((CaselessKeyword('Asc') | CaselessKeyword('AscW')))  + Optional(Suppress('(') + expression + Suppress(')'))
 asc.setParseAction(Asc)
 
 # --- StrReverse() --------------------------------------------------------------------

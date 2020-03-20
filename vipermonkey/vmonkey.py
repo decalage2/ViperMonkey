@@ -1454,14 +1454,20 @@ def _process_file (filename,
                             # 99f4991450003a2bb92aaf5d1af187ec34d57085d8af7061c032e2455f0b3cd3
                             # 17005731c750286cae8fa61ce89afd3368ee18ea204afd08a7eb978fd039af68
                             # a0c45d3d8c147427aea94dd15eac69c1e2689735a9fbd316a6a639c07facfbdf
-                            tmp_name = "textbox1"
-                            vm.globals[tmp_name] = form_string
-                            if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
-                            tmp_name = "label1"
-                            vm.globals[tmp_name] = form_string
-                            if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                            specific_names = ["textbox1", "label1"]
+                            for specific_name in specific_names:
+                                tmp_name = specific_name
+                                vm.globals[tmp_name] = form_string
+                                if (log.getEffectiveLevel() == logging.DEBUG):
+                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                tmp_name = specific_name + ".caption"
+                                vm.globals[tmp_name] = form_string
+                                if (log.getEffectiveLevel() == logging.DEBUG):
+                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                tmp_name = global_var_name_orig.lower() + "." + specific_name + ".caption"
+                                vm.globals[tmp_name] = form_string
+                                if (log.getEffectiveLevel() == logging.DEBUG):
+                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 
