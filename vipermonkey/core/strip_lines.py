@@ -303,10 +303,10 @@ def fix_unbalanced_quotes(vba_code):
                 r += next_line
                 pos += 1
                 next_line = lines[pos + 1]
-        print "---"
-        print str(pos) + ": " + line
-        print str(pos + 1) + ": " + next_line
-        print "***"
+        #print "---"
+        #print str(pos) + ": " + line
+        #print str(pos + 1) + ": " + next_line
+        #print "***"
         if ('"' not in line):
             r += line + "\n"
             continue
@@ -318,8 +318,8 @@ def fix_unbalanced_quotes(vba_code):
             # Handle the special case of a misgenerated "\n" in a string.
             if (line.strip().endswith('"') and next_line.strip().startswith('"')):
                 tmp_line = line + "\\n" + next_line
-                print "SYNTH:"
-                print tmp_line
+                #print "SYNTH:"
+                #print tmp_line
                 line = tmp_line
                 synthetic_line = True
                 continue
