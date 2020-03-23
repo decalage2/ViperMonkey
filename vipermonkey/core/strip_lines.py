@@ -404,6 +404,7 @@ def fix_skipped_1st_arg2(vba_code):
 
     # Skipped this if unneeded.
     if (re.match(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None):
+        #print "SKIPPED!!"
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
@@ -443,7 +444,9 @@ def fix_skipped_1st_arg2(vba_code):
     tmp_code = vba_code
     for str_name in strings.keys():
         tmp_code = tmp_code.replace(strings[str_name], str_name)
-
+    #print "HERE: 1"
+    #print tmp_code
+        
     # Find all paren exprs and make up replacement names.
     in_paren = False
     paren_count = 0
@@ -469,13 +472,14 @@ def fix_skipped_1st_arg2(vba_code):
                 
                 # Map a temporary name to the current string.
                 paren_count = 0
-                paren_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
-                while (paren_name in parens):
-                    str_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
-                curr_paren += c
-                parens[paren_name] = curr_paren
                 in_paren = False
-                curr_paren = None
+                if (curr_paren is not None):
+                    paren_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                    while (paren_name in parens):
+                        str_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                    curr_paren += c
+                    parens[paren_name] = curr_paren
+                    curr_paren = None
 
         # Save the character if we are in a paren expr.
         if (in_paren):
@@ -484,7 +488,9 @@ def fix_skipped_1st_arg2(vba_code):
     # Replace the paren exprs.
     for paren_name in parens.keys():
         tmp_code = tmp_code.replace(parens[paren_name], paren_name)
-            
+    #print "HERE: 2"
+    #print tmp_code
+        
     # Replace the skipped 1st arguments in calls.
     vba_code = re.sub(r"\n\s*([0-9a-zA-Z_\.]+)\s*,", r"\n\1 SKIPPED_ARG,", tmp_code)
 
