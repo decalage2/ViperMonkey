@@ -284,14 +284,48 @@ def fix_unbalanced_quotes(vba_code):
     
     # See if we have lines with unbalanced double quotes.
     r = ""
-    for line in vba_code.split("\n"):
+    lines = vba_code.split("\n")
+    pos = -1
+    synthetic_line = False
+    while (pos < (len(lines) - 1)):
+
+        # Get the current line and next line.
+        pos += 1
+        if (not synthetic_line):
+            line = lines[pos]
+        synthetic_line = False
+        next_line = ""
+        if ((pos + 1) < len(lines)):
+            next_line = lines[pos + 1]
+            # Skip processing blank lines.
+            while ((len(next_line.strip()) == 0) and
+                   ((pos + 2) < len(lines))):
+                r += next_line
+                pos += 1
+                next_line = lines[pos + 1]
+        print "---"
+        print str(pos) + ": " + line
+        print str(pos + 1) + ": " + next_line
+        print "***"
         if ('"' not in line):
             r += line + "\n"
             continue
+
+        # Unmatched quotes?
         num_quotes = line.count('"')
         if ((num_quotes % 2) != 0):
-            last_quote = line.rindex('"')
-            line = line[:last_quote] + '"' + line[last_quote:]
+            
+            # Handle the special case of a misgenerated "\n" in a string.
+            if (line.strip().endswith('"') and next_line.strip().startswith('"')):
+                tmp_line = line + "\\n" + next_line
+                print "SYNTH:"
+                print tmp_line
+                line = tmp_line
+                synthetic_line = True
+                continue
+            
+            first_quote = line.index('"')
+            line = line[:first_quote] + '"' + line[first_quote:]
         r += line + "\n"
 
     # Return the balanced code.
