@@ -340,13 +340,13 @@ def fix_multiple_assignments(line):
     r.replace('IN_STR_EQUAL', '=')
     return r
 
-def fix_skipped_1st_arg(vba_code):
+def fix_skipped_1st_arg1(vba_code):
     """
     Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
     """
 
     # Skipped this if unneeded.
-    if (re.match(r".*([0-9a-zA-Z_])\(\s*,.*", vba_code, re.DOTALL) is None):
+    if (re.match(r".*[0-9a-zA-Z_\.]+\(\s*,.*", vba_code, re.DOTALL) is None):
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
@@ -386,17 +386,117 @@ def fix_skipped_1st_arg(vba_code):
     tmp_code = vba_code
     for str_name in strings.keys():
         tmp_code = tmp_code.replace(strings[str_name], str_name)
-            
+        
     # Replace the skipped 1st arguments in calls.
-    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
+    vba_code = re.sub(r"([0-9a-zA-Z_\.]+)\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
 
-    # Put the string literals back.
+    # Put the string literals.
     for str_name in strings.keys():
         vba_code = vba_code.replace(str_name, strings[str_name])
-
+        
     # Return the modified code.
     return vba_code
+
+def fix_skipped_1st_arg2(vba_code):
+    """
+    Replace calls like \nfoo, 1, ... with \nfoo SKIPPED_ARG, 1, ... .
+    """
+
+    # Skipped this if unneeded.
+    if (re.match(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None):
+        return vba_code
     
+    # We don't want to replace things like this in string literals. Temporarily
+    # pull out the string literals from the line.
+
+    # Find all the string literals and make up replacement names.
+    strings = {}
+    in_str = False
+    curr_str = None
+    for c in vba_code:
+
+        # Start/end of string?
+        if (c == '"'):
+
+            # Start of string?
+            if (not in_str):
+                curr_str = ""
+                in_str = True
+
+            # End of string.
+            else:
+
+                # Map a temporary name to the current string.
+                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                while (str_name in strings):
+                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                curr_str += c
+                strings[str_name] = curr_str
+                in_str = False
+                curr_str = None
+
+        # Save the character if we are in a string.
+        if (in_str):
+            curr_str += c
+
+    # Temporarily replace the string literals.
+    tmp_code = vba_code
+    for str_name in strings.keys():
+        tmp_code = tmp_code.replace(strings[str_name], str_name)
+
+    # Find all paren exprs and make up replacement names.
+    in_paren = False
+    paren_count = 0
+    parens = {}
+    curr_paren = None
+    for c in tmp_code:
+
+        # Start/end of parenthesized expression?
+        #print c
+        if (c == '('):
+
+            # Start of paren expr?
+            paren_count += 1
+            if (paren_count > 0):
+                curr_paren = ""
+                in_paren = True
+
+        if (c == ')'): 
+
+            # Out of parens?
+            paren_count -= 1
+            if (paren_count <= 0):
+                
+                # Map a temporary name to the current string.
+                paren_count = 0
+                paren_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                while (paren_name in parens):
+                    str_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                curr_paren += c
+                parens[paren_name] = curr_paren
+                in_paren = False
+                curr_paren = None
+
+        # Save the character if we are in a paren expr.
+        if (in_paren):
+            curr_paren += c
+
+    # Replace the paren exprs.
+    for paren_name in parens.keys():
+        tmp_code = tmp_code.replace(parens[paren_name], paren_name)
+            
+    # Replace the skipped 1st arguments in calls.
+    vba_code = re.sub(r"\n\s*([0-9a-zA-Z_\.]+)\s*,", r"\n\1 SKIPPED_ARG,", tmp_code)
+
+    # Put the string literals and paren exprs back.
+    for paren_name in parens.keys():
+        vba_code = vba_code.replace(paren_name, parens[paren_name])
+    for str_name in strings.keys():
+        vba_code = vba_code.replace(str_name, strings[str_name])
+        
+    # Return the modified code.
+    return vba_code
+
 def fix_unhandled_array_assigns(vba_code):
     """
     Currently things like 'foo(1, 2, 3) = 1' are not handled.
@@ -1080,7 +1180,8 @@ def fix_vba_code(vba_code):
     vba_code = fix_difficult_code(vba_code)
     
     # Fix function calls with a skipped 1st argument.
-    vba_code = fix_skipped_1st_arg(vba_code)
+    vba_code = fix_skipped_1st_arg1(vba_code)
+    vba_code = fix_skipped_1st_arg2(vba_code)
 
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)

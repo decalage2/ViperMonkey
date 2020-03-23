@@ -3602,6 +3602,7 @@ file_type = (
         Optional(Suppress(CaselessKeyword("Access")))
         + (
             CaselessKeyword("Read Write")
+            ^ CaselessKeyword("Read Shared")
             ^ CaselessKeyword("Read")
             ^ CaselessKeyword("Shared")
             ^ CaselessKeyword("Write")
@@ -3679,7 +3680,7 @@ simple_statement = (
         | option_statement
         | (
             prop_assign_statement
-            ^ (let_statement | lset_statement |call_statement)
+            ^ (let_statement | lset_statement | call_statement)
             ^ label_statement
             ^ expression
         )
