@@ -590,7 +590,8 @@ class Left(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (len(params) > 2):
             params = params[-2:]
-        assert len(params) == 2
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
@@ -660,7 +661,8 @@ class Right(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (len(params) > 2):
             params = params[-2:]
-        assert len(params) == 2
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
@@ -950,7 +952,8 @@ class UBound(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         arr = params[0]
         # TODO: Handle multidimensional arrays.
         if ((arr is None) or (not hasattr(arr, '__len__'))):
@@ -967,7 +970,8 @@ class LBound(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         arr = params[0]
         # TODO: Handle multidimensional arrays.
         r = 0
@@ -999,7 +1003,8 @@ class RTrim(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         r = None
         if (isinstance(params[0], int)):
             r = str(params[0])
@@ -1032,7 +1037,8 @@ class AscW(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) == 1
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         c = params[0]
         if (isinstance(c, int)):
             r = c
@@ -1075,7 +1081,8 @@ class StrComp(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 2
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
         s1 = params[0]
         s2 = params[1]
         method = 0
@@ -1100,7 +1107,8 @@ class StrPtr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
 
         # Do we have a variable name?
         arg = str(params[0])
@@ -1118,7 +1126,8 @@ class StrConv(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
 
         # TODO: Actually implement this properly.
 
@@ -1306,9 +1315,8 @@ class Split(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (params is None):
-            return ""
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         # TODO: Actually implement this properly.
         string = None
         try:
@@ -1331,7 +1339,8 @@ class Int(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         # TODO: Actually implement this properly.
         val = params[0]
         try:
@@ -1368,7 +1377,8 @@ class Oct(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         val = params[0]
         try:
             r = oct(val)
@@ -1385,7 +1395,8 @@ class StrReverse(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         # TODO: Actually implement this properly.
         string =''
         if ((params[0] is not None) and (len(params) > 0)):
@@ -1608,7 +1619,8 @@ class Join(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) > 0
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
         strings = params[0]
         sep = " "
         if (len(params) > 1):
@@ -1629,7 +1641,8 @@ class InStr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 2
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
 
         # Were we given a start position?
         start = 0
@@ -1684,7 +1697,8 @@ class CVar(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 1
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         # We are not tracking variant types, so work as a pass-through.
         return params[0]
@@ -1695,7 +1709,8 @@ class IsNumeric(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 1
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         arg = str(params[0])
         try:
@@ -1710,7 +1725,8 @@ class InStrRev(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert len(params) >= 2
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
 
         # Were we given a start position?
         start = 0
@@ -1762,7 +1778,8 @@ class Sgn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         num = params[0]
         r = ''
         try:
@@ -1783,7 +1800,8 @@ class Sqr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = int_convert(params[0]) + 0.0
@@ -1800,7 +1818,8 @@ class Abs(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = int_convert(params[0])
@@ -1817,7 +1836,8 @@ class Fix(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -1834,7 +1854,8 @@ class Round(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert ((len(params) == 1) or (len(params) == 2))
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -1854,7 +1875,8 @@ class Hex(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = int_convert(params[0])
@@ -1879,7 +1901,8 @@ class CByte(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             tmp = params[0].upper()
@@ -1902,7 +1925,8 @@ class CLng(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         # Handle abstracted pointers to memory.
         val = params[0]
@@ -1935,7 +1959,8 @@ class CBool(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         val = params[0]
         r = 0
         if ((val == True) or (val == 1)):
@@ -1950,7 +1975,8 @@ class CDate(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         # TODO: For now this is stubbed out. Handling dates correctly is hard.
         r = 12345
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1963,7 +1989,8 @@ class CStr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         val = params[0]
         r = str(val)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1976,7 +2003,8 @@ class CSng(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             tmp = params[0].upper()
@@ -1996,7 +2024,8 @@ class Atn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -2013,7 +2042,8 @@ class Tan(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -2030,7 +2060,8 @@ class Cos(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -2047,7 +2078,8 @@ class Log(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = params[0]
         try:
             num = float(params[0])
@@ -2065,7 +2097,8 @@ class String(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 2)
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
         r = ''
         try:
             num = int_convert(params[0])
@@ -2110,7 +2143,8 @@ class RGB(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 3)
+        if ((params is None) or (len(params) < 3)):
+            return "NULL"
         r = ''
         try:
             red = int_convert(params[0])
@@ -2129,7 +2163,8 @@ class Exp(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = params[0]
         try:
             num = float(params[0])
@@ -2147,7 +2182,8 @@ class Sin(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         r = ''
         try:
             num = float(params[0])
@@ -2177,10 +2213,8 @@ class Val(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-
-        if (params is None):
-            return ''
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         
         # Sanity check.
         if ((params[0] is None) or (not isinstance(params[0], str))):
@@ -2231,7 +2265,8 @@ class Base64Decode(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         txt = params[0]
         if (txt is None):
             txt = ''
@@ -2250,7 +2285,8 @@ class CleanString(VbaLibraryFunc):
     """
 
     def eval(self,context,params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         txt=params[0]
         if (txt is None):
             txt = ''
@@ -2349,7 +2385,8 @@ class Pmt(VbaLibraryFunc):
     '               PMT = (-fv - pv) / nper    : if rate == 0
     """
     def eval(self, context, params=None):
-        assert (len(params) >= 3)
+        if ((params is None) or (len(params) < 3)):
+            return "NULL"
 
         r = ''
         try:
@@ -2382,7 +2419,8 @@ class Day(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         txt = params[0]
         if ((txt is None) or (txt == "NULL")):
             txt = ''
@@ -2525,7 +2563,8 @@ class DriveExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         drive = str(params[0]).lower()
         r = False
         # Assume the C: drive is always there.
@@ -2539,7 +2578,8 @@ class Navigate(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         url = str(params[0])
         if (url.startswith("tp://")):
             url = "ht" + url
@@ -2578,7 +2618,8 @@ class CVErr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         err = None
         try:
             err = int(params[0])
@@ -2601,7 +2642,8 @@ class CallByName(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 3)
+        if ((params is None) or (len(params) < 3)):
+            return "NULL"
 
         # Report interesting external commands run.
         cmd = str(params[1])
@@ -2720,7 +2762,8 @@ class Put(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert ((len(params) == 2) or (len(params) == 3))
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
         
         # Get the ID of the file.
         file_id = params[0]
@@ -2744,7 +2787,8 @@ class WriteLine(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         # Get the data.
         data = params[0]
@@ -3008,7 +3052,8 @@ class ExecQuery(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         # Get the query to run.
         cmd = str(params[0])
@@ -3030,7 +3075,8 @@ class WinExec(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) >= 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         cmd = params[0]
         context.report_action("Run", cmd, 'Interesting Command Execution', strip_null_bytes=True)
@@ -3122,7 +3168,8 @@ class Specialfolders(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         return "%" + str(params[0]) + "%"
 
 class IsArray(VbaLibraryFunc):
@@ -3131,7 +3178,8 @@ class IsArray(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) > 0)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         return isinstance(params[0], list)
 
 class Month(VbaLibraryFunc):
@@ -3140,7 +3188,8 @@ class Month(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         try:
             arg = int(params[0])
             if (arg == 1):
@@ -3337,7 +3386,8 @@ class Year(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         t = params[0]
         r = "**MATCH ANY**"
         if ((isinstance(t, datetime)) or (isinstance(t, date))):
@@ -3350,7 +3400,8 @@ class Minute(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         t = params[0]
         r = 0
         if (isinstance(t, datetime)):
@@ -3363,7 +3414,8 @@ class Second(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         t = params[0]
         r = 0
         if (isinstance(t, datetime)):
@@ -3381,7 +3433,8 @@ class Variable(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         var = str(params[0]).strip()
         var = var.replace("activedocument.customdocumentproperties(", "").\
               replace(")", "").\
@@ -3405,7 +3458,8 @@ class CDbl(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert (len(params) == 1)
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         try:
             # Handle hex.
             tmp = str(params[0]).upper()
@@ -3603,7 +3657,8 @@ class Unescape(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Get the string to unescape.
-        assert len(params) > 0
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
         s = str(params[0])
 
         # It reverses the transformation performed by the Escape
@@ -3722,7 +3777,8 @@ class Write(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        assert params and len(params) >= 1
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
 
         # Get the data.
         data = str(params[0])

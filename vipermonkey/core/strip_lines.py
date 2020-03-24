@@ -574,7 +574,7 @@ def fix_unhandled_event_statements(vba_code):
         # Punt.
         return vba_code
     
-    pat = "\n( *Event[^\n]{10,})"
+    pat = "\n( *(?:[Pp]ublic) *Event[^\n]{10,})"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         vba_code = "\n" + vba_code + "\n"
         vba_code = re.sub(pat, r"\n' UNHANDLED EVENT STATEMENT \1", vba_code) + "\n"
@@ -632,28 +632,40 @@ def convert_colons_to_linefeeds(vba_code):
     while (pos < (len(vba_code) - 1)):
 
         # Do we have any blocks of text coming up that we should not change?
+        # Find the 1st marker in the string.
+        marker_pos1 = len(vba_code)
+        use_start_marker = None
+        use_end_marker = None
         found_marker = False
         for marker, end_marker in marker_chars:
 
             # Do we have an unchangeable block?
             if (marker in vba_code[pos:]):
-                
-                # Find the chunk of text we should modify.
-                found_marker = True
-                marker_pos1 = vba_code[pos:].index(marker) + pos
-                change_chunk = vba_code[pos:marker_pos1+1]
-                change_chunk = change_chunk.replace(":", "\n")
 
-                # Find the chunk of text to leave alone.
-                marker_pos2 = len(vba_code)
-                if (end_marker in vba_code[marker_pos1+1:]):
-                    marker_pos2 = vba_code[marker_pos1+1:].index(end_marker) + marker_pos1 + 2
-                leave_chunk = vba_code[marker_pos1+1:marker_pos2]
+                # Is this the most recent marker found?
+                found_marker = True
+                curr_marker_pos1 = vba_code[pos:].index(marker) + pos
+                if (curr_marker_pos1 < marker_pos1):
+                    marker_pos1 = curr_marker_pos1
+                    use_end_marker = end_marker
+                    use_start_marker = marker
+
+        # Did we find a marker?
+        if (found_marker):
+
+            # Pull out the text to change.
+            change_chunk = vba_code[pos:marker_pos1+1]
+            change_chunk = change_chunk.replace(":", "\n")
+
+            # Find the chunk of text to leave alone.
+            marker_pos2 = len(vba_code)
+            if (use_end_marker in vba_code[marker_pos1+1:]):
+                marker_pos2 = vba_code[marker_pos1+1:].index(use_end_marker) + marker_pos1 + 2
+            leave_chunk = vba_code[marker_pos1+1:marker_pos2]
                 
-                # Save the modified chunk and the unmodified chunk.
-                r += change_chunk + leave_chunk
-                pos = marker_pos2
-                break
+            # Save the modified chunk and the unmodified chunk.
+            r += change_chunk + leave_chunk
+            pos = marker_pos2
 
         # If the whole remaining text string is modifiable just do the ':' -> '\n' on the
         # whole remaining string.
@@ -1322,6 +1334,7 @@ def strip_line_nums(line):
 
     # Find the end of a number at the start of the line, if there is one.
     pos = 0
+    line = line.strip()
     for c in line:
         if (not c.isdigit()):
             # Don't delete numeric labels.
@@ -1360,6 +1373,9 @@ def strip_useless_code(vba_code, local_funcs):
     global external_funcs
     for line in vba_code.split("\n"):
 
+        # Strip line numbers from starts of lines.
+        line = strip_line_nums(line)
+        
         # Skip comment lines.
         line_num += 1
         if (line.strip().startswith("'")):
