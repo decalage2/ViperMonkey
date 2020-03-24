@@ -334,6 +334,10 @@ def fix_unbalanced_quotes(vba_code):
 MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"
 def fix_multiple_assignments(line):
 
+    # Skip comments.
+    if ("'" in line):
+        line = line[:line.index("'")]
+    
     # Pull out multiple assignments and the final assignment value.
     items = re.findall(MULT_ASSIGN_RE, line)
     if (len(items) == 0):
@@ -755,6 +759,11 @@ def fix_difficult_code(vba_code):
                 if (re.search(bad_bool_pat, tmp_exp) is None):
                     continue
 
+            # Don't count multi-variable assignments.
+            multi_pat = r"(?:\w+ *= *){2,}"
+            if (re.search(multi_pat, bad_exp) is not None):
+                continue
+                
             # This is actually an integer expression with boolean logic.
             # Not handled.
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION " + bad_exp[1:])

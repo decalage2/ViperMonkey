@@ -793,7 +793,9 @@ def process_file(container,
     # add handler for tee'd log file
     if tee_log:
 
-        tee_filename = "./" + filename[filename.rindex("/") + 1:]
+        tee_filename = "./" + filename
+        if ("/" in filename):
+            tee_filename = "./" + filename[filename.rindex("/") + 1:]
 
         if tee_bytes > 0:
             capped_handler = CappedFileHandler(tee_filename + ".log", sizecap=tee_bytes)
