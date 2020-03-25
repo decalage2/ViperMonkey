@@ -3319,7 +3319,10 @@ class Range(VbaLibraryFunc):
         if (len(params) != 1):
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
-
+        if (":" in str(params[0])):
+            log.warning("Range(" + str(params[0]) + ") calls not supported. Returning NULL.")
+            return "NULL"
+            
         # Guess that we want the 1st sheet.
         sheet = None
         try:

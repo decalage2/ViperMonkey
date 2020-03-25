@@ -2712,9 +2712,12 @@ select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").s
                 + (expression("select_val") ^ boolean_expression("select_val"))
 select_clause.setParseAction(Select_Clause)
 
+#case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
+#                      (CaselessKeyword("Else")) | \
+#                      (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
                       (CaselessKeyword("Else")) | \
-                      (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
+                      (any_expression("case_val")))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
 case_clause = CaselessKeyword("Case").suppress() + \
