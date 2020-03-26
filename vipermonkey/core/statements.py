@@ -2712,9 +2712,12 @@ select_clause = CaselessKeyword("Select").suppress() + CaselessKeyword("Case").s
                 + (expression("select_val") ^ boolean_expression("select_val"))
 select_clause.setParseAction(Select_Clause)
 
+#case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
+#                      (CaselessKeyword("Else")) | \
+#                      (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
 case_clause_atomic = ((expression("lbound") + CaselessKeyword("To").suppress() + expression("ubound")) | \
                       (CaselessKeyword("Else")) | \
-                      (any_expression("case_val") + ZeroOrMore(Suppress(",") + any_expression)))
+                      (any_expression("case_val")))
 case_clause_atomic.setParseAction(Case_Clause_Atomic)
 
 case_clause = CaselessKeyword("Case").suppress() + \
@@ -3602,6 +3605,7 @@ file_type = (
         Optional(Suppress(CaselessKeyword("Access")))
         + (
             CaselessKeyword("Read Write")
+            ^ CaselessKeyword("Read Shared")
             ^ CaselessKeyword("Read")
             ^ CaselessKeyword("Shared")
             ^ CaselessKeyword("Write")
@@ -3679,7 +3683,7 @@ simple_statement = (
         | option_statement
         | (
             prop_assign_statement
-            ^ (let_statement | lset_statement |call_statement)
+            ^ (let_statement | lset_statement | call_statement)
             ^ label_statement
             ^ expression
         )

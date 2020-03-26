@@ -1848,7 +1848,8 @@ def quick_parse_int_or_var(text):
     
 # Parse large array expressions quickly with a regex.
 # language=PythonRegExp
-expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+\s*,\s*){10,}\s*[0-9a-zA-Z_]+\s*")
+# No newlines in whitespace.
+expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+[ \t\f\v]*,[ \t\f\v]*){10,}[ \t\f\v]*[0-9a-zA-Z_]+[ \t\f\v]*")
 expr_list_fast.setParseAction(lambda t: [quick_parse_int_or_var(i) for i in t[0].split(",")])
 
 # Parse general expression lists more completely but more slowly.
@@ -1905,7 +1906,10 @@ function_call_limited <<= (
             # parsed as function_call_limited "foo .bar". The real way this should be
             # parsed is to require at least 1 space between the function name and the
             # 1st argument, then "foo.bar" will not match.
-            | (Suppress(Optional('$')) + NotAny(".") + expr_list('params')))
+            #
+            # And the "step" expression is to keep step from being parsed as an arg to
+            # a.b(step) in 'for i = 0 to a.b step 2'.
+            | (Suppress(Optional('$')) + NotAny(".") + NotAny(CaselessKeyword("step")) + expr_list('params')))
     )
 )
 function_call_limited.setParseAction(Function_Call)
@@ -2219,6 +2223,7 @@ bool_expr_item = (limited_expression + \
                   (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
+#bool_expr_item = _bool_expr_item ^ (_bool_expr_item + CaselessKeyword("=") + boolean_literal)
 bool_expr_item.setParseAction(BoolExprItem)
 
 class BoolExpr(VBA_Object):
@@ -2341,7 +2346,7 @@ class BoolExpr(VBA_Object):
             return lhs and rhs
         elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
             return lhs or rhs
-        elif (self.op.lower() == "eqv"):
+        elif ((self.op.lower() == "eqv") or (self.op.lower() == "=")):
             return (lhs == rhs)
         else:
             log.error("BoolExpr: Unknown operator boolean %r" % self.op)
@@ -2355,6 +2360,7 @@ boolean_expression <<= infixNotation(bool_expr_item,
                                          (CaselessKeyword("Or"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("OrElse"), 2, opAssoc.LEFT),
                                          (CaselessKeyword("Eqv"), 2, opAssoc.LEFT),
+                                         (CaselessKeyword("="), 2, opAssoc.LEFT),
                                      ])
 boolean_expression.setParseAction(BoolExpr)
 

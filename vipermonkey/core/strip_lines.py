@@ -284,14 +284,48 @@ def fix_unbalanced_quotes(vba_code):
     
     # See if we have lines with unbalanced double quotes.
     r = ""
-    for line in vba_code.split("\n"):
+    lines = vba_code.split("\n")
+    pos = -1
+    synthetic_line = False
+    while (pos < (len(lines) - 1)):
+
+        # Get the current line and next line.
+        pos += 1
+        if (not synthetic_line):
+            line = lines[pos]
+        synthetic_line = False
+        next_line = ""
+        if ((pos + 1) < len(lines)):
+            next_line = lines[pos + 1]
+            # Skip processing blank lines.
+            while ((len(next_line.strip()) == 0) and
+                   ((pos + 2) < len(lines))):
+                r += next_line
+                pos += 1
+                next_line = lines[pos + 1]
+        #print "---"
+        #print str(pos) + ": " + line
+        #print str(pos + 1) + ": " + next_line
+        #print "***"
         if ('"' not in line):
             r += line + "\n"
             continue
+
+        # Unmatched quotes?
         num_quotes = line.count('"')
         if ((num_quotes % 2) != 0):
-            last_quote = line.rindex('"')
-            line = line[:last_quote] + '"' + line[last_quote:]
+            
+            # Handle the special case of a misgenerated "\n" in a string.
+            if (line.strip().endswith('"') and next_line.strip().startswith('"')):
+                tmp_line = line + "\\n" + next_line
+                #print "SYNTH:"
+                #print tmp_line
+                line = tmp_line
+                synthetic_line = True
+                continue
+            
+            first_quote = line.index('"')
+            line = line[:first_quote] + '"' + line[first_quote:]
         r += line + "\n"
 
     # Return the balanced code.
@@ -300,6 +334,10 @@ def fix_unbalanced_quotes(vba_code):
 MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"
 def fix_multiple_assignments(line):
 
+    # Skip comments.
+    if ("'" in line):
+        line = line[:line.index("'")]
+    
     # Pull out multiple assignments and the final assignment value.
     items = re.findall(MULT_ASSIGN_RE, line)
     if (len(items) == 0):
@@ -340,13 +378,13 @@ def fix_multiple_assignments(line):
     r.replace('IN_STR_EQUAL', '=')
     return r
 
-def fix_skipped_1st_arg(vba_code):
+def fix_skipped_1st_arg1(vba_code):
     """
     Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
     """
 
     # Skipped this if unneeded.
-    if (re.match(r".*([0-9a-zA-Z_])\(\s*,.*", vba_code, re.DOTALL) is None):
+    if (re.match(r".*[0-9a-zA-Z_\.]+\(\s*,.*", vba_code, re.DOTALL) is None):
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
@@ -386,17 +424,123 @@ def fix_skipped_1st_arg(vba_code):
     tmp_code = vba_code
     for str_name in strings.keys():
         tmp_code = tmp_code.replace(strings[str_name], str_name)
-            
+        
     # Replace the skipped 1st arguments in calls.
-    vba_code = re.sub(r"([0-9a-zA-Z_])\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
+    vba_code = re.sub(r"([0-9a-zA-Z_\.]+)\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
 
-    # Put the string literals back.
+    # Put the string literals.
     for str_name in strings.keys():
         vba_code = vba_code.replace(str_name, strings[str_name])
-
+        
     # Return the modified code.
     return vba_code
+
+def fix_skipped_1st_arg2(vba_code):
+    """
+    Replace calls like \nfoo, 1, ... with \nfoo SKIPPED_ARG, 1, ... .
+    """
+
+    # Skipped this if unneeded.
+    if (re.match(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None):
+        #print "SKIPPED!!"
+        return vba_code
     
+    # We don't want to replace things like this in string literals. Temporarily
+    # pull out the string literals from the line.
+
+    # Find all the string literals and make up replacement names.
+    strings = {}
+    in_str = False
+    curr_str = None
+    for c in vba_code:
+
+        # Start/end of string?
+        if (c == '"'):
+
+            # Start of string?
+            if (not in_str):
+                curr_str = ""
+                in_str = True
+
+            # End of string.
+            else:
+
+                # Map a temporary name to the current string.
+                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                while (str_name in strings):
+                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                curr_str += c
+                strings[str_name] = curr_str
+                in_str = False
+                curr_str = None
+
+        # Save the character if we are in a string.
+        if (in_str):
+            curr_str += c
+
+    # Temporarily replace the string literals.
+    tmp_code = vba_code
+    for str_name in strings.keys():
+        tmp_code = tmp_code.replace(strings[str_name], str_name)
+    #print "HERE: 1"
+    #print tmp_code
+        
+    # Find all paren exprs and make up replacement names.
+    in_paren = False
+    paren_count = 0
+    parens = {}
+    curr_paren = None
+    for c in tmp_code:
+
+        # Start/end of parenthesized expression?
+        #print c
+        if (c == '('):
+
+            # Start of paren expr?
+            paren_count += 1
+            if (paren_count > 0):
+                curr_paren = ""
+                in_paren = True
+
+        if (c == ')'): 
+
+            # Out of parens?
+            paren_count -= 1
+            if (paren_count <= 0):
+                
+                # Map a temporary name to the current string.
+                paren_count = 0
+                in_paren = False
+                if (curr_paren is not None):
+                    paren_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                    while (paren_name in parens):
+                        str_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                    curr_paren += c
+                    parens[paren_name] = curr_paren
+                    curr_paren = None
+
+        # Save the character if we are in a paren expr.
+        if (in_paren):
+            curr_paren += c
+
+    # Replace the paren exprs.
+    for paren_name in parens.keys():
+        tmp_code = tmp_code.replace(parens[paren_name], paren_name)
+    #print "HERE: 2"
+    #print tmp_code
+        
+    # Replace the skipped 1st arguments in calls.
+    vba_code = re.sub(r"\n\s*([0-9a-zA-Z_\.]+)\s*,", r"\n\1 SKIPPED_ARG,", tmp_code)
+
+    # Put the string literals and paren exprs back.
+    for paren_name in parens.keys():
+        vba_code = vba_code.replace(paren_name, parens[paren_name])
+    for str_name in strings.keys():
+        vba_code = vba_code.replace(str_name, strings[str_name])
+        
+    # Return the modified code.
+    return vba_code
+
 def fix_unhandled_array_assigns(vba_code):
     """
     Currently things like 'foo(1, 2, 3) = 1' are not handled.
@@ -430,7 +574,7 @@ def fix_unhandled_event_statements(vba_code):
         # Punt.
         return vba_code
     
-    pat = "\n( *Event[^\n]{10,})"
+    pat = "\n( *(?:[Pp]ublic) *Event[^\n]{10,})"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         vba_code = "\n" + vba_code + "\n"
         vba_code = re.sub(pat, r"\n' UNHANDLED EVENT STATEMENT \1", vba_code) + "\n"
@@ -488,28 +632,40 @@ def convert_colons_to_linefeeds(vba_code):
     while (pos < (len(vba_code) - 1)):
 
         # Do we have any blocks of text coming up that we should not change?
+        # Find the 1st marker in the string.
+        marker_pos1 = len(vba_code)
+        use_start_marker = None
+        use_end_marker = None
         found_marker = False
         for marker, end_marker in marker_chars:
 
             # Do we have an unchangeable block?
             if (marker in vba_code[pos:]):
-                
-                # Find the chunk of text we should modify.
-                found_marker = True
-                marker_pos1 = vba_code[pos:].index(marker) + pos
-                change_chunk = vba_code[pos:marker_pos1+1]
-                change_chunk = change_chunk.replace(":", "\n")
 
-                # Find the chunk of text to leave alone.
-                marker_pos2 = len(vba_code)
-                if (end_marker in vba_code[marker_pos1+1:]):
-                    marker_pos2 = vba_code[marker_pos1+1:].index(end_marker) + marker_pos1 + 2
-                leave_chunk = vba_code[marker_pos1+1:marker_pos2]
+                # Is this the most recent marker found?
+                found_marker = True
+                curr_marker_pos1 = vba_code[pos:].index(marker) + pos
+                if (curr_marker_pos1 < marker_pos1):
+                    marker_pos1 = curr_marker_pos1
+                    use_end_marker = end_marker
+                    use_start_marker = marker
+
+        # Did we find a marker?
+        if (found_marker):
+
+            # Pull out the text to change.
+            change_chunk = vba_code[pos:marker_pos1+1]
+            change_chunk = change_chunk.replace(":", "\n")
+
+            # Find the chunk of text to leave alone.
+            marker_pos2 = len(vba_code)
+            if (use_end_marker in vba_code[marker_pos1+1:]):
+                marker_pos2 = vba_code[marker_pos1+1:].index(use_end_marker) + marker_pos1 + 2
+            leave_chunk = vba_code[marker_pos1+1:marker_pos2]
                 
-                # Save the modified chunk and the unmodified chunk.
-                r += change_chunk + leave_chunk
-                pos = marker_pos2
-                break
+            # Save the modified chunk and the unmodified chunk.
+            r += change_chunk + leave_chunk
+            pos = marker_pos2
 
         # If the whole remaining text string is modifiable just do the ':' -> '\n' on the
         # whole remaining string.
@@ -615,6 +771,11 @@ def fix_difficult_code(vba_code):
                 if (re.search(bad_bool_pat, tmp_exp) is None):
                     continue
 
+            # Don't count multi-variable assignments.
+            multi_pat = r"(?:\w+ *= *){2,}"
+            if (re.search(multi_pat, bad_exp) is not None):
+                continue
+                
             # This is actually an integer expression with boolean logic.
             # Not handled.
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION " + bad_exp[1:])
@@ -1080,7 +1241,8 @@ def fix_vba_code(vba_code):
     vba_code = fix_difficult_code(vba_code)
     
     # Fix function calls with a skipped 1st argument.
-    vba_code = fix_skipped_1st_arg(vba_code)
+    vba_code = fix_skipped_1st_arg1(vba_code)
+    vba_code = fix_skipped_1st_arg2(vba_code)
 
     # Fix lines with missing double quotes.
     vba_code = fix_unbalanced_quotes(vba_code)
@@ -1172,6 +1334,7 @@ def strip_line_nums(line):
 
     # Find the end of a number at the start of the line, if there is one.
     pos = 0
+    line = line.strip()
     for c in line:
         if (not c.isdigit()):
             # Don't delete numeric labels.
@@ -1210,6 +1373,9 @@ def strip_useless_code(vba_code, local_funcs):
     global external_funcs
     for line in vba_code.split("\n"):
 
+        # Strip line numbers from starts of lines.
+        line = strip_line_nums(line)
+        
         # Skip comment lines.
         line_num += 1
         if (line.strip().startswith("'")):
