@@ -763,6 +763,23 @@ def parse_streams(vba, strip_useless=False):
     else:
         return parse_streams_serial(vba, strip_useless)
 
+# === Top level utility functions ================================================================================
+
+def read_excel_sheets(fname):
+    """
+    Read all the sheets of a given Excel file as CSV and return them as a ExcelBook object. 
+    Returns None on error.
+    """
+
+    # Read the sheets.
+    try:
+        f = open(fname, 'rb')
+        data = f.read()
+        f.close()
+        return load_excel_libreoffice(data)
+    except:
+        return None
+        
 # === Top level Programatic Interface ================================================================================    
 
 def process_file(container,
