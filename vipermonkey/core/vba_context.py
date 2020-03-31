@@ -3655,7 +3655,7 @@ class Context(object):
         """
         Save variable values that appear to contain base64 encoded or URL IOCs.
         """
-
+        
         # Is there a URL in the data?
         got_ioc = False
         URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'

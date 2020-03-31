@@ -247,7 +247,7 @@ def collapse_macro_if_blocks(vba_code):
         
     # Return the stripped VBA.
     return r
-
+    
 def fix_unbalanced_quotes(vba_code):
     """
     Fix lines with missing double quotes.
@@ -699,6 +699,7 @@ def fix_difficult_code(vba_code):
 
     # Targeted fix for some maldocs.
     #print "HERE: 1"
+    #print vba_code
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
     vba_code = fix_unhandled_event_statements(vba_code)
@@ -949,6 +950,7 @@ def fix_difficult_code(vba_code):
         #print "--------"
         #print pos
         #print c
+        #print got_interesting
         #print prev_char
         #print next_char
         if (not got_interesting):
@@ -989,6 +991,7 @@ def fix_difficult_code(vba_code):
 
                 # Process the string starting at the interesting character we found.
                 poss_pos = index + pos
+                #print ">>>>>>>>>>>>>>>>>>"
                 #print interesting_c
                 #print pos
                 #print poss_pos
@@ -1086,6 +1089,10 @@ def fix_difficult_code(vba_code):
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
             r += "d" + str(ord(c))
+
+        # Make sure needed ';' are kept.
+        if (c == ";"):
+            r += c
 
     # Put the #if macros back.
     r = r.replace("HASH__if", "#If")
@@ -1249,7 +1256,7 @@ def fix_vba_code(vba_code):
 
     # For each const integer defined, replace it inline in the code to reduce lookups
     vba_code = replace_constant_int_inline(vba_code)
-    
+
     # Skip the next part if unnneeded.
     uni_vba_code = None
     try:

@@ -58,6 +58,7 @@ import re
 from curses_ascii import isprint
 import traceback
 import string
+import gc
 
 from inspect import getouterframes, currentframe
 import sys

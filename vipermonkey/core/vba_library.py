@@ -84,6 +84,14 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class GetSaveAsFilename(VbaLibraryFunc):
+    """
+    GetSaveAsFilename() function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return 'C:\\Users\\admin\\AppData\\Local\\Faked_SaveAs_File_Name.dat'
+        
 class GetSpecialFolder(VbaLibraryFunc):
     """
     GetSpecialFolder() function
@@ -3833,7 +3841,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                URLDownloadToFileW, SaveAs, Quit, Exists, RegRead, Kill, RmDir, EOF,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
-               VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists):
+               VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
+               GetSaveAsFilename):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
