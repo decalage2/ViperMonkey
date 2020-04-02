@@ -547,6 +547,25 @@ def fix_skipped_1st_arg2(vba_code):
     # Return the modified code.
     return vba_code
 
+def fix_unhandled_named_params(vba_code):
+    """
+    Currently things like 'foo(a:=1, b:=2)' are not handled.
+    Comment them out.
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "\n([^\n]*\w+\([^\n]*\w+:=)"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        log.warning("Named parameters are not currently handled. Commenting them out...")
+        vba_code = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", vba_code) + "\n"
+    return vba_code
+
 def fix_unhandled_array_assigns(vba_code):
     """
     Currently things like 'foo(1, 2, 3) = 1' are not handled.
@@ -710,6 +729,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_array_assigns(vba_code)
     vba_code = fix_unhandled_event_statements(vba_code)
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
+    vba_code = fix_unhandled_named_params(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
     #vba_code = vba_code.replace("\xe2\x80", '"')
@@ -755,7 +775,7 @@ def fix_difficult_code(vba_code):
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
     #print "HERE: 6"
-    namespace_pat = r"(\w+\.Run\(.+\)[^,]*),\s*[^\n]+"
+    namespace_pat = r"(\w+\.Run\(.+\)[^,\n]*),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         #print "HERE: 6.1"
         vba_code = re.sub(namespace_pat, r"\1", vba_code)

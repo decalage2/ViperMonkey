@@ -62,9 +62,6 @@ def is_garbage_vba(vba):
             num_bad += 1
 
     # It's bad if > 60% of the 1st 10% of the string is garbage.    
-    print num_bad
-    print total_len
-    print num_bad/total_len
     return ((num_bad/total_len) > .6)
 
 def pull_base64(data):
