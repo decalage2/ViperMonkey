@@ -1401,7 +1401,7 @@ def strip_line_nums(line):
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """
-    Strip statements that have no usefull effect from the given VB. The
+    Strip statements that have no useful effect from the given VB. The
     stripped statements are commented out.
     """
 
@@ -1413,7 +1413,8 @@ def strip_useless_code(vba_code, local_funcs):
     # could be used in the execed code strings.
     exec_pat = r"execute(?:global)?\s*\("
     if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
-        return vba_code
+        r = collapse_macro_if_blocks(vba_code)
+        return r
     
     # Track data change callback function names.
     change_callbacks = set()    
