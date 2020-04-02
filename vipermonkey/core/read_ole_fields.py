@@ -42,11 +42,30 @@ import random
 import os
 import sys
 from collections import Counter
+import string
 
 import olefile
 
 from logger import log
 import filetype
+
+def is_garbage_vba(vba):
+    """
+    Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
+    """
+
+    # See if the 1st 10% of the string is mostly bad or mostly good.
+    total_len = int(len(vba) * .1)
+    num_bad = 0.0
+    for c in vba[:total_len]:
+        if (c not in string.printable):
+            num_bad += 1
+
+    # It's bad if > 60% of the 1st 10% of the string is garbage.    
+    print num_bad
+    print total_len
+    print num_bad/total_len
+    return ((num_bad/total_len) > .6)
 
 def pull_base64(data):
     """

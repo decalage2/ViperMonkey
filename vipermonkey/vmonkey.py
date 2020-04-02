@@ -658,6 +658,10 @@ def parse_stream(subfilename,
     # .hta file).
     vba_code = get_vb_contents(vba_code)
 
+    # Do not analyze the file if the VBA looks like garbage characters.
+    if (read_ole_fields.is_garbage_vba(vba_code)):
+        raise ValueError("VBA looks corrupted. Not analyzing.")
+    
     # Strip out code that does not affect the end result of the program.
     if (strip_useless):
         vba_code = strip_lines.strip_useless_code(vba_code, local_funcs)
@@ -1236,6 +1240,10 @@ def _process_file (filename,
             for (subfilename, stream_path, vba_filename, macro_code) in vba.extract_macros():
                 if (macro_code is not None):
                     vba_code += macro_code
+
+            # Do not analyze the file if the VBA looks like garbage characters.
+            if (read_ole_fields.is_garbage_vba(vba_code)):
+                raise ValueError("VBA looks corrupted. Not analyzing.")
                     
             # Pull out embedded OLE form textbox text.
             log.info("Reading TextBox and RichEdit object text fields...")
