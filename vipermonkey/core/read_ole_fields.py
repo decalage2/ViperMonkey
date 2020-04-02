@@ -56,6 +56,8 @@ def is_garbage_vba(vba):
 
     # See if the 1st 10% of the string is mostly bad or mostly good.
     total_len = int(len(vba) * .1)
+    if (total_len == 0):
+        return False
     num_bad = 0.0
     for c in vba[:total_len]:
         if (c not in string.printable):

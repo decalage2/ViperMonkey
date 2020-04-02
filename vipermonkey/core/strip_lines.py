@@ -547,6 +547,23 @@ def fix_skipped_1st_arg2(vba_code):
     # Return the modified code.
     return vba_code
 
+def fix_bad_var_names(vba_code):
+    """
+    Change things like a& = b& + 1 to a = b + 1.
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "(\w)&\s*((?:[\+\-/\*=n,\)\n&]|[Mm]od|[Aa]nd|[Oo]r|[Xx]or|[Ee]qv))"
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        vba_code = re.sub(pat, r"\1 \2", vba_code) + "\n"
+    return vba_code
+
 def fix_unhandled_named_params(vba_code):
     """
     Currently things like 'foo(a:=1, b:=2)' are not handled.
@@ -730,6 +747,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_event_statements(vba_code)
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
     vba_code = fix_unhandled_named_params(vba_code)
+    vba_code = fix_bad_var_names(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
     #vba_code = vba_code.replace("\xe2\x80", '"')
@@ -1632,10 +1650,10 @@ def strip_useless_code(vba_code, local_funcs):
             if (var.lower() in line.lower()):
 
                 # If we are aggressively stripping don't pay attention to debug.print.
-                if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
-                    continue
+                #if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
+                #    if (log.getEffectiveLevel() == logging.DEBUG):
+                #        log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                #    continue
                 
                 # Maybe. Count this as a reference.
                 if (log.getEffectiveLevel() == logging.DEBUG):
