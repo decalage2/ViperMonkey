@@ -3298,13 +3298,12 @@ class Redim_Statement(VBA_Object):
         return
 
 # Array redim statement
-redim_statement = CaselessKeyword('ReDim').suppress() + \
-                  Optional(CaselessKeyword('Preserve')) + \
-                  expression('item') + \
-                  Optional('(' + expression + CaselessKeyword('To') + expression + \
-                           ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + \
-                           ')').suppress() + \
-                  Optional(CaselessKeyword('As') + lex_identifier).suppress()
+redim_item = Optional(CaselessKeyword('Preserve')) + \
+             expression('item') + \
+             Optional('(' + expression + CaselessKeyword('To') + expression + ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + ')').suppress() + \
+             Optional(CaselessKeyword('As') + lex_identifier).suppress()
+redim_statement = CaselessKeyword('ReDim').suppress() + redim_item + ZeroOrMore("," + redim_item)
+
 redim_statement.setParseAction(Redim_Statement)
 
 # --- WITH statement ----------------------------------------------------------
