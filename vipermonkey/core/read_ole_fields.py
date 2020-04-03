@@ -54,8 +54,8 @@ def is_garbage_vba(vba):
     Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
     """
 
-    # See if the 1st 10% of the string is mostly bad or mostly good.
-    total_len = int(len(vba) * .1)
+    # See if the 1st % of the string is mostly bad or mostly good.
+    total_len = int(len(vba) * .25)
     if (total_len == 0):
         return False
     num_bad = 0.0

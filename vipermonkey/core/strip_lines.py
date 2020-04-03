@@ -547,6 +547,29 @@ def fix_skipped_1st_arg2(vba_code):
     # Return the modified code.
     return vba_code
 
+def fix_bad_next_statements(vba_code):
+    """
+    Change things like "Next x,y" to "Next x\nNext y"
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    pat = "Next +(?:\w+ *, *)+\w+ *\n"
+    r = vba_code
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+        index_pat = "(?:(\w+) *, *)+(\w+)"
+        for bad_next in re.findall(pat, vba_code):
+            new_nexts = ""
+            for index in re.findall(index_pat, bad_next)[0]:
+                new_nexts += "Next " + index + "\n"
+            r = r.replace(bad_next, new_nexts)
+    return r
+
 def fix_bad_var_names(vba_code):
     """
     Change things like a& = b& + 1 to a = b + 1.
@@ -748,6 +771,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
     vba_code = fix_unhandled_named_params(vba_code)
     vba_code = fix_bad_var_names(vba_code)
+    vba_code = fix_bad_next_statements(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
     #vba_code = vba_code.replace("\xe2\x80", '"')
