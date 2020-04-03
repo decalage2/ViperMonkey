@@ -1440,6 +1440,20 @@ def strip_line_nums(line):
         pos += 1
     return line[pos:]
 
+def strip_attribute_lines(vba_code):
+    """
+    Strip all Attribute statements from the code.
+    """
+    if (vba_code is None):
+        return vba_code
+    r = ""
+    for line in vba_code.split("\n"):
+        if (line.strip().startswith("Attribute ")):
+            log.warning("Attribute statements not handled. Stripping '" + line.strip() + "'.")
+            continue
+        r += line + "\n"
+    return r
+        
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """
@@ -1455,7 +1469,8 @@ def strip_useless_code(vba_code, local_funcs):
     # could be used in the execed code strings.
     exec_pat = r"execute(?:global)?\s*\("
     if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
-        r = collapse_macro_if_blocks(vba_code)
+        r = strip_attribute_lines(vba_code)
+        r = collapse_macro_if_blocks(r)
         return r
     
     # Track data change callback function names.
