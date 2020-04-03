@@ -783,7 +783,13 @@ def read_excel_sheets(fname):
         return load_excel_libreoffice(data)
     except:
         return None
-        
+
+def pull_urls_office97(fname):
+    """
+    Pull URLs directly from an Office97 file.
+    """
+    return read_ole_fields.pull_urls_office97(fname, False, None)
+    
 # === Top level Programatic Interface ================================================================================    
 
 def process_file(container,
