@@ -3696,6 +3696,7 @@ simple_statement = (
         | doevents_statement
         | rem_statement
         | resume_statement
+        | global_variable_declaration
     )
 )
 
