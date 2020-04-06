@@ -664,6 +664,13 @@ class ViperMonkey(object):
         t.max_width['Parameters'] = 25
         t.max_width['Description'] = 25
         for action in self.actions:
+            # Cut insanely large results down to size.
+            str_action = str(action)
+            if (len(str_action) > 50000):
+                new_params = str(action[1])
+                if (len(new_params) > 50000):
+                    new_params = new_params[:25000] + "... <SNIP> ..." + new_params[-25000:]
+                action = (action[0], new_params, action[2])
             t.add_row(action)
         return t
 
