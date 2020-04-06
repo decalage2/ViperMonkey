@@ -99,19 +99,19 @@ class GetSpecialFolder(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
-            return "UNKNOWN_FOLDER"
+            return "UNKNOWN_FOLDER\\"
         try:
             typ = int(params[0])
             if (typ == 0):
-                return "C:\\Windows"
+                return "C:\\Windows\\"
             elif (typ == 1):
-                return "C:\\Windows\\system32"
+                return "C:\\Windows\\system32\\"
             elif (typ == 2):
-                return "C:\\Documents and Settings\\admin\\Local Settings\\Temp"
+                return "C:\\Documents and Settings\\admin\\Local Settings\\Temp\\"
             else:
-                return "UNKNOWN_FOLDER"
+                return "UNKNOWN_FOLDER\\"
         except:
-            return "UNKNOWN_FOLDER"
+            return "UNKNOWN_FOLDER\\"
             
 class MonthName(VbaLibraryFunc):
     """
@@ -842,9 +842,6 @@ class Execute(VbaLibraryFunc):
         
         # Save the command.
         command = strip_nonvb_chars(str(params[0]))
-
-        # Why am I doing this?
-        #command = command.replace('""', '"')
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
@@ -865,12 +862,28 @@ class Execute(VbaLibraryFunc):
             # Maybe replacing the '""' with '"' was a bad idea. Try the original
             # command.
             try:
+                log.warning("Parsing failed on modified command. Trying original command ...")
                 obj = modules.module.parseString(orig_command, parseAll=True)[0]
             except ParseException:
-                if (len(orig_command) > 50):
-                    orig_command = orig_command[:50] + " ..."
-                log.error("Parse error. Cannot evaluate '" + orig_command + "'")
-                return "NULL"
+                
+                # Final attempt. Try cutting off the final line and executing.
+                if ("\n" in command):
+                    short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
+                    try:
+                        log.warning("Parsing failed on original command. Trying shortened command ...")
+                        obj = modules.module.parseString(short_command, parseAll=True)[0]
+                    except ParseException:
+                        if (len(orig_command) > 50):
+                            orig_command = orig_command[:50] + " ..."
+                        log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                        return "NULL"
+
+                # No shorter command. Punt.
+                else:
+                    if (len(orig_command) > 50):
+                        orig_command = orig_command[:50] + " ..."
+                    log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                    return "NULL"
             
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?
@@ -3014,7 +3027,7 @@ class Run(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
-            return
+            return 0
 
         # Get the name of the function to call.
         func_name = str(params[0])
@@ -3035,6 +3048,7 @@ class Run(VbaLibraryFunc):
             return s.eval(context=context, params=call_params)
         except KeyError:
             log.error("Application.Run() failed. Cannot find function " + str(func_name) + ".")
+            return 0
 
 class Exec(VbaLibraryFunc):
     """
@@ -3800,18 +3814,27 @@ class Write(VbaLibraryFunc):
 
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
-        # current open file.
+        # obvious open file.
         if not context.open_files:
             log.error("Cannot process Write(). No open files.")
             return
-        if len(context.open_files) > 1:
-            log.error("Cannot process Write(). Too many open files.")
-            return
+        files = context.open_files.keys()
+        if len(files) > 1:
+            # Skip ADODB.Stream when guessing what file to write to.
+            tmp_files = []
+            for f in files:
+                if (f.strip() == "ADODB.Stream"):
+                    continue
+                tmp_files.append(f)
+            files = tmp_files
+            if len(files) > 1:
+                log.error("Cannot process Write(). Too many open files.")
+                return
 
         # Simulate the write.
 
         # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+        file_id = files[0]
         log.info("Writing data to " + str(file_id) + " .")
 
         context.write_file(file_id, data)

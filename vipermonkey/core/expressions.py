@@ -1496,8 +1496,22 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-member-access-expression = "." unrestricted-name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
-with_member_access_expression = OneOrMore( Suppress(".") + (unrestricted_name ^ function_call_limited) )
-with_member_access_expression.setParseAction(lambda t: ''.join('.%s' % u for u in t)[1:])
+class With_Member_Expression(VBA_Object):
+    
+    def __init__(self, original_str, location, tokens, old_call=None):
+        super(With_Member_Expression, self).__init__(original_str, location, tokens)
+        self.expr = tokens.expr
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as With_Member_Expression' % self)
+
+    def __repr__(self):
+        return "." + str(self.expr)
+
+    def eval(self, context, params=None):
+        return self.expr.eval(context, params)
+
+with_member_access_expression = Suppress(".") + (simple_name_expression("expr") ^ function_call_limited("expr") ^ member_access_expression("expr")) 
+with_member_access_expression.setParseAction(With_Member_Expression)
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
 
@@ -2371,7 +2385,7 @@ class New_Expression(VBA_Object):
         super(New_Expression, self).__init__(original_str, location, tokens)
         self.obj = tokens.expression
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
+            log.debug('parsed %r as New_Expression' % self)
 
     def __repr__(self):
         return ('New %r' % self.obj)

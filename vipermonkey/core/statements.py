@@ -692,7 +692,7 @@ class Let_Statement(VBA_Object):
             self.index1 = tokens.index1
         self.op = tokens["op"]
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
+            log.debug('parsed %r as Let_Statement' % self)
 
     def __repr__(self):
         if (self.index is None):
