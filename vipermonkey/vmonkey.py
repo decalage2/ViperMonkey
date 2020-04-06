@@ -1154,7 +1154,7 @@ def _process_file (filename,
             # the macros.
             out_dir = None
             if (only_filename is not None):
-                out_dir = artifact_dir + only_filename + "_artifacts/"
+                out_dir = artifact_dir + "/" + only_filename + "_artifacts/"
             else:
                 out_dir = "/tmp/tmp_file_" + str(random.randrange(0, 10000000000))
             log.info("Saving dropped analysis artifacts in " + out_dir)

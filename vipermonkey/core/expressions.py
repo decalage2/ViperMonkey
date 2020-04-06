@@ -672,7 +672,8 @@ class MemberAccessExpression(VBA_Object):
 
             # Fix the file name for emulation if needed.
             if (read_file.startswith("C:\\")):
-                read_file = read_file.replace("C:\\", "./")
+                #read_file = read_file.replace("C:\\", "./")
+                read_file = read_file.replace("C:\\", "")
 
             try:
                 f = open(read_file, 'rb')
