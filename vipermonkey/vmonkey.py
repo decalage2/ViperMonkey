@@ -139,6 +139,7 @@ def safe_print(text):
     Sometimes printing large strings when running in a Docker container triggers exceptions.
     This function just wraps a print in a try/except block to not crash ViperMonkey when this happens.
     """
+    text = str(text)
     try:
         print(text)
     except Exception as e:
