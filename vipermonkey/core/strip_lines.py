@@ -570,6 +570,50 @@ def fix_bad_next_statements(vba_code):
             r = r.replace(bad_next, new_nexts)
     return r
 
+def fix_bad_exponents(vba_code):
+    """
+    Change things like '2^2' to '2 ^ 2'. 
+    """
+
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    
+    # Do we have possible bad exponents?
+    pat = '([\w\(\)])\^([\w\(\)])'
+    r = ""
+    if (re2.search(unicode(pat), uni_vba_code) is not None):
+
+        # Now look line by line through the code so as not to modify these constructs
+        # when they appear in strings.
+        for line in vba_code.split("\n"):
+
+            # String line?
+            if ('"' in line):
+                r += line + "\n"
+                continue
+
+            # Line with no bad exponents?
+            uni_line = None
+            try:
+                uni_line = line.decode("utf-8")
+            except UnicodeDecodeError:
+                # Punt.
+                r += line + "\n"
+                continue
+            if (re2.search(unicode(pat), uni_line) is None):
+                r += line + "\n"
+                continue
+
+            # This line has bad exponents. Fix it.
+            new_line = re.sub(pat, r"\1 ^ \2", line)
+            r += new_line + "\n"
+
+    return r
+
 def fix_bad_var_names(vba_code):
     """
     Change things like a& = b& + 1 to a = b + 1.
@@ -771,6 +815,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
     vba_code = fix_unhandled_named_params(vba_code)
     vba_code = fix_bad_var_names(vba_code)
+    vba_code = fix_bad_exponents(vba_code)
     vba_code = fix_bad_next_statements(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
