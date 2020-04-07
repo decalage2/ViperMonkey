@@ -1681,7 +1681,17 @@ def strip_useless_code(vba_code, local_funcs):
             for m in match:
                 
                 # Look at each matched variable.
+                expanded_vars = []
                 for var in m:
+                    if (var is None):
+                        continue
+                    expanded_vars.append(var)
+                    if ("(" in var):
+                        array_var = var[:var.index("(")]
+                        expanded_vars.append(array_var)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Assigned vars (1) = " + str(expanded_vars) + ". Line # = " + str(line_num))
+                for var in expanded_vars:
 
                     # Skip empty.
                     if ((var is None) or (len(var.strip()) == 0)):
