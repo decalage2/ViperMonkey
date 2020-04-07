@@ -612,6 +612,10 @@ def fix_bad_exponents(vba_code):
             new_line = re.sub(pat, r"\1 ^ \2", line)
             r += new_line + "\n"
 
+    # No bad exponents anywhere.
+    else:
+        return vba_code
+            
     return r
 
 def fix_bad_var_names(vba_code):
