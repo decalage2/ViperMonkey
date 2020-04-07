@@ -1478,7 +1478,7 @@ def strip_useless_code(vba_code, local_funcs):
     
     # Find all assigned variables and track what line the variable was assigned on.
     # Dim statements are counted as assignments.
-    assign_re = re2.compile(u"(?:\s*(\w+(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
+    assign_re = re2.compile(u"(?:\s*(\w+(?:\([^\)]*\))?(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
@@ -1656,7 +1656,11 @@ def strip_useless_code(vba_code, local_funcs):
                     # (ex. a = a + 1).
                     if (var.lower() in val.lower()):
                         continue
-                
+
+                    # Keep updates where we are changing the field of an object.
+                    if ("." in var):
+                        continue
+                    
                     # It does not look like we are running something. Track the variable.
                     if (var not in assigns):
                         assigns[var] = set()
