@@ -1978,10 +1978,14 @@ class While_Statement(VBA_Object):
                     if_guard_str = str(if_guard).strip()
                     if (if_guard_str.startswith(loop_counter + " = ")):
 
+                        # We are only handling simple If statements (no Else or ElseIf).
+                        if (("Else " in str(s)) or ("ElseIf " in str(s))):
+                            return False
+                        
                         # Pull out the loop counter value we are looking for and
                         # what to run when the counter equals that.
                         if_block = s.pieces[0]["body"]
-
+                        
                         # We can only handle ints for the loop counter value to check for.
                         try:
                             start = if_guard_str.rindex("=") + 1

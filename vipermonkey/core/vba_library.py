@@ -867,7 +867,7 @@ class Execute(VbaLibraryFunc):
             except ParseException:
                 
                 # Final attempt. Try cutting off the final line and executing.
-                if ("\n" in command):
+                if ("\n" in orig_command.strip()):
                     short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
                     try:
                         log.warning("Parsing failed on original command. Trying shortened command ...")

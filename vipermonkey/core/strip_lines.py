@@ -107,7 +107,7 @@ def is_useless_dim(line):
     # Done.
     return r
 
-aggressive_strip = True
+aggressive_strip = False
 def is_interesting_call(line, external_funcs, local_funcs):
 
     # Is this an interesting function call?
