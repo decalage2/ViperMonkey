@@ -353,6 +353,11 @@ def get_cached_value(arg):
     Get the cached value of an all constant numeric expression if we have it.
     """
 
+    # Don't do any more work if this is already a resolved value.
+    if (isinstance(arg, int)):
+        return arg
+
+    # This is not already resolved to an int. See if we computed this before.
     arg_str = str(arg)
     if (arg_str not in constant_expr_cache.keys()):
         return None
@@ -363,6 +368,15 @@ def set_cached_value(arg, val):
     Set the cached value of an all constant numeric expression.
     """
 
+    # We should be setting this to a numeric expression
+    if ((not isinstance(val, int)) and
+        (not isinstance(val, float)) and
+        (not isinstance(val, complex))):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.warning("Expression '" + str(val) + "' is a " + str(type(val)) + ", not an int. Not caching.")
+        return
+
+    # We have a number. Cache it.
     arg_str = str(arg)
     try:
         if (log.getEffectiveLevel() == logging.DEBUG):

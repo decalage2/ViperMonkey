@@ -3837,6 +3837,7 @@ class Context(object):
 
                     # Make sure this is a potentially valid base64 string
                     tmp_str = filter(isascii, str(value).strip())
+                    tmp_str = tmp_str.replace(" ", "")
                     b64_pat = r"^[A-Za-z0-9+/=]+$"
                     if (re.match(b64_pat, tmp_str) is not None):
 
@@ -3911,6 +3912,7 @@ class Context(object):
                     
                         # Set the typed value of the node to the decoded value.
                         tmp_str = filter(isascii, str(node_value).strip())
+                        tmp_str = tmp_str.replace(" ", "")
                         missing_padding = len(tmp_str) % 4
                         if missing_padding:
                             tmp_str += b'='* (4 - missing_padding)
