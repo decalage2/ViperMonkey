@@ -383,6 +383,8 @@ class FileExists(VbaLibraryFunc):
             return True
         if ("cmd.exe" in fname.lower()):
             return True
+        if ("explorer.exe" in fname.lower()):
+            return True
         return False
         
 class Switch(VbaLibraryFunc):
