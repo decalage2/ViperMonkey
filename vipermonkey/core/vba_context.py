@@ -3733,7 +3733,16 @@ class Context(object):
         if (case_insensitive):
             tmp_name = name.lower()
             self.set(tmp_name, value, var_type, do_with_prefix, force_local, force_global, no_conversion=no_conversion, case_insensitive=False)
-        
+
+        # Handling of special case where an array access is being stored as a variable.
+        name_str = str(name)
+        if (("(" in name_str) and (")" in name_str)):
+
+            # See if this is actually referring to a global variable.
+            name_str = name_str[:name_str.index("(")].strip()
+            if (name_str in self.globals.keys()):
+                force_global = True
+            
         # Set the variable
         if (force_global):
             try:
@@ -3800,16 +3809,17 @@ class Context(object):
 
             # Is this a base64 object?
             do_b64 = False
+            node_type = name.replace(".text", ".datatype")
             try:
 
                 # Is the root object something set to the "bin.base64" data type?
-                node_type = name.replace(".text", ".datatype")
                 val = str(self.get(node_type)).strip()
                 if (val.lower() == "bin.base64"):
                     do_b64 = True
 
             except KeyError:
-                pass
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Did not find type var " + node_type)
 
             # Is this a general XML object?
             try:
@@ -3880,7 +3890,8 @@ class Context(object):
                         self.set(name, conv_val, no_conversion=True)
                         
             except KeyError:
-                pass
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Did not find type var " + node_type)
 
         # Handle after the fact data conversion with VBA objects.
         if (name.endswith(".datatype")):
