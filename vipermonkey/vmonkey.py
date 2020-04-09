@@ -989,6 +989,10 @@ def load_excel_libreoffice(data):
     # Delete the temp files with the CSV sheet data.
     for sheet_file in sheet_files:
         os.remove(sheet_file)
+
+    # Delete the temporary Excel file.
+    if os.path.isfile(out_dir):
+        os.remove(out_dir)
         
     # Return the workbook.
     return result_book

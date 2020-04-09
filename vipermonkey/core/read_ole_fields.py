@@ -143,6 +143,10 @@ def get_defaulttargetframe_text(data):
     contents = f1.read()
     f1.close()
 
+    # Delete the temporary Office file.
+    if (delete_file):
+        os.remove(fname)
+    
     # <vt:lpwstr>custom value</vt:lpwstr>
     # Pull out the DefaultTargetFrame string value. This assumes that DefaultTargetFrame
     # is the only value stored in custom.xml.
@@ -1745,7 +1749,6 @@ def _get_comments_2007(fname):
             text = text.replace("&apos;", "'")
             text = text.replace("&quot;", '"')
             block_text += text
-
 
         # Save the comment.
         r.append((curr_id, block_text))
