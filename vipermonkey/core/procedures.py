@@ -88,6 +88,9 @@ class Sub(VBA_Object):
         context = Context(context=caller_context)
         context.in_procedure = True
 
+        # We are entering the function so reset whether we executed a goto.
+        context.goto_executed = False
+        
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
@@ -179,7 +182,8 @@ class Sub(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -205,7 +209,10 @@ class Sub(VBA_Object):
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-            
+
+        # We are leaving the function so reset whether we executed a goto.
+        context.goto_executed = False
+        
         # Handle subs with no return values.
         try:            
             context.get(self.name)
@@ -368,6 +375,9 @@ class Function(VBA_Object):
         # TODO: Local variable inheritence needs to be investigated more...
         context = Context(context=caller_context)        
         context.in_procedure = True
+
+        # We are entering the function so reset whether we executed a goto.
+        context.goto_executed = False
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -482,7 +492,8 @@ class Function(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -500,7 +511,10 @@ class Function(VBA_Object):
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-            
+
+        # We are leaving the function so reset whether we executed a goto.
+        context.goto_executed = False
+        
         # TODO: get result from context.locals
         context.exit_func = False
         try:

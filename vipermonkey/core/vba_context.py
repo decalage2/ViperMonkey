@@ -150,10 +150,10 @@ class Context(object):
         self.filename = filename
         
         # Track whether an error was raised in an emulated statement.
-        got_error = False
+        self.got_error = False
 
         # Track the error handler to execute when an error is raised.
-        error_handler = None
+        self.error_handler = None
         
         # Track mapping from bogus alias name of DLL imported functions to
         # real names.
@@ -182,6 +182,9 @@ class Context(object):
 
         # Track if this is the context of a function/sub.
         self.in_procedure = False
+
+        # Track whether we have emulated a goto.
+        self.goto_executed = False
         
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables

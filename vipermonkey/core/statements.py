@@ -378,7 +378,8 @@ class TaggedBlock(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -1577,11 +1578,14 @@ class For_Statement(VBA_Object):
         if (not context.contains(self.name)):
             log.warn("Cannot find loop variable " + str(self.name) + ". Skipping loop.")
             return
-        
+
         # Loop until the loop is broken out of or we hit the last index.
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
+            # We have already handled any gotos from the previous loop iteration.
+            context.goto_executed = False
+            
             # Handle assigning the loop index variable to a constant value
             # in the loop body. This can cause infinite loops.
             last_index = context.get(self.name)
@@ -1645,7 +1649,8 @@ class For_Statement(VBA_Object):
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
-                if (isinstance(s, Goto_Statement)):
+                #if (isinstance(s, Goto_Statement)):
+                if (context.goto_executed):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -1818,7 +1823,8 @@ class For_Each_Statement(VBA_Object):
 
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
-                    if (isinstance(s, Goto_Statement)):
+                    #if (isinstance(s, Goto_Statement)):
+                    if (context.goto_executed):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("GOTO executed. Go to next loop iteration.")
                         break
@@ -2286,7 +2292,8 @@ class While_Statement(VBA_Object):
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
-                if (isinstance(s, Goto_Statement)):
+                #if (isinstance(s, Goto_Statement)):
+                if (context.goto_executed):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2417,7 +2424,8 @@ class Do_Statement(VBA_Object):
 
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
-                if (isinstance(s, Goto_Statement)):
+                #if (isinstance(s, Goto_Statement)):
+                if (context.goto_executed):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2520,6 +2528,14 @@ class Select_Statement(VBA_Object):
                     if (context.must_handle_error()):
                         break
                     context.clear_error()
+
+                    # Did we just run a GOTO? If so we should not run the
+                    # statements after the GOTO.
+                    #if (isinstance(s, Goto_Statement)):
+                    if (context.goto_executed):
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("GOTO executed. Break out of Select.")
+                        break
 
                 # Run the error handler if we have one and we broke out of the statement
                 # loop with an error.
@@ -3369,7 +3385,8 @@ class With_Statement(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -3470,6 +3487,11 @@ class Goto_Statement(VBA_Object):
         if (not context.throttle_logging):
             log.info("GOTO " + str(self.label))
         block.eval(context, params)
+
+        # Tag that we have just emulated all the statements associated with the goto.
+        # The execution flow was covered by emulating the destination of the goto,
+        # so the regular code flow is now null and void.
+        context.goto_executed = True
 
 # Goto statement
 goto_statement = (CaselessKeyword('Goto').suppress() | CaselessKeyword('Gosub').suppress()) + (lex_identifier('label') | decimal_literal('label'))
