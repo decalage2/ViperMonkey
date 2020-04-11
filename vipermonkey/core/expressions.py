@@ -1726,6 +1726,14 @@ class Function_Call(VBA_Object):
                     
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Calling: %r' % f)
+
+            # Handle indirect function calls.
+            if ((isinstance(f, str)) and (context.contains(f))):
+                tmp_f = context.get(f)
+                if (isinstance(tmp_f, VbaLibraryFunc)):
+                    f = tmp_f
+
+            # Emulate the action.
             if (f is not None):
                 if (isinstance(f, procedures.Function) or
                     isinstance(f, procedures.Sub) or
