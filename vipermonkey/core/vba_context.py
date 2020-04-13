@@ -3498,7 +3498,7 @@ class Context(object):
         
         # See if this is an aliased reference to an objects .Text field.
         name = str(name)
-        if (((name == "NodeTypedValue") or (name == ".NodeTypedValue")) and
+        if (((name.lower() == "nodetypedvalue") or (name.lower() == ".nodetypedvalue")) and
             (not name in self.locals) and
             (".Text".lower() in self.locals)):
             return self.get(".Text")
