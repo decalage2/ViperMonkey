@@ -594,13 +594,16 @@ def get_vb_contents(vba_code):
     """
 
     # Try several regexes to pull out HTA script contents.
-    hta_regexes = [r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
-                   r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,})</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
+    hta_regexes = [r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,}?)</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
+                   r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+\%\d{1,10}\s*>(.{20,}?)</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>",
                    r"<\s*[Ss][Cc][Rr][Ii][Pp][Tt]\s+(?:(?:[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee])|(?:[Tt][Yy][Pp][Ee]))\s*=\s*\"?.{0,10}[Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt]\"?\s*>(.{20,})$"]
     code = []
     for pat in hta_regexes:
         code = re.findall(pat, vba_code.strip(), re.DOTALL)
         if (len(code) > 0):
+            #for c in code:
+            #    print("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n")
+            #    print(c)
             break
     if (len(code) == 0):
         return vba_code        
