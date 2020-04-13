@@ -1288,6 +1288,11 @@ def fix_vba_code(vba_code):
     # Make "End Try" in try/catch blocks easier to parse.
     #print "FIX_VBA_CODE: 4"
     vba_code = re.sub(r"End\s+Try", "##End ##Try", vba_code)
+
+    # Super specific. Some malicious VBScript has a floating '\n}\n'
+    # in the code. Remove it if needed.
+    if ("}" in vba_code):
+        vba_code = re.sub(r"\r?\n *\} *\r?\n", "\n", vba_code)
     
     # We don't handle Line Input constructs for now. Delete them.
     # TODO: Actually handle Line Input consructs.
