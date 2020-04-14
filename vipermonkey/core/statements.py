@@ -1799,6 +1799,7 @@ class For_Each_Statement(VBA_Object):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug('FOR EACH loop: %r = %r' % (self.item, context.get(self.item)))
                 done = False
+                context.goto_executed = False
                 for s in self.statements:
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug('FOR EACH loop eval statement: %r' % s)
@@ -2268,6 +2269,7 @@ class While_Statement(VBA_Object):
             
             # Execute the loop body.
             done = False
+            context.goto_executed = False
             for s in self.body:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug('WHILE loop eval statement: %r' % s)
@@ -2400,6 +2402,7 @@ class Do_Statement(VBA_Object):
             
             # Execute the loop body.
             done = False
+            context.goto_executed = False
             for s in self.body:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug('DO loop eval statement: %r' % s)

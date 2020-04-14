@@ -303,6 +303,16 @@ class RmDir(VbaLibraryFunc):
             context.report_action('Delete Directory', params[0], 'RmDir', strip_null_bytes=True)
         return ""  # vbOK
 
+class ChDir(VbaLibraryFunc):
+    """
+    ChDir() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is not None) and (len(params) > 0)):
+            context.report_action('Change Directory', params[0], 'ChDir', strip_null_bytes=True)
+        return ""  # vbOK
+
 class Quit(VbaLibraryFunc):
     """
     Wscript.Quit(). Just keeps going.
@@ -3867,7 +3877,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename):
+               GetSaveAsFilename, ChDir):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
