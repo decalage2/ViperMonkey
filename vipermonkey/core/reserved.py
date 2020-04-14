@@ -72,7 +72,7 @@ statement_keyword = caselessKeywordsList(
      "GoSub", "GoTo", "If", "Implements", "Let", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
      "Resume", "RSet", "Select", "Set", "Static", "Stop", "Sub",
-     "Unlock", "Wend", "While", "With", "Write"))
+     "Unlock", "Wend", "While", "With"))
 
 rem_keyword = CaselessKeyword("Rem")
 
@@ -80,7 +80,7 @@ rem_keyword = CaselessKeyword("Rem")
 # syntactic structure of a statement.
 marker_keyword = caselessKeywordsList(
     ("As", "ByRef", "ByVal ", "Case", "For", "Each", "Else", "In", "New",
-     "Shared", "Until", "WithEvents", "Write", "Optional", "ParamArray", "Preserve",
+     "Shared", "Until", "WithEvents", "Optional", "ParamArray", "Preserve",
      "Tab", "Then"))
 
 # An <operator-identifier> is a <reserved-identifier> that is used
