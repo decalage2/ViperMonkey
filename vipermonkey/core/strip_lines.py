@@ -706,7 +706,7 @@ def fix_unhandled_raiseevent_statements(vba_code):
         # Punt.
         return vba_code
     
-    pat = "\n( *RaiseEvent[^\n]{10,})"
+    pat = "\n( *RaiseEvent[^\n]{3,})"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         vba_code = "\n" + vba_code + "\n"
         vba_code = re.sub(pat, r"\n' UNHANDLED RAISEEVENT STATEMENT \1", vba_code) + "\n"
