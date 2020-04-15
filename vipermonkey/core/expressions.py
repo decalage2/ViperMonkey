@@ -1318,7 +1318,7 @@ class MemberAccessExpression(VBA_Object):
                 return r
 
             # Are we reading the text of an object that we resolved?
-            if ((str(self.rhs) == "['Text']") and (isinstance(tmp_lhs, str))):
+            if (((str(self.rhs) == "['Text']") or (str(self.rhs).lower() == "['value']")) and (isinstance(tmp_lhs, str))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Returning .Text value.")
                 return tmp_lhs
