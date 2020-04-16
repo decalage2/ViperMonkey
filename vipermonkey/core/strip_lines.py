@@ -1648,6 +1648,12 @@ def strip_useless_code(vba_code, local_funcs):
                     log.debug("SKIP: Loop statement. Keep it.")
                 continue
 
+            # Skip Mid() updates of strings.
+            if (line.strip().startswith("Mid")):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: Mid() string update. Keep it.")
+                continue
+
             # Skip calls to various interesting calls.
             if (is_interesting_call(line, external_funcs, local_funcs)):
                 continue
