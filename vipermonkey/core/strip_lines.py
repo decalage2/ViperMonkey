@@ -1464,7 +1464,7 @@ def replace_constant_int_inline(vba_code):
     behind in case the regex fails.
     """
 
-    const_pattern = re.compile("(?i)const ([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
+    const_pattern = re.compile("(?i)const +([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
     d_const = dict()
 
     for const in re.findall(const_pattern, vba_code):
