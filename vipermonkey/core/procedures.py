@@ -176,7 +176,8 @@ class Sub(VBA_Object):
                 s.eval(context=context)
 
             # Was there an error that will make us jump to an error handler?
-            if (context.must_handle_error()):
+            #if (context.must_handle_error()):
+            if (context.have_error()):
                 break
             context.clear_error()
 
@@ -194,7 +195,7 @@ class Sub(VBA_Object):
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-            
+        
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             if (isinstance(self.bogus_if, VBA_Object)):
@@ -212,6 +213,9 @@ class Sub(VBA_Object):
 
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
+
+        # Bubble up any unhandled errors to the caller.
+        caller_context.got_error = context.got_error
         
         # Handle subs with no return values.
         try:            
@@ -486,7 +490,8 @@ class Function(VBA_Object):
                 break
 
             # Was there an error that will make us jump to an error handler?
-            if (context.must_handle_error()):
+            #if (context.must_handle_error()):
+            if (context.have_error()):
                 break
             context.clear_error()
 
@@ -514,6 +519,9 @@ class Function(VBA_Object):
 
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
+
+        # Bubble up any unhandled errors to the caller.
+        caller_context.got_error = context.got_error
         
         # TODO: get result from context.locals
         context.exit_func = False

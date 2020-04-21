@@ -499,7 +499,7 @@ class Division(VBA_Object):
                 # TODO
                 return 0
         except ZeroDivisionError:
-            log.error("Division by 0 error. Returning 'NULL'.")
+            context.set_error("Division by 0 error. Returning 'NULL'.")
             return 'NULL'
 
     def __repr__(self):
@@ -543,13 +543,13 @@ class MultiOp(VBA_Object):
                     ret = self.operator_map[operator](ret, arg)
                 return ret
             except ZeroDivisionError:
-                log.error("Division by 0 error. Returning 'NULL'.")
+                context.set_error("Division by 0 error. Returning 'NULL'.")
                 return 'NULL'
             except Exception as e:
                 log.error('Impossible to operate on arguments of different types. ' + str(e))
                 return 0
         except ZeroDivisionError:
-            log.error("Division by 0 error. Returning 'NULL'.")
+            context.set_error("Division by 0 error. Returning 'NULL'.")
             return 'NULL'
 
     def __repr__(self):

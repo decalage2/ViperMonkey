@@ -3198,8 +3198,9 @@ class Context(object):
             self.got_error = False
             self.error_handler.eval(context=self, params=params)
 
-        # The error has now been cleared.
-        self.got_error = False
+            # The error has now been cleared. Note that if there is no
+            # error handler and there is an error it will remain.
+            self.got_error = False
 
     def set_error(self, reason):
         """
