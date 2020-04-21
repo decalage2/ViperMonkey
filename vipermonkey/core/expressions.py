@@ -462,6 +462,7 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Full function call?
+        func_args = None
         if (isinstance(self.rhs[0].params[0], Function_Call)):
             func_name = self.rhs[0].params[0].name
             func_args = self.rhs[0].params[0].params
@@ -477,20 +478,27 @@ class MemberAccessExpression(VBA_Object):
         # See if we can run the other function.
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Try indirect run of function '" + func_name + "'")
+        r = "NULL"
         try:
+
+            # Drill down through layers of indirection to get the name of the function to run.
             s = func_name
             while (isinstance(s, str)):
                 s = context.get(s)
-            if (s is None):
-                return None
-            r = s.eval(context=context, params=func_args)
+                if (isinstance(s, procedures.Function) or
+                    isinstance(s, procedures.Sub) or
+                    isinstance(s, VbaLibraryFunc)):
+                    s = s.eval(context=context, params=func_args)
+                    r = s
 
             # Report actions if interesting.
-            if (str(self).lower().startswith("thisdocument.run(")):
+            if ((str(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
                 context.report_action('Execute Command', r, 'ThisDocument.Run', strip_null_bytes=True)
             return r
         
         except KeyError:
+            if (r != "NULL"):
+                return r
             return None
 
     def _handle_set_clipboard(self, context):
@@ -1816,13 +1824,31 @@ class Function_Call(VBA_Object):
                 # See if we can run the other function.
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Try indirect run of function '" + new_func + "'")
+                r = "NULL"
                 try:
 
-                    # Return result.
-                    s = context.get(new_func)
-                    return s.eval(context=context, params=new_params)
+                    # Return result, if we find a function to run.
+                    s = new_func
+                    while (isinstance(s, str)):
+
+                        # Drill down through layers of indirection to get the name of the function to run.
+                        s = context.get(s)
+                        if (isinstance(s, procedures.Function) or
+                            isinstance(s, procedures.Sub) or
+                            isinstance(s, VbaLibraryFunc)):
+                            s = s.eval(context=context, params=new_params)
+                            r = s
+
+                    # Report actions if interesting.
+                    if ((str(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
+                        context.report_action('Execute Command', r, 'ThisDocument.Run', strip_null_bytes=True)
+
                 except KeyError:
                     pass
+
+                # Did we run a function with Application.Run()?
+                if (r != "NULL"):
+                    return r
 
             # Could this be a misparsed addition to a variable (thanks VB grammar... :( )?
             if (context.contains(self.name) and

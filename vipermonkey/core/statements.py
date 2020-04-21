@@ -3183,21 +3183,29 @@ class Call_Statement(VBA_Object):
                     # See if we can run the other function.
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Try indirect run of function '" + new_func + "'")
+                    r = "NULL"
                     try:
 
-                        # Emulate the function.
+                        # Emulate the function, drilling down through layers of indirection to get the func name.
                         s = context.get(new_func)
-                        r = s.eval(context=context, params=new_params)
-                        
-                        # We are out of the called function, so if we exited the called function early
-                        # it does not apply to the current function.
-                        context.exit_func = False
+                        while (isinstance(s, str)):
+                            s = context.get(s)
+                            if (isinstance(s, procedures.Function) or
+                                isinstance(s, procedures.Sub) or
+                                isinstance(s, VbaLibraryFunc)):
+                                s = s.eval(context=context, params=new_params)
+                                r = s
 
-                        # Return the function result.
+                                # We are out of the called function, so if we exited the called function early
+                                # it does not apply to the current function.
+                                context.exit_func = False
+                            
+                        # Return the function result. This is "NULL" if we did not run a function.
                         return r
                     except KeyError:
-                        pass
-                log.error('Procedure %r not found' % func_name)
+
+                        # Return the function result. This is "NULL" if we did not run a function.
+                        return r
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
                 if (log.getEffectiveLevel() == logging.DEBUG):

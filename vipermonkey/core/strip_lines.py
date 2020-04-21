@@ -893,7 +893,11 @@ def fix_difficult_code(vba_code):
             multi_pat = r"(?:\w+ *= *){2,}"
             if (re.search(multi_pat, bad_exp) is not None):
                 continue
-                
+
+            # Don't count if this is obviously only assigning a boolean expression.
+            if (re.search(r"[\+\-\*/\^]", bad_exp) is None):
+                continue
+            
             # This is actually an integer expression with boolean logic.
             # Not handled.
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION " + bad_exp[1:])
