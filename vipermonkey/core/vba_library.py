@@ -2809,7 +2809,7 @@ class Put(VbaLibraryFunc):
             data = params[2]
 
         # Has the file been opened?
-        if (file_id not in context.open_files):
+        if (not context.file_is_open(file_id)):
             context.open_file(file_id)
 
         context.write_file(file_id, data)

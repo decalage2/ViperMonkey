@@ -3259,6 +3259,16 @@ class Context(object):
 
         # Punt.
         return None
+
+    def file_is_open(self, fname):
+        """
+        Check to see if a file is already open.
+        """
+        fname = str(fname)
+        fname = fname.replace(".\\", "").replace("\\", "/")
+
+        # Don't reopen already opened files.
+        return (fname in self.open_files.keys())
         
     def open_file(self, fname, file_id=""):
         """
@@ -3270,6 +3280,13 @@ class Context(object):
         # Save that the file is opened.
         fname = str(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
+
+        # Don't reopen already opened files.
+        if (fname in self.open_files.keys()):
+            log.warning("File " + str(fname) + " is already open.")
+            return
+
+        # Open the simulated file.
         self.open_files[fname] = b''
         if (file_id != ""):
             self.file_id_map[file_id] = fname
