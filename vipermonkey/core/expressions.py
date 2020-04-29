@@ -571,7 +571,6 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Something like banrcboyjdipc.Controls(1).Value ?
-        #pat = r".+\.Controls\(\s*'(\d+)'\s*\)(?:\.Value)?"
         pat = r".+\.Controls\(\s*'([^']+)'\s*\)(?:\.Value)?"
         my_text = str(self)
         if (re.match(pat, str(self)) is None):
@@ -647,7 +646,13 @@ class MemberAccessExpression(VBA_Object):
         rhs = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
         if ((isinstance(val, dict)) and (rhs in val)):
             val = val[rhs]
-                    
+
+        # Filter out function calls, these are not document variable reads.
+        if (isinstance(val, procedures.Function) or
+            isinstance(val, procedures.Sub) or
+            isinstance(val, VbaLibraryFunc)):
+            return None
+            
         # Return the value.
         return val
 
@@ -1110,7 +1115,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs[len(self.rhs) - 1]
             if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
-
+                
         # Figure out if we are calling a function.
         calling_func = isinstance(rhs, Function_Call)
         if (not calling_func):
@@ -1187,7 +1192,7 @@ class MemberAccessExpression(VBA_Object):
             # This is something like ".foo.bar" in a With statement. The LHS
             # is the With context item.
             tmp_lhs = eval_arg(context.with_prefix, context)
-
+            
         # See if this is reading a table cell value.
         call_retval = self._handle_table_cell(context)
         if (call_retval is not None):
