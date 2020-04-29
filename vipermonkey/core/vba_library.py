@@ -3331,6 +3331,98 @@ class Range(VbaLibraryFunc):
     Excel Range() function.
     """
 
+    def _get_row_and_column(self, cell_str):
+        """
+        Get a numeric row and column from a "i93" style Excel cell reference.
+        """
+
+        # Pull out the cell index.
+        cell_index = str(cell_str).replace('"', "").replace("'", "")
+
+        # Pull out the cell column and row.
+        col = ""
+        row = ""
+        for c in cell_index:
+            if (c.isalpha()):
+                col += c
+            else:
+                row += c
+                    
+        # Convert the row and column to numeric indices for xlrd.
+        row = int(row) - 1
+        col = excel_col_letter_to_index(col)
+
+        # Done.
+        return (row, col)
+        
+    def _read_cell_list(self, sheet, cell_str):
+        """
+        Read multiple cells specified by a "i93:i424" cell string.
+        """
+
+        # Get the start and end cell.
+        fields = cell_str.split(":")
+        if (len(fields) != 2):
+            log.warning("Improper cell range " + cell_str + " specified. Range() is returning NULL.")
+            return "NULL"
+        start = fields[0]
+        end = fields[1]
+
+        # Get start and end rows and columns.
+        start_row, start_col = self._get_row_and_column(start)
+        end_row, end_col = self._get_row_and_column(end)
+
+        # Reading down a single column?
+        r = []
+        if (start_col == end_col):
+            next = (end_row - start_row)/abs(end_row - start_row)
+            curr_row = start_row
+            while (curr_row != end_row):
+                val = None
+                try:
+                    val = str(sheet.cell_value(curr_row, start_col))
+                except:
+                    pass
+                if (val is not None):
+                    r.append(val)
+                curr_row += next
+            val = None
+            try:
+                val = str(sheet.cell_value(curr_row, start_col))
+            except:
+                pass
+            if (val is not None):
+                r.append(val)
+
+        # Reading single row?
+        elif (start_row == end_row):
+            next = (end_col - start_col)/abs(end_col - start_col)
+            curr_col = start_col
+            while (curr_col != end_col):
+                val = None
+                try:
+                    val = str(sheet.cell_value(start_row, curr_col))
+                except:
+                    pass
+                if (val is not None):
+                    r.append(val)
+                curr_col += next
+            val = None
+            try:
+                val = str(sheet.cell_value(start_row, curr_col))
+            except:
+                pass
+            if (val is not None):
+                r.append(val)
+
+        # Not reading single row or column.
+        else:
+            log.warning("Cell range " + cell_str + " does not specify a single row/column. Range() is returing NULL.")
+            return "NULL"
+
+        # Return the cell values.
+        return r
+    
     def eval(self, context, params=None):
 
         # Sanity check.
@@ -3353,9 +3445,6 @@ class Range(VbaLibraryFunc):
         if (len(params) != 1):
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
-        if (":" in str(params[0])):
-            log.warning("Range(" + str(params[0]) + ") calls not supported. Returning NULL.")
-            return "NULL"
             
         # Guess that we want the 1st sheet.
         sheet = None
@@ -3365,26 +3454,18 @@ class Range(VbaLibraryFunc):
             log.warning("Cannot process Cells() call. No sheets in file.")
             return "NULL"
 
+        # Multiple cells?
+        if (":" in str(params[0])):
+            try:
+                return self._read_cell_list(sheet, str(params[0]))
+            except Exception as e:
+                return "NULL"
+        
         # Get the cell contents.
         try:
 
-            # Pull out the cell index.
-            cell_index = str(params[0]).replace('"', "").replace("'", "")
-
-            # Pull out the cell column and row.
-            col = ""
-            row = ""
-            for c in cell_index:
-                if (c.isalpha()):
-                    col += c
-                else:
-                    row += c
-                    
-            # Convert the row and column to numeric indices for xlrd.
-            row = int(row) - 1
-            col = excel_col_letter_to_index(col)
-            
             # Pull out the cell value.
+            row, col = self._get_row_and_column(params[0])
             val = str(sheet.cell_value(row, col))
             
             # Return the cell value.

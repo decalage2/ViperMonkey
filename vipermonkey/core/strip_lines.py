@@ -742,7 +742,7 @@ def convert_colons_to_linefeeds(vba_code):
     # Loop through the text leaving some blocks unchanged and others with ':' changed to '\n'.
     pos = 0
     r = ""
-    while (pos < (len(vba_code) - 1)):
+    while (pos < len(vba_code)):
 
         # Do we have any blocks of text coming up that we should not change?
         # Find the 1st marker in the string.
