@@ -1762,7 +1762,13 @@ class Function_Call(VBA_Object):
                                 try:
                                     arg_var_name = str(self.params[byref_param_info[1]])
                                     if (context.contains(arg_var_name)):
-                                        context.set(arg_var_name, f.byref_params[byref_param_info])
+
+                                        # Don't overwrite functions.
+                                        arg_var_val = context.get(arg_var_name)
+                                        if (not (isinstance(f, procedures.Function) or
+                                                 isinstance(f, procedures.Sub) or
+                                                 isinstance(f, VbaLibraryFunc))):
+                                            context.set(arg_var_name, f.byref_params[byref_param_info])
                                 except IndexError:
                                     break
 

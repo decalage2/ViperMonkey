@@ -226,6 +226,9 @@ class Sub(VBA_Object):
             # these funcion values.
             context.set(self.name, '')
 
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Returning from sub " + str(self))
+
 # 5.3.1.1 Procedure Scope
 #
 # MS-GRAMMAR: procedure-scope = ["global" / "public" / "private" / "friend"]
@@ -570,6 +573,8 @@ class Function(VBA_Object):
                 else:
                     log.warn(str(self) + " does not return an array. Not doing array access.")
 
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning from func " + str(self))
             return return_value
 
         except KeyError:
