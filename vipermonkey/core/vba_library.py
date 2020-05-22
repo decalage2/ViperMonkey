@@ -50,7 +50,6 @@ import math
 import base64
 import re
 from hashlib import sha256
-import sys
 import os
 import random
 from from_unicode_str import *
@@ -3774,6 +3773,8 @@ class Unescape(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        print "UNESCAPE"
+        sys.exit(0)
         # Get the string to unescape.
         if ((params is None) or (len(params) < 1)):
             return "NULL"
