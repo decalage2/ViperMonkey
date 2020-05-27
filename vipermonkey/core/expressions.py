@@ -1879,6 +1879,26 @@ class Function_Call(VBA_Object):
             log.warning('Function %r not found' % self.name)
             return None
 
+        def to_python(self, context, params=None):
+
+            # Get a list of the Python expressions for each parameter.
+            py_params = []
+            for p in params:
+                py_params.append(p.to_python(context, params))
+
+            # Generate the Python function call.
+            r = str(self.name) + "("
+            first = True
+            for p in py_params:
+                if (not first):
+                    r += ", "
+                first = False
+                r += p
+            r += ")"
+
+            # Done.
+            return r
+        
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_item = Forward()

@@ -83,6 +83,18 @@ from logger import log
 # Track the unresolved arguments to the current call.
 var_names = None
 
+class ExecuteExcel4Macro(VbaLibraryFunc):
+    """
+    ExecuteExcel4Macro() dynamic XLM evaluation function.
+    """
+
+    def eval(self, context, params=None):
+        if (len(params) == 0):
+            return 0
+        xlm = str(params[0])
+        context.report_action('XLM Macro Execution', xlm, 'Dynamic XLM Macro Execution', strip_null_bytes=True)
+        return 0
+
 class GetSaveAsFilename(VbaLibraryFunc):
     """
     GetSaveAsFilename() function (stubbed).
@@ -3959,7 +3971,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -186,6 +186,12 @@ class VBA_Object(object):
         for child in self.get_children():
             child.accept(visitor)
 
+    def to_python(self, context, params=None):
+        """
+        JIT compile this VBA object to Python code for direct emulation.
+        """
+        raise NotImplemented("to_python() not implemented in " + str(type(self)))
+
 def _read_from_excel(arg, context):
     """
     Try to evaluate an argument by reading from the loaded Excel spreadsheet.
