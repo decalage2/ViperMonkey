@@ -186,11 +186,11 @@ class VBA_Object(object):
         for child in self.get_children():
             child.accept(visitor)
 
-    def to_python(self, context, params=None):
+    def to_python(self, context, params=None, indent=0):
         """
         JIT compile this VBA object to Python code for direct emulation.
         """
-        raise NotImplemented("to_python() not implemented in " + str(type(self)))
+        raise NotImplementedError("to_python() not implemented in " + str(type(self)))
 
 def _read_from_excel(arg, context):
     """
@@ -421,6 +421,14 @@ def is_constant_math(arg):
 
 meta = None
 
+def to_python(arg, context, params=None, indent=0):
+    """
+    Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
+    """
+    if (hasattr(arg, "to_python")):
+        return arg.to_python(context, params=params, indent=indent)
+    return " " * indent + str(arg)
+    
 def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value

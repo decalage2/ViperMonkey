@@ -158,7 +158,7 @@ class String(VBA_Object):
             log.debug("String.eval: return " + r)
         return r
 
-    def to_python(self, context, params=None):
+    def to_python(self, context, params=None, indent=0):
         r = str(self.value).replace('"', '\\"')
         return '"' + r + '"'
 

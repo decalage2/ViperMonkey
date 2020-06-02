@@ -50,6 +50,7 @@ from vba_object import *
 
 from logger import log
 from vba_object import int_convert
+from vba_object import to_python
 
 def debug_repr(op, args):
     r = "("
@@ -520,6 +521,12 @@ class MultiOp(VBA_Object):
         self.arg = tokens[0][::2]  # Keep as helper  (kept singular to keep backwards compatibility)
         self.operators = tokens[0][1::2]
 
+    def to_python(self, context, params=None, indent=0):
+        ret = [to_python(self.arg[0], context, params=params)]
+        for operator, arg in zip(self.operators, self.arg[1:]):
+            ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
+        return '({})'.format(''.join(ret))
+        
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.

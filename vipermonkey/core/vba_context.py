@@ -108,6 +108,9 @@ class Context(object):
                  expand_env_vars=True,
                  metadata=None):
 
+        # Track canonical names of variables.
+        self.name_cache = {}
+        
         # Track whether emulation actions have been reported.
         self.got_actions = False
         
@@ -3470,6 +3473,7 @@ class Context(object):
         if is_change_handler: change_name = change_name[:-len("_change")]
         
         # convert to lowercase if needed.
+        orig_name = name
         if (case_insensitive):
             name = name.lower()
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3485,24 +3489,28 @@ class Context(object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Found %r in locals' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
+            self.name_cache[orig_name] = name
             return self.locals[name]
         # second, in globals:
         elif ((not local_only) and (name in self.globals)):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Found %r in globals' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
+            self.name_cache[orig_name] = name
             return self.globals[name]
         # next, search in the global VBA library:
         elif ((not local_only) and (name in VBA_LIBRARY)):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Found %r in VBA Library' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
+            self.name_cache[orig_name] = name
             return VBA_LIBRARY[name]
         # Is it a doc var?
         elif ((not local_only) and (name in self.doc_vars)):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Found %r in VBA document variables' % name)
             if is_change_handler: self.has_change_handler[change_name] = True
+            self.name_cache[orig_name] = name
             return self.doc_vars[name]
         # Unknown symbol.
         else:
@@ -3520,7 +3528,19 @@ class Context(object):
             (not name in self.locals) and
             (".Text".lower() in self.locals)):
             return self.get(".Text")
-        
+
+        # Try to avoid attempting a bunch of variations on the variable name
+        # if we already know one that worked earlier.
+        if (name in self.name_cache):
+            cached_name = self.name_cache[name]
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cached name of '" + str(name) + "' is '" + str(cached_name) + "'")
+            try:
+                return self.__get(cached_name, case_insensitive=case_insensitive, local_only=local_only)
+            except KeyError:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Cached lookup failed.")
+                
         # Try to get the item using the current with context.
         if (name.startswith(".")):
             tmp_name = str(self.with_prefix) + str(name)

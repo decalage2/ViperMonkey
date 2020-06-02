@@ -58,6 +58,7 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import to_python
 from vba_object import coerce_to_int
 from vba_object import strip_nonvb_chars
 from vba_object import int_convert
@@ -94,6 +95,9 @@ class SimpleNameExpression(VBA_Object):
     def __repr__(self):
         return '%s' % self.name
 
+    def to_python(self, context, params=None, indent=0):
+        return str(self)
+    
     def eval(self, context, params=None):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('try eval variable/function %r' % self.name)
@@ -1879,12 +1883,12 @@ class Function_Call(VBA_Object):
             log.warning('Function %r not found' % self.name)
             return None
 
-        def to_python(self, context, params=None):
+        def to_python(self, context, params=None, indent=0):
 
             # Get a list of the Python expressions for each parameter.
             py_params = []
             for p in params:
-                py_params.append(p.to_python(context, params))
+                py_params.append(to_python(p, context, params))
 
             # Generate the Python function call.
             r = str(self.name) + "("

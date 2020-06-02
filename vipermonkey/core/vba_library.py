@@ -2840,7 +2840,11 @@ class WriteLine(VbaLibraryFunc):
             data = params[2]
         
         # Save writes that look like they are writing URLs.
-        data_str = str(data)
+        data_str = None
+        try:
+            data_str = str(data)
+        except UnicodeEncodeError:
+            data_str = filter(isprint, data)
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'File Write')
         
@@ -3628,13 +3632,17 @@ class Print(VbaLibraryFunc):
             return
 
         # Save writes that look like they are writing URLs.
-        data_str = str(params[0])
+        data_str = None
+        try:
+            data_str = str(params[0])
+        except UnicodeEncodeError:
+            data_str = filter(isprint, params[0])
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'Debug Print')
 
         if (params[0] is not None):
             if (not context.throttle_logging):
-                context.report_action("Debug Print", str(params[0]), '')
+                context.report_action("Debug Print", data_str, '')
 
 class Debug(Print):
     """

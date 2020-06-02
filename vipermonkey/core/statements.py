@@ -56,6 +56,7 @@ from vba_context import *
 from reserved import *
 from from_unicode_str import *
 from vba_object import int_convert
+from vba_object import to_python
 import procedures
 from var_in_expr_visitor import *
 from function_call_visitor import *
@@ -701,6 +702,15 @@ class Let_Statement(VBA_Object):
         else:
             return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
 
+    def to_python(self, context, params=None, indent=0):        
+        r = None
+        if (self.index is None):
+            r = str(self.name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+        else:
+            r = str(self.name) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
+        r = " " * indent + r
+        return r
+        
     def _handle_change_callback(self, var_name, context):
 
         # Get the variable name, minus any embedded context.
@@ -1229,6 +1239,47 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
+def _infer_type(var, item, context):
+    """
+    Try to infer the type of an undefined variable based on how it is used.
+    """
+    return "INTEGER"
+
+def _get_var_vals(item, context):
+    """
+    Get the current values for all of the referenced VBA variables that appear in the 
+    given VBA object.
+
+    Returns a dict mapping var names to values.
+    """
+
+    # Get all the variables.
+    var_visitor = var_in_expr_visitor()
+    item.accept(var_visitor)
+    var_names = var_visitor.variables
+
+    # Get a value for each variable.
+    r = {}
+    for var in var_names:
+        val = None
+        try:
+            val = context.get(var)
+        except KeyError:
+
+            # Variable is not defined. Try to infer the type based on how it is
+            # used.
+            var_type = _infer_type(var, item, context)
+            if (var_type == "INTEGER"):
+                val = 0
+            elif (var_type == "STRING"):
+                val = ""
+            else:
+                raise ValueError("Type " + str(var_type) + " not handled.")
+        r[var] = val
+
+    # Done.
+    return r
+
 class For_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
@@ -1248,6 +1299,96 @@ class For_Statement(VBA_Object):
         return 'For %s = %r to %r step %r' % (self.name,
                                               self.start_value, self.end_value, self.step_value)
 
+    def _get_loop_indices(self, context):
+        """
+        Get the start inedx, end index, and step of the loop.
+        """
+
+        # Get the start index. If this is a string, convert to an int.
+        start = eval_arg(self.start_value, context=context)
+        if (isinstance(start, basestring)):
+            start = int_convert(start)
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
+
+        # Get the end index. If this is a string, convert to an int.
+        end = eval_arg(self.end_value, context=context)
+        if (isinstance(end, basestring)):
+            end = int_convert(end)
+        if (end is None):
+            log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
+            return
+            
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+
+        # Get the loop step value.
+        if self.step_value != 1:
+            step = eval_arg(self.step_value, context=context)
+            if (isinstance(step, basestring)):
+                step = int_convert(step)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
+        else:
+            step = 1
+
+        # Handle backwards loops.
+        if ((start > end) and (step > 0)):
+            step = step * -1
+
+        # Done.
+        return (start, end, step)
+    
+    def to_python(self, context, params=None, indent=0):
+        """
+        Convert this loop to Python code.
+        """
+        
+        # Get the start index, end index, and step of the loop.
+        start, end, step = self._get_loop_indices(context)
+
+        # Get the loop variable.
+        loop_var = str(self.name)
+
+        # Set up doing this for loop in Python.
+        rev_code = ""
+        if (step < 0):
+            rev_code = "[::-1]"
+            step = abs(step)
+        indent_str = " " * indent
+        loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":"
+
+        # Set up initialization of variables used in the loop.
+        loop_init = ""
+        init_vals = _get_var_vals(self, context)
+        for var in init_vals.keys():
+            loop_init += indent_str + str(var) + " = " + str(init_vals[var]) + "\n"
+        
+        # Set up the loop body.
+        loop_body = ""
+        for statement in self.statements:
+            loop_body += indent_str + " " * 4 + "try:\n"
+            loop_body += to_python(statement, context, indent=indent+8) + "\n"
+            loop_body += indent_str + " " * 4 + "except:\n"
+            loop_body += indent_str + " " * 8 + "pass\n"
+            
+        # Full python code for the loop.
+        python_code = loop_init + "\n" + loop_start + "\n" + loop_body + "\n"
+
+        # Done.
+        return python_code
+
+    def _eval_python(self, context, params=None):
+        """
+        Convert the loop to Python and emulate the loop directly in Python.
+        """
+
+        # Get the Python code for the loop.
+        loop_code = to_python(self, context)
+        print loop_code
+        sys.exit(0)
+    
     def _handle_medium_loop(self, context, params, end, step):
 
         # Handle loops used purely for obfuscation that just do the same
@@ -1494,40 +1635,10 @@ class For_Statement(VBA_Object):
             return
 
         # Assign all const variables first.
-        do_const_assignments(self.statements, context)
+        do_const_assignments(self.statements, context)        
         
-        # Get the start index. If this is a string, convert to an int.
-        start = eval_arg(self.start_value, context=context)
-        if (isinstance(start, basestring)):
-            start = int_convert(start)
-
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
-
-        # Get the end index. If this is a string, convert to an int.
-        end = eval_arg(self.end_value, context=context)
-        if (isinstance(end, basestring)):
-            end = int_convert(end)
-        if (end is None):
-            log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
-            return
-            
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
-
-        # Get the loop step value.
-        if self.step_value != 1:
-            step = eval_arg(self.step_value, context=context)
-            if (isinstance(step, basestring)):
-                step = int_convert(step)
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
-        else:
-            step = 1
-
-        # Handle backwards loops.
-        if ((start > end) and (step > 0)):
-            step = step * -1
+        # Get the start index, end index, and step of the loop.
+        start, end, step = self._get_loop_indices(context)
             
         # Set the loop index variable to the start value.
         context.set(self.name, start)
@@ -1546,6 +1657,10 @@ class For_Statement(VBA_Object):
             self.is_useless = True
             return
 
+        # See if we can convert the loop to Python and directly emulate it.
+        if (self._eval_python(context, params=params)):
+            return
+        
         # Set end to valid values.
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
 
