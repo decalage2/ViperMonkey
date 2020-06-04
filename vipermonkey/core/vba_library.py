@@ -89,7 +89,7 @@ def run_function(func_name, context, params):
     func_name = func_name.lower()
     if (func_name not in VBA_LIBRARY):
         return None
-    func_obj = VBA_LIBRARY[func_name]()
+    func_obj = VBA_LIBRARY[func_name]
     return func_obj.eval(context, params=params)
     
 # Track the unresolved arguments to the current call.

@@ -1348,7 +1348,10 @@ class For_Statement(VBA_Object):
         # Boilerplate used by the Python.
         boilerplate = "import core.vba_library\n"
         boilerplate += "import core.vba_context\n"
-        boilerplate += "\n__context = core.vba_context.Context()\n"
+        boilerplate += "import core.stubbed_engine\n"
+        boilerplate += "\n__engine = core.stubbed_engine.StubbedEngine()\n"
+        boilerplate += "__context = core.vba_context.Context(engine=__engine)\n"
+        
         
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
@@ -3145,6 +3148,49 @@ class Call_Statement(VBA_Object):
     def __repr__(self):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
+    def to_python(self, context, params=None, indent=0):
+        """
+        Convert this call to Python code.
+        """
+
+        # Get a list of the Python expressions for each parameter.
+        py_params = []
+        for p in self.params:
+            py_params.append(to_python(p, context, params))
+
+        # Is the whole call stuffed into the name?
+        indent_str = " " * indent
+        if ((isinstance(self.name, VBA_Object)) and (len(self.params) == 0)):
+            r = indent_str + to_python(self.name, context, params)
+            return r
+            
+        # Is this a VBA internal function?
+        import vba_library
+        if (self.name.lower() in vba_library.VBA_LIBRARY):
+            first = True
+            args = "["
+            for p in py_params:
+                if (not first):
+                    args += ", "
+                first = False
+                args += p
+            args += "]"
+            r = indent_str + "core.vba_library.run_function(\"" + str(self.name) + "\", __context, " + args + ")"
+            return r
+                
+        # Generate the Python function call to a local function.
+        r = indent_str + str(self.name) + "("
+        first = True
+        for p in py_params:
+            if (not first):
+                r += ", "
+            first = False
+            r += p
+        r += ")"
+
+        # Done.
+        return r
+    
     def _handle_with_calls(self, context):
 
         # Is this a call like '.WriteText "foo"'?

@@ -239,6 +239,13 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def to_python(self, context, params=None, indent=0):
+
+        # For now just pick off the last item in the expression.
+        if (len(self.rhs) > 0):
+            return to_python(self.rhs[-1], context, params)
+        return ""
+    
     def _handle_indexed_pages_access(self, context):
         """
         Handle getting the caption of a Page object referenced via index.
