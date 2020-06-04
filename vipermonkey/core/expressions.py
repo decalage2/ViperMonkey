@@ -1908,7 +1908,7 @@ class Function_Call(VBA_Object):
                 first = False
                 args += p
             args += "]"
-            r = "core.vba_library.run_function(\"" + str(self.name) + "\", __context, " + args + ")"
+            r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
             return r
                 
         # Generate the Python function call to a local function.

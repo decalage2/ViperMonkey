@@ -59,6 +59,7 @@ from vba_object import int_convert
 from vba_object import to_python
 import procedures
 from var_in_expr_visitor import *
+from lhs_var_visitor import *
 from function_call_visitor import *
 import vb_str
 import loop_transform
@@ -1254,11 +1255,19 @@ def _get_var_vals(item, context):
     """
 
     # Get all the variables.
+
+    # Vars on RHS.
     var_visitor = var_in_expr_visitor()
     item.accept(var_visitor)
     var_names = var_visitor.variables
 
+    # Vars on LHS.
+    lhs_visitor = lhs_var_visitor()
+    item.accept(lhs_visitor)
+    lhs_var_names = lhs_visitor.variables
+    
     # Get a value for each variable.
+    var_names = var_names.union(lhs_var_names)
     r = {}
     for var in var_names:
         val = None
@@ -1349,10 +1358,9 @@ class For_Statement(VBA_Object):
         boilerplate = "import core.vba_library\n"
         boilerplate += "import core.vba_context\n"
         boilerplate += "import core.stubbed_engine\n"
-        boilerplate += "\n__engine = core.stubbed_engine.StubbedEngine()\n"
-        boilerplate += "__context = core.vba_context.Context(engine=__engine)\n"
-        
-        
+        boilerplate += "\nstub_engine = core.stubbed_engine.StubbedEngine()\n"
+        boilerplate += "vm_context = core.vba_context.Context(engine=stub_engine)\n"
+                
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
 
@@ -1372,7 +1380,20 @@ class For_Statement(VBA_Object):
         init_vals = _get_var_vals(self, context)
         for var in init_vals.keys():
             loop_init += indent_str + str(var) + " = " + str(init_vals[var]) + "\n"
-        
+
+        # Save the updated variable values.
+        lhs_visitor = lhs_var_visitor()
+        self.accept(lhs_visitor)
+        lhs_var_names = lhs_visitor.variables
+        save_vals = indent_str + "var_updates = {"
+        first = True
+        for var in lhs_var_names:
+            if (not first):
+                save_vals += ", "
+            first = False
+            save_vals += '"' + var + '" : ' + var
+        save_vals += "}"
+                    
         # Set up the loop body.
         loop_body = ""
         for statement in self.statements:
@@ -1382,7 +1403,11 @@ class For_Statement(VBA_Object):
             loop_body += indent_str + " " * 8 + "pass\n"
             
         # Full python code for the loop.
-        python_code = boilerplate + "\n" + loop_init + "\n" + loop_start + "\n" + loop_body + "\n"
+        python_code = boilerplate + "\n" + \
+                      loop_init + "\n" + \
+                      loop_start + "\n" + \
+                      loop_body + "\n" + \
+                      save_vals + "\n"
 
         # Done.
         return python_code
@@ -1395,6 +1420,12 @@ class For_Statement(VBA_Object):
         # Get the Python code for the loop.
         loop_code = to_python(self, context)
         print loop_code
+
+        # Execute the generated loop code.
+        # TODO: Remove dangerous functions from what can be exec'ed.
+        exec(loop_code)
+        print vm_context.engine.actions[0:10]
+        print var_updates
         sys.exit(0)
     
     def _handle_medium_loop(self, context, params, end, step):
@@ -3175,7 +3206,7 @@ class Call_Statement(VBA_Object):
                 first = False
                 args += p
             args += "]"
-            r = indent_str + "core.vba_library.run_function(\"" + str(self.name) + "\", __context, " + args + ")"
+            r = indent_str + "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
             return r
                 
         # Generate the Python function call to a local function.
