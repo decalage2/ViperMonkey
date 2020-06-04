@@ -1344,6 +1344,11 @@ class For_Statement(VBA_Object):
         """
         Convert this loop to Python code.
         """
+
+        # Boilerplate used by the Python.
+        boilerplate = "import core.vba_library\n"
+        boilerplate += "import core.vba_context\n"
+        boilerplate += "\n__context = core.vba_context.Context()\n"
         
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
@@ -1374,7 +1379,7 @@ class For_Statement(VBA_Object):
             loop_body += indent_str + " " * 8 + "pass\n"
             
         # Full python code for the loop.
-        python_code = loop_init + "\n" + loop_start + "\n" + loop_body + "\n"
+        python_code = boilerplate + "\n" + loop_init + "\n" + loop_start + "\n" + loop_body + "\n"
 
         # Done.
         return python_code

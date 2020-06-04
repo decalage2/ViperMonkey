@@ -80,12 +80,18 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
-def run_function(func_name, params):
+def run_function(func_name, context, params):
     """
     Run a VBA library function with the given parameters.
     """
-    raise NotImplementedError("Implement this!!")
 
+    # Create an object for emulating the function.
+    func_name = func_name.lower()
+    if (func_name not in VBA_LIBRARY):
+        return None
+    func_obj = VBA_LIBRARY[func_name]()
+    return func_obj.eval(context, params=params)
+    
 # Track the unresolved arguments to the current call.
 var_names = None
 

@@ -1883,25 +1883,39 @@ class Function_Call(VBA_Object):
             log.warning('Function %r not found' % self.name)
             return None
 
-        def to_python(self, context, params=None, indent=0):
+    def to_python(self, context, params=None, indent=0):
 
-            # Get a list of the Python expressions for each parameter.
-            py_params = []
-            for p in params:
-                py_params.append(to_python(p, context, params))
+        # Get a list of the Python expressions for each parameter.
+        py_params = []
+        for p in self.params:
+            py_params.append(to_python(p, context, params))
 
-            # Generate the Python function call.
-            r = str(self.name) + "("
+        # Is this a VBA internal function?
+        import vba_library
+        if (self.name.lower() in vba_library.VBA_LIBRARY):
             first = True
+            args = "["
             for p in py_params:
                 if (not first):
-                    r += ", "
+                    args += ", "
                 first = False
-                r += p
-            r += ")"
-
-            # Done.
+                args += p
+            args += "]"
+            r = "core.vba_library.run_function(\"" + str(self.name) + "\", __context, " + args + ")"
             return r
+                
+        # Generate the Python function call to a local function.
+        r = str(self.name) + "("
+        first = True
+        for p in py_params:
+            if (not first):
+                r += ", "
+            first = False
+            r += p
+        r += ")"
+
+        # Done.
+        return r
         
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
