@@ -43,6 +43,7 @@ import unidecode
 import string
 
 import logging
+from logger import log
 
 class StubbedEngine(object):
     """

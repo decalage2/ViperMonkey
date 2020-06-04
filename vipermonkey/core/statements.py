@@ -1356,11 +1356,12 @@ class For_Statement(VBA_Object):
 
         # Boilerplate used by the Python.
         boilerplate = "import core.vba_library\n"
-        boilerplate += "import core.vba_context\n"
-        boilerplate += "import core.stubbed_engine\n"
-        boilerplate += "\nstub_engine = core.stubbed_engine.StubbedEngine()\n"
-        boilerplate += "vm_context = core.vba_context.Context(engine=stub_engine)\n"
-                
+        #boilerplate += "import core.vba_context\n"
+        #boilerplate += "import core.stubbed_engine\n"
+        #boilerplate += "\nstub_engine = core.stubbed_engine.StubbedEngine()\n"
+        #boilerplate += "vm_context = core.vba_context.Context(engine=stub_engine)\n"
+        boilerplate += "\nvm_context = context\n"
+        
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
 
@@ -1424,9 +1425,18 @@ class For_Statement(VBA_Object):
         # Execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.
         exec(loop_code)
-        print vm_context.engine.actions[0:10]
-        print var_updates
-        sys.exit(0)
+
+        # Update the context with the new actions and variable values from the JIT
+        # code execution.
+        #for action in vm_context.engine.actions:
+        #    context.report_action(action[0], action[1], action[2], strip_null_bytes=True)
+        print "UPDATING VARS"
+        for updated_var in var_updates.keys():
+            context.set(updated_var, var_updates[updated_var])
+        print "DONE"
+
+        # Done.
+        return True
     
     def _handle_medium_loop(self, context, params, end, step):
 
