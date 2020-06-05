@@ -187,6 +187,16 @@ class Xor(VBA_Object):
     def __repr__(self):
         return ' ^ '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " ^ "
+            first = False
+            r += to_python(arg, context, params=params)
+        return r
+    
 # --- AND --------------------------------------------------------
 
 class And(VBA_Object):
@@ -710,3 +720,12 @@ class Mod(VBA_Object):
         return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " % "
+            first = False
+            r += to_python(arg, context, params=params)
+        return r

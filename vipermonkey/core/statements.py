@@ -2970,6 +2970,7 @@ simple_select_statement.setParseAction(Select_Statement)
 # --- IF-THEN-ELSE statement ----------------------------------------------------------
 
 class If_Statement(VBA_Object):
+
     def __init__(self, original_str, location, tokens):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
@@ -3079,7 +3080,50 @@ class If_Statement(VBA_Object):
             print body
             sys.exit(0)
         return r
-            
+
+    def to_python(self, context, params=None, indent=0):
+
+        # Not handling broken if statements.
+        if (self.is_bogus):
+            return ""
+
+        # Make the Python code.
+        r = ""
+        first = True
+        indent_str = " " * indent
+        for piece in self.pieces:
+
+            # Pick the right keyword for this piece of the if.
+            r += indent_str
+            keyword = "if"
+            if (not first):
+                keyword = "elif"
+            if (piece["guard"] is None):
+                keyword = "else"
+            first = False
+            r += keyword + " "
+
+            # Add in the guard.
+            guard = ""
+            keyword = ""
+            if (piece["guard"] is not None):
+                guard = to_python(piece["guard"], context)
+            r += guard
+
+            # Add in the body.
+            r += ":\n"
+            for stmt in piece["body"]:
+                r += indent_str + " " * 4 + "try:\n"
+                r += to_python(stmt, context, indent=indent+8) + "\n"
+                r += indent_str + " " * 4 + "except Exception as e:\n"
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    r += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
+                else:
+                    r += indent_str + " " * 8 + "pass\n"
+
+        # Done.
+        return r
+    
     def eval(self, context, params=None):
 
         # Skip this if it is a bogus, do nothing if statement.
@@ -3794,6 +3838,9 @@ class On_Error_Statement(VBA_Object):
     def __repr__(self):
         return str(self.tokens)
 
+    def to_python(self, context, params=None, indent=0):
+        return "# '" + str(self) + "' not emulated."
+    
     def eval(self, context, params=None):
 
         # Do we have a goto error handler?

@@ -67,6 +67,21 @@ import vba_context
 
 from logger import log
 
+def _vba_to_python_op(op):
+    """
+    Convert a VBA boolean operator to a Python boolean operator.
+    """
+    op_map = {
+        "Not" : "not",
+        "And" : "and",
+        "AndAlso" : "and",
+        "Or" : "or",
+        "OrElse" : "or",
+        "Eqv" : "==",
+        "=" : "=="
+    }
+    return op_map[op]
+
 # --- FILE POINTER -------------------------------------------------
 
 file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier)
@@ -2192,6 +2207,17 @@ class BoolExprItem(VBA_Object):
             log.error("BoolExprItem: Improperly parsed.")
             return ""
 
+    def to_python(self, context, params=None, indent=0):
+        r = " " * indent
+        if (self.op is not None):
+            r += to_python(self.lhs, context) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+        elif (self.lhs is not None):
+            r += to_python(self.lhs, context)
+        else:
+            log.error("BoolExprItem: Improperly parsed.")
+            return ""
+        return r
+        
     def eval(self, context, params=None):
 
         # We always have a LHS. Evaluate that in the current context.
@@ -2366,7 +2392,24 @@ class BoolExpr(VBA_Object):
         else:
             log.error("BoolExpr: Improperly parsed.")
             return ""
+        
+    def to_python(self, context, params=None, indent=0):
+        r = " " * indent + "("
+        if (self.op is not None):
+            if (self.lhs is not None):
+                r += to_python(self.lhs, context) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+            else:
+                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+        elif (self.lhs is not None):
+            r += to_python(self.lhs, context)
+        else:
+            log.error("BoolExpr: Improperly parsed.")
+            return ""
 
+        # Done.
+        r += ")"
+        return r
+        
     def eval(self, context, params=None):
 
         # Unary operator?
