@@ -59,6 +59,7 @@ from vba_object import int_convert
 from vba_object import to_python
 import procedures
 from var_in_expr_visitor import *
+from function_call_visitor import *
 from lhs_var_visitor import *
 from function_call_visitor import *
 import vb_str
@@ -258,6 +259,9 @@ class Parameter(VBA_Object):
             r += ' = ' + str(self.init_val)
         return r
 
+    def to_python(self, context, params=None, indent=0):
+        return str(self.name)
+    
 # 5.3.1.5 Parameter Lists
 #
 # MS-GRAMMAR: procedure-parameters = "(" [parameter-list] ")"
@@ -1348,6 +1352,32 @@ class For_Statement(VBA_Object):
 
         # Done.
         return (start, end, step)
+
+    def _called_funcs_to_python(self, context, indent):
+        """
+        Convert all the functions called in the loop to Python.
+        """
+
+        # Get all the functions called in the loop.
+        call_visitor = function_call_visitor()
+        self.accept(call_visitor)
+        func_names = call_visitor.called_funcs
+
+        # Get the definitions for all local functions called.
+        local_funcs = []
+        for func_name in func_names:
+            if (context.contains(func_name)):
+                curr_func = context.get(func_name)
+                if (isinstance(curr_func, VBA_Object)):
+                    local_funcs.append(curr_func)
+
+        # Convert each local function to Python.
+        r = ""
+        for local_func in local_funcs:
+            r += to_python(local_func, context, indent=indent) + "\n"
+
+        # Done.
+        return r
     
     def to_python(self, context, params=None, indent=0):
         """
@@ -1355,12 +1385,12 @@ class For_Statement(VBA_Object):
         """
 
         # Boilerplate used by the Python.
-        boilerplate = "import core.vba_library\n"
-        #boilerplate += "import core.vba_context\n"
-        #boilerplate += "import core.stubbed_engine\n"
-        #boilerplate += "\nstub_engine = core.stubbed_engine.StubbedEngine()\n"
-        #boilerplate += "vm_context = core.vba_context.Context(engine=stub_engine)\n"
-        boilerplate += "\nvm_context = context\n"
+        indent_str = " " * indent
+        boilerplate = indent_str + "import core.vba_library\n"        
+        boilerplate += indent_str + "\ntry:\n"
+        boilerplate += indent_str + " " * 4 + "vm_context\n"
+        boilerplate += indent_str + "except NameError:\n"
+        boilerplate += indent_str + " " * 4 + "vm_context = context\n"
         
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
@@ -1373,39 +1403,54 @@ class For_Statement(VBA_Object):
         if (step < 0):
             rev_code = "[::-1]"
             step = abs(step)
-        indent_str = " " * indent
         loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":"
-
+        loop_start = indent_str + "# Start emulated loop.\n" + loop_start
+        
         # Set up initialization of variables used in the loop.
         loop_init = ""
         init_vals = _get_var_vals(self, context)
         for var in init_vals.keys():
             val = to_python(init_vals[var], context, params=params)
             loop_init += indent_str + str(var) + " = " + val + "\n"
-
+        loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
+            
+        # Define the local VBA functions called by the loop.
+        func_defns = self._called_funcs_to_python(context, indent)
+        func_defns = indent_str + "# VBA Local Function Definitions\n" + func_defns
+            
         # Save the updated variable values.
         lhs_visitor = lhs_var_visitor()
         self.accept(lhs_visitor)
         lhs_var_names = lhs_visitor.variables
-        save_vals = indent_str + "var_updates = {"
+        var_dict_str = "{"
         first = True
         for var in lhs_var_names:
             if (not first):
-                save_vals += ", "
+                var_dict_str += ", "
             first = False
-            save_vals += '"' + var + '" : ' + var
-        save_vals += "}"
-                    
+            var_dict_str += '"' + var + '" : ' + var
+        var_dict_str += "}"
+        save_vals = indent_str + "try:\n"
+        save_vals += indent_str + " " * 4 + "var_updates\n"
+        save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
+        save_vals += indent_str + "except NameError:\n"
+        save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
+        save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
+        
         # Set up the loop body.
         loop_body = ""
         for statement in self.statements:
             loop_body += indent_str + " " * 4 + "try:\n"
             loop_body += to_python(statement, context, indent=indent+8) + "\n"
-            loop_body += indent_str + " " * 4 + "except:\n"
-            loop_body += indent_str + " " * 8 + "pass\n"
+            loop_body += indent_str + " " * 4 + "except Exception as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                loop_body += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
+            else:
+                loop_body += indent_str + " " * 8 + "pass\n"
             
         # Full python code for the loop.
         python_code = boilerplate + "\n" + \
+                      func_defns + "\n" + \
                       loop_init + "\n" + \
                       loop_start + "\n" + \
                       loop_body + "\n" + \
