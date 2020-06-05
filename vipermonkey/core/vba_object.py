@@ -425,9 +425,14 @@ def to_python(arg, context, params=None, indent=0):
     """
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
     """
+    r = None
     if (hasattr(arg, "to_python")):
-        return arg.to_python(context, params=params, indent=indent)
-    return " " * indent + str(arg)
+        r = arg.to_python(context, params=params, indent=indent)
+    elif (isinstance(arg, str)):
+        r = " " * indent + '"' + str(arg) + '"'
+    else:
+        r = " " * indent + str(arg)
+    return r
     
 def eval_arg(arg, context, treat_as_var_name=False):
     """

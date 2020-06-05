@@ -1380,7 +1380,8 @@ class For_Statement(VBA_Object):
         loop_init = ""
         init_vals = _get_var_vals(self, context)
         for var in init_vals.keys():
-            loop_init += indent_str + str(var) + " = " + str(init_vals[var]) + "\n"
+            val = to_python(init_vals[var], context, params=params)
+            loop_init += indent_str + str(var) + " = " + val + "\n"
 
         # Save the updated variable values.
         lhs_visitor = lhs_var_visitor()
@@ -1424,16 +1425,14 @@ class For_Statement(VBA_Object):
 
         # Execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.
+        loop_vba = str(self).replace("\n", "\\n")[:20]
+        log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
         exec(loop_code)
+        log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
 
-        # Update the context with the new actions and variable values from the JIT
-        # code execution.
-        #for action in vm_context.engine.actions:
-        #    context.report_action(action[0], action[1], action[2], strip_null_bytes=True)
-        print "UPDATING VARS"
+        # Update the context with the variable values from the JIT code execution.
         for updated_var in var_updates.keys():
             context.set(updated_var, var_updates[updated_var])
-        print "DONE"
 
         # Done.
         return True
