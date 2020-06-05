@@ -78,7 +78,15 @@ def _vba_to_python_op(op):
         "Or" : "or",
         "OrElse" : "or",
         "Eqv" : "==",
-        "=" : "=="
+        "=" : "==",
+        ">" : ">",
+        "<" : "<",
+        ">=" : ">=",
+        "=>" : ">=",
+        "<=" : "<=",
+        "=<" : "<=",
+        "<>" : "!=",
+        "is" : "=="
     }
     return op_map[op]
 
@@ -2210,9 +2218,9 @@ class BoolExprItem(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         r = " " * indent
         if (self.op is not None):
-            r += to_python(self.lhs, context) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+            r += to_python(self.lhs, context, params) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
-            r += to_python(self.lhs, context)
+            r += to_python(self.lhs, context, params)
         else:
             log.error("BoolExprItem: Improperly parsed.")
             return ""
@@ -2397,11 +2405,11 @@ class BoolExpr(VBA_Object):
         r = " " * indent + "("
         if (self.op is not None):
             if (self.lhs is not None):
-                r += to_python(self.lhs, context) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+                r += to_python(self.lhs, context, params) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
             else:
-                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context)
+                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
-            r += to_python(self.lhs, context)
+            r += to_python(self.lhs, context, params)
         else:
             log.error("BoolExpr: Improperly parsed.")
             return ""

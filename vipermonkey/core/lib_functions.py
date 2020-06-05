@@ -73,6 +73,9 @@ class Chr(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
+    def to_python(self, context, params=None, indent=0):
+        return "chr(" + to_python(self.arg, context) + ")"
+            
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer
         # But in reality, VBA accepts a string containing the representation
@@ -152,6 +155,9 @@ class Asc(VBA_Object):
             # Here the arg is expected to be either a character or a VBA_Object        
             self.arg = tokens[0]
 
+    def to_python(self, context, params=None, indent=0):
+        return "ord(" + to_python(self.arg, context) + ")"
+    
     def eval(self, context, params=None):
 
         # Are we just looking up a variable called 'asc'?

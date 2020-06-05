@@ -1441,7 +1441,14 @@ class For_Statement(VBA_Object):
         loop_body = ""
         for statement in self.statements:
             loop_body += indent_str + " " * 4 + "try:\n"
-            loop_body += to_python(statement, context, indent=indent+8) + "\n"
+            try:
+                loop_body += to_python(statement, context, indent=indent+8) + "\n"
+            except Exception as e:
+                print statement
+                print e
+                traceback.print_exc(file=sys.stdout)
+                sys.exit(1)
+
             loop_body += indent_str + " " * 4 + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 loop_body += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
