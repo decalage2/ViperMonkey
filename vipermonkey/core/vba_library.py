@@ -576,11 +576,15 @@ class Mid(VbaLibraryFunc):
             pass
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-        vb_s = vb_str.VbStr(s, context.is_vbscript)
+        vb_s = None
+        s_len = len(s)
+        if context.is_vbscript:
+            vb_s = vb_str.VbStr(s, context.is_vbscript)
+            s_len = vb_s.len()
         
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
-        if (start > vb_s.len()):
+        if (start > s_len):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Mid: start>len(s) => return ""')
             return ''
@@ -603,19 +607,23 @@ class Mid(VbaLibraryFunc):
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
-        if start+length-1 > vb_s.len():
+        if start+length-1 > s_len:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
-            #return s[start-1:]
-            return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
+            if context.is_vbscript:
+                return s[start-1:]
+            else:
+                return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
 
         # What to do when length<=0 is not specified:
         if length <= 0:
             return ''
 
         # Regular Mid().
-        #r = s[start - 1:start-1+length]
-        r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
+        if context.is_vbscript:
+            r = s[start - 1:start-1+length]
+        else:
+            r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
 
         # Done.
         if (log.getEffectiveLevel() == logging.DEBUG):

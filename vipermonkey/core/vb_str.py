@@ -285,9 +285,13 @@ class VbStr(object):
 
         """
 
+        # Track if this is a VBScript string.
+        self.is_vbscript = is_vbscript
+        
         # Copy contructor? (sort of).
         if (isinstance(orig_str, list)):
             self.vb_str = orig_str
+            self.orig_str = "".join(self.vb_str)
             return
 
         # Make sure we have a string.
@@ -298,7 +302,8 @@ class VbStr(object):
                 orig_str = ''.join(filter(lambda x:x in string.printable, orig_str))
             else:
                 raise ValueError("Given value cannot be converted to a string.")
-                
+        self.orig_str = orig_str
+            
         # If this is VBScript each character will be a single byte (like the Python
         # string).
         self.vb_str = []

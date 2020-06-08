@@ -72,6 +72,7 @@ import sys
 import re
 import base64
 from curses_ascii import isprint
+import hashlib
 
 def is_simple_statement(s):
     """
@@ -1412,6 +1413,9 @@ class For_Statement(VBA_Object):
         for var in init_vals.keys():
             val = to_python(init_vals[var], context, params=params)
             loop_init += indent_str + str(var) + " = " + val + "\n"
+        hash_object = hashlib.md5(str(self).encode())
+        prog_var = "pct_" + hash_object.hexdigest()
+        loop_init += indent_str + prog_var + " = 0\n"
         loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
             
         # Define the local VBA functions called by the loop.
@@ -1439,6 +1443,9 @@ class For_Statement(VBA_Object):
         
         # Set up the loop body.
         loop_body = ""
+        loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/" + str(end) + "*100) == " + prog_var + "):\n"
+        loop_body += indent_str + " " * 8 + "print str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\"\n"
+        loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         for statement in self.statements:
             loop_body += indent_str + " " * 4 + "try:\n"
             try:
@@ -3846,7 +3853,9 @@ class On_Error_Statement(VBA_Object):
         return str(self.tokens)
 
     def to_python(self, context, params=None, indent=0):
-        return "# '" + str(self) + "' not emulated."
+        indent_str = " " * indent
+        return indent_str + "# '" + str(self) + "' not emulated.\n" + \
+            indent_str + "pass"
     
     def eval(self, context, params=None):
 
