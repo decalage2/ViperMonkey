@@ -714,6 +714,8 @@ class Let_Statement(VBA_Object):
             r = str(self.name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
         else:
             r = str(self.name) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
+        if (r.startswith(".")):
+            r = r[1:]
         r = " " * indent + r
         return r
         
@@ -1412,7 +1414,7 @@ class For_Statement(VBA_Object):
         init_vals = _get_var_vals(self, context)
         for var in init_vals.keys():
             val = to_python(init_vals[var], context, params=params)
-            loop_init += indent_str + str(var) + " = " + val + "\n"
+            loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
         hash_object = hashlib.md5(str(self).encode())
         prog_var = "pct_" + hash_object.hexdigest()
         loop_init += indent_str + prog_var + " = 0\n"
@@ -1432,6 +1434,7 @@ class For_Statement(VBA_Object):
             if (not first):
                 var_dict_str += ", "
             first = False
+            var = var.replace(".", "")
             var_dict_str += '"' + var + '" : ' + var
         var_dict_str += "}"
         save_vals = indent_str + "try:\n"
@@ -1455,7 +1458,6 @@ class For_Statement(VBA_Object):
                 print e
                 traceback.print_exc(file=sys.stdout)
                 sys.exit(1)
-
             loop_body += indent_str + " " * 4 + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 loop_body += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
@@ -3304,7 +3306,10 @@ class Call_Statement(VBA_Object):
         # Is the whole call stuffed into the name?
         indent_str = " " * indent
         if ((isinstance(self.name, VBA_Object)) and (len(self.params) == 0)):
-            r = indent_str + to_python(self.name, context, params)
+            r = to_python(self.name, context, params)
+            if (r.startswith(".")):
+                r = r[1:]
+            r = indent_str + r
             return r
             
         # Is this a VBA internal function?
@@ -3322,7 +3327,7 @@ class Call_Statement(VBA_Object):
             return r
                 
         # Generate the Python function call to a local function.
-        r = indent_str + str(self.name) + "("
+        r = str(self.name) + "("
         first = True
         for p in py_params:
             if (not first):
@@ -3330,7 +3335,10 @@ class Call_Statement(VBA_Object):
             first = False
             r += p
         r += ")"
-
+        if (r.startswith(".")):
+            r = r[1:]
+        r = indent_str + r
+        
         # Done.
         return r
     
@@ -3567,6 +3575,9 @@ class Exit_For_Statement(VBA_Object):
     def __repr__(self):
         return 'Exit For'
 
+    def to_python(self, context, params=None, indent=0):
+        return " " * indent + "break"
+
     def eval(self, context, params=None):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
@@ -3662,6 +3673,30 @@ class With_Statement(VBA_Object):
     def __repr__(self):
         return 'With ' + str(self.env) + "\\n" + str(self.body) + " End With"
 
+    def to_python(self, context, params=None, indent=0):
+
+        # For now just convert the with body to Python and hope for the best.
+        r = ""
+        indent_str = " " * indent
+        r += indent_str + "# With block: " + str(self).replace("\n", "\\n")[:20] + "\n"
+        for statement in self.body:
+            r += indent_str + "try:\n"
+            try:
+                r += to_python(statement, context, indent=indent + 4) + "\n"
+            except Exception as e:
+                print statement
+                print e
+                traceback.print_exc(file=sys.stdout)
+                sys.exit(1)
+            r += indent_str + "except Exception as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "print \"ERROR: \" + str(e)\n"
+            else:
+                r += indent_str + " " * 4 + "pass\n"
+
+        # Done.
+        return r
+                
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.

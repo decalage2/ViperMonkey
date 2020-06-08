@@ -119,7 +119,7 @@ class SimpleNameExpression(VBA_Object):
         return '%s' % self.name
 
     def to_python(self, context, params=None, indent=0):
-        return str(self)
+        return str(self).replace(".", "")
     
     def eval(self, context, params=None):
         if (log.getEffectiveLevel() == logging.DEBUG):
