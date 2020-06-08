@@ -132,6 +132,9 @@ class Context(object):
         # Track whether VBScript or VBA is being analyzed.
         self.is_vbscript = False
 
+        # JIT loop emulation?
+        self.do_jit = False
+
         # Track whether logging should be throttled.
         self.throttle_logging = False
         
@@ -206,6 +209,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.do_jit = context.do_jit
             self.has_change_handler = context.has_change_handler
             self.throttle_logging = context.throttle_logging
             self.is_vbscript = context.is_vbscript

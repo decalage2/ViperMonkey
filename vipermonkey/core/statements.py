@@ -1296,6 +1296,32 @@ def _get_var_vals(item, context):
     # Done.
     return r
 
+def _called_funcs_to_python(loop, context, indent):
+    """
+    Convert all the functions called in the loop to Python.
+    """
+
+    # Get all the functions called in the loop.
+    call_visitor = function_call_visitor()
+    loop.accept(call_visitor)
+    func_names = call_visitor.called_funcs
+
+    # Get the definitions for all local functions called.
+    local_funcs = []
+    for func_name in func_names:
+        if (context.contains(func_name)):
+            curr_func = context.get(func_name)
+            if (isinstance(curr_func, VBA_Object)):
+                local_funcs.append(curr_func)
+
+    # Convert each local function to Python.
+    r = ""
+    for local_func in local_funcs:
+        r += to_python(local_func, context, indent=indent) + "\n"
+
+    # Done.
+    return r
+
 class For_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
@@ -1317,7 +1343,7 @@ class For_Statement(VBA_Object):
 
     def _get_loop_indices(self, context):
         """
-        Get the start inedx, end index, and step of the loop.
+        Get the start index, end index, and step of the loop.
         """
 
         # Get the start index. If this is a string, convert to an int.
@@ -1355,32 +1381,6 @@ class For_Statement(VBA_Object):
 
         # Done.
         return (start, end, step)
-
-    def _called_funcs_to_python(self, context, indent):
-        """
-        Convert all the functions called in the loop to Python.
-        """
-
-        # Get all the functions called in the loop.
-        call_visitor = function_call_visitor()
-        self.accept(call_visitor)
-        func_names = call_visitor.called_funcs
-
-        # Get the definitions for all local functions called.
-        local_funcs = []
-        for func_name in func_names:
-            if (context.contains(func_name)):
-                curr_func = context.get(func_name)
-                if (isinstance(curr_func, VBA_Object)):
-                    local_funcs.append(curr_func)
-
-        # Convert each local function to Python.
-        r = ""
-        for local_func in local_funcs:
-            r += to_python(local_func, context, indent=indent) + "\n"
-
-        # Done.
-        return r
     
     def to_python(self, context, params=None, indent=0):
         """
@@ -1421,7 +1421,7 @@ class For_Statement(VBA_Object):
         loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
             
         # Define the local VBA functions called by the loop.
-        func_defns = self._called_funcs_to_python(context, indent)
+        func_defns = _called_funcs_to_python(self, context, indent)
         func_defns = indent_str + "# VBA Local Function Definitions\n" + func_defns
             
         # Save the updated variable values.
@@ -1457,7 +1457,7 @@ class For_Statement(VBA_Object):
                 print statement
                 print e
                 traceback.print_exc(file=sys.stdout)
-                sys.exit(1)
+                return "ERROR! to_python failed! " + str(e)
             loop_body += indent_str + " " * 4 + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 loop_body += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
@@ -1480,20 +1480,29 @@ class For_Statement(VBA_Object):
         Convert the loop to Python and emulate the loop directly in Python.
         """
 
+        # Are we actually doing this?
+        if (not context.do_jit):
+            return False
+        
         # Get the Python code for the loop.
         loop_code = to_python(self, context)
-        print loop_code
+        #print loop_code
 
         # Execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.
         loop_vba = str(self).replace("\n", "\\n")[:20]
         log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
-        exec(loop_code)
-        log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
+        try:
+            exec(loop_code)
+            log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
 
-        # Update the context with the variable values from the JIT code execution.
-        for updated_var in var_updates.keys():
-            context.set(updated_var, var_updates[updated_var])
+            # Update the context with the variable values from the JIT code execution.
+            for updated_var in var_updates.keys():
+                context.set(updated_var, var_updates[updated_var])
+        except Exception as e:
+            log.error("JIT loop emulation failed. " + str(e))
+            print loop_code
+            return False
 
         # Done.
         return True

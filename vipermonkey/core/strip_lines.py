@@ -750,17 +750,25 @@ def hide_string_content(s):
     """
     if (not isinstance(s, str)):
         return s
+    if ('"' not in s):
+        return s
     r = ""
-    in_str = False
-    for c in s:
-        if (in_str):
-            r += "_"
-        else:
-            r += c
-        if (c == '"'):
-            if (in_str):
-                r += '"'
-            in_str = not in_str
+    start = 0    
+    while ('"' in s[start:]):
+
+        # Out of string. Add in as-is.
+        end = s[start:].index('"') + start + 1
+        r += s[start:end]
+        start = end
+
+        # In string?
+        end = len(s)
+        if ('"' in s[start:]):
+            end = s[start:].index('"') + start            
+        r += "_" * (end - start - 1)
+        start = end + 1
+    r += s[start:]
+
     return r
 
 def convert_colons_to_linefeeds(vba_code):

@@ -144,7 +144,8 @@ from stubbed_engine import StubbedEngine
 class ViperMonkey(StubbedEngine):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self, filename, data):
+    def __init__(self, filename, data, do_jit=False):
+        self.do_jit = do_jit
         self.comments = None
         self.metadata = None
         self.filename = filename
@@ -461,6 +462,7 @@ class ViperMonkey(StubbedEngine):
                           filename=self.filename,
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
+        context.do_jit = self.do_jit
 
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
