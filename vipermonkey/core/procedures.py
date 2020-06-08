@@ -78,6 +78,38 @@ class Sub(VBA_Object):
     def __repr__(self):
         return 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
+    def to_python(self, context, params=None, indent=0):
+
+        # Define the function prototype.
+        indent_str = " " * indent
+        func_args = "("
+        first = True
+        for param in self.params:
+            if (not first):
+                func_args += ", "
+            first = False
+            func_args += to_python(param, context)
+        func_args += ")"
+        r = indent_str + "def " + str(self.name) + func_args + ":\n"
+
+        # Init return value.
+        r += indent_str + " " * 4 + "import core.vba_library\n"
+        r += indent_str + " " * 4 + "global vm_context\n"
+        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        
+        # Function body.
+        for statement in self.statements:
+            r += indent_str + " " * 4 + "try:\n"
+            r += to_python(statement, context, indent=indent+8) + "\n"
+            r += indent_str + " " * 4 + "except Exception as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
+            else:
+                r += indent_str + " " * 8 + "pass\n"
+
+        # Done.
+        return r
+    
     def eval(self, context, params=None):
 
         # create a new context for this execution:

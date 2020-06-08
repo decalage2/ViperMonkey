@@ -1933,7 +1933,19 @@ class Function_Call(VBA_Object):
             args += "]"
             r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
             return r
-                
+
+        # Is this an array access?
+        if (context.contains(self.name)):
+            ref = context.get(self.name)
+            if (isinstance(ref, list)):
+
+                # Do the array access.
+                acc_str = ""
+                for p in py_params:
+                    acc_str += "[" + p + "]"
+                r = str(self.name) + acc_str
+                return r
+        
         # Generate the Python function call to a local function.
         r = str(self.name) + "("
         first = True

@@ -1264,7 +1264,7 @@ def _get_var_vals(item, context):
     # Get all the variables.
 
     # Vars on RHS.
-    var_visitor = var_in_expr_visitor()
+    var_visitor = var_in_expr_visitor(context)
     item.accept(var_visitor)
     var_names = var_visitor.variables
 
