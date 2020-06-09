@@ -209,8 +209,8 @@ class Sub(VBA_Object):
                 s.eval(context=context)
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.must_handle_error()):
-            if (context.have_error()):
+            #if (context.have_error()):
+            if (context.must_handle_error()):
                 break
             context.clear_error()
 
@@ -561,8 +561,8 @@ class Function(VBA_Object):
                 break
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.must_handle_error()):
-            if (context.have_error()):
+            #if (context.have_error()):
+            if (context.must_handle_error()):
                 break
             context.clear_error()
 

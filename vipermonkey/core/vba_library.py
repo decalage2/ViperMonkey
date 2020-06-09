@@ -1004,8 +1004,7 @@ class Array(VbaLibraryFunc):
         r = []
         if ((len(params) == 1) and (params[0] == "NULL")):
             return []        
-        for v in params:
-            r.append(v)
+        r = list(params)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Array: return %r" % r)
         return r

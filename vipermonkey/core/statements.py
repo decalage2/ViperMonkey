@@ -58,6 +58,7 @@ from from_unicode_str import *
 from vba_object import int_convert
 from vba_object import to_python
 import procedures
+from let_statement_visitor import *
 from var_in_expr_visitor import *
 from function_call_visitor import *
 from lhs_var_visitor import *
@@ -1247,10 +1248,28 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
-def _infer_type(var, item, context):
+def _infer_type(var, code_chunk, context):
     """
     Try to infer the type of an undefined variable based on how it is used.
     """
+
+    # Get all the assignments in the code chunk.
+    visitor = let_statement_visitor(var)
+    code_chunk.accept(visitor)
+
+    # Look at each assignment statement and check out the ones where the current
+    # variable is assigned.
+    str_funcs = ["cstr(", "chr(", "left(", "right(", "mid(", "join(", "lcase(",
+                 "replace(", "trim(", "ucase(", "chrw("]
+    for assign in visitor.let_statements:
+
+        # Does a VBA function that returns a string appear on the RHS?
+        rhs = str(assign.expression).lower()
+        for str_func in str_funcs:
+            if (str_func in rhs):
+                return "STRING"
+
+    # Does not look like a string, assume int.
     return "INTEGER"
 
 def _get_var_vals(item, context):
@@ -1408,7 +1427,7 @@ class For_Statement(VBA_Object):
             step = abs(step)
         loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
-        
+
         # Set up initialization of variables used in the loop.
         loop_init = ""
         init_vals = _get_var_vals(self, context)

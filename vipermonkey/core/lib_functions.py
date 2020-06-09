@@ -74,7 +74,7 @@ class Chr(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def to_python(self, context, params=None, indent=0):
-        return "chr(" + to_python(self.arg, context) + ")"
+        return "chr(int(" + to_python(self.arg, context) + "))"
             
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer
