@@ -884,10 +884,16 @@ class MemberAccessExpression(VBA_Object):
             txt = str(rhs_val)
         except UnicodeEncodeError:
             txt = ''.join(filter(lambda x:x in string.printable, rhs_val))
-
+            
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.
-        context.set(str(lhs_orig) + ".ReadText", txt, force_global=True)
+        #
+        # We are appending the written data to whatever is already there.
+        var_name = str(lhs_orig) + ".ReadText"
+        if (not context.contains(var_name)):
+            context.set(var_name, "", force_global=True)
+        final_txt = context.get(var_name) + txt
+        context.set(var_name, final_txt, force_global=True)
         
         # We handled the write.
         return True
@@ -1004,6 +1010,9 @@ class MemberAccessExpression(VBA_Object):
             file_hash = h.hexdigest()
             context.report_action("Dropped File Hash", file_hash, 'File Name: ' + filename)
 
+            # Consider this ADODB stream to be finished, so clear the ReadText variable.
+            context.set(var_name, "")
+            
         except Exception as e:
             log.error("Writing " + fname + " failed. " + str(e))
             return False

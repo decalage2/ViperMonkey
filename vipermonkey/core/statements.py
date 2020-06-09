@@ -897,7 +897,7 @@ class Let_Statement(VBA_Object):
                 value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + str(value) + "' failed. " + str(e))
-                
+
         # Is this setting an interesting field in a COM object?
         if ((str(self.name).endswith(".Arguments")) or
             (str(self.name).endswith(".Path"))):
@@ -926,7 +926,7 @@ class Let_Statement(VBA_Object):
         if ((self.op == "+=") or (self.op == "-=")):
             lhs = context.get(self.name)
             value = self._handle_autoincrement(lhs, value)
-                
+
         # set variable, non-array access.
         if (self.index is None):
 

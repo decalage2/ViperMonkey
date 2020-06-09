@@ -769,6 +769,14 @@ def eval_args(args, context, treat_as_var_name=False):
         iterator = iter(args)
     except TypeError:
         return args
+
+    # Short circuit check to see if there are any VBA objects.
+    got_vba_objects = False
+    for arg in args:
+        if (isinstance(arg, VBA_Object)):
+            got_vba_objects = True
+    if (not got_vba_objects):
+        return args
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
     return r
 
