@@ -578,7 +578,7 @@ class Mid(VbaLibraryFunc):
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
         vb_s = None
         s_len = len(s)
-        if context.is_vbscript:
+        if (not context.is_vbscript):
             vb_s = vb_str.VbStr(s, context.is_vbscript)
             s_len = vb_s.len()
         

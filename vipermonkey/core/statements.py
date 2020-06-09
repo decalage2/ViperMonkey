@@ -1486,7 +1486,7 @@ class For_Statement(VBA_Object):
         
         # Get the Python code for the loop.
         loop_code = to_python(self, context)
-        #print loop_code
+        print loop_code
 
         # Execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.

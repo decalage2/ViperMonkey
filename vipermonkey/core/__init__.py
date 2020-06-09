@@ -567,7 +567,8 @@ class ViperMonkey(StubbedEngine):
             entry_point = entry_point.lower()
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Trying entry point " + entry_point)
-            if entry_point in self.globals:
+            if ((entry_point in self.globals) and
+                (hasattr(self.globals[entry_point], "eval"))):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
                 context.dump_all_files(autoclose=True)
