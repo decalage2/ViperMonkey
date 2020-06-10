@@ -118,7 +118,7 @@ class Sum(VBA_Object):
                 r += " + "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"
         
     def __repr__(self):
         return debug_repr("+", self.arg)
@@ -205,7 +205,7 @@ class Xor(VBA_Object):
                 r += " ^ "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"
     
 # --- AND --------------------------------------------------------
 
@@ -226,7 +226,7 @@ class And(VBA_Object):
                 r += " & "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"
         
     def eval(self, context, params=None):
 
@@ -298,7 +298,7 @@ class Or(VBA_Object):
                 r += " | "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"
         
     def __repr__(self):
         return ' | '.join(map(repr, self.arg))
@@ -719,7 +719,7 @@ class Concatenation(VBA_Object):
                 r += " + "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"
 
 # --- MOD OPERATOR -----------------------------------------------------------
 
@@ -766,4 +766,4 @@ class Mod(VBA_Object):
                 r += " % "
             first = False
             r += to_python(arg, context, params=params)
-        return r
+        return "(" + r + ")"

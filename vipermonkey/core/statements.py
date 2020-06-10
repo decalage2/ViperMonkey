@@ -1296,10 +1296,24 @@ def _get_var_vals(item, context):
     var_names = var_names.union(lhs_var_names)
     r = {}
     for var in var_names:
+
+        # Do we already know the variable value?
         val = None
         try:
+
+            # Function definitions are not valid values.
             val = context.get(var)
+            if (isinstance(val, procedures.Function) or
+                isinstance(val, procedures.Sub) or
+                isinstance(val, VbaLibraryFunc)):
+                val = None
+
+        # Unedfined variable.
         except KeyError:
+            pass
+
+        # Got a valid value for the variable?
+        if (val is None):
 
             # Variable is not defined. Try to infer the type based on how it is
             # used.
@@ -1310,6 +1324,8 @@ def _get_var_vals(item, context):
                 val = ""
             else:
                 raise ValueError("Type " + str(var_type) + " not handled.")
+
+        # Save the variable value.
         r[var] = val
 
     # Done.
