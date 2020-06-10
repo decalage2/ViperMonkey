@@ -10,12 +10,14 @@ import subprocess
 import time
 import argparse
 import json
+import os, signal
 
 # sudo pip3 install unotools
 # sudo apt install libreoffice-calc, python3-uno
 from unotools import Socket, connect
 from unotools.component.writer import Writer
 from unotools.unohelper import convert_path_to_url
+from unotools import ConnectionError
 
 # Connection information for LibreOffice.
 HOST = "127.0.0.1"
@@ -34,13 +36,33 @@ def is_word_file(file):
     return ((b"Microsoft Office Word" in typ) or (b"Word 2007+" in typ))
 
 ###################################################################################################
-def run_soffice():
+def wait_for_uno_api():
     """
-    Start the headless, UNO supporting, libreoffice process to access the API, if it is not already
-    running.
+    Sleeps until the libreoffice UNO api is available by the headless libreoffice process. Takes
+    a bit to spin up even after the OS reports the process as running. Tries 3 times before giving
+    up and throwing an Exception.
     """
 
-    # Is soffice already running?
+    tries = 0
+
+    while tries < 3:
+        try:
+            connect(Socket(HOST, PORT))
+            return
+        except ConnectionError:
+            time.sleep(5)
+            tries += 1
+
+    raise Exception("libreoffice UNO API failed to start")
+
+###################################################################################################
+def get_office_proc():
+    """
+    Returns the process info for the headless libreoffice process. None if it's not running
+
+    @return (psutil.Process)
+    """
+
     for proc in psutil.process_iter():
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
@@ -48,17 +70,36 @@ def run_soffice():
             pass
         else:
             if (pinfo["name"].startswith("soffice")):
+                return pinfo
+    return None
 
-                # Already running. Don't start it again.
-                return
+###################################################################################################
+def is_office_running():
+    """
+    Check to see if the headless libreoffice process is running.
 
-    # soffice is not running. Run it in listening mode.
-    cmd = "/usr/lib/libreoffice/program/soffice.bin --headless --invisible " + \
-          "--nocrashreport --nodefault --nofirststartwizard --nologo " + \
-          "--norestore " + \
-          '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"'
-    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    time.sleep(5)
+    @return (bool) True if running False otherwise
+    """
+
+    return True if get_office_proc() else False
+
+###################################################################################################
+def run_soffice():
+    """
+    Start the headless, UNO supporting, libreoffice process to access the API, if it is not already
+    running.
+    """
+
+    # start the process
+    if not is_office_running():
+
+        # soffice is not running. Run it in listening mode.
+        cmd = "/usr/lib/libreoffice/program/soffice.bin --headless --invisible " + \
+              "--nocrashreport --nodefault --nofirststartwizard --nologo " + \
+              "--norestore " + \
+              '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"'
+        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        wait_for_uno_api()
 
 ###################################################################################################
 def get_document(file, connection):
@@ -142,3 +183,6 @@ if args.text:
     print(get_text(document))
 elif args.tables:
     print(json.dumps(get_tables(document)))
+
+# clean up
+os.kill(get_office_proc()["pid"], signal.SIGTERM)

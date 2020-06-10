@@ -12,6 +12,7 @@ Project Repository:
 https://github.com/decalage2/ViperMonkey
 """
 
+import logging
 import subprocess
 
 from logger import log
@@ -30,7 +31,8 @@ def get_metadata_exif(filename):
         return {}
 
     # Sanity check results.
-    log.debug("exiftool output: '" + str(output) + "'")
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        log.debug("exiftool output: '" + str(output) + "'")
     if (":" not in output):
         log.warning("Cannot read metadata with exiftool.")
         return {}

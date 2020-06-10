@@ -51,12 +51,14 @@ __version__ = '0.08'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import base64
 from logger import log
 import re
 from curses_ascii import isprint
 import traceback
 import string
+import gc
 
 from inspect import getouterframes, currentframe
 import sys
@@ -133,7 +135,8 @@ class VBA_Object(object):
         :param context: Context for the evaluation (local and global variables)
         :return: current value of the object
         """
-        log.debug(self)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug(self)
         # raise NotImplementedError
 
     def full_str(self):
@@ -195,7 +198,8 @@ def _read_from_excel(arg, context):
         ("sheets(" in arg_str.lower()) and
         (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
-        log.debug("Try as Excel cell read...")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Try as Excel cell read...")
         
         # Pull out the sheet name.
         tmp_arg_str = arg_str.lower()
@@ -211,7 +215,8 @@ def _read_from_excel(arg, context):
             start = tmp_arg_str.index("cells(") + len("cells(")
         end = start + tmp_arg_str[start:].index(")")
         cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
-        log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
         
         try:
             
@@ -246,7 +251,8 @@ def _read_from_excel(arg, context):
             
             # Return the cell value.
             log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
-            log.debug("Cell value = '" + str(val) + "'")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cell value = '" + str(val) + "'")
             return val
         
         except Exception as e:
@@ -269,7 +275,8 @@ def _read_from_object_text(arg, context):
     if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
-        log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Try to get as ....TextFrame.TextRange.Text value: " + arg_str.lower())
 
         # Handle member access?
         lhs = "Shapes('1')"
@@ -283,7 +290,8 @@ def _read_from_object_text(arg, context):
                 lhs = arg.rhs[0]
         
             # Eval the leftmost prefix element of the member access expression first.
-            log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
             if ((hasattr(lhs, "eval")) and
                 (not isinstance(lhs, pyparsing.ParseResults))):
                 lhs = lhs.eval(context)
@@ -300,7 +308,8 @@ def _read_from_object_text(arg, context):
                 lhs = "Shapes('1')"
             if ("inlineshapes" in arg_str_low):
                 lhs = "InlineShapes('1')"
-            log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
         
         # Try to get this as a doc var.
         doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
@@ -311,10 +320,12 @@ def _read_from_object_text(arg, context):
               (not doc_var_name.startswith("Shapes(")) and
               ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
-        log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         if (val is not None):
-            log.debug("eval_obj_text: Found " + str(doc_var_name) + " = " + str(val))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_obj_text: Found " + str(doc_var_name) + " = " + str(val))
             return val
 
         # Not found. Try looking for the object with index 1.
@@ -330,7 +341,8 @@ def _read_from_object_text(arg, context):
               (not doc_var_name.startswith("Shapes(")) and
               ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
-        log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
     
@@ -341,6 +353,11 @@ def get_cached_value(arg):
     Get the cached value of an all constant numeric expression if we have it.
     """
 
+    # Don't do any more work if this is already a resolved value.
+    if (isinstance(arg, int)):
+        return arg
+
+    # This is not already resolved to an int. See if we computed this before.
     arg_str = str(arg)
     if (arg_str not in constant_expr_cache.keys()):
         return None
@@ -351,8 +368,21 @@ def set_cached_value(arg, val):
     Set the cached value of an all constant numeric expression.
     """
 
+    # We should be setting this to a numeric expression
+    if ((not isinstance(val, int)) and
+        (not isinstance(val, float)) and
+        (not isinstance(val, complex))):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.warning("Expression '" + str(val) + "' is a " + str(type(val)) + ", not an int. Not caching.")
+        return
+
+    # We have a number. Cache it.
     arg_str = str(arg)
-    log.debug("Cache value of " + arg_str + " = " + str(val))
+    try:
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Cache value of " + arg_str + " = " + str(val))
+    except UnicodeEncodeError:
+        pass
     constant_expr_cache[arg_str] = val
     
 def is_constant_math(arg):
@@ -394,7 +424,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
     # avoid that. Also check to see if emulation has taken too long.
     limits_exceeded(throw_error=True)
 
-    log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        log.debug("try eval arg: %s (%s, %s, %s)" % (arg, type(arg), isinstance(arg, VBA_Object), treat_as_var_name))
 
     # Is this a constant math expression?
     got_constant_math = is_constant_math(arg)
@@ -402,7 +433,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
     # Do we have the cached value of this expression?
     cached_val = get_cached_value(arg)
     if (cached_val is not None):
-        log.debug("eval_arg: Got cached value %r = %r" % (arg, cached_val))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Got cached value %r = %r" % (arg, cached_val))
         return cached_val
     
     # Try handling reading value from an Excel spreadsheet cell.
@@ -430,7 +462,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 return arg_evaled
 
         # Handle as a regular VBA object.
-        log.debug("eval_arg: eval as VBA_Object %s" % arg)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: eval as VBA_Object %s" % arg)
         r = arg.eval(context=context)
 
         # Is this a Shapes() access that still needs to be handled?
@@ -440,7 +473,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
         except:
             pass
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
-            log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
             r = eval_arg(r, context)
             if got_constant_math: set_cached_value(arg, r)
             return r
@@ -451,25 +485,30 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
     # Not a VBA object.
     else:
-        log.debug("eval_arg: not a VBA_Object: %r" % arg)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: not a VBA_Object: %r" % arg)
 
         # Might this be a special type of variable lookup?
         if (isinstance(arg, str)):
 
             # Simple case first. Is this a variable?
             try:
-                log.debug("eval_arg: Try as variable name: %r" % arg)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Try as variable name: %r" % arg)
                 r = context.get(arg)
-                log.debug("eval_arg: Got %r = %r" % (arg, r))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Got %r = %r" % (arg, r))
                 if got_constant_math: set_cached_value(arg, r)
                 return r
             except:
                     
                 # No it is not. Try more complicated cases.
-                log.debug("eval_arg: Not found as variable name: %r" % arg)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Not found as variable name: %r" % arg)
                 pass
             else:
-                log.debug("eval_arg: Do not try as variable name: %r" % arg)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Do not try as variable name: %r" % arg)
 
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
@@ -477,36 +516,43 @@ def eval_arg(arg, context, treat_as_var_name=False):
             if ("nodetypedvalue" in arg.lower()):
                 try:
                     tmp = arg.lower().replace("nodetypedvalue", "text")
-                    log.debug("eval_arg: Try to get as " + tmp + "...")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Try to get as " + tmp + "...")
                     val = context.get(tmp)
     
                     # It looks like maybe this magically does base64 decode? Try that.
                     try:
-                        log.debug("eval_arg: Try base64 decode of '" + val + "'...")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Try base64 decode of '" + val + "'...")
                         base64_str = filter(isprint, str(base64_str).strip())
                         val_decode = base64.b64decode(str(val)).replace(chr(0), "")
-                        log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
                         if got_constant_math: set_cached_value(arg, val_decode)
                         return val_decode
                     except Exception as e:
-                        log.debug("eval_arg: Base64 decode fail. " + str(e))
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Base64 decode fail. " + str(e))
                         if got_constant_math: set_cached_value(arg, val)
                         return val
                 except KeyError:
-                    log.debug("eval_arg: Not found as .text.")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Not found as .text.")
                     pass
 
             # This is a hack to get values saved in the .rapt.Value field of objects.
             elif (".selecteditem" in arg.lower()):
                 try:
                     tmp = arg.lower().replace(".selecteditem", ".rapt.value")
-                    log.debug("eval_arg: Try to get as " + tmp + "...")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Try to get as " + tmp + "...")
                     val = context.get(tmp)
                     if got_constant_math: set_cached_value(arg, val)
                     return val
 
                 except KeyError:
-                    log.debug("eval_arg: Not found as .rapt.value.")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Not found as .rapt.value.")
                     pass
 
             # Is this trying to access some VBA form variable?
@@ -525,14 +571,16 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     # Try it as a form variable.
                     curr_var_attempt = arg_peeled.lower()
                     try:
-                        log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                         val = context.get(curr_var_attempt)
                         if (val != str(arg)):
                             if got_constant_math: set_cached_value(arg, val)
                             return val
 
                     except KeyError:
-                        log.debug("eval_arg: Not found as variable")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Not found as variable")
                         pass
 
                     arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
@@ -543,7 +591,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 try:
 
                     # Lookp and execute the function.
-                    log.debug("eval_arg: Try to run as function '" + func_name + "'...")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Try to run as function '" + func_name + "'...")
                     func = context.get(func_name)
                     r = func
                     import procedures
@@ -565,10 +614,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     return arg
 
                 except KeyError:
-                    log.debug("eval_arg: Not found as function")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Not found as function")
 
                 except Exception as e:
-                    log.debug("eval_arg: Failed. Not a function. " + str(e))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Failed. Not a function. " + str(e))
                     traceback.print_exc()
 
                 # Are we trying to load some document meta data?
@@ -590,7 +641,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                     # We have the attribute. Return it.
                     r = getattr(meta, prop.lower())
-                    log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
                     return r
 
                 # Are we trying to load some document data?
@@ -614,7 +666,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
 
                     # ActiveDocument.Variables("ER0SNQAWT").Value
                     # Try to pull the result from the document variables.
-                    log.debug("eval_arg: handle expression as doc var lookup '" + tmp + "'")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: handle expression as doc var lookup '" + tmp + "'")
                     var = tmp.replace("activedocument.variables(", "").\
                           replace(")", "").\
                           replace("'","").\
@@ -622,13 +675,16 @@ def eval_arg(arg, context, treat_as_var_name=False):
                           replace('.value',"").\
                           replace("(", "").\
                           strip()
-                    log.debug("eval_arg: look for '" + var + "' as document variable...")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: look for '" + var + "' as document variable...")
                     val = context.get_doc_var(var)
                     if (val is not None):
-                        log.debug("eval_arg: got it as document variable.")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: got it as document variable.")
                         return val
                     else:
-                        log.debug("eval_arg: did NOT get it as document variable.")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: did NOT get it as document variable.")
 
                 # Are we loading a custom document property?
                 if (tmp.startswith("activedocument.customdocumentproperties(")):
@@ -652,7 +708,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     tmp_name = wild_name + str(i)
                     try:
                         val = context.get(tmp_name)
-                        log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
+                        if (log.getEffectiveLevel() == logging.DEBUG):
+                            log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
                         return val
                     except:
                         pass
@@ -662,7 +719,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
         if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
 
             # We did not resolve the variable. Treat it as unitialized.
-            log.debug("eval_arg: return 'NULL'")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: return 'NULL'")
             return "NULL"
 
         # Are we referring to a form element that we cannot find?
@@ -679,7 +737,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
             return ""
         
         # The .text hack did not work.
-        log.debug("eval_arg: return " + str(arg))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: return " + str(arg))
         return arg
 
 def eval_args(args, context, treat_as_var_name=False):
@@ -855,7 +914,8 @@ def coerce_args(orig_args, preferred_type=None):
             else:
                 new_args.append(arg)
 
-        log.debug("Coerce to str " + str(new_args))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Coerce to str " + str(new_args))
         return coerce_args_to_str(new_args)
 
     else:
@@ -868,14 +928,19 @@ def coerce_args(orig_args, preferred_type=None):
             else:
                 new_args.append(arg)
                 
-        log.debug("Coerce to int " + str(new_args))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Coerce to int " + str(new_args))
         return coerce_args_to_int(new_args)
 
-def int_convert(arg):
+def int_convert(arg, leave_alone=False):
     """
     Convert a VBA expression to an int, handling VBA NULL.
     """
 
+    # Easy case.
+    if (isinstance(arg, int)):
+        return arg
+    
     # NULLs are 0.
     if (arg == "NULL"):
         return 0
@@ -907,8 +972,11 @@ def int_convert(arg):
     try:
         return int(arg_str)
     except Exception as e:
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
-        return 0
+        if (not leave_alone):
+            log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
+            return 0
+        log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
+        return arg_str
 
 def str_convert(arg):
     """

@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import logging
 import sys
 
 from vba_context import *
@@ -87,6 +88,9 @@ class Sub(VBA_Object):
         context = Context(context=caller_context)
         context.in_procedure = True
 
+        # We are entering the function so reset whether we executed a goto.
+        context.goto_executed = False
+        
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
@@ -122,7 +126,8 @@ class Sub(VBA_Object):
                     param_value = str(param_value)
                     
                 # Add the parameter value to the local function context.
-                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
                 call_info[param_name] = param_value
 
                 # Is this a ByRef parameter?
@@ -157,26 +162,31 @@ class Sub(VBA_Object):
         context.global_scope = False
                     
         # Emulate the function.
-        log.debug('evaluating Sub %s(%s)' % (self.name, params))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluating Sub %s(%s)' % (self.name, params))
         log.info('evaluating Sub %s' % self.name)
         # TODO self.call_params
         context.clear_error()
         for s in self.statements:
 
             # Emulate the current statement.
-            log.debug('Sub %s eval statement: %s' % (self.name, s))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Sub %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
 
             # Was there an error that will make us jump to an error handler?
-            if (context.must_handle_error()):
+            #if (context.must_handle_error()):
+            if (context.have_error()):
                 break
             context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
-                log.debug("GOTO executed. Go to next loop iteration.")
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                 break
             
         # Reset variable update scoping.
@@ -185,7 +195,7 @@ class Sub(VBA_Object):
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-            
+        
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             if (isinstance(self.bogus_if, VBA_Object)):
@@ -200,7 +210,13 @@ class Sub(VBA_Object):
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-            
+
+        # We are leaving the function so reset whether we executed a goto.
+        context.goto_executed = False
+
+        # Bubble up any unhandled errors to the caller.
+        caller_context.got_error = context.got_error
+        
         # Handle subs with no return values.
         try:            
             context.get(self.name)
@@ -209,6 +225,9 @@ class Sub(VBA_Object):
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
             context.set(self.name, '')
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Returning from sub " + str(self))
 
 # 5.3.1.1 Procedure Scope
 #
@@ -290,7 +309,8 @@ sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(Case
             + Optional(params_list_paren) + EOS.suppress()
 sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
-sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress() | \
+          bogus_simple_for_each_statement
 simple_sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function'))).suppress()
 sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
 multiline_sub = (sub_start + \
@@ -362,6 +382,9 @@ class Function(VBA_Object):
         # TODO: Local variable inheritence needs to be investigated more...
         context = Context(context=caller_context)        
         context.in_procedure = True
+
+        # We are entering the function so reset whether we executed a goto.
+        context.goto_executed = False
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -419,7 +442,8 @@ class Function(VBA_Object):
                 param_value = str(param_value)
                     
             # Add the parameter value to the local function context.
-            log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
             call_info[param_name] = param_value
 
             # Is this a ByRef parameter?
@@ -454,11 +478,13 @@ class Function(VBA_Object):
         context.global_scope = False
         
         # Emulate the function.
-        log.debug('evaluating Function %s(%s)' % (self.name, params))
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('evaluating Function %s(%s)' % (self.name, params))
         # TODO self.call_params
         context.clear_error()
         for s in self.statements:
-            log.debug('Function %s eval statement: %s' % (self.name, s))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
                 
@@ -467,14 +493,17 @@ class Function(VBA_Object):
                 break
 
             # Was there an error that will make us jump to an error handler?
-            if (context.must_handle_error()):
+            #if (context.must_handle_error()):
+            if (context.have_error()):
                 break
             context.clear_error()
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (isinstance(s, Goto_Statement)):
-                log.debug("GOTO executed. Go to next loop iteration.")
+            #if (isinstance(s, Goto_Statement)):
+            if (context.goto_executed):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("GOTO executed. Go to next loop iteration.")
                 break
             
         # Reset variable update scoping.
@@ -490,7 +519,13 @@ class Function(VBA_Object):
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-            
+
+        # We are leaving the function so reset whether we executed a goto.
+        context.goto_executed = False
+
+        # Bubble up any unhandled errors to the caller.
+        caller_context.got_error = context.got_error
+        
         # TODO: get result from context.locals
         context.exit_func = False
         try:
@@ -504,7 +539,8 @@ class Function(VBA_Object):
             return_value = context.get(self.name, local_only=True)
             if ((return_value is None) or (isinstance(return_value, Function))):
                 return_value = ''
-            log.debug('Function %s: return value = %r' % (self.name, return_value))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Function %s: return value = %r' % (self.name, return_value))
 
             # Convert the return value to a String if needed.
             if ((self.return_type == "String") and (not isinstance(return_value, str))):
@@ -537,6 +573,8 @@ class Function(VBA_Object):
                 else:
                     log.warn(str(self) + " does not return an array. Not doing array access.")
 
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning from func " + str(self))
             return return_value
 
         except KeyError:
@@ -553,7 +591,8 @@ function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_pr
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
-function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
+function_end = (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress() | \
+               (bogus_simple_for_each_statement + Suppress(EOS))
 simple_function_end = (CaselessKeyword('End') + CaselessKeyword('Function')).suppress()
 function_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + CaselessKeyword('Function') + EOS).suppress()
 
