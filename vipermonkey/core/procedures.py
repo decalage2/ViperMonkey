@@ -98,14 +98,7 @@ class Sub(VBA_Object):
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
         
         # Function body.
-        for statement in self.statements:
-            r += indent_str + " " * 4 + "try:\n"
-            r += to_python(statement, context, indent=indent+8) + "\n"
-            r += indent_str + " " * 4 + "except Exception as e:\n"
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                r += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
-            else:
-                r += indent_str + " " * 8 + "pass\n"
+        r += to_python(self.statements, context, indent=indent+4, statements=True)
 
         # Done.
         return r
@@ -425,14 +418,7 @@ class Function(VBA_Object):
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
         
         # Function body.
-        for statement in self.statements:
-            r += indent_str + " " * 4 + "try:\n"
-            r += to_python(statement, context, indent=indent+8) + "\n"
-            r += indent_str + " " * 4 + "except Exception as e:\n"
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                r += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
-            else:
-                r += indent_str + " " * 8 + "pass\n"
+        r += to_python(self.statements, context, indent=indent+4, statements=True)
 
         # Return the function return val.
         r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"

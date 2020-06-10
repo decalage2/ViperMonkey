@@ -1468,20 +1468,7 @@ class For_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/" + str(end) + "*100) == " + prog_var + "):\n"
         loop_body += indent_str + " " * 8 + "print str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\"\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
-        for statement in self.statements:
-            loop_body += indent_str + " " * 4 + "try:\n"
-            try:
-                loop_body += to_python(statement, context, indent=indent+8) + "\n"
-            except Exception as e:
-                print statement
-                print e
-                traceback.print_exc(file=sys.stdout)
-                return "ERROR! to_python failed! " + str(e)
-            loop_body += indent_str + " " * 4 + "except Exception as e:\n"
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                loop_body += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
-            else:
-                loop_body += indent_str + " " * 8 + "pass\n"
+        loop_body += to_python(self.statements, context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
         python_code = boilerplate + "\n" + \
@@ -3156,14 +3143,7 @@ class If_Statement(VBA_Object):
 
             # Add in the body.
             r += ":\n"
-            for stmt in piece["body"]:
-                r += indent_str + " " * 4 + "try:\n"
-                r += to_python(stmt, context, indent=indent+8) + "\n"
-                r += indent_str + " " * 4 + "except Exception as e:\n"
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    r += indent_str + " " * 8 + "print \"ERROR: \" + str(e)\n"
-                else:
-                    r += indent_str + " " * 8 + "pass\n"
+            r += to_python(piece["body"], context, indent=indent+4, statements=True)
 
         # Done.
         return r
@@ -3707,20 +3687,7 @@ class With_Statement(VBA_Object):
         r = ""
         indent_str = " " * indent
         r += indent_str + "# With block: " + str(self).replace("\n", "\\n")[:20] + "\n"
-        for statement in self.body:
-            r += indent_str + "try:\n"
-            try:
-                r += to_python(statement, context, indent=indent + 4) + "\n"
-            except Exception as e:
-                print statement
-                print e
-                traceback.print_exc(file=sys.stdout)
-                sys.exit(1)
-            r += indent_str + "except Exception as e:\n"
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                r += indent_str + " " * 4 + "print \"ERROR: \" + str(e)\n"
-            else:
-                r += indent_str + " " * 4 + "pass\n"
+        r += to_python(self.body, context, indent=indent, statements=True)
 
         # Done.
         return r

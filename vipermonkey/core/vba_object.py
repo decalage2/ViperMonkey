@@ -421,17 +421,45 @@ def is_constant_math(arg):
 
 meta = None
 
-def to_python(arg, context, params=None, indent=0):
+def to_python(arg, context, params=None, indent=0, statements=False):
     """
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
     """
+
+    # VBA Object?
     r = None
-    if (hasattr(arg, "to_python")):
+    if (hasattr(arg, "to_python") and (str(type(arg.to_python)) == "<type 'method'>")):
         r = arg.to_python(context, params=params, indent=indent)
+
+    # String literal?
     elif (isinstance(arg, str)):
         r = " " * indent + '"' + str(arg) + '"'
+
+    # List of statements?
+    elif ((isinstance(arg, list) or
+           isinstance(arg, pyparsing.ParseResults)) and statements):
+        r = ""
+        indent_str = " " * indent
+        for statement in arg:
+            r += indent_str + "try:\n"
+            try:
+                r += to_python(statement, context, indent=indent+4) + "\n"
+            except Exception as e:
+                print statement
+                print e
+                traceback.print_exc(file=sys.stdout)
+                return "ERROR! to_python failed! " + str(e)
+            r += indent_str + "except Exception as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "print \"ERROR: \" + str(e)\n"
+            else:
+                r += indent_str + " " * 4 + "pass\n"
+
+    # Some other literal?
     else:
         r = " " * indent + str(arg)
+
+    # Done.
     return r
     
 def eval_arg(arg, context, treat_as_var_name=False):
