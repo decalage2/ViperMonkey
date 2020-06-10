@@ -1339,7 +1339,50 @@ def _called_funcs_to_python(loop, context, indent):
         r += to_python(local_func, context, indent=indent) + "\n"
 
     # Done.
+    indent_str = " " * indent
+    r = indent_str + "# VBA Local Function Definitions\n" + r
     return r
+
+def _loop_vars_to_python(loop, context, indent):
+    """
+    Set up initialization of variables used in a loop in Python.
+    """
+    indent_str = " " * indent
+    loop_init = ""
+    init_vals = _get_var_vals(loop, context)
+    for var in init_vals.keys():
+        val = to_python(init_vals[var], context)
+        loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
+    hash_object = hashlib.md5(str(loop).encode())
+    prog_var = "pct_" + hash_object.hexdigest()
+    loop_init += indent_str + prog_var + " = 0\n"
+    loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
+    return (loop_init, prog_var)
+
+def _updated_vars_to_python(loop, context, indent):
+    """
+    Save the variables updated in a loop in Python.
+    """
+    indent_str = " " * indent
+    lhs_visitor = lhs_var_visitor()
+    loop.accept(lhs_visitor)
+    lhs_var_names = lhs_visitor.variables
+    var_dict_str = "{"
+    first = True
+    for var in lhs_var_names:
+        if (not first):
+            var_dict_str += ", "
+        first = False
+        var = var.replace(".", "")
+        var_dict_str += '"' + var + '" : ' + var
+    var_dict_str += "}"
+    save_vals = indent_str + "try:\n"
+    save_vals += indent_str + " " * 4 + "var_updates\n"
+    save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
+    save_vals += indent_str + "except NameError:\n"
+    save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
+    save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
+    return save_vals
 
 class For_Statement(VBA_Object):
 
@@ -1429,39 +1472,13 @@ class For_Statement(VBA_Object):
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
 
         # Set up initialization of variables used in the loop.
-        loop_init = ""
-        init_vals = _get_var_vals(self, context)
-        for var in init_vals.keys():
-            val = to_python(init_vals[var], context, params=params)
-            loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
-        hash_object = hashlib.md5(str(self).encode())
-        prog_var = "pct_" + hash_object.hexdigest()
-        loop_init += indent_str + prog_var + " = 0\n"
-        loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
+        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
             
         # Define the local VBA functions called by the loop.
         func_defns = _called_funcs_to_python(self, context, indent)
-        func_defns = indent_str + "# VBA Local Function Definitions\n" + func_defns
             
         # Save the updated variable values.
-        lhs_visitor = lhs_var_visitor()
-        self.accept(lhs_visitor)
-        lhs_var_names = lhs_visitor.variables
-        var_dict_str = "{"
-        first = True
-        for var in lhs_var_names:
-            if (not first):
-                var_dict_str += ", "
-            first = False
-            var = var.replace(".", "")
-            var_dict_str += '"' + var + '" : ' + var
-        var_dict_str += "}"
-        save_vals = indent_str + "try:\n"
-        save_vals += indent_str + " " * 4 + "var_updates\n"
-        save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
-        save_vals += indent_str + "except NameError:\n"
-        save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
-        save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
+        save_vals = _updated_vars_to_python(self, context, indent)
         
         # Set up the loop body.
         loop_body = ""
