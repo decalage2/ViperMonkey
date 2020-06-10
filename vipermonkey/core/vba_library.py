@@ -1968,7 +1968,7 @@ class CByte(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            tmp = params[0].upper()
+            tmp = str(params[0]).upper()
             if (tmp.lower().startswith("&h")):
                 tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
@@ -1976,7 +1976,7 @@ class CByte(VbaLibraryFunc):
             r = num
             if (r > 255):
                 r = 255
-        except:
+        except Exception as e:
             pass 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CByte: %r returns %r" % (self, r))
