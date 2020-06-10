@@ -5,8 +5,19 @@ ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
-See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+See the article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
+
+ViperMonkey was also demonstrated at the Black Hat Europe 2019 conference: 
+see the [slides](https://decalage.info/en/bheu2019) 
+and [video](https://youtu.be/l5sMPGjtKn0?list=PLH15HpR5qRsXiPOP3gxN6ultoj0rAR6Yn&t=1118) (at 18:38).
+
+ViperMonkey was created by [Philippe Lagadec](https://github.com/decalage2) in 2015-2016, and the project
+is maintained in the repository https://github.com/decalage2/ViperMonkey. 
+Since November 2017, most of the development is done by [Kirk Sayre](https://github.com/kirk-sayre-work) 
+and other contributors in the repository https://github.com/kirk-sayre-work/ViperMonkey. 
+The main repository is synchronised regularly, but cutting edge improvements are usually
+available first in Kirk's version.
 
 **Quick links:**
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
@@ -224,7 +235,7 @@ License
 This license applies to the ViperMonkey package, apart from the thirdparty folder which contains third-party files
 published with their own license.
 
-The ViperMonkey package is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
+The ViperMonkey package is copyright (c) 2015-2020 Philippe Lagadec (http://www.decalage.info)
 
 All rights reserved.
 
