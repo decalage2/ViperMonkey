@@ -1298,6 +1298,19 @@ class GetCursorPos(VbaLibraryFunc):
         context.set(var_name + ".*", random.randint(100, 10000), force_global=True)
         
         return 0
+
+class VarPtr(VbaLibraryFunc):
+    """
+    Faked VarPtr() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+
+        # Report on the full byte array given to VarPtr().
+        val = params[0]
+        context.report_action("External Call", "VarPtr(" + str(val) + ")", "VarPtr", strip_null_bytes=True)
     
 class GetByteCount_2(VbaLibraryFunc):
     """
@@ -3972,7 +3985,6 @@ class Write(VbaLibraryFunc):
 
         context.write_file(file_id, data)
 
-
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -3998,7 +4010,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir, ExecuteExcel4Macro):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

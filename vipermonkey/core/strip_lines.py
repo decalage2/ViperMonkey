@@ -837,7 +837,19 @@ def convert_colons_to_linefeeds(vba_code):
     #print "******************"
     #sys.exit(0)
     return r
-    
+
+def fix_varptr_calls(vba_code):
+    """
+    Change calls like VarPtr(foo(0)) to VarPtr(foo) so we can report on the
+    whole byte array.
+    """
+
+    # Do we have any VarPtr() calls?
+    if ("VarPtr(" not in vba_code):
+        return vba_code
+    vba_code = re.sub(r"(VarPtr\(\w+)\(0\)\)", r'\1)', vba_code)
+    return vba_code
+
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -861,6 +873,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_bad_var_names(vba_code)
     vba_code = fix_bad_exponents(vba_code)
     vba_code = fix_bad_next_statements(vba_code)
+    vba_code = fix_varptr_calls(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
     #vba_code = vba_code.replace("\xe2\x80", '"')

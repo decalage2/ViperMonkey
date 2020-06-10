@@ -1384,6 +1384,18 @@ def _updated_vars_to_python(loop, context, indent):
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
     return save_vals
 
+def _boilerplate_to_python(indent):
+    """
+    Get starting boilerplate code for VB to Python JIT code.
+    """
+    indent_str = " " * indent
+    boilerplate = indent_str + "import core.vba_library\n"        
+    boilerplate += indent_str + "\ntry:\n"
+    boilerplate += indent_str + " " * 4 + "vm_context\n"
+    boilerplate += indent_str + "except NameError:\n"
+    boilerplate += indent_str + " " * 4 + "vm_context = context\n"
+    return boilerplate
+
 class For_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
@@ -1450,12 +1462,8 @@ class For_Statement(VBA_Object):
         """
 
         # Boilerplate used by the Python.
+        boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
-        boilerplate = indent_str + "import core.vba_library\n"        
-        boilerplate += indent_str + "\ntry:\n"
-        boilerplate += indent_str + " " * 4 + "vm_context\n"
-        boilerplate += indent_str + "except NameError:\n"
-        boilerplate += indent_str + " " * 4 + "vm_context = context\n"
         
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
@@ -2017,6 +2025,90 @@ class For_Each_Statement(VBA_Object):
     def __repr__(self):
         return 'For Each %r In %r ...' % (self.item, self.container)
 
+    def to_python(self, context, params=None, indent=0):
+        """
+        Convert this loop to Python code.
+        """
+
+        # Boilerplate used by the Python.
+        boilerplate = _boilerplate_to_python(indent)
+        indent_str = " " * indent
+        
+        # Get the values to iterate over.
+        loop_vals = to_python(self.container, context)
+
+        # Get the loop variable.
+        loop_var = str(self.item)
+
+        # Set up doing this for loop in Python.
+        loop_start = indent_str + "for " + loop_var + " in " + loop_vals + ":\n"
+        loop_start = indent_str + "# Start emulated loop.\n" + loop_start
+
+        # Set up initialization of variables used in the loop.
+        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
+        hash_object = hashlib.md5(str(self).encode())
+        len_var = "len_" + hash_object.hexdigest()
+        pos_var = "pos_" + hash_object.hexdigest()
+        loop_init += indent_str + len_var + " = len(" + loop_vals + ")\n"
+        loop_init += indent_str + pos_var + " = 0\n"
+            
+        # Define the local VBA functions called by the loop.
+        func_defns = _called_funcs_to_python(self, context, indent)
+            
+        # Save the updated variable values.
+        save_vals = _updated_vars_to_python(self, context, indent)
+        
+        # Set up the loop body.
+        loop_body = ""
+        loop_body += indent_str + " " * 4 + pos_var + " += 1\n"
+        loop_body += indent_str + " " * 4 + "if (int(float(" + pos_var + ")/" + len_var + "*100) == " + prog_var + "):\n"
+        loop_body += indent_str + " " * 8 + "print str(int(float(" + pos_var + ")/" + len_var + "*100)) + \"% done with loop " + str(self) + "\"\n"
+        loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
+        loop_body += to_python(self.statements, context, params=params, indent=indent+4, statements=True)
+            
+        # Full python code for the loop.
+        python_code = boilerplate + "\n" + \
+                      func_defns + "\n" + \
+                      loop_init + "\n" + \
+                      loop_start + "\n" + \
+                      loop_body + "\n" + \
+                      save_vals + "\n"
+
+        # Done.
+        return python_code
+
+    def _eval_python(self, context, params=None):
+        """
+        Convert the loop to Python and emulate the loop directly in Python.
+        """
+
+        # Are we actually doing this?
+        if (not context.do_jit):
+            return False
+        
+        # Get the Python code for the loop.
+        loop_code = to_python(self, context)
+        print loop_code
+
+        # Execute the generated loop code.
+        # TODO: Remove dangerous functions from what can be exec'ed.
+        loop_vba = str(self).replace("\n", "\\n")[:20]
+        log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
+        try:
+            exec(loop_code)
+            log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
+
+            # Update the context with the variable values from the JIT code execution.
+            for updated_var in var_updates.keys():
+                context.set(updated_var, var_updates[updated_var])
+        except Exception as e:
+            log.error("JIT loop emulation failed. " + str(e))
+            print loop_code
+            return False
+
+        # Done.
+        return True
+
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -2041,6 +2133,10 @@ class For_Each_Statement(VBA_Object):
 
         # Assign all const variables first.
         do_const_assignments(self.statements, context)
+
+        # See if we can convert the loop to Python and directly emulate it.
+        if (self._eval_python(context, params=params)):
+            return
         
         # Try iterating over the values in the container.
         if (not isinstance(container, list)):
@@ -3656,6 +3752,15 @@ class Redim_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
         self.item = str(tokens.item)
+        self.start = None
+        if (hasattr(tokens, "start")):
+            self.start = tokens.start
+        self.end = None
+        if (hasattr(tokens, "end")):
+            self.end = tokens.end
+        self.data_type = None
+        if (hasattr(tokens, "data_type")):
+            self.data_type = tokens.data_type
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r' % self)
 
@@ -3670,14 +3775,36 @@ class Redim_Statement(VBA_Object):
             # Variant types cannot hold string values, so assume that the variable
             # should hold an array.
             context.set(self.item, [])
-            
+
+        # Is this a Byte array?
+        if (str(context.get_type(self.item)) == "Byte Array"):
+
+            # Do we have a start and end for the new size?
+            if ((self.start is not None) and (self.end is not None)):
+
+                # Compute the new array size.
+                start = None
+                end = None
+                try:
+
+                    # Get the start and end of the new array. Must be integer constants.
+                    start = int(eval_arg(self.start, context=context))
+                    end = int(eval_arg(self.end, context=context))
+
+                    # Resize the list.
+                    new_list = [0] * (end - start)
+                    context.set(self.item, new_list)
+
+                except:
+                    pass
+                    
         return
 
 # Array redim statement
 redim_item = Optional(CaselessKeyword('Preserve')) + \
              expression('item') + \
-             Optional('(' + expression + CaselessKeyword('To') + expression + ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + ')').suppress() + \
-             Optional(CaselessKeyword('As') + lex_identifier).suppress()
+             Optional('(' + expression('start') + CaselessKeyword('To') + expression('end') + ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + ')') + \
+             Optional(CaselessKeyword('As') + lex_identifier('data_type'))
 redim_statement = CaselessKeyword('ReDim').suppress() + redim_item + ZeroOrMore("," + redim_item)
 
 redim_statement.setParseAction(Redim_Statement)
