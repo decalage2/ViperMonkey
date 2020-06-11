@@ -1409,8 +1409,8 @@ def _boilerplate_to_python(indent):
     Get starting boilerplate code for VB to Python JIT code.
     """
     indent_str = " " * indent
-    boilerplate = indent_str + "import core.vba_library\n"        
-    boilerplate += indent_str + "\ntry:\n"
+    boilerplate = indent_str + "import core.vba_library\n\n"
+    boilerplate += indent_str + "try:\n"
     boilerplate += indent_str + " " * 4 + "vm_context\n"
     boilerplate += indent_str + "except NameError:\n"
     boilerplate += indent_str + " " * 4 + "vm_context = context\n"
