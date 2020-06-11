@@ -435,7 +435,9 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         
     # VBA Object?
     r = None
-    if (hasattr(arg, "to_python") and (str(type(arg.to_python)) == "<type 'method'>")):
+    if (hasattr(arg, "to_python") and
+        ((str(type(arg.to_python)) == "<type 'method'>") or
+         (str(type(arg.to_python)) == "<type 'instancemethod'>"))):
         r = arg.to_python(context, params=params, indent=indent)
 
     # String literal?
