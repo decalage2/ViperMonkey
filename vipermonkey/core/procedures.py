@@ -80,6 +80,12 @@ class Sub(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
+        # Make a copy of the context so we can mark variables as function
+        # arguments.
+        tmp_context = Context(context=context)
+        for param in self.params:
+            tmp_context.set(param.name, "__FUNC_ARG__")
+        
         # Define the function prototype.
         indent_str = " " * indent
         func_args = "("
@@ -88,7 +94,7 @@ class Sub(VBA_Object):
             if (not first):
                 func_args += ", "
             first = False
-            func_args += to_python(param, context)
+            func_args += to_python(param, tmp_context)
         func_args += ")"
         r = indent_str + "def " + str(self.name) + func_args + ":\n"
 
@@ -98,7 +104,7 @@ class Sub(VBA_Object):
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
         
         # Function body.
-        r += to_python(self.statements, context, indent=indent+4, statements=True)
+        r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
 
         # Done.
         return r
@@ -399,7 +405,13 @@ class Function(VBA_Object):
         return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def to_python(self, context, params=None, indent=0):
-
+        
+        # Make a copy of the context so we can mark variables as function
+        # arguments.
+        tmp_context = Context(context=context)
+        for param in self.params:
+            tmp_context.set(param.name, "__FUNC_ARG__")
+            
         # Define the function prototype.
         indent_str = " " * indent
         func_args = "("
@@ -408,7 +420,7 @@ class Function(VBA_Object):
             if (not first):
                 func_args += ", "
             first = False
-            func_args += to_python(param, context)
+            func_args += to_python(param, tmp_context)
         func_args += ")"
         r = indent_str + "def " + str(self.name) + func_args + ":\n"
 
@@ -418,7 +430,7 @@ class Function(VBA_Object):
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
         
         # Function body.
-        r += to_python(self.statements, context, indent=indent+4, statements=True)
+        r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
 
         # Return the function return val.
         r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"

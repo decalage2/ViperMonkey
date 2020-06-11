@@ -1581,7 +1581,9 @@ class SaveToFile(VbaLibraryFunc):
 
         # Just return the file name. This is used in
         # expressions.MemberAccessExpression._handle_savetofile().
-        return str(params[0])
+        r = str(params[0])
+        context.last_saved_file = r
+        return r
 
 class SaveAs(VbaLibraryFunc):
     """
@@ -2901,7 +2903,32 @@ class WriteLine(VbaLibraryFunc):
         context.write_file(file_id, data)
         context.write_file(file_id, b'\n')
 
+class WriteText(VbaLibraryFunc):
+    """
+    File WriteText() method.
+    """
 
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
+
+        # Get the data.
+        txt = params[0]
+        if (len(params) == 3):
+            txt = params[2]
+        
+        # Set the text value of the string as a faux variable. Make this
+        # global as a hacky solution to handle fields in user defined objects.
+        #
+        # We are appending the written data to whatever is already there.
+
+        # Assume we are writing to ADODB.Stream.ReadText
+        var_name = "ADODB.Stream.ReadText"
+        if (not context.contains(var_name)):
+            context.set(var_name, "", force_global=True)
+        final_txt = context.get(var_name) + txt
+        context.set(var_name, final_txt, force_global=True)
+        
 class CurDir(VbaLibraryFunc):
     """
     CurDir() function.
@@ -4010,7 +4037,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

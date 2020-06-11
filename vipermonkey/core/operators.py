@@ -670,6 +670,16 @@ class FloorDivision(VBA_Object):
         return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " // "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+    
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
 
 class Concatenation(VBA_Object):

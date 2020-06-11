@@ -110,6 +110,9 @@ class Context(object):
 
         # Track canonical names of variables.
         self.name_cache = {}
+
+        # Track the name of the last saved file.
+        self.last_saved_file = None
         
         # Track whether emulation actions have been reported.
         self.got_actions = False
@@ -209,6 +212,7 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.last_saved_file = context.last_saved_file
             self.do_jit = context.do_jit
             self.has_change_handler = context.has_change_handler
             self.throttle_logging = context.throttle_logging
@@ -3248,9 +3252,17 @@ class Context(object):
         """
 
         # Look for the longest file name and any files name on the C: drive.
+        # Also look for the last saved file.
         longest = ""
         cdrive = None
+        print "LAST SAVED!!"
+        print self.last_saved_file
+        print "****"
         for file_id in self.open_files.keys():
+            print file_id
+            if ((self.last_saved_file is not None) and (str(file_id).lower() == self.last_saved_file.lower())):
+                cdrive = file_id
+                break
             if (str(file_id).lower().startswith("c:")):
                 cdrive = file_id
             if (len(str(file_id)) > len(longest)):

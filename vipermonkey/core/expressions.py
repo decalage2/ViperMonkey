@@ -1943,10 +1943,12 @@ class Function_Call(VBA_Object):
             r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
             return r
 
-        # Is this an array access?
+        # Is this an array access? We tell if this is an array access based on the
+        # value of the variable or if this variable is a function argument (functions
+        # not 1st class objects in VB).
         if (context.contains(self.name)):
             ref = context.get(self.name)
-            if (isinstance(ref, list)):
+            if ((isinstance(ref, list)) or (ref == "__FUNC_ARG__")):
 
                 # Do the array access.
                 acc_str = ""

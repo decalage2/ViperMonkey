@@ -1312,6 +1312,14 @@ def _get_var_vals(item, context):
             if (str(val).strip() == "inf"):
                 val = None
 
+            # Do not set function arguments to new values.
+            if (val == "__FUNC_ARG__"):
+                continue
+
+            # Weird bug.
+            if ("core.vba_library.run_function" in str(val)):
+                val = 0
+            
         # Unedfined variable.
         except KeyError:
             pass
@@ -1437,41 +1445,31 @@ class For_Statement(VBA_Object):
 
     def _get_loop_indices(self, context):
         """
-        Get the start index, end index, and step of the loop.
+        Get the start index, end index, and step of the loop as Python code.
         """
 
-        # Get the start index. If this is a string, convert to an int.
-        start = eval_arg(self.start_value, context=context)
-        if (isinstance(start, basestring)):
-            start = int_convert(start)
-
+        # Get the start index.
+        start = to_python(self.start_value, context=context)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
         # Get the end index. If this is a string, convert to an int.
-        end = eval_arg(self.end_value, context=context)
-        if (isinstance(end, basestring)):
-            end = int_convert(end)
-        if (end is None):
-            log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
-            return
-            
+        end = to_python(self.end_value, context=context)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
         # Get the loop step value.
         if self.step_value != 1:
-            step = eval_arg(self.step_value, context=context)
-            if (isinstance(step, basestring)):
-                step = int_convert(step)
+            step = to_python(self.step_value, context=context)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
-            step = 1
+            step = "1"
 
         # Handle backwards loops.
-        if ((start > end) and (step > 0)):
-            step = step * -1
+        # TODO: Figure this out.
+        #if ((start > end) and (step > 0)):
+        #    step = step * -1
 
         # Done.
         return (start, end, step)
@@ -1496,7 +1494,7 @@ class For_Statement(VBA_Object):
         if (step < 0):
             rev_code = "[::-1]"
             step = abs(step)
-        loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":"
+        loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + ", " + str(step) + ")" + rev_code + ":"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
 
         # Set up initialization of variables used in the loop.
@@ -1554,6 +1552,11 @@ class For_Statement(VBA_Object):
             for updated_var in var_updates.keys():
                 context.set(updated_var, var_updates[updated_var])
 
+        except NotImplementedError as e:
+            log.error("JIT loop emulation failed. " + str(e))
+            #print "REMOVE THIS!!"
+            #raise e
+            return False
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
             traceback.print_exc(file=sys.stdout)
@@ -2130,6 +2133,11 @@ class For_Each_Statement(VBA_Object):
             for updated_var in var_updates.keys():
                 context.set(updated_var, var_updates[updated_var])
 
+        except NotImplementedError as e:
+            log.error("JIT loop emulation failed. " + str(e))
+            #print "REMOVE THIS!!"
+            #raise e
+            return False
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
             traceback.print_exc(file=sys.stdout)
@@ -3464,8 +3472,11 @@ class Call_Statement(VBA_Object):
             return r
             
         # Is this a VBA internal function?
+        func_name = str(self.name)
+        if (func_name.startswith(".")):
+            func_name = func_name[1:]
         import vba_library
-        if (self.name.lower() in vba_library.VBA_LIBRARY):
+        if (func_name.lower() in vba_library.VBA_LIBRARY):
             first = True
             args = "["
             for p in py_params:
@@ -3474,11 +3485,11 @@ class Call_Statement(VBA_Object):
                 first = False
                 args += p
             args += "]"
-            r = indent_str + "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
+            r = indent_str + "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
             return r
                 
         # Generate the Python function call to a local function.
-        r = str(self.name) + "("
+        r = func_name + "("
         first = True
         for p in py_params:
             if (not first):
