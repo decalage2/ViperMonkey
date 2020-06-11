@@ -426,12 +426,14 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
     """
 
+    """
     print "--- to_python() ---"
     print arg
     print type(arg)
     print hasattr(arg, "to_python")
     if (hasattr(arg, "to_python")):
         print type(arg.to_python)
+    """
         
     # VBA Object?
     r = None
