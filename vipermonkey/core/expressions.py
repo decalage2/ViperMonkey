@@ -2428,7 +2428,7 @@ class BoolExpr(VBA_Object):
             if (self.lhs is not None):
                 r += to_python(self.lhs, context, params) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
             else:
-                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+                r += _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
             r += to_python(self.lhs, context, params)
         else:
