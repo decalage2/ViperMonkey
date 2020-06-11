@@ -1535,21 +1535,25 @@ class For_Statement(VBA_Object):
         if (not context.do_jit):
             return False
         
-        # Get the Python code for the loop.
-        loop_code = to_python(self, context)
-        print loop_code
-
-        # Execute the generated loop code.
+        # Generate the Python code for the loop and execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.
         loop_vba = str(self).replace("\n", "\\n")[:20]
         log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
+        loop_code = ""
         try:
+
+            # Get the Python code for the loop.
+            loop_code = to_python(self, context)
+            #print loop_code
+
+            # Run the Python code.
             exec(loop_code)
             log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
 
             # Update the context with the variable values from the JIT code execution.
             for updated_var in var_updates.keys():
                 context.set(updated_var, var_updates[updated_var])
+
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
             print loop_code
@@ -2106,21 +2110,25 @@ class For_Each_Statement(VBA_Object):
         if (not context.do_jit):
             return False
         
-        # Get the Python code for the loop.
-        loop_code = to_python(self, context)
-        print loop_code
-
-        # Execute the generated loop code.
+        # Generate the Python code for the loop and execute the generated loop code.
         # TODO: Remove dangerous functions from what can be exec'ed.
         loop_vba = str(self).replace("\n", "\\n")[:20]
         log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
+        loop_code = ""
         try:
+
+            # Get the Python code for the loop.
+            loop_code = to_python(self, context)
+            #print loop_code
+
+            # Run the Python code.
             exec(loop_code)
             log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
 
             # Update the context with the variable values from the JIT code execution.
             for updated_var in var_updates.keys():
                 context.set(updated_var, var_updates[updated_var])
+
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
             print loop_code
