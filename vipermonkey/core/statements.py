@@ -1556,7 +1556,8 @@ class For_Statement(VBA_Object):
 
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
-            print loop_code
+            traceback.print_exc(file=sys.stdout)
+            print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
             return False
 
         # Done.
@@ -2131,7 +2132,8 @@ class For_Each_Statement(VBA_Object):
 
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
-            print loop_code
+            traceback.print_exc(file=sys.stdout)
+            print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
             return False
 
         # Done.
