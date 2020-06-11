@@ -186,6 +186,12 @@ class VBA_Object(object):
         for child in self.get_children():
             child.accept(visitor)
 
+    def to_python(self, context, params=None, indent=0):
+        """
+        JIT compile this VBA object to Python code for direct emulation.
+        """
+        raise NotImplementedError("to_python() not implemented in " + str(type(self)))
+
 def _read_from_excel(arg, context):
     """
     Try to evaluate an argument by reading from the loaded Excel spreadsheet.
@@ -415,6 +421,47 @@ def is_constant_math(arg):
 
 meta = None
 
+def to_python(arg, context, params=None, indent=0, statements=False):
+    """
+    Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
+    """
+
+    # VBA Object?
+    r = None
+    if (hasattr(arg, "to_python") and (str(type(arg.to_python)) == "<type 'method'>")):
+        r = arg.to_python(context, params=params, indent=indent)
+
+    # String literal?
+    elif (isinstance(arg, str)):
+        r = " " * indent + '"' + str(arg) + '"'
+
+    # List of statements?
+    elif ((isinstance(arg, list) or
+           isinstance(arg, pyparsing.ParseResults)) and statements):
+        r = ""
+        indent_str = " " * indent
+        for statement in arg:
+            r += indent_str + "try:\n"
+            try:
+                r += to_python(statement, context, indent=indent+4) + "\n"
+            except Exception as e:
+                print statement
+                print e
+                traceback.print_exc(file=sys.stdout)
+                return "ERROR! to_python failed! " + str(e)
+            r += indent_str + "except Exception as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "print \"ERROR: \" + str(e)\n"
+            else:
+                r += indent_str + " " * 4 + "pass\n"
+
+    # Some other literal?
+    else:
+        r = " " * indent + str(arg)
+
+    # Done.
+    return r
+    
 def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
@@ -749,6 +796,14 @@ def eval_args(args, context, treat_as_var_name=False):
     try:
         iterator = iter(args)
     except TypeError:
+        return args
+
+    # Short circuit check to see if there are any VBA objects.
+    got_vba_objects = False
+    for arg in args:
+        if (isinstance(arg, VBA_Object)):
+            got_vba_objects = True
+    if (not got_vba_objects):
         return args
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
     return r

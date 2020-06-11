@@ -750,17 +750,25 @@ def hide_string_content(s):
     """
     if (not isinstance(s, str)):
         return s
+    if ('"' not in s):
+        return s
     r = ""
-    in_str = False
-    for c in s:
-        if (in_str):
-            r += "_"
-        else:
-            r += c
-        if (c == '"'):
-            if (in_str):
-                r += '"'
-            in_str = not in_str
+    start = 0    
+    while ('"' in s[start:]):
+
+        # Out of string. Add in as-is.
+        end = s[start:].index('"') + start + 1
+        r += s[start:end]
+        start = end
+
+        # In string?
+        end = len(s)
+        if ('"' in s[start:]):
+            end = s[start:].index('"') + start            
+        r += "_" * (end - start - 1)
+        start = end + 1
+    r += s[start:]
+
     return r
 
 def convert_colons_to_linefeeds(vba_code):
@@ -829,7 +837,19 @@ def convert_colons_to_linefeeds(vba_code):
     #print "******************"
     #sys.exit(0)
     return r
-    
+
+def fix_varptr_calls(vba_code):
+    """
+    Change calls like VarPtr(foo(0)) to VarPtr(foo) so we can report on the
+    whole byte array.
+    """
+
+    # Do we have any VarPtr() calls?
+    if ("VarPtr(" not in vba_code):
+        return vba_code
+    vba_code = re.sub(r"(VarPtr\(\w+)\(0\)\)", r'\1)', vba_code)
+    return vba_code
+
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -853,6 +873,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_bad_var_names(vba_code)
     vba_code = fix_bad_exponents(vba_code)
     vba_code = fix_bad_next_statements(vba_code)
+    vba_code = fix_varptr_calls(vba_code)
     # Bad double quotes.
     #print "HERE: 2"
     #vba_code = vba_code.replace("\xe2\x80", '"')

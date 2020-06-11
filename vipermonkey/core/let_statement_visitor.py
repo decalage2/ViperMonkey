@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names declared variables.
+ViperMonkey: Visitor for collecting Let statements.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -37,40 +37,23 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from statements import *
 
-class var_in_expr_visitor(visitor):
+class let_statement_visitor(visitor):
     """
-    Get the names of all variables that appear in an expression.
+    Get all Let statements.
     """
 
-    def __init__(self, context=None):
-        self.variables = set()
+    def __init__(self, var_name=None):
+        self.let_statements = set()
         self.visited = set()
-        self.context = context
+        self.var_name = var_name
     
     def visit(self, item):
-        from expressions import SimpleNameExpression
-        from expressions import Function_Call
-        from vba_object import VbaLibraryFunc
-        from vba_object import VBA_Object
-
-        # Already looked at this?
+        from statements import Let_Statement
         if (item in self.visited):
             return False
-        self.visited.add(item)
-
-        # Simple variable?
-        if (isinstance(item, SimpleNameExpression)):
-            self.variables.add(str(item.name))
-
-        # Array access?
-        if ((isinstance(item, Function_Call)) and (self.context is not None)):
-
-            # Is this an array or function?
-            if (self.context.contains(item.name)):
-                ref = self.context.get(item.name)
-                if ((not isinstance(ref, VbaLibraryFunc)) and (not isinstance(ref, VBA_Object))):
-                    self.variables.add(str(item.name))
-                    
+        self.visited.add(item)        
+        if ((isinstance(item, Let_Statement)) and
+            ((self.var_name is None) or (item.name == self.var_name))):
+            self.let_statements.add(item)
         return True

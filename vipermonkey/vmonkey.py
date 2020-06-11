@@ -809,7 +809,8 @@ def process_file(container,
                  tee_log=False,
                  tee_bytes=0,
                  artifact_dir=None,
-                 out_file_name=None):
+                 out_file_name=None,
+                 do_jit=False):
 
     # set logging level
     if verbose:
@@ -862,7 +863,7 @@ def process_file(container,
             return None
     r = _process_file(filename, data, altparser=altparser, strip_useless=strip_useless,
                       entry_points=entry_points, time_limit=time_limit, display_int_iocs=display_int_iocs,
-                      artifact_dir=artifact_dir, out_file_name=out_file_name)
+                      artifact_dir=artifact_dir, out_file_name=out_file_name, do_jit=do_jit)
 
     # Reset logging.
     colorlog.basicConfig(level=logging.ERROR, format='%(log_color)s%(levelname)-8s %(message)s')
@@ -1089,7 +1090,8 @@ def _process_file (filename,
                    time_limit=None,
                    display_int_iocs=False,
                    artifact_dir=None,
-                   out_file_name=None):
+                   out_file_name=None,
+                   do_jit=False):
     """
     Process a single file
 
@@ -1111,7 +1113,7 @@ def _process_file (filename,
 
     # Create the emulator.
     log.info("Starting emulation...")
-    vm = ViperMonkey(filename, data)
+    vm = ViperMonkey(filename, data, do_jit=do_jit)
     orig_filename = filename
     if (entry_points is not None):
         for entry_point in entry_points:
@@ -1747,6 +1749,8 @@ def main():
                       help='Use the alternate line parser (experimental)')
     parser.add_option("-s", '--strip', action="store_true", dest="strip_useless_code",
                       help='Strip useless VB code from macros prior to parsing.')
+    parser.add_option("-j", '--jit', action="store_true", dest="do_jit",
+                      help='Speed up emulation by JIT compilation of VB loops to Python.')
     parser.add_option('-i', '--init', dest="entry_points", action="store", default=None,
                       help="Emulate starting at the given function name(s). Use comma seperated "
                            "list for multiple entries.")
@@ -1807,7 +1811,8 @@ def main():
                          display_int_iocs=options.display_int_iocs,
                          tee_log=options.tee_log,
                          tee_bytes=options.tee_bytes,
-                         out_file_name=options.out_file)
+                         out_file_name=options.out_file,
+                         do_jit=options.do_jit)
 
             # add json results to list
             if (options.out_file):

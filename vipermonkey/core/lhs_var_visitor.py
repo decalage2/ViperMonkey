@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names declared variables.
+ViperMonkey: Visitor for collecting variables on the LHS of assignments.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -37,40 +37,21 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from statements import *
 
-class var_in_expr_visitor(visitor):
+class lhs_var_visitor(visitor):
     """
-    Get the names of all variables that appear in an expression.
+    Get the LHS of all Let statements.
     """
 
-    def __init__(self, context=None):
+    def __init__(self):
         self.variables = set()
         self.visited = set()
-        self.context = context
     
     def visit(self, item):
-        from expressions import SimpleNameExpression
-        from expressions import Function_Call
-        from vba_object import VbaLibraryFunc
-        from vba_object import VBA_Object
-
-        # Already looked at this?
+        from statements import Let_Statement
         if (item in self.visited):
             return False
-        self.visited.add(item)
-
-        # Simple variable?
-        if (isinstance(item, SimpleNameExpression)):
+        self.visited.add(item)        
+        if (isinstance(item, Let_Statement)):
             self.variables.add(str(item.name))
-
-        # Array access?
-        if ((isinstance(item, Function_Call)) and (self.context is not None)):
-
-            # Is this an array or function?
-            if (self.context.contains(item.name)):
-                ref = self.context.get(item.name)
-                if ((not isinstance(ref, VbaLibraryFunc)) and (not isinstance(ref, VBA_Object))):
-                    self.variables.add(str(item.name))
-                    
         return True

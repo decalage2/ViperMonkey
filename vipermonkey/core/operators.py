@@ -50,6 +50,7 @@ from vba_object import *
 
 from logger import log
 from vba_object import int_convert
+from vba_object import to_python
 
 def debug_repr(op, args):
     r = "("
@@ -109,6 +110,16 @@ class Sum(VBA_Object):
             log.error("overflow trying eval sum: %r" % self.arg)
             raise e
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " + "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+        
     def __repr__(self):
         return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
@@ -186,6 +197,16 @@ class Xor(VBA_Object):
     def __repr__(self):
         return ' ^ '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " ^ "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+    
 # --- AND --------------------------------------------------------
 
 class And(VBA_Object):
@@ -197,6 +218,16 @@ class And(VBA_Object):
         super(And, self).__init__(original_str, location, tokens)
         self.arg = tokens[0][::2]
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " & "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+        
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.
@@ -259,6 +290,16 @@ class Or(VBA_Object):
             log.error("overflow trying eval or: %r" % self.arg)
             raise e
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " | "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+        
     def __repr__(self):
         return ' | '.join(map(repr, self.arg))
 
@@ -294,6 +335,10 @@ class Not(VBA_Object):
             log.error("Cannot compute Not " + str(self.arg) + ". " + str(e))
             return "NULL"
 
+    def to_python(self, context, params=None, indent=0):
+        r = "~ (" + to_python(self.arg, context) + ")"
+        return r
+        
     def __repr__(self):
         return "Not " + str(self.arg)
 
@@ -310,6 +355,10 @@ class Neg(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as unary negation' % self)
 
+    def to_python(self, context, params=None, indent=0):
+        r = "- (" + to_python(self.arg, context) + ")"
+        return r
+            
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.
@@ -520,6 +569,12 @@ class MultiOp(VBA_Object):
         self.arg = tokens[0][::2]  # Keep as helper  (kept singular to keep backwards compatibility)
         self.operators = tokens[0][1::2]
 
+    def to_python(self, context, params=None, indent=0):
+        ret = [to_python(self.arg[0], context, params=params)]
+        for operator, arg in zip(self.operators, self.arg[1:]):
+            ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
+        return '({})'.format(''.join(ret))
+        
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.
@@ -656,6 +711,16 @@ class Concatenation(VBA_Object):
         return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " + "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+
 # --- MOD OPERATOR -----------------------------------------------------------
 
 class Mod(VBA_Object):
@@ -693,3 +758,12 @@ class Mod(VBA_Object):
         return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " % "
+            first = False
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"

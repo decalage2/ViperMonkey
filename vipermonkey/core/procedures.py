@@ -50,6 +50,7 @@ from identifiers import *
 
 from logger import log
 from tagged_block_finder_visitor import *
+from vba_object import to_python
 
 # --- SUB --------------------------------------------------------------------
 
@@ -77,6 +78,31 @@ class Sub(VBA_Object):
     def __repr__(self):
         return 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
+    def to_python(self, context, params=None, indent=0):
+
+        # Define the function prototype.
+        indent_str = " " * indent
+        func_args = "("
+        first = True
+        for param in self.params:
+            if (not first):
+                func_args += ", "
+            first = False
+            func_args += to_python(param, context)
+        func_args += ")"
+        r = indent_str + "def " + str(self.name) + func_args + ":\n"
+
+        # Init return value.
+        r += indent_str + " " * 4 + "import core.vba_library\n"
+        r += indent_str + " " * 4 + "global vm_context\n"
+        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        
+        # Function body.
+        r += to_python(self.statements, context, indent=indent+4, statements=True)
+
+        # Done.
+        return r
+    
     def eval(self, context, params=None):
 
         # create a new context for this execution:
@@ -176,8 +202,8 @@ class Sub(VBA_Object):
                 s.eval(context=context)
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.must_handle_error()):
-            if (context.have_error()):
+            #if (context.have_error()):
+            if (context.must_handle_error()):
                 break
             context.clear_error()
 
@@ -372,6 +398,34 @@ class Function(VBA_Object):
     def __repr__(self):
         return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
+    def to_python(self, context, params=None, indent=0):
+
+        # Define the function prototype.
+        indent_str = " " * indent
+        func_args = "("
+        first = True
+        for param in self.params:
+            if (not first):
+                func_args += ", "
+            first = False
+            func_args += to_python(param, context)
+        func_args += ")"
+        r = indent_str + "def " + str(self.name) + func_args + ":\n"
+
+        # Init return value.
+        r += indent_str + " " * 4 + "import core.vba_library\n"
+        r += indent_str + " " * 4 + "global vm_context\n"
+        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        
+        # Function body.
+        r += to_python(self.statements, context, indent=indent+4, statements=True)
+
+        # Return the function return val.
+        r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"
+
+        # Done.
+        return r
+
     def eval(self, context, params=None):
 
         # create a new context for this execution:
@@ -493,8 +547,8 @@ class Function(VBA_Object):
                 break
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.must_handle_error()):
-            if (context.have_error()):
+            #if (context.have_error()):
+            if (context.must_handle_error()):
                 break
             context.clear_error()
 

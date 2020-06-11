@@ -137,12 +137,15 @@ from modules import *
 # Make sure we populate the VBA Library:
 from vba_library import *
 
+from stubbed_engine import StubbedEngine
+
 # === ViperMonkey class ======================================================
 
-class ViperMonkey(object):
+class ViperMonkey(StubbedEngine):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self, filename, data):
+    def __init__(self, filename, data, do_jit=False):
+        self.do_jit = do_jit
         self.comments = None
         self.metadata = None
         self.filename = filename
@@ -459,6 +462,7 @@ class ViperMonkey(object):
                           filename=self.filename,
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
+        context.do_jit = self.do_jit
 
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
@@ -563,7 +567,8 @@ class ViperMonkey(object):
             entry_point = entry_point.lower()
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Trying entry point " + entry_point)
-            if entry_point in self.globals:
+            if ((entry_point in self.globals) and
+                (hasattr(self.globals[entry_point], "eval"))):
                 context.report_action('Found Entry Point', str(entry_point), '')
                 self.globals[entry_point].eval(context=context)
                 context.dump_all_files(autoclose=True)
@@ -626,32 +631,6 @@ class ViperMonkey(object):
             log.debug('e=%r - type=%s' % (e, type(e)))
         value = e.eval(context=context)
         return value
-
-    def report_action(self, action, params=None, description=None):
-        """
-        Callback function for each evaluated statement to report macro actions
-        """
-        # store the action for later use:
-        try:
-            if (isinstance(action, str)):
-                action = unidecode.unidecode(action.decode('unicode-escape'))
-        except UnicodeDecodeError:
-            action = ''.join(filter(lambda x:x in string.printable, action))
-        if (isinstance(params, str)):
-            try:
-                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
-                params = unidecode.unidecode(decoded)
-            except Exception as e:
-                log.warn("Unicode decode of action params failed. " + str(e))
-                params = ''.join(filter(lambda x:x in string.printable, params))
-        try:
-            if (isinstance(description, str)):
-                description = unidecode.unidecode(description.decode('unicode-escape'))
-        except UnicodeDecodeError as e:
-            log.warn("Unicode decode of action description failed. " + str(e))
-            description = ''.join(filter(lambda x:x in string.printable, description))
-        self.actions.append((action, params, description))
-        log.info("ACTION: %s - params %r - %s" % (action, params, description))
 
     def dump_actions(self):
         """

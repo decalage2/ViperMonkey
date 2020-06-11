@@ -58,6 +58,7 @@ from literals import *
 from operators import *
 import procedures
 from vba_object import eval_arg
+from vba_object import to_python
 from vba_object import coerce_to_int
 from vba_object import strip_nonvb_chars
 from vba_object import int_convert
@@ -65,6 +66,29 @@ from vba_object import VbaLibraryFunc
 import vba_context
 
 from logger import log
+
+def _vba_to_python_op(op):
+    """
+    Convert a VBA boolean operator to a Python boolean operator.
+    """
+    op_map = {
+        "Not" : "not",
+        "And" : "and",
+        "AndAlso" : "and",
+        "Or" : "or",
+        "OrElse" : "or",
+        "Eqv" : "==",
+        "=" : "==",
+        ">" : ">",
+        "<" : "<",
+        ">=" : ">=",
+        "=>" : ">=",
+        "<=" : "<=",
+        "=<" : "<=",
+        "<>" : "!=",
+        "is" : "=="
+    }
+    return op_map[op]
 
 # --- FILE POINTER -------------------------------------------------
 
@@ -94,6 +118,9 @@ class SimpleNameExpression(VBA_Object):
     def __repr__(self):
         return '%s' % self.name
 
+    def to_python(self, context, params=None, indent=0):
+        return str(self).replace(".", "")
+    
     def eval(self, context, params=None):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('try eval variable/function %r' % self.name)
@@ -235,6 +262,13 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def to_python(self, context, params=None, indent=0):
+
+        # For now just pick off the last item in the expression.
+        if (len(self.rhs) > 0):
+            return to_python(self.rhs[-1], context, params)
+        return ""
+    
     def _handle_indexed_pages_access(self, context):
         """
         Handle getting the caption of a Page object referenced via index.
@@ -850,10 +884,16 @@ class MemberAccessExpression(VBA_Object):
             txt = str(rhs_val)
         except UnicodeEncodeError:
             txt = ''.join(filter(lambda x:x in string.printable, rhs_val))
-
+            
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.
-        context.set(str(lhs_orig) + ".ReadText", txt, force_global=True)
+        #
+        # We are appending the written data to whatever is already there.
+        var_name = str(lhs_orig) + ".ReadText"
+        if (not context.contains(var_name)):
+            context.set(var_name, "", force_global=True)
+        final_txt = context.get(var_name) + txt
+        context.set(var_name, final_txt, force_global=True)
         
         # We handled the write.
         return True
@@ -970,6 +1010,9 @@ class MemberAccessExpression(VBA_Object):
             file_hash = h.hexdigest()
             context.report_action("Dropped File Hash", file_hash, 'File Name: ' + filename)
 
+            # Consider this ADODB stream to be finished, so clear the ReadText variable.
+            context.set(var_name, "")
+            
         except Exception as e:
             log.error("Writing " + fname + " failed. " + str(e))
             return False
@@ -1879,6 +1922,52 @@ class Function_Call(VBA_Object):
             log.warning('Function %r not found' % self.name)
             return None
 
+    def to_python(self, context, params=None, indent=0):
+
+        # Get a list of the Python expressions for each parameter.
+        py_params = []
+        for p in self.params:
+            py_params.append(to_python(p, context, params))
+
+        # Is this a VBA internal function?
+        import vba_library
+        if (self.name.lower() in vba_library.VBA_LIBRARY):
+            first = True
+            args = "["
+            for p in py_params:
+                if (not first):
+                    args += ", "
+                first = False
+                args += p
+            args += "]"
+            r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
+            return r
+
+        # Is this an array access?
+        if (context.contains(self.name)):
+            ref = context.get(self.name)
+            if (isinstance(ref, list)):
+
+                # Do the array access.
+                acc_str = ""
+                for p in py_params:
+                    acc_str += "[" + p + "]"
+                r = str(self.name) + acc_str
+                return r
+        
+        # Generate the Python function call to a local function.
+        r = str(self.name) + "("
+        first = True
+        for p in py_params:
+            if (not first):
+                r += ", "
+            first = False
+            r += p
+        r += ")"
+
+        # Done.
+        return r
+        
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_item = Forward()
@@ -2147,6 +2236,17 @@ class BoolExprItem(VBA_Object):
             log.error("BoolExprItem: Improperly parsed.")
             return ""
 
+    def to_python(self, context, params=None, indent=0):
+        r = " " * indent
+        if (self.op is not None):
+            r += to_python(self.lhs, context, params) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+        elif (self.lhs is not None):
+            r += to_python(self.lhs, context, params)
+        else:
+            log.error("BoolExprItem: Improperly parsed.")
+            return ""
+        return r
+        
     def eval(self, context, params=None):
 
         # We always have a LHS. Evaluate that in the current context.
@@ -2321,7 +2421,24 @@ class BoolExpr(VBA_Object):
         else:
             log.error("BoolExpr: Improperly parsed.")
             return ""
+        
+    def to_python(self, context, params=None, indent=0):
+        r = " " * indent + "("
+        if (self.op is not None):
+            if (self.lhs is not None):
+                r += to_python(self.lhs, context, params) + " " + _vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+            else:
+                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+        elif (self.lhs is not None):
+            r += to_python(self.lhs, context, params)
+        else:
+            log.error("BoolExpr: Improperly parsed.")
+            return ""
 
+        # Done.
+        r += ")"
+        return r
+        
     def eval(self, context, params=None):
 
         # Unary operator?

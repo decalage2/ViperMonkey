@@ -80,6 +80,18 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+def run_function(func_name, context, params):
+    """
+    Run a VBA library function with the given parameters.
+    """
+
+    # Create an object for emulating the function.
+    func_name = func_name.lower()
+    if (func_name not in VBA_LIBRARY):
+        return None
+    func_obj = VBA_LIBRARY[func_name]
+    return func_obj.eval(context, params=params)
+    
 # Track the unresolved arguments to the current call.
 var_names = None
 
@@ -564,11 +576,15 @@ class Mid(VbaLibraryFunc):
             pass
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
-        vb_s = vb_str.VbStr(s, context.is_vbscript)
+        vb_s = None
+        s_len = len(s)
+        if (not context.is_vbscript):
+            vb_s = vb_str.VbStr(s, context.is_vbscript)
+            s_len = vb_s.len()
         
         # "If Start is greater than the number of characters in String,
         # Mid returns a zero-length string ("")."
-        if (start > vb_s.len()):
+        if (start > s_len):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Mid: start>len(s) => return ""')
             return ''
@@ -591,19 +607,23 @@ class Mid(VbaLibraryFunc):
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
         # position to the end of the string are returned."
-        if start+length-1 > vb_s.len():
+        if start+length-1 > s_len:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Mid: start+length-1>len(s), return s[%d:]' % (start-1))
-            #return s[start-1:]
-            return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
+            if context.is_vbscript:
+                return s[start-1:]
+            else:
+                return vb_s.get_chunk(start - 1, vb_s.len()).to_python_str()
 
         # What to do when length<=0 is not specified:
         if length <= 0:
             return ''
 
         # Regular Mid().
-        #r = s[start - 1:start-1+length]
-        r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
+        if context.is_vbscript:
+            r = s[start - 1:start-1+length]
+        else:
+            r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
 
         # Done.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -984,8 +1004,7 @@ class Array(VbaLibraryFunc):
         r = []
         if ((len(params) == 1) and (params[0] == "NULL")):
             return []        
-        for v in params:
-            r.append(v)
+        r = list(params)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Array: return %r" % r)
         return r
@@ -1279,6 +1298,19 @@ class GetCursorPos(VbaLibraryFunc):
         context.set(var_name + ".*", random.randint(100, 10000), force_global=True)
         
         return 0
+
+class VarPtr(VbaLibraryFunc):
+    """
+    Faked VarPtr() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+
+        # Report on the full byte array given to VarPtr().
+        val = params[0]
+        context.report_action("External Call", "VarPtr(" + str(val) + ")", "VarPtr", strip_null_bytes=True)
     
 class GetByteCount_2(VbaLibraryFunc):
     """
@@ -1949,7 +1981,7 @@ class CByte(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            tmp = params[0].upper()
+            tmp = str(params[0]).upper()
             if (tmp.lower().startswith("&h")):
                 tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
@@ -1957,7 +1989,7 @@ class CByte(VbaLibraryFunc):
             r = num
             if (r > 255):
                 r = 255
-        except:
+        except Exception as e:
             pass 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CByte: %r returns %r" % (self, r))
@@ -2840,7 +2872,11 @@ class WriteLine(VbaLibraryFunc):
             data = params[2]
         
         # Save writes that look like they are writing URLs.
-        data_str = str(data)
+        data_str = None
+        try:
+            data_str = str(data)
+        except UnicodeEncodeError:
+            data_str = filter(isprint, data)
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'File Write')
         
@@ -3628,13 +3664,17 @@ class Print(VbaLibraryFunc):
             return
 
         # Save writes that look like they are writing URLs.
-        data_str = str(params[0])
+        data_str = None
+        try:
+            data_str = str(params[0])
+        except UnicodeEncodeError:
+            data_str = filter(isprint, params[0])
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'Debug Print')
 
         if (params[0] is not None):
             if (not context.throttle_logging):
-                context.report_action("Debug Print", str(params[0]), '')
+                context.report_action("Debug Print", data_str, '')
 
 class Debug(Print):
     """
@@ -3945,7 +3985,6 @@ class Write(VbaLibraryFunc):
 
         context.write_file(file_id, data)
 
-
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -3971,7 +4010,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir, ExecuteExcel4Macro):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
