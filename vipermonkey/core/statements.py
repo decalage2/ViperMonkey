@@ -1308,6 +1308,10 @@ def _get_var_vals(item, context):
                 isinstance(val, VbaLibraryFunc)):
                 val = None
 
+            # 'inf' is not a valid value.
+            if (str(val).strip() == "inf"):
+                val = None
+
         # Unedfined variable.
         except KeyError:
             pass
