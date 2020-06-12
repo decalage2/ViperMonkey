@@ -111,6 +111,9 @@ class Context(object):
         # Track canonical names of variables.
         self.name_cache = {}
 
+        # Track the name of the current function being emulated.
+        self.curr_func_name = None
+        
         # Track the name of the last saved file.
         self.last_saved_file = None
         
@@ -213,6 +216,7 @@ class Context(object):
             else:
                 self.globals = context.globals
             self.last_saved_file = context.last_saved_file
+            self.curr_func_name = context.curr_func_name
             self.do_jit = context.do_jit
             self.has_change_handler = context.has_change_handler
             self.throttle_logging = context.throttle_logging

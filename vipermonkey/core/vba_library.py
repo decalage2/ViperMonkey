@@ -2937,6 +2937,17 @@ class CurDir(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "~"
 
+class Unprotect(VbaLibraryFunc):
+    """
+    Stubbed Unprotect() function.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        passwd = str(params[0])
+        context.report_action('Unprotect()', passwd, 'Try Sheet Unprotect Password', strip_null_bytes=True)
+
 class KeyString(VbaLibraryFunc):
     """
     KeyString() function.

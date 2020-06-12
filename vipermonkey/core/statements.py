@@ -1356,8 +1356,18 @@ def _get_var_vals(item, context):
         val = None
         try:
 
-            # Function definitions are not valid values.
+            # Try to get the current value.
             val = context.get(var)
+
+            # Do not set function arguments to new values.
+            if (val == "__FUNC_ARG__"):
+                continue
+
+            # Do not set loop index variables to new values.
+            if (val == "__LOOP_VAR__"):
+                continue
+            
+            # Function definitions are not valid values.
             if (isinstance(val, procedures.Function) or
                 isinstance(val, procedures.Sub) or
                 isinstance(val, VbaLibraryFunc)):
@@ -1366,10 +1376,6 @@ def _get_var_vals(item, context):
             # 'inf' is not a valid value.
             if (str(val).strip() == "inf"):
                 val = None
-
-            # Do not set function arguments to new values.
-            if (val == "__FUNC_ARG__"):
-                continue
 
             # Weird bug.
             if ("core.vba_library.run_function" in str(val)):
@@ -1534,6 +1540,13 @@ class For_Statement(VBA_Object):
         Convert this loop to Python code.
         """
 
+        # Get the loop variable.
+        loop_var = str(self.name)
+
+        # Make a copy of the context so we can mark variables as loop index variables.
+        tmp_context = Context(context=context)
+        tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
+        
         # Boilerplate used by the Python.
         boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
@@ -1541,19 +1554,19 @@ class For_Statement(VBA_Object):
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
 
-        # Get the loop variable.
-        loop_var = str(self.name)
-
         # Set up doing this for loop in Python.
         rev_code = ""
         if (step < 0):
             rev_code = "[::-1]"
             step = abs(step)
-        loop_start = indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + ", " + str(step) + ")" + rev_code + ":"
+        loop_start = indent_str + "exit_all_loops = False\n"
+        loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + ", " + str(step) + ")" + rev_code + ":\n"
+        loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
+        loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
 
         # Set up initialization of variables used in the loop.
-        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
+        loop_init, prog_var = _loop_vars_to_python(self, tmp_context, indent)
             
         # Define the local VBA functions called by the loop.
         func_defns = _called_funcs_to_python(self, context, indent)
@@ -1566,7 +1579,7 @@ class For_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/" + str(end) + "*100) == " + prog_var + "):\n"
         loop_body += indent_str + " " * 8 + "print str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\"\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
-        loop_body += to_python(self.statements, context, params=params, indent=indent+4, statements=True)
+        loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
         python_code = boilerplate + "\n" + \
@@ -1597,7 +1610,7 @@ class For_Statement(VBA_Object):
 
             # Get the Python code for the loop.
             loop_code = to_python(self, context)
-            #print loop_code
+            print loop_code
 
             # Run the Python code.
             exec(loop_code)
@@ -1609,8 +1622,8 @@ class For_Statement(VBA_Object):
 
         except NotImplementedError as e:
             log.error("JIT loop emulation failed. " + str(e))
-            #print "REMOVE THIS!!"
-            #raise e
+            print "REMOVE THIS!!"
+            raise e
             return False
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
@@ -2113,22 +2126,29 @@ class For_Each_Statement(VBA_Object):
         Convert this loop to Python code.
         """
 
+        # Get the loop variable.
+        loop_var = str(self.item)
+
+        # Make a copy of the context so we can mark variables as loop index variables.
+        tmp_context = Context(context=context)
+        tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
+        
         # Boilerplate used by the Python.
         boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
         
         # Get the values to iterate over.
-        loop_vals = to_python(self.container, context)
-
-        # Get the loop variable.
-        loop_var = str(self.item)
+        loop_vals = to_python(self.container, tmp_context)
 
         # Set up doing this for loop in Python.
-        loop_start = indent_str + "for " + loop_var + " in " + loop_vals + ":\n"
+        loop_start = indent_str + "exit_all_loops = False\n"
+        loop_start += indent_str + "for " + loop_var + " in " + loop_vals + ":\n"
+        loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
+        loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
 
         # Set up initialization of variables used in the loop.
-        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
+        loop_init, prog_var = _loop_vars_to_python(self, tmp_context, indent)
         hash_object = hashlib.md5(str(self).encode())
         len_var = "len_" + hash_object.hexdigest()
         pos_var = "pos_" + hash_object.hexdigest()
@@ -2147,7 +2167,7 @@ class For_Each_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (int(float(" + pos_var + ")/" + len_var + "*100) == " + prog_var + "):\n"
         loop_body += indent_str + " " * 8 + "print str(int(float(" + pos_var + ")/" + len_var + "*100)) + \"% done with loop " + str(self) + "\"\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
-        loop_body += to_python(self.statements, context, params=params, indent=indent+4, statements=True)
+        loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
         python_code = boilerplate + "\n" + \
@@ -2178,7 +2198,7 @@ class For_Each_Statement(VBA_Object):
 
             # Get the Python code for the loop.
             loop_code = to_python(self, context)
-            #print loop_code
+            print loop_code
 
             # Run the Python code.
             exec(loop_code)
@@ -2190,8 +2210,8 @@ class For_Each_Statement(VBA_Object):
 
         except NotImplementedError as e:
             log.error("JIT loop emulation failed. " + str(e))
-            #print "REMOVE THIS!!"
-            #raise e
+            print "REMOVE THIS!!"
+            raise e
             return False
         except Exception as e:
             log.error("JIT loop emulation failed. " + str(e))
@@ -3830,6 +3850,9 @@ class Exit_Function_Statement(VBA_Object):
     def __repr__(self):
         return 'Exit Function'
 
+    def to_python(self, context, params=None, indent=0):
+        return " " * indent + "exit_all_loops = True"
+    
     def eval(self, context, params=None):
         # Mark that we should return from the current function.
         log.info("Explicit exit function invoked")

@@ -85,7 +85,10 @@ class Sub(VBA_Object):
         tmp_context = Context(context=context)
         for param in self.params:
             tmp_context.set(param.name, "__FUNC_ARG__")
-        
+
+        # Save the name of the current function so we can handle exit function calls.
+        tmp_context.curr_func_name = str(self.name)
+            
         # Define the function prototype.
         indent_str = " " * indent
         func_args = "("
@@ -120,6 +123,9 @@ class Sub(VBA_Object):
         context = Context(context=caller_context)
         context.in_procedure = True
 
+        # Save the name of the current function so we can handle exit function calls.
+        context.curr_func_name = str(self.name)
+        
         # We are entering the function so reset whether we executed a goto.
         context.goto_executed = False
         
@@ -411,6 +417,9 @@ class Function(VBA_Object):
         tmp_context = Context(context=context)
         for param in self.params:
             tmp_context.set(param.name, "__FUNC_ARG__")
+
+        # Save the name of the current function so we can handle exit function calls.
+        tmp_context.curr_func_name = str(self.name)
             
         # Define the function prototype.
         indent_str = " " * indent
@@ -451,6 +460,9 @@ class Function(VBA_Object):
 
         # We are entering the function so reset whether we executed a goto.
         context.goto_executed = False
+
+        # Save the name of the current function so we can handle exit function calls.
+        context.curr_func_name = str(self.name)
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
