@@ -514,6 +514,61 @@ class Dim_Statement(VBA_Object):
             r += " = " + str(self.init_val)
         return r
 
+    def to_python(self, context, params=None, indent=0):        
+
+        # Get Python code for the initial variable value(s).
+        init_val = ''
+        if (self.init_val is not None):
+            init_val = to_python(self.init_val, context=context)
+            
+        # Track each declared variable.
+        for var in self.variables:
+
+            # Do we know the variable type?
+            curr_init_val = init_val
+            curr_type = var[2]
+            if (curr_type is not None):
+
+                # Get the initial value.
+                if ((curr_type == "Long") or (curr_type == "Integer")):
+                    curr_init_val = "0"
+                if (curr_type == "String"):
+                    curr_init_val = '""'
+                if (curr_type == "Boolean"):
+                    curr_init_val = "False"
+                
+                # Is this variable an array?
+                if (var[1]):
+                    curr_type += " Array"
+                    curr_init_val = []
+                    if ((var[3] is not None) and
+                        ((curr_type == "Byte Array") or (curr_type == "Integer Array"))):
+                        curr_init_val = str([0] * (var[3] + 1))
+                    if ((var[3] is not None) and (curr_type == "String Array")):
+                        curr_init_val = str([''] * var[3])
+
+            # Handle untyped arrays.
+            elif (var[1]):
+                curr_init_val = str([])
+
+            # Handle uninitialized global variables.
+            if ((context.global_scope) and (curr_init_val is None)):
+                curr_init_val = "0"
+
+            # Keep the current variable value if this variable already exists.
+            if (context.contains(var[0], local=True)):
+                curr_init_val = to_python(context.get(var[0]), context)
+
+            # Handle VB NULL values.
+            if (curr_init_val == '"NULL"'):
+                curr_init_val = "0"
+                
+            # Set the initial value of the declared variable.
+            r = " " * indent + str(var[0]) + " = " + curr_init_val
+
+            # Done.
+            return r
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
