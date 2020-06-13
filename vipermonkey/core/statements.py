@@ -1544,7 +1544,7 @@ class For_Statement(VBA_Object):
         loop_var = str(self.name)
 
         # Make a copy of the context so we can mark variables as loop index variables.
-        tmp_context = Context(context=context)
+        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
         
         # Boilerplate used by the Python.
@@ -2130,7 +2130,7 @@ class For_Each_Statement(VBA_Object):
         loop_var = str(self.item)
 
         # Make a copy of the context so we can mark variables as loop index variables.
-        tmp_context = Context(context=context)
+        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
         
         # Boilerplate used by the Python.
