@@ -37,6 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
+import pyparsing
 
 class lhs_var_visitor(visitor):
     """
@@ -53,5 +54,10 @@ class lhs_var_visitor(visitor):
             return False
         self.visited.add(item)        
         if (isinstance(item, Let_Statement)):
-            self.variables.add(str(item.name))
+            if (isinstance(item.name, str)):
+                self.variables.add(item.name)
+            elif (isinstance(item.name, pyparsing.ParseResults) and
+                  (item.name[0].lower() == "mid")):
+                self.variables.add(str(item.name[1]))
+
         return True

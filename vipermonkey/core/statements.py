@@ -765,9 +765,33 @@ class Let_Statement(VBA_Object):
             return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
 
     def to_python(self, context, params=None, indent=0):        
-        r = None
+        
+        # Regular assignment?
+        r = None        
         if (self.index is None):
-            r = str(self.name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+
+            # Annoying Mid() assignment?
+            if ((self.string_op is not None) and
+                ((self.string_op["op"] == "mid") or (self.string_op["op"] == "mid$"))):
+                
+                # Get the string to modify, substring start index, and substring length.
+                args = self.string_op["args"]
+                if (len(args) < 3):
+                    return "ERROR: Wrong # args to mid. " + str(self)
+                the_str_var = to_python(args[0], context)
+                start = to_python(args[1], context)
+                size = to_python(args[2], context)
+                rhs = to_python(self.expression, context)
+                
+                # Modify the string in Python.
+                r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
+                print r
+
+            # Basic assignment.
+            else:
+                r = str(self.name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+
+        # Array assignment?
         else:
             r = str(self.name) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
         if (r.startswith(".")):
@@ -1547,6 +1571,44 @@ class For_Statement(VBA_Object):
                                               self.start_value, self.end_value, self.step_value)
 
     def _get_loop_indices(self, context):
+
+        # Get the start index. If this is a string, convert to an int.
+        start = eval_arg(self.start_value, context=context)
+        if (isinstance(start, basestring)):
+            start = int_convert(start)
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
+
+        # Get the end index. If this is a string, convert to an int.
+        end = eval_arg(self.end_value, context=context)
+        if (isinstance(end, basestring)):
+            end = int_convert(end)
+        if (end is None):
+            log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
+            return
+            
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
+
+        # Get the loop step value.
+        if self.step_value != 1:
+            step = eval_arg(self.step_value, context=context)
+            if (isinstance(step, basestring)):
+                step = int_convert(step)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
+        else:
+            step = 1
+
+        # Handle backwards loops.
+        if ((start > end) and (step > 0)):
+            step = step * -1
+
+        # Done.
+        return (start, end, step)
+        
+    def _get_loop_indices_python(self, context):
         """
         Get the start index, end index, and step of the loop as Python code.
         """
@@ -1594,7 +1656,7 @@ class For_Statement(VBA_Object):
         indent_str = " " * indent
         
         # Get the start index, end index, and step of the loop.
-        start, end, step = self._get_loop_indices(context)
+        start, end, step = self._get_loop_indices_python(context)
 
         # Set up doing this for loop in Python.
         rev_code = ""
@@ -1907,6 +1969,8 @@ class For_Statement(VBA_Object):
             return
         
         # Set end to valid values.
+        print "-----"
+        print end
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
 
             # Fix the loop upper bound if it is ridiculously huge. We are assuming that a
@@ -4737,7 +4801,6 @@ def quick_parse_simple_call(tokens):
             params = tmp_params
 
         # Directly create the call statement?
-        print i
         if ((name is not None) and (params is not None)):
             r.append(Call_Statement(None, None, None, name=name, params=params))
 
