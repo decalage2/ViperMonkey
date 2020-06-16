@@ -2366,9 +2366,13 @@ class While_Statement(VBA_Object):
         if (len(loop_str) > 100):
             loop_str = loop_str[:100] + " ..."
         loop_body = ""
+        # Report progress.
         loop_body += indent_str + " " * 4 + "if (" + prog_var + " % 100) == 0:\n"
         loop_body += indent_str + " " * 8 + "print \"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\"\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
+        # No infinite loops.
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > 100000000000):\n"
+        loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
