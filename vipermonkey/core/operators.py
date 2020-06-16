@@ -117,7 +117,7 @@ class Sum(VBA_Object):
             if (not first):
                 r += " + "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
         
     def __repr__(self):
@@ -204,7 +204,7 @@ class Xor(VBA_Object):
             if (not first):
                 r += " ^ "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
     
 # --- AND --------------------------------------------------------
@@ -225,7 +225,7 @@ class And(VBA_Object):
             if (not first):
                 r += " & "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
         
     def eval(self, context, params=None):
@@ -297,7 +297,7 @@ class Or(VBA_Object):
             if (not first):
                 r += " | "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
         
     def __repr__(self):
@@ -336,7 +336,7 @@ class Not(VBA_Object):
             return "NULL"
 
     def to_python(self, context, params=None, indent=0):
-        r = "~ (" + to_python(self.arg, context) + ")"
+        r = "~ (" + "int(" + to_python(self.arg, context) + "))"
         return r
         
     def __repr__(self):
@@ -356,7 +356,7 @@ class Neg(VBA_Object):
             log.debug('parsed %r as unary negation' % self)
 
     def to_python(self, context, params=None, indent=0):
-        r = "- (" + to_python(self.arg, context) + ")"
+        r = "- (" + "int(" + to_python(self.arg, context) + "))"
         return r
             
     def eval(self, context, params=None):
@@ -572,7 +572,7 @@ class MultiOp(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         ret = [to_python(self.arg[0], context, params=params)]
         for operator, arg in zip(self.operators, self.arg[1:]):
-            ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
+            ret.append(' {} {!s}'.format(operator, "int(" + to_python(arg, context, params=params) + ")"))
         return '({})'.format(''.join(ret))
         
     def eval(self, context, params=None):
@@ -677,7 +677,7 @@ class FloorDivision(VBA_Object):
             if (not first):
                 r += " // "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
     
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
@@ -728,7 +728,7 @@ class Concatenation(VBA_Object):
             if (not first):
                 r += " + "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "str(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
 
 # --- MOD OPERATOR -----------------------------------------------------------
@@ -775,5 +775,5 @@ class Mod(VBA_Object):
             if (not first):
                 r += " % "
             first = False
-            r += to_python(arg, context, params=params)
+            r += "int(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"

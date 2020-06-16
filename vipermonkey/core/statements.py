@@ -785,7 +785,6 @@ class Let_Statement(VBA_Object):
                 
                 # Modify the string in Python.
                 r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
-                print r
 
             # Basic assignment.
             else:
@@ -1664,7 +1663,7 @@ class For_Statement(VBA_Object):
             rev_code = "[::-1]"
             step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + ", " + str(step) + ")" + rev_code + ":\n"
+        loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -1969,8 +1968,6 @@ class For_Statement(VBA_Object):
             return
         
         # Set end to valid values.
-        print "-----"
-        print end
         if ((VBA_Object.loop_upper_bound > 0) and (end > VBA_Object.loop_upper_bound)):
 
             # Fix the loop upper bound if it is ridiculously huge. We are assuming that a
