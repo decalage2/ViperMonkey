@@ -159,7 +159,36 @@ class String(VBA_Object):
         return r
 
     def to_python(self, context, params=None, indent=0):
-        r = str(self.value).replace('"', '\\"')
+        # Escape some characters.
+        r = str(self.value).\
+            replace('"', '\\"').\
+            replace("\n", "\\n").\
+            replace("\t", "\\t").\
+            replace("\r", "\\r")
+        for i in range(0, 9):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            r = r.replace(chr(i), repl)
+        for i in range(11, 13):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            r = r.replace(chr(i), repl)
+        for i in range(14, 32):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            r = r.replace(chr(i), repl)
+        for i in range(127, 255):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            r = r.replace(chr(i), repl)
         return '"' + r + '"'
 
 # NOTE: QuotedString creates a regex, so speed should not be an issue.

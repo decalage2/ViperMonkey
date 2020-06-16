@@ -2158,7 +2158,7 @@ class Log(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
             return "NULL"
-        r = params[0]
+        r = 0.0
         try:
             num = float(params[0])
             r = math.log(num)

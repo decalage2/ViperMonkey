@@ -444,7 +444,39 @@ def to_python(arg, context, params=None, indent=0, statements=False):
 
     # String literal?
     elif (isinstance(arg, str)):
-        r = " " * indent + '"' + str(arg) + '"'
+
+        # Escape some characters.
+        the_str = str(arg)
+        the_str = str(the_str).\
+                  replace('"', '\\"').\
+                  replace("\n", "\\n").\
+                  replace("\t", "\\t").\
+                  replace("\r", "\\r")
+        for i in range(0, 9):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            the_str = the_str.replace(chr(i), repl)
+        for i in range(11, 13):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            the_str = the_str.replace(chr(i), repl)
+        for i in range(14, 32):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            the_str = the_str.replace(chr(i), repl)
+        for i in range(127, 255):
+            repl = hex(i).replace("0x", "")
+            if (len(repl) == 1):
+                repl = "0" + repl
+            repl = "\\x" + repl
+            the_str = the_str.replace(chr(i), repl)
+        r = " " * indent + '"' + the_str + '"'
 
     # List of statements?
     elif ((isinstance(arg, list) or
