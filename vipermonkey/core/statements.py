@@ -1303,6 +1303,48 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
+def _eval_python(loop, context, params=None):
+    """
+    Convert the loop to Python and emulate the loop directly in Python.
+    """
+
+    # Are we actually doing this?
+    if (not context.do_jit):
+        return False
+        
+    # Generate the Python code for the loop and execute the generated loop code.
+    # TODO: Remove dangerous functions from what can be exec'ed.
+    loop_vba = str(loop).replace("\n", "\\n")[:20]
+    log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
+    loop_code = ""
+    try:
+
+        # Get the Python code for the loop.
+        loop_code = to_python(loop, context)
+        print loop_code
+
+        # Run the Python code.
+        exec(loop_code)
+        log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
+
+        # Update the context with the variable values from the JIT code execution.
+        for updated_var in var_updates.keys():
+            context.set(updated_var, var_updates[updated_var])
+
+    except NotImplementedError as e:
+        log.error("JIT loop emulation failed. " + str(e))
+        print "REMOVE THIS!!"
+        raise e
+        return False
+    except Exception as e:
+        log.error("JIT loop emulation failed. " + str(e))
+        traceback.print_exc(file=sys.stdout)
+        print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
+        return False
+
+    # Done.
+    return True
+
 def _infer_type(var, code_chunk, context):
     """
     Try to infer the type of an undefined variable based on how it is used.
@@ -1592,48 +1634,6 @@ class For_Statement(VBA_Object):
         # Done.
         return python_code
 
-    def _eval_python(self, context, params=None):
-        """
-        Convert the loop to Python and emulate the loop directly in Python.
-        """
-
-        # Are we actually doing this?
-        if (not context.do_jit):
-            return False
-        
-        # Generate the Python code for the loop and execute the generated loop code.
-        # TODO: Remove dangerous functions from what can be exec'ed.
-        loop_vba = str(self).replace("\n", "\\n")[:20]
-        log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
-        loop_code = ""
-        try:
-
-            # Get the Python code for the loop.
-            loop_code = to_python(self, context)
-            print loop_code
-
-            # Run the Python code.
-            exec(loop_code)
-            log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
-
-            # Update the context with the variable values from the JIT code execution.
-            for updated_var in var_updates.keys():
-                context.set(updated_var, var_updates[updated_var])
-
-        except NotImplementedError as e:
-            log.error("JIT loop emulation failed. " + str(e))
-            print "REMOVE THIS!!"
-            raise e
-            return False
-        except Exception as e:
-            log.error("JIT loop emulation failed. " + str(e))
-            traceback.print_exc(file=sys.stdout)
-            print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
-            return False
-
-        # Done.
-        return True
-    
     def _handle_medium_loop(self, context, params, end, step):
 
         # Handle loops used purely for obfuscation that just do the same
@@ -1903,7 +1903,7 @@ class For_Statement(VBA_Object):
             return
 
         # See if we can convert the loop to Python and directly emulate it.
-        if (self._eval_python(context, params=params)):
+        if (_eval_python(self, context, params=params)):
             return
         
         # Set end to valid values.
@@ -2180,48 +2180,6 @@ class For_Each_Statement(VBA_Object):
         # Done.
         return python_code
 
-    def _eval_python(self, context, params=None):
-        """
-        Convert the loop to Python and emulate the loop directly in Python.
-        """
-
-        # Are we actually doing this?
-        if (not context.do_jit):
-            return False
-        
-        # Generate the Python code for the loop and execute the generated loop code.
-        # TODO: Remove dangerous functions from what can be exec'ed.
-        loop_vba = str(self).replace("\n", "\\n")[:20]
-        log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
-        loop_code = ""
-        try:
-
-            # Get the Python code for the loop.
-            loop_code = to_python(self, context)
-            print loop_code
-
-            # Run the Python code.
-            exec(loop_code)
-            log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
-
-            # Update the context with the variable values from the JIT code execution.
-            for updated_var in var_updates.keys():
-                context.set(updated_var, var_updates[updated_var])
-
-        except NotImplementedError as e:
-            log.error("JIT loop emulation failed. " + str(e))
-            print "REMOVE THIS!!"
-            raise e
-            return False
-        except Exception as e:
-            log.error("JIT loop emulation failed. " + str(e))
-            traceback.print_exc(file=sys.stdout)
-            print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
-            return False
-
-        # Done.
-        return True
-
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -2248,7 +2206,7 @@ class For_Each_Statement(VBA_Object):
         do_const_assignments(self.statements, context)
 
         # See if we can convert the loop to Python and directly emulate it.
-        if (self._eval_python(context, params=params)):
+        if (_eval_python(self, context, params=params)):
             return
         
         # Try iterating over the values in the container.
@@ -2378,6 +2336,52 @@ class While_Statement(VBA_Object):
         r += str(self.body) + "\\nLoop"
         return r
 
+    def to_python(self, context, params=None, indent=0):
+        """
+        Convert this loop to Python code.
+        """
+
+        # Boilerplate used by the Python.
+        boilerplate = _boilerplate_to_python(indent)
+        indent_str = " " * indent
+
+        # Set up doing this for loop in Python.
+        loop_start = indent_str + "exit_all_loops = False\n"
+        loop_start += indent_str + "while " + to_python(self.guard, context) + ":\n"
+        loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
+        loop_start += indent_str + " " * 8 + "break\n"
+        loop_start = indent_str + "# Start emulated loop.\n" + loop_start
+
+        # Set up initialization of variables used in the loop.
+        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
+            
+        # Define the local VBA functions called by the loop.
+        func_defns = _called_funcs_to_python(self, context, indent)
+            
+        # Save the updated variable values.
+        save_vals = _updated_vars_to_python(self, context, indent)
+        
+        # Set up the loop body.
+        loop_str = str(self).replace('"', '\\"').replace("\\n", " :: ")
+        if (len(loop_str) > 100):
+            loop_str = loop_str[:100] + " ..."
+        loop_body = ""
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " % 100) == 0:\n"
+        loop_body += indent_str + " " * 8 + "print \"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\"\n"
+        loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
+        loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
+            
+        # Full python code for the loop.
+        python_code = boilerplate + "\n" + \
+                      func_defns + "\n" + \
+                      loop_init + "\n" + \
+                      loop_start + "\n" + \
+                      loop_body + "\n" + \
+                      save_vals + "\n"
+
+        # Done.
+        return python_code
+        
     def _eval_guard(self, curr_counter, final_val, comp_op):
         if (comp_op == "<="):
             return (curr_counter <= final_val)
@@ -2679,6 +2683,9 @@ class While_Statement(VBA_Object):
                 log.warn("Found loop that never runs w. constant loop guard. Skipping.")
                 return
 
+        # Try converting the loop to Python and running that.
+        if (_eval_python(self, context)):
+            return
         
         # Track that the current loop is running.
         context.loop_stack.append(True)
@@ -3272,6 +3279,8 @@ class If_Statement(VBA_Object):
         if (self.is_bogus):
             return self._children
         for piece in self.pieces:
+
+            # Handle If bodies.
             if (isinstance(piece["body"], VBA_Object)):
                 self._children.append(piece["body"])
             if ((isinstance(piece["body"], list)) or
@@ -3283,6 +3292,21 @@ class If_Statement(VBA_Object):
                 for i in piece["body"].values():
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
+
+            # Handle If guards.
+            if (isinstance(piece["guard"], VBA_Object)):
+                self._children.append(piece["guard"])
+            if ((isinstance(piece["guard"], list)) or
+                (isinstance(piece["guard"], pyparsing.ParseResults))):
+                for i in piece["guard"]:
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+            if (isinstance(piece["guard"], dict)):
+                for i in piece["guard"].values():
+                    if (isinstance(i, VBA_Object)):
+                        self._children.append(i)
+
+        # Done. Return the children.
         return self._children
 
     def __repr__(self):
