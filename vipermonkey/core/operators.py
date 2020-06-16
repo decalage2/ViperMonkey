@@ -117,7 +117,8 @@ class Sum(VBA_Object):
             if (not first):
                 r += " + "
             first = False
-            r += "int(" + to_python(arg, context, params=params) + ")"
+            # Could be a str or an int, so hope for the best.
+            r += to_python(arg, context, params=params)
         return "(" + r + ")"
         
     def __repr__(self):
@@ -572,7 +573,7 @@ class MultiOp(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         ret = [to_python(self.arg[0], context, params=params)]
         for operator, arg in zip(self.operators, self.arg[1:]):
-            ret.append(' {} {!s}'.format(operator, "int(" + to_python(arg, context, params=params) + ")"))
+            ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
         return '({})'.format(''.join(ret))
         
     def eval(self, context, params=None):

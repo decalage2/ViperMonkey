@@ -2165,8 +2165,8 @@ class Log(VbaLibraryFunc):
             num = float(params[0])
             r = math.log(num)
         except ValueError as e:
-            log.error("Log(" + str(params[0]) + ") failed. " + str(e))
-            pass
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.error("Log(" + str(params[0]) + ") failed. " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Log: %r returns %r" % (self, r))
         return r

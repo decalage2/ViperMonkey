@@ -1504,7 +1504,9 @@ def _loop_vars_to_python(loop, context, indent):
     indent_str = " " * indent
     loop_init = ""
     init_vals = _get_var_vals(loop, context)
-    for var in init_vals.keys():
+    sorted_vars = list(init_vals.keys())
+    sorted_vars.sort()
+    for var in sorted_vars:
         val = to_python(init_vals[var], context)
         loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
     hash_object = hashlib.md5(str(loop).encode())
@@ -1536,6 +1538,7 @@ def _updated_vars_to_python(loop, context, indent):
     save_vals += indent_str + "except NameError:\n"
     save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
+    #save_vals += indent_str + "print var_updates\n"
     return save_vals
 
 def _boilerplate_to_python(indent):
