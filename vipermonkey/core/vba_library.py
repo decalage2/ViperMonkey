@@ -418,6 +418,8 @@ class FileExists(VbaLibraryFunc):
             return True
         if ("explorer.exe" in fname.lower()):
             return True
+        if ("c:\\programdata" in fname.lower()):
+            return True
         return False
         
 class Switch(VbaLibraryFunc):
