@@ -92,7 +92,7 @@ def _vba_to_python_op(op):
 
 # --- FILE POINTER -------------------------------------------------
 
-file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier)
+file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier) + NotAny("#")
 file_pointer.setParseAction(lambda t: "#" + str(t[0]))
 file_pointer_loose = (decimal_literal ^ lex_identifier)
 file_pointer_loose.setParseAction(lambda t: "#" + str(t[0]))
@@ -2127,7 +2127,8 @@ literal_range_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
-        (file_pointer ^ literal)
+        date_string
+        | file_pointer
         | float_literal
         | named_argument
         | l_expression
@@ -2135,6 +2136,7 @@ expr_item <<= (
         | simple_name_expression
         | asc
         | strReverse
+        | literal
         | placeholder
         | typeof_expression
         | addressof_expression
