@@ -2127,7 +2127,7 @@ literal_range_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
-        file_pointer
+        (file_pointer ^ literal)
         | float_literal
         | named_argument
         | l_expression
@@ -2135,8 +2135,6 @@ expr_item <<= (
         | simple_name_expression
         | asc
         | strReverse
-        | literal
-#        | file_pointer
         | placeholder
         | typeof_expression
         | addressof_expression

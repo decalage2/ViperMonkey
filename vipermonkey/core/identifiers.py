@@ -66,8 +66,8 @@ reserved_keywords = CaselessKeyword("ChrB") | \
                     CaselessKeyword("Private") | \
                     CaselessKeyword("Declare") | \
                     CaselessKeyword("Function") | \
-                    CaselessKeyword("End") | \
                     CaselessKeyword("To")
+#                    CaselessKeyword("End") | \
 
 strict_reserved_keywords = reserved_keywords | \
                            Regex(re.compile('Open', re.IGNORECASE))
