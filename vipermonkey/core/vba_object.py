@@ -488,13 +488,13 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             try:
                 r += to_python(statement, context, indent=indent+4) + "\n"
             except Exception as e:
-                print statement
-                print e
-                traceback.print_exc(file=sys.stdout)
+                #print statement
+                #print e
+                #traceback.print_exc(file=sys.stdout)
                 return "ERROR! to_python failed! " + str(e)
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                r += indent_str + " " * 4 + "print \"ERROR: \" + str(e)\n"
+                r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
             else:
                 r += indent_str + " " * 4 + "pass\n"
 

@@ -3259,11 +3259,7 @@ class Context(object):
         # Also look for the last saved file.
         longest = ""
         cdrive = None
-        print "LAST SAVED!!"
-        print self.last_saved_file
-        print "****"
         for file_id in self.open_files.keys():
-            print file_id
             if ((self.last_saved_file is not None) and (str(file_id).lower() == self.last_saved_file.lower())):
                 cdrive = file_id
                 break

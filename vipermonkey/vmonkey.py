@@ -127,38 +127,13 @@ if not _thismodule_dir in sys.path:
 from core import *
 import core.excel as excel
 import core.read_ole_fields as read_ole_fields
+from core.utils import safe_print
 
 # for logging
 from core.logger import log
 from core.logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
-
-def safe_print(text):
-    """
-    Sometimes printing large strings when running in a Docker container triggers exceptions.
-    This function just wraps a print in a try/except block to not crash ViperMonkey when this happens.
-    """
-    text = str(text)
-    try:
-        print(text)
-    except Exception as e:
-        msg = "ERROR: Printing text failed (len text = " + str(len(text)) + ". " + str(e)
-        if (len(msg) > 100):
-            msg = msg[:100]
-        try:
-            print(msg)
-        except:
-            pass
-
-    # if our logger has a FileHandler, we need to tee this print to a file as well
-    for handler in log.handlers:
-        if type(handler) is FileHandler or type(handler) is CappedFileHandler:
-            # set the format to be like a print, not a log, then set it back
-            handler.setFormatter(logging.Formatter("%(message)s"))
-            handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
-            handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
-
 
 # === MAIN (for tests) ===============================================================================================
 

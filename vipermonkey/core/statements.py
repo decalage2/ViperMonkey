@@ -65,6 +65,7 @@ from lhs_var_visitor import *
 from function_call_visitor import *
 import vb_str
 import loop_transform
+from utils import safe_print
 
 import traceback
 import string
@@ -1344,7 +1345,7 @@ def _eval_python(loop, context, params=None):
 
         # Get the Python code for the loop.
         loop_code = to_python(loop, context)
-        print loop_code
+        #safe_print(loop_code)
 
         # Run the Python code.
         exec(loop_code)
@@ -1356,13 +1357,13 @@ def _eval_python(loop, context, params=None):
 
     except NotImplementedError as e:
         log.error("JIT loop emulation failed. " + str(e))
-        print "REMOVE THIS!!"
-        raise e
+        #safe_print("REMOVE THIS!!")
+        #raise e
         return False
     except Exception as e:
         log.error("JIT loop emulation failed. " + str(e))
         traceback.print_exc(file=sys.stdout)
-        print "-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-"
+        safe_print("-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-")
         return False
 
     # Done.
@@ -1546,7 +1547,8 @@ def _boilerplate_to_python(indent):
     Get starting boilerplate code for VB to Python JIT code.
     """
     indent_str = " " * indent
-    boilerplate = indent_str + "import core.vba_library\n\n"
+    boilerplate = indent_str + "import core.vba_library\n"
+    boilerplate += indent_str + "from core.utils import safe_print\n\n"
     boilerplate += indent_str + "try:\n"
     boilerplate += indent_str + " " * 4 + "vm_context\n"
     boilerplate += indent_str + "except NameError:\n"
@@ -1683,7 +1685,7 @@ class For_Statement(VBA_Object):
         # Set up the loop body.
         loop_body = ""
         loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/" + str(end) + "*100) == " + prog_var + "):\n"
-        loop_body += indent_str + " " * 8 + "print str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\"\n"
+        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
             
@@ -2229,7 +2231,7 @@ class For_Each_Statement(VBA_Object):
         loop_body = ""
         loop_body += indent_str + " " * 4 + pos_var + " += 1\n"
         loop_body += indent_str + " " * 4 + "if (int(float(" + pos_var + ")/" + len_var + "*100) == " + prog_var + "):\n"
-        loop_body += indent_str + " " * 8 + "print str(int(float(" + pos_var + ")/" + len_var + "*100)) + \"% done with loop " + str(self) + "\"\n"
+        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + pos_var + ")/" + len_var + "*100)) + \"% done with loop " + str(self) + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
             
@@ -2432,7 +2434,7 @@ class While_Statement(VBA_Object):
         loop_body = ""
         # Report progress.
         loop_body += indent_str + " " * 4 + "if (" + prog_var + " % 100) == 0:\n"
-        loop_body += indent_str + " " * 8 + "print \"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\"\n"
+        loop_body += indent_str + " " * 8 + "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
         loop_body += indent_str + " " * 4 + "if (" + prog_var + " > 100000000000):\n"
