@@ -161,6 +161,7 @@ class String(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         # Escape some characters.
         r = str(self.value).\
+            replace("\\", "\\\\").\
             replace('"', '\\"').\
             replace("\n", "\\n").\
             replace("\t", "\\t").\

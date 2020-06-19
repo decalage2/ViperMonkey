@@ -1310,6 +1310,9 @@ class Prop_Assign_Statement(VBA_Object):
     def __repr__(self):
         return str(self.prop) + " " + str(self.param) + ":=" + str(self.value)
 
+    def to_python(self, context, params=None, indent=0):
+        return " " * indent + "pass"
+    
     def eval(self, context, params=None):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
@@ -1539,7 +1542,9 @@ def _updated_vars_to_python(loop, context, indent):
     save_vals += indent_str + "except NameError:\n"
     save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
-    #save_vals += indent_str + "print var_updates\n"
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        save_vals += indent_str + "print \"UPDATED VALS!!\"\n"
+        save_vals += indent_str + "print var_updates\n"
     return save_vals
 
 def _boilerplate_to_python(indent):
@@ -1668,7 +1673,11 @@ class For_Statement(VBA_Object):
             rev_code = "[::-1]"
             step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":\n"
+        # range
+        #loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":\n"
+        # --while
+        loop_start += indent_str + loop_var + " = " + str(start) + "\n"
+        loop_start += indent_str + "while (" + loop_var + " <= " + str(end) + "):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -1688,7 +1697,9 @@ class For_Statement(VBA_Object):
         loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/" + str(end) + "*100)) + \"% done with loop " + str(self) + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
-            
+        # --while
+        loop_body += indent_str + " " * 4 + loop_var + " += " + str(step) + "\n"
+        
         # Full python code for the loop.
         python_code = boilerplate + "\n" + \
                       func_defns + "\n" + \
@@ -3035,6 +3046,43 @@ class Select_Statement(VBA_Object):
         r += "End Select"
         return r
 
+    def _to_python_if(self, context, indent, case, first):
+        """
+        Convert a single Select case to a Python if, elif, or else statement.
+        """
+
+        # Get the value being checked as Python.
+        select_val_str = to_python(self.select_val, context)
+
+        # Figure out the Python for the value being checked in this case.
+        case_guard_str = to_python(case.case_val, context)
+        
+        # Figure out the Python control flow construct to use.
+        indent_str = " " * indent
+        flow_str = "if "
+        if (not first):
+            flow_str = "elif "
+
+        # Set up the check for this case.
+        r = indent_str + flow_str + "(" + select_val_str + " in " + case_guard_str + "):\n"
+            
+        # Final catchall case?
+        if (case_guard_str == '["Else"]'):
+            r = indent_str + "else:\n"
+
+        # Add in the case body.
+        r += to_python(case.body, context, indent=indent+4, statements=True)
+            
+        return r
+            
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for case in self.cases:
+            r += self._to_python_if(context, indent, case, first)
+            first = False
+        return r
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -3105,6 +3153,10 @@ class Select_Clause(VBA_Object):
         r += "Select Case " + str(self.select_val) + "\\n " 
         return r
 
+    def to_python(self, context, params=None, indent=0):
+        # Just returns the value being checked.
+        return to_python(self.select_val, context)
+    
     def eval(self, context, params=None):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
@@ -3160,6 +3212,25 @@ class Case_Clause_Atomic(VBA_Object):
             r += str(self.case_val[0])
         return r
 
+    def to_python(self, context, params=None, indent=0):
+
+        # All select clause checks will checking for the select value being in a list of values.
+        r = ""
+        if (self.test_range):
+            r += "range(" + to_python(self.case_val[0], context) + ", " + to_python(self.case_val[1], context) + " + 1)"
+        elif (self.test_set):
+            r += "["
+            first = True
+            for val in self.case_val:
+                if (not first):
+                    r += ", "
+                first = False
+                r += to_python(val, context)
+            r += "]"
+        else:
+            r += "[" + to_python(self.case_val[0], context) + "]"
+        return r
+        
     def eval(self, context, params=None):
         """
         Evaluate the guard of this case against the given value.
@@ -3239,6 +3310,21 @@ class Case_Clause(VBA_Object):
             r += str(clause)
         return r
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for clause in self.clauses:
+            if (not first):
+                r += ", "
+            first = False
+            curr_str = to_python(clause, context)
+            if (curr_str.startswith("[") and curr_str.endswith("]")):
+                curr_str = curr_str[1:-1]
+            r += curr_str
+        if (not r.startswith("range(")):
+            r = "[" + r + "]"
+        return r
+        
     def eval(self, context, params=None):
         """
         Evaluate the guard of this case against the given value.
@@ -3463,7 +3549,10 @@ class If_Statement(VBA_Object):
 
             # Add in the body.
             r += ":\n"
-            r += to_python(piece["body"], context, indent=indent+4, statements=True)
+            body_str = to_python(piece["body"], context, indent=indent+4, statements=True)
+            if (len(body_str.strip()) == 0):
+                body_str = " " * (indent + 4) + "pass\n"
+            r += body_str
 
         # Done.
         return r
@@ -4030,7 +4119,7 @@ class With_Statement(VBA_Object):
         super(With_Statement, self).__init__(original_str, location, tokens)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("tokens = " + str(tokens))
-        self.body = tokens[1]
+        self.body = tokens[-1]
         self.env = tokens.env
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r' % self)
@@ -4043,7 +4132,7 @@ class With_Statement(VBA_Object):
         # For now just convert the with body to Python and hope for the best.
         r = ""
         indent_str = " " * indent
-        r += indent_str + "# With block: " + str(self).replace("\n", "\\n")[:20] + "\n"
+        r += indent_str + "# With block: " + str(self).replace("\\n", "\\\\n")[:50] + "...\n"
         r += to_python(self.body, context, indent=indent, statements=True)
 
         # Done.

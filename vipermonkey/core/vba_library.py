@@ -403,6 +403,16 @@ class FolderExists(VbaLibraryFunc):
         curr_dir = str(params[0]).lower()
         return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 
+class FileCopy(VbaLibraryFunc):
+    """
+    FileCopy() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 2)):
+            return
+        context.report_action('Copy File', "FileCopy(" + str(params) + ")", '---', strip_null_bytes=True)
+    
 class FileExists(VbaLibraryFunc):
     """
     FileExists() VB function (stubbed).
@@ -3865,8 +3875,6 @@ class Unescape(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        print "UNESCAPE"
-        sys.exit(0)
         # Get the string to unescape.
         if ((params is None) or (len(params) < 1)):
             return "NULL"
@@ -4050,7 +4058,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

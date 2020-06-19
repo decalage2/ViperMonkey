@@ -1564,6 +1564,9 @@ class With_Member_Expression(VBA_Object):
     def __repr__(self):
         return "." + str(self.expr)
 
+    def to_python(self, context, params=None, indent=0):
+        return to_python(self.expr, context)
+    
     def eval(self, context, params=None):
         return self.expr.eval(context, params)
 

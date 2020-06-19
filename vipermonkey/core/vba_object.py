@@ -426,14 +426,12 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
     """
 
-    """
-    print "--- to_python() ---"
-    print arg
-    print type(arg)
-    print hasattr(arg, "to_python")
-    if (hasattr(arg, "to_python")):
-        print type(arg.to_python)
-    """
+    #print "--- to_python() ---"
+    #print arg
+    #print type(arg)
+    #print hasattr(arg, "to_python")
+    #if (hasattr(arg, "to_python")):
+    #    print type(arg.to_python)
         
     # VBA Object?
     r = None
@@ -448,6 +446,7 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         # Escape some characters.
         the_str = str(arg)
         the_str = str(the_str).\
+                  replace("\\", "\\\\").\
                   replace('"', '\\"').\
                   replace("\n", "\\n").\
                   replace("\t", "\\t").\
