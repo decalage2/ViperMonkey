@@ -512,6 +512,10 @@ class Power(VBA_Object):
     def __repr__(self):
         return debug_repr("^", self.arg)
         return ' ^ '.join(map(repr, self.arg))
+
+    def to_python(self, context, params=None, indent=0):
+        r = reduce(lambda x, y: "pow(int(" + to_python(x, context) + "), int(" + to_python(y, context) + "))", self.arg)
+        return r
     
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
