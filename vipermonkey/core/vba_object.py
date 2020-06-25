@@ -572,6 +572,11 @@ def _get_var_vals(item, context):
         context.set(var, "__ALREADY_SET__")
         context.set(var, "__ALREADY_SET__", force_global=True)
 
+        # Save the original value so we know it's data type for later use in JIT
+        # code generation.
+        context.set("__ORIG__" + var, val)
+        context.set("__ORIG__" + var, val, force_global=True)
+
     # Done.
     return r
 
@@ -735,7 +740,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
                           var_inits + "\n" + \
                           code_python + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
-        #safe_print(code_python)
+        safe_print(code_python)
 
         # Run the Python code.
         if (namespace is None):

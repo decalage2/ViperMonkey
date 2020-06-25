@@ -233,6 +233,7 @@ class MemberAccessExpression(VBA_Object):
     def __init__(self, original_str, location, tokens, raw_fields=None):
 
         # Are we manually creating a member access object?
+        self.is_loop = False
         if (raw_fields is not None):
             self.lhs = raw_fields[0]
             self.rhs = raw_fields[1]
@@ -1951,7 +1952,14 @@ class Function_Call(VBA_Object):
         # not 1st class objects in VB).
         if (context.contains(self.name)):
             ref = context.get(self.name)
-            if ((isinstance(ref, list)) or (ref == "__FUNC_ARG__")):
+            ref1 = None
+            try:
+                ref1 = context.get("__ORIG__" + self.name)
+            except KeyError:
+                pass
+            if ((isinstance(ref, list)) or
+                (isinstance(ref1, list)) or
+                (ref == "__FUNC_ARG__")):
 
                 # Do the array access.
                 acc_str = ""
