@@ -673,8 +673,6 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
             else:
-                #print "REMOVE!!"
-                #r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
                 r += indent_str + " " * 4 + "pass\n"
 
     # Some other literal?
@@ -741,7 +739,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
                           var_inits + "\n" + \
                           code_python + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
-        safe_print(code_python)
+        #safe_print(code_python)
 
         # Run the Python code.
         if (namespace is None):
@@ -757,8 +755,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     except NotImplementedError as e:
         log.error("JIT emulation failed. " + str(e))
-        safe_print("REMOVE THIS!!")
-        raise e
+        #safe_print("REMOVE THIS!!")
+        #raise e
         return False
     except Exception as e:
         log.error("JIT emulation failed. " + str(e))
