@@ -65,12 +65,12 @@ class var_in_expr_visitor(visitor):
             self.variables.add(str(item.name))
 
         # Array access?
-        if ((isinstance(item, Function_Call)) and (self.context is not None)):
+        if (("Function_Call" in str(type(item))) and (self.context is not None)):
 
             # Is this an array or function?
             if (self.context.contains(item.name)):
                 ref = self.context.get(item.name)
-                if ((not isinstance(ref, VbaLibraryFunc)) and (not isinstance(ref, VBA_Object))):
+                if (isinstance(ref, list) or isinstance(ref, str)):
                     self.variables.add(str(item.name))
                     
         return True

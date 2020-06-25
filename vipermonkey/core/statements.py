@@ -57,6 +57,10 @@ from reserved import *
 from from_unicode_str import *
 from vba_object import int_convert
 from vba_object import to_python
+from vba_object import _eval_python
+from vba_object import _boilerplate_to_python
+from vba_object import _updated_vars_to_python
+from vba_object import _loop_vars_to_python
 import procedures
 from let_statement_visitor import *
 from var_in_expr_visitor import *
@@ -1330,149 +1334,6 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
-def _eval_python(loop, context, params=None):
-    """
-    Convert the loop to Python and emulate the loop directly in Python.
-    """
-
-    # Are we actually doing this?
-    if (not context.do_jit):
-        return False
-        
-    # Generate the Python code for the loop and execute the generated loop code.
-    # TODO: Remove dangerous functions from what can be exec'ed.
-    loop_vba = str(loop).replace("\n", "\\n")[:20]
-    log.info("Starting JIT loop emulation of '" + loop_vba + "...' ...")
-    loop_code = ""
-    try:
-
-        # Get the Python code for the loop.
-        loop_code = to_python(loop, context)
-        #safe_print(loop_code)
-
-        # Run the Python code.
-        exec(loop_code)
-        log.info("Done JIT loop emulation of '" + loop_vba + "...' .")
-
-        # Update the context with the variable values from the JIT code execution.
-        for updated_var in var_updates.keys():
-            context.set(updated_var, var_updates[updated_var])
-
-    except NotImplementedError as e:
-        log.error("JIT loop emulation failed. " + str(e))
-        #safe_print("REMOVE THIS!!")
-        #raise e
-        return False
-    except Exception as e:
-        log.error("JIT loop emulation failed. " + str(e))
-        traceback.print_exc(file=sys.stdout)
-        safe_print("-*-*-*-*-\n" + loop_code + "\n-*-*-*-*-")
-        return False
-
-    # Done.
-    return True
-
-def _infer_type(var, code_chunk, context):
-    """
-    Try to infer the type of an undefined variable based on how it is used.
-    """
-
-    # Get all the assignments in the code chunk.
-    visitor = let_statement_visitor(var)
-    code_chunk.accept(visitor)
-
-    # Look at each assignment statement and check out the ones where the current
-    # variable is assigned.
-    str_funcs = ["cstr(", "chr(", "left(", "right(", "mid(", "join(", "lcase(",
-                 "replace(", "trim(", "ucase(", "chrw("]
-    for assign in visitor.let_statements:
-
-        # Does a VBA function that returns a string appear on the RHS?
-        rhs = str(assign.expression).lower()
-        for str_func in str_funcs:
-            if (str_func in rhs):
-                return "STRING"
-
-    # Does not look like a string, assume int.
-    return "INTEGER"
-
-def _get_var_vals(item, context):
-    """
-    Get the current values for all of the referenced VBA variables that appear in the 
-    given VBA object.
-
-    Returns a dict mapping var names to values.
-    """
-
-    # Get all the variables.
-
-    # Vars on RHS.
-    var_visitor = var_in_expr_visitor(context)
-    item.accept(var_visitor)
-    var_names = var_visitor.variables
-
-    # Vars on LHS.
-    lhs_visitor = lhs_var_visitor()
-    item.accept(lhs_visitor)
-    lhs_var_names = lhs_visitor.variables
-    
-    # Get a value for each variable.
-    var_names = var_names.union(lhs_var_names)
-    r = {}
-    for var in var_names:
-
-        # Do we already know the variable value?
-        val = None
-        try:
-
-            # Try to get the current value.
-            val = context.get(var)
-
-            # Do not set function arguments to new values.
-            if (val == "__FUNC_ARG__"):
-                continue
-
-            # Do not set loop index variables to new values.
-            if (val == "__LOOP_VAR__"):
-                continue
-            
-            # Function definitions are not valid values.
-            if (isinstance(val, procedures.Function) or
-                isinstance(val, procedures.Sub) or
-                isinstance(val, VbaLibraryFunc)):
-                val = None
-
-            # 'inf' is not a valid value.
-            if (str(val).strip() == "inf"):
-                val = None
-
-            # Weird bug.
-            if ("core.vba_library.run_function" in str(val)):
-                val = 0
-            
-        # Unedfined variable.
-        except KeyError:
-            pass
-
-        # Got a valid value for the variable?
-        if (val is None):
-
-            # Variable is not defined. Try to infer the type based on how it is
-            # used.
-            var_type = _infer_type(var, item, context)
-            if (var_type == "INTEGER"):
-                val = 0
-            elif (var_type == "STRING"):
-                val = ""
-            else:
-                raise ValueError("Type " + str(var_type) + " not handled.")
-
-        # Save the variable value.
-        r[var] = val
-
-    # Done.
-    return r
-
 def _called_funcs_to_python(loop, context, indent):
     """
     Convert all the functions called in the loop to Python.
@@ -1501,69 +1362,11 @@ def _called_funcs_to_python(loop, context, indent):
     r = indent_str + "# VBA Local Function Definitions\n" + r
     return r
 
-def _loop_vars_to_python(loop, context, indent):
-    """
-    Set up initialization of variables used in a loop in Python.
-    """
-    indent_str = " " * indent
-    loop_init = ""
-    init_vals = _get_var_vals(loop, context)
-    sorted_vars = list(init_vals.keys())
-    sorted_vars.sort()
-    for var in sorted_vars:
-        val = to_python(init_vals[var], context)
-        loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
-    hash_object = hashlib.md5(str(loop).encode())
-    prog_var = "pct_" + hash_object.hexdigest()
-    loop_init += indent_str + prog_var + " = 0\n"
-    loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
-    return (loop_init, prog_var)
-
-def _updated_vars_to_python(loop, context, indent):
-    """
-    Save the variables updated in a loop in Python.
-    """
-    indent_str = " " * indent
-    lhs_visitor = lhs_var_visitor()
-    loop.accept(lhs_visitor)
-    lhs_var_names = lhs_visitor.variables
-    var_dict_str = "{"
-    first = True
-    for var in lhs_var_names:
-        if (not first):
-            var_dict_str += ", "
-        first = False
-        var = var.replace(".", "")
-        var_dict_str += '"' + var + '" : ' + var
-    var_dict_str += "}"
-    save_vals = indent_str + "try:\n"
-    save_vals += indent_str + " " * 4 + "var_updates\n"
-    save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
-    save_vals += indent_str + "except NameError:\n"
-    save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
-    save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
-    if (log.getEffectiveLevel() == logging.DEBUG):
-        save_vals += indent_str + "print \"UPDATED VALS!!\"\n"
-        save_vals += indent_str + "print var_updates\n"
-    return save_vals
-
-def _boilerplate_to_python(indent):
-    """
-    Get starting boilerplate code for VB to Python JIT code.
-    """
-    indent_str = " " * indent
-    boilerplate = indent_str + "import core.vba_library\n"
-    boilerplate += indent_str + "from core.utils import safe_print\n\n"
-    boilerplate += indent_str + "try:\n"
-    boilerplate += indent_str + " " * 4 + "vm_context\n"
-    boilerplate += indent_str + "except NameError:\n"
-    boilerplate += indent_str + " " * 4 + "vm_context = context\n"
-    return boilerplate
-
 class For_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(For_Statement, self).__init__(original_str, location, tokens)
+        self.is_loop = True
         self.name = tokens.name
         self.start_value = tokens.start_value
         self.end_value = tokens.end_value
@@ -1640,25 +1443,23 @@ class For_Statement(VBA_Object):
         else:
             step = "1"
 
-        # Handle backwards loops.
-        # TODO: Figure this out.
-        #if ((start > end) and (step > 0)):
-        #    step = step * -1
-
         # Done.
         return (start, end, step)
     
     def to_python(self, context, params=None, indent=0):
         """
         Convert this loop to Python code.
+
+        This modifies the given context!!
         """
 
         # Get the loop variable.
         loop_var = str(self.name)
 
         # Make a copy of the context so we can mark variables as loop index variables.
-        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
-        tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
+        #tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+        tmp_context = context
+        tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)        
         
         # Boilerplate used by the Python.
         boilerplate = _boilerplate_to_python(indent)
@@ -1677,7 +1478,8 @@ class For_Statement(VBA_Object):
         #loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":\n"
         # --while
         loop_start += indent_str + loop_var + " = " + str(start) + "\n"
-        loop_start += indent_str + "while (" + loop_var + " <= " + str(end) + "):\n"
+        loop_start += indent_str + "while (((" + loop_var + " <= " + str(end) + ") and (" + str(step) + " > 0)) or " + \
+                      "((" + loop_var + " >= " + str(end) + ") and (" + str(step) + " < 0))):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -2188,6 +1990,7 @@ class For_Each_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(For_Each_Statement, self).__init__(original_str, location, tokens)
+        self.is_loop = True
         self.statements = tokens.statements
         self.body = self.statements
         self.item = tokens.clause.item
@@ -2201,13 +2004,16 @@ class For_Each_Statement(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         """
         Convert this loop to Python code.
+
+        This modifies the given context!!
         """
 
         # Get the loop variable.
         loop_var = str(self.item)
 
         # Make a copy of the context so we can mark variables as loop index variables.
-        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+        #tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+        tmp_context = context
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
         
         # Boilerplate used by the Python.
@@ -2400,6 +2206,7 @@ class While_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
+        self.is_loop = True
         self.original_str = original_str[location:]
         self.loop_type = tokens.clause.type
         self.guard = tokens.clause.guard
@@ -2448,7 +2255,7 @@ class While_Statement(VBA_Object):
         loop_body += indent_str + " " * 8 + "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > 100000000000):\n"
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + str(VBA_Object.loop_upper_bound) + "):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
             
@@ -2897,6 +2704,7 @@ simple_while_statement.setParseAction(While_Statement)
 class Do_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Do_Statement, self).__init__(original_str, location, tokens)
+        self.is_loop = True
         self.loop_type = tokens.type
         self.guard = tokens.guard
         if (self.guard is None):
@@ -3735,6 +3543,8 @@ class Call_Statement(VBA_Object):
             func_name = func_name[1:]
         import vba_library
         if (func_name.lower() in vba_library.VBA_LIBRARY):
+
+            # Make the Python parameter list.
             first = True
             args = "["
             for p in py_params:
@@ -3742,6 +3552,14 @@ class Call_Statement(VBA_Object):
                     args += ", "
                 first = False
                 args += p
+
+            # Execute() (dynamic VB execution) will be converted to Python and needs some
+            # special arguments so the exec() of the JIT generated code works.
+            if ((str(func_name) == "Execute") or
+                (str(func_name) == "ExecuteGlobal") or
+                (str(func_name) == "AddCode") or
+                (str(func_name) == "AddFromString")):
+                args += ", locals(), \"__JIT_EXEC__\""
             args += "]"
             r = indent_str + "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
             return r

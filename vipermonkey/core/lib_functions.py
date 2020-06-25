@@ -75,10 +75,7 @@ class Chr(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         arg_str = to_python(self.arg, context)
-        # ("&H" + i)
-        hex_pat = r'\("&H"( \+ "?\w+"?(?: \+ "?\w+"?)*)\)'
-        arg_str = re.sub(hex_pat, r"int('0x'\1, 16)", arg_str)
-        return "chr(int(round(" + arg_str + ")))"
+        return "chr(coerce_to_int(" + arg_str + "))"
             
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer

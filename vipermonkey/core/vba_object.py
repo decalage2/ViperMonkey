@@ -59,6 +59,7 @@ from curses_ascii import isprint
 import traceback
 import string
 import gc
+import hashlib
 
 from inspect import getouterframes, currentframe
 import sys
@@ -67,6 +68,10 @@ import pyparsing
 
 import expressions
 from var_in_expr_visitor import *
+from lhs_var_visitor import *
+from utils import safe_print
+from let_statement_visitor import *
+from vba_context import *
 
 max_emulation_time = None
 
@@ -127,6 +132,7 @@ class VBA_Object(object):
         self.tokens = tokens
         self._children = None
         self.is_useless = False
+        self.is_loop = False
         
     def eval(self, context, params=None):
         """
@@ -170,21 +176,45 @@ class VBA_Object(object):
         self._children = r
         return r
                         
-    def accept(self, visitor):
+    def accept(self, visitor, no_embedded_loops=False):
         """
         Visitor design pattern support. Accept a visitor.
         """
 
         # Check for timeouts.
         limits_exceeded(throw_error=True)
-        
+
+        # Skipping visiting embedded loops? Check to see if we are already
+        # in a loop and the current VBA object is a loop.
+        if (no_embedded_loops and
+            hasattr(visitor, "in_loop") and
+            visitor.in_loop and
+            self.is_loop):
+            #print "SKIPPING LOOP!!"
+            #print self
+            return
+
+        # Set initial in loop status of visitor if needed.
+        if (not hasattr(visitor, "in_loop")):
+            visitor.in_loop = self.is_loop
+
+        # Have we moved into a loop?
+        if ((not visitor.in_loop) and (self.is_loop)):
+            visitor.in_loop = True
+
         # Visit the current item.
         if (not visitor.visit(self)):
             return
 
+        # Save the in loop status so we can restore it after visiting the children.
+        old_in_loop = visitor.in_loop
+        
         # Visit all the children.
         for child in self.get_children():
-            child.accept(visitor)
+            child.accept(visitor, no_embedded_loops=no_embedded_loops)
+
+        # Back in current VBA object. Restore the in loop status.
+        visitor.in_loop = old_in_loop
 
     def to_python(self, context, params=None, indent=0):
         """
@@ -421,6 +451,148 @@ def is_constant_math(arg):
 
 meta = None
 
+def _boilerplate_to_python(indent):
+    """
+    Get starting boilerplate code for VB to Python JIT code.
+    """
+    indent_str = " " * indent
+    boilerplate = indent_str + "import core.vba_library\n"
+    boilerplate += indent_str + "from core.utils import safe_print\n"
+    boilerplate += indent_str + "from core.vba_object import coerce_to_int\n\n"
+    boilerplate += indent_str + "try:\n"
+    boilerplate += indent_str + " " * 4 + "vm_context\n"
+    boilerplate += indent_str + "except NameError:\n"
+    boilerplate += indent_str + " " * 4 + "vm_context = context\n"
+    return boilerplate
+
+def _infer_type(var, code_chunk, context):
+    """
+    Try to infer the type of an undefined variable based on how it is used.
+    """
+
+    # Get all the assignments in the code chunk.
+    visitor = let_statement_visitor(var)
+    code_chunk.accept(visitor)
+
+    # Look at each assignment statement and check out the ones where the current
+    # variable is assigned.
+    str_funcs = ["cstr(", "chr(", "left(", "right(", "mid(", "join(", "lcase(",
+                 "replace(", "trim(", "ucase(", "chrw("]
+    for assign in visitor.let_statements:
+
+        # Does a VBA function that returns a string appear on the RHS?
+        rhs = str(assign.expression).lower()
+        for str_func in str_funcs:
+            if (str_func in rhs):
+                return "STRING"
+
+    # Does not look like a string, assume int.
+    return "INTEGER"
+
+def _get_var_vals(item, context):
+    """
+    Get the current values for all of the referenced VBA variables that appear in the 
+    given VBA object.
+
+    Returns a dict mapping var names to values.
+    """
+
+    import procedures
+    
+    # Get all the variables.
+
+    # Vars on RHS.
+    var_visitor = var_in_expr_visitor(context)
+    item.accept(var_visitor, no_embedded_loops=False)
+    var_names = var_visitor.variables
+
+    # Vars on LHS.
+    lhs_visitor = lhs_var_visitor()
+    item.accept(lhs_visitor, no_embedded_loops=False)
+    lhs_var_names = lhs_visitor.variables
+    
+    # Get a value for each variable.
+    var_names = var_names.union(lhs_var_names)
+    r = {}
+    for var in var_names:
+
+        # Do we already know the variable value?
+        val = None
+        try:
+
+            # Try to get the current value.
+            val = context.get(var)
+
+            # Do not set function arguments to new values.
+            # Do not set loop index variables to new values.
+            if ((val == "__FUNC_ARG__") or
+                (val == "__ALREADY_SET__") or
+                (val == "__LOOP_VAR__")):
+                continue
+            
+            # Function definitions are not valid values.
+            if (isinstance(val, procedures.Function) or
+                isinstance(val, procedures.Sub) or
+                isinstance(val, VbaLibraryFunc)):
+                val = None
+
+            # 'inf' is not a valid value.
+            if (str(val).strip() == "inf"):
+                val = None
+
+            # 'NULL' is not a valid value.
+            if (str(val).strip() == "NULL"):
+                val = None
+
+            # Weird bug.
+            if ("core.vba_library.run_function" in str(val)):
+                val = 0
+            
+        # Unedfined variable.
+        except KeyError:
+            pass
+
+        # Got a valid value for the variable?
+        if (val is None):
+
+            # Variable is not defined. Try to infer the type based on how it is used.
+            var_type = _infer_type(var, item, context)
+            if (var_type == "INTEGER"):
+                val = 0
+            elif (var_type == "STRING"):
+                val = ""
+            else:
+                raise ValueError("Type " + str(var_type) + " not handled.")
+
+        # Save the variable value.
+        r[var] = val
+
+        # Mark this variable as being set in the Python code to avoid
+        # embedded loop Python code generation stomping on the value.
+        context.set(var, "__ALREADY_SET__")
+        context.set(var, "__ALREADY_SET__", force_global=True)
+
+    # Done.
+    return r
+
+def _loop_vars_to_python(loop, context, indent):
+    """
+    Set up initialization of variables used in a loop in Python.
+    """
+    indent_str = " " * indent
+    loop_init = ""
+    init_vals = _get_var_vals(loop, context)
+    sorted_vars = list(init_vals.keys())
+    sorted_vars.sort()
+    for var in sorted_vars:
+        val = to_python(init_vals[var], context)
+        loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
+    hash_object = hashlib.md5(str(loop).encode())
+    prog_var = "pct_" + hash_object.hexdigest()
+    loop_init += indent_str + prog_var + " = 0\n"
+    loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
+    return (loop_init, prog_var)
+
 def to_python(arg, context, params=None, indent=0, statements=False):
     """
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
@@ -495,6 +667,8 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
             else:
+                #print "REMOVE!!"
+                #r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
                 r += indent_str + " " * 4 + "pass\n"
 
     # Some other literal?
@@ -503,7 +677,92 @@ def to_python(arg, context, params=None, indent=0, statements=False):
 
     # Done.
     return r
-    
+
+def _updated_vars_to_python(loop, context, indent):
+    """
+    Save the variables updated in a loop in Python.
+    """
+    indent_str = " " * indent
+    lhs_visitor = lhs_var_visitor()
+    loop.accept(lhs_visitor)
+    lhs_var_names = lhs_visitor.variables
+    var_dict_str = "{"
+    first = True
+    for var in lhs_var_names:
+        if (not first):
+            var_dict_str += ", "
+        first = False
+        var = var.replace(".", "")
+        var_dict_str += '"' + var + '" : ' + var
+    var_dict_str += "}"
+    save_vals = indent_str + "try:\n"
+    save_vals += indent_str + " " * 4 + "var_updates\n"
+    save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
+    save_vals += indent_str + "except NameError:\n"
+    save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
+    save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        save_vals += indent_str + "print \"UPDATED VALS!!\"\n"
+        save_vals += indent_str + "print var_updates\n"
+    return save_vals
+
+def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=None):
+    """
+    Convert the loop to Python and emulate the loop directly in Python.
+    """
+
+    # Are we actually doing this?
+    if (not context.do_jit):
+        return False
+        
+    # Generate the Python code for the VB code and execute the generated Python code.
+    # TODO: Remove dangerous functions from what can be exec'ed.
+    code_vba = str(loop).replace("\n", "\\n")[:20]
+    log.info("Starting JIT emulation of '" + code_vba + "...' ...")
+    code_python = ""
+    try:
+
+        # For JIT handling we modify the values of certain variables to
+        # handle recursive python code generation, so make a copy of the
+        # original context.
+        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+        
+        # Get the Python code for the loop.
+        code_python = to_python(loop, tmp_context)
+        if add_boilerplate:
+            var_inits, _ = _loop_vars_to_python(loop, tmp_context, 0)
+            code_python = _boilerplate_to_python(0) + "\n" + \
+                          var_inits + "\n" + \
+                          code_python + "\n" + \
+                          _updated_vars_to_python(loop, tmp_context, 0)
+        #safe_print(code_python)
+
+        # Run the Python code.
+        if (namespace is None):
+            exec(code_python)
+        else:
+            exec(code_python, namespace)
+            var_updates = namespace["var_updates"]
+        log.info("Done JIT emulation of '" + code_vba + "...' .")
+
+        # Update the context with the variable values from the JIT code execution.
+        for updated_var in var_updates.keys():
+            context.set(updated_var, var_updates[updated_var])
+
+    except NotImplementedError as e:
+        log.error("JIT emulation failed. " + str(e))
+        safe_print("REMOVE THIS!!")
+        raise e
+        return False
+    except Exception as e:
+        log.error("JIT emulation failed. " + str(e))
+        traceback.print_exc(file=sys.stdout)
+        safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
+        return False
+
+    # Done.
+    return True
+
 def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value

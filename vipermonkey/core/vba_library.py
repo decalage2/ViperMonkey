@@ -71,6 +71,7 @@ from vba_object import strip_nonvb_chars
 import expressions
 import modules
 import strip_lines
+from vba_object import _eval_python
 
 from logger import log
 
@@ -939,7 +940,16 @@ class Execute(VbaLibraryFunc):
                         orig_command = orig_command[:50] + " ..."
                     log.error("Parse error. Cannot evaluate '" + orig_command + "'")
                     return "NULL"
-            
+
+        # Are we execing this code inside JIT generated Python code?
+        # Note that the dict of local variable values to update when we exec the
+        # generated Python code is passed as the 2nd to last argument to Execute().
+        if ((params[-1] == "__JIT_EXEC__") and
+            (_eval_python(obj, context, add_boilerplate=True, namespace=params[-2]))):
+            return "NULL"
+
+        # No JIT. Do regular emulation.
+        
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?
         r = obj

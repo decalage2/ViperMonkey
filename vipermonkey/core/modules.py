@@ -51,6 +51,7 @@ from procedures import *
 from statements import *
 import vba_context
 from function_defn_visitor import *
+from vba_object import to_python
 
 from logger import log
 
@@ -174,6 +175,9 @@ class Module(VBA_Object):
         # Return if we ran anything.
         return done_emulation
 
+    def to_python(self, context, params=None, indent=0):
+        return to_python(self.loose_lines, context, indent=indent, statements=True)
+    
     def load_context(self, context):
         """
         Load functions/subs defined in the module into the given
@@ -258,6 +262,9 @@ class LooseLines(VBA_Object):
             s = s[:35] + " ...)"
         return 'Loose Lines Block: %s: %s statement(s)' % (s, len(self.block))
 
+    def to_python(self, context, params=None, indent=0):
+        return to_python(self.block, context, indent=indent, statements=True)
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.

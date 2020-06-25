@@ -53,7 +53,7 @@ class lhs_var_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)        
-        if (isinstance(item, Let_Statement)):
+        if ("Let_Statement" in str(type(item))):
             if (isinstance(item.name, str)):
                 self.variables.add(item.name)
             elif (isinstance(item.name, pyparsing.ParseResults) and
