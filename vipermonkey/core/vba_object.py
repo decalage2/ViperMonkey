@@ -537,7 +537,8 @@ def _get_var_vals(item, context):
                 val = None
 
             # 'inf' is not a valid value.
-            if (str(val).strip() == "inf"):
+            if ((str(val).strip() == "inf") or
+                (str(val).strip() == "-inf")):
                 val = None
 
             # 'NULL' is not a valid value.
