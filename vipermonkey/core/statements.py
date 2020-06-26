@@ -2229,9 +2229,16 @@ class While_Statement(VBA_Object):
         boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
 
+        # Logic is flipped for do until loops.
+        until_pre = ""
+        until_post = ""
+        if (self.loop_type.lower() == "until"):
+            until_pre = "not ("
+            until_post = ")"
+        
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "while " + to_python(self.guard, context) + ":\n"
+        loop_start += indent_str + "while " + until_pre + to_python(self.guard, context) + until_post + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -2396,6 +2403,8 @@ class While_Statement(VBA_Object):
 
         # Now emulate the loop in Python.
         running = self._eval_guard(curr_counter, final_val, comp_op)
+        if (self.loop_type.lower() == "until"):
+            running = (not running)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Short circuiting loop evaluation: Guard: " + str(self.guard))
             log.debug("Short circuiting loop evaluation: Body: " + str(self.body))

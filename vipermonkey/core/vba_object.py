@@ -718,11 +718,17 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     # Are we actually doing this?
     if (not context.do_jit):
         return False
-        
-    # Generate the Python code for the VB code and execute the generated Python code.
-    # TODO: Remove dangerous functions from what can be exec'ed.
+
+    # Emulating full VB programs in Python is difficult, so for now skip loops
+    # that Execute() dynamic VB.
     code_vba = str(loop).replace("\n", "\\n")[:20]
     log.info("Starting JIT emulation of '" + code_vba + "...' ...")
+    if (("Execute(" in str(loop)) or ("ExecuteGlobal(" in str(loop))):
+        log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
+        return False
+    
+    # Generate the Python code for the VB code and execute the generated Python code.
+    # TODO: Remove dangerous functions from what can be exec'ed.
     code_python = ""
     try:
 

@@ -883,6 +883,7 @@ class Exists(VbaLibraryFunc):
     def eval(self, context, params=None):
         return False
         
+parse_cache = {}
 class Execute(VbaLibraryFunc):
     """
     WScript Execute() function.
@@ -908,39 +909,49 @@ class Execute(VbaLibraryFunc):
         # we execute the string.
         orig_command = command
         command = command.replace('""', '"')
-        
-        # Parse it.
-        obj = None
-        try:
-            obj = modules.module.parseString(command, parseAll=True)[0]
-        except ParseException:
 
-            # Maybe replacing the '""' with '"' was a bad idea. Try the original
-            # command.
+        # Have we already parsed this?
+        obj = None
+        if (orig_command in parse_cache):
+            obj = parse_cache[orig_command]
+
+        # We have not parsed this previously.
+        else:
+
+            # Parse it.
             try:
-                log.warning("Parsing failed on modified command. Trying original command ...")
-                obj = modules.module.parseString(orig_command, parseAll=True)[0]
+                obj = modules.module.parseString(command, parseAll=True)[0]
             except ParseException:
+
+                # Maybe replacing the '""' with '"' was a bad idea. Try the original
+                # command.
+                try:
+                    log.warning("Parsing failed on modified command. Trying original command ...")
+                    obj = modules.module.parseString(orig_command, parseAll=True)[0]
+                except ParseException:
                 
-                # Final attempt. Try cutting off the final line and executing.
-                if ("\n" in orig_command.strip()):
-                    short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
-                    try:
-                        log.warning("Parsing failed on original command. Trying shortened command ...")
-                        obj = modules.module.parseString(short_command, parseAll=True)[0]
-                    except ParseException:
+                    # Final attempt. Try cutting off the final line and executing.
+                    if ("\n" in orig_command.strip()):
+                        short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
+                        try:
+                            log.warning("Parsing failed on original command. Trying shortened command ...")
+                            obj = modules.module.parseString(short_command, parseAll=True)[0]
+                        except ParseException:
+                            if (len(orig_command) > 50):
+                                orig_command = orig_command[:50] + " ..."
+                            log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                            return "NULL"
+
+                    # No shorter command. Punt.
+                    else:
                         if (len(orig_command) > 50):
                             orig_command = orig_command[:50] + " ..."
                         log.error("Parse error. Cannot evaluate '" + orig_command + "'")
                         return "NULL"
 
-                # No shorter command. Punt.
-                else:
-                    if (len(orig_command) > 50):
-                        orig_command = orig_command[:50] + " ..."
-                    log.error("Parse error. Cannot evaluate '" + orig_command + "'")
-                    return "NULL"
-
+        # Cache the parsed VB.
+        parse_cache[orig_command] = obj
+                    
         # Are we execing this code inside JIT generated Python code?
         # Note that the dict of local variable values to update when we exec the
         # generated Python code is passed as the 2nd to last argument to Execute().
