@@ -1222,6 +1222,12 @@ def coerce_to_num(obj):
     # Do we have a string?
     if (isinstance(obj, str)):
 
+        # Stupid "123,456,7890" string where everything after the
+        # 1st comma is ignored?
+        dumb_pat = r"(?:\d+,)+\d+"
+        if (re.match(dumb_pat, obj) is not None):
+            obj = obj[:obj.index(",")]
+        
         # Float string?
         if ("." in obj):
             try:
