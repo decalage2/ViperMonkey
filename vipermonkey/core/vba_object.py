@@ -745,7 +745,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
                           var_inits + "\n" + \
                           code_python + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
-        #safe_print(code_python)
+        safe_print(code_python)
 
         # Run the Python code.
         if (namespace is None):
@@ -1179,6 +1179,10 @@ def coerce_to_int(obj):
     if ((obj is None) or (obj == "NULL")):
         return 0
 
+    # Already have int?
+    if (isinstance(obj, int)):
+        return obj
+    
     # Do we have a float string?
     if (isinstance(obj, str)):
 
@@ -1194,7 +1198,45 @@ def coerce_to_int(obj):
             return 0
 
         # Hex string?
-        if ((obj.lower().startswith("&h")) and (len(obj) <= 4)):
+        hex_pat = r"&h[0-9a-f]+"
+        if (re.match(hex_pat, obj.lower()) is not None):
+            return int(obj.lower().replace("&h", "0x"), 16)
+
+    # Try regular int.
+    return int(obj)
+
+def coerce_to_num(obj):
+    """
+    Coerce a constant VBA object (integer, Null, etc) to a int or float.
+    :param obj: VBA object
+    :return: int
+    """
+    # in VBA, Null/None is equivalent to 0
+    if ((obj is None) or (obj == "NULL")):
+        return 0
+
+    # Already have float or int?
+    if ((isinstance(obj, float)) or (isinstance(obj, int))):
+        return obj
+    
+    # Do we have a string?
+    if (isinstance(obj, str)):
+
+        # Float string?
+        if ("." in obj):
+            try:
+                obj = float(obj)
+                return obj
+            except:
+                pass
+
+        # Do we have a null byte string?
+        if (obj.count('\x00') == len(obj)):
+            return 0
+
+        # Hex string?
+        hex_pat = r"&h[0-9a-f]+"
+        if (re.match(hex_pat, obj.lower()) is not None):
             return int(obj.lower().replace("&h", "0x"), 16)
 
     # Try regular int.

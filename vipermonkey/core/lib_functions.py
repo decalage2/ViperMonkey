@@ -75,7 +75,7 @@ class Chr(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         arg_str = to_python(self.arg, context)
-        return "chr(coerce_to_int(" + arg_str + "))"
+        return "chr(coerce_to_int(" + arg_str + ") if isinstance(" + arg_str + ", str)" + " else int(round(" + arg_str + ")))"
             
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer

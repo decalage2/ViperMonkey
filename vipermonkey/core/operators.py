@@ -357,7 +357,7 @@ class Neg(VBA_Object):
             log.debug('parsed %r as unary negation' % self)
 
     def to_python(self, context, params=None, indent=0):
-        r = "- (" + "coerce_to_int(" + to_python(self.arg, context) + "))"
+        r = "- (" + "coerce_to_num(" + to_python(self.arg, context) + "))"
         return r
             
     def eval(self, context, params=None):
@@ -514,7 +514,7 @@ class Power(VBA_Object):
         return ' ^ '.join(map(repr, self.arg))
 
     def to_python(self, context, params=None, indent=0):
-        r = reduce(lambda x, y: "pow(coerce_to_int(" + to_python(x, context) + "), coerce_to_int(" + to_python(y, context) + "))", self.arg)
+        r = reduce(lambda x, y: "pow(coerce_to_num(" + to_python(x, context) + "), coerce_to_num(" + to_python(y, context) + "))", self.arg)
         return r
     
 # --- DIVISION: / OPERATOR ------------------------------------------------
@@ -578,12 +578,12 @@ class MultiOp(VBA_Object):
         if (self.operators[0] == "+"):
             ret = [to_python(self.arg[0], context, params=params)]
         else:
-            ret = ["coerce_to_int(" + to_python(self.arg[0], context, params=params)  + ")"]
+            ret = ["coerce_to_num(" + to_python(self.arg[0], context, params=params)  + ")"]
         for operator, arg in zip(self.operators, self.arg[1:]):
             if (operator == "+"):
                 ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
             else:
-                ret.append(' {} {!s}'.format(operator, "coerce_to_int(" + to_python(arg, context, params=params) + ")"))
+                ret.append(' {} {!s}'.format(operator, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
         return '({})'.format(''.join(ret))
         
     def eval(self, context, params=None):
@@ -688,7 +688,7 @@ class FloorDivision(VBA_Object):
             if (not first):
                 r += " // "
             first = False
-            r += "coerce_to_int(" + to_python(arg, context, params=params) + ")"
+            r += "coerce_to_num(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
     
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
@@ -787,5 +787,5 @@ class Mod(VBA_Object):
             if (not first):
                 r += " % "
             first = False
-            r += "coerce_to_int(" + to_python(arg, context, params=params) + ")"
+            r += "coerce_to_num(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
