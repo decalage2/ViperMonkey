@@ -2306,6 +2306,18 @@ class While_Statement(VBA_Object):
         # Are we just sleeping in the loop?
         if ("sleep(" in str(self.body[0]).lower()):
             return True
+
+        # Are we just executing dynamic VB in the loop?
+        if (("execute(" in str(self.body[0]).lower()) or
+            ("executeglobal(" in str(self.body[0]).lower())):
+
+            # Run the loop once.
+            for s in self.body:
+                if (not isinstance(s, VBA_Object)):
+                    continue
+                s.eval(context=context)
+
+            return True
         
         # Do we have a simple loop guard?
         loop_counter = str(self.guard).strip()
