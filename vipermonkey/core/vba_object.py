@@ -745,7 +745,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
                           var_inits + "\n" + \
                           code_python + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
-        safe_print(code_python)
+        #safe_print(code_python)
 
         # Run the Python code.
         if (namespace is None):
