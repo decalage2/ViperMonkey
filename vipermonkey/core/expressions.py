@@ -119,6 +119,17 @@ class SimpleNameExpression(VBA_Object):
         return '%s' % self.name
 
     def to_python(self, context, params=None, indent=0):
+
+        # Is this a 0 argument builtin function call?
+        import vba_library
+        if (self.name.lower() in vba_library.VBA_LIBRARY):
+
+            # Call the function in python.
+            args = "[]"
+            r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
+            return r
+
+        # Just treat as a variable reference.
         return str(self).replace(".", "")
     
     def eval(self, context, params=None):

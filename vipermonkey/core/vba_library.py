@@ -922,32 +922,53 @@ class Execute(VbaLibraryFunc):
             try:
                 obj = modules.module.parseString(command, parseAll=True)[0]
             except ParseException:
+                pass
 
+            # Was is parsed?
+            if (obj == None):
+                
                 # Maybe replacing the '""' with '"' was a bad idea. Try the original
                 # command.
                 try:
                     log.warning("Parsing failed on modified command. Trying original command ...")
                     obj = modules.module.parseString(orig_command, parseAll=True)[0]
                 except ParseException:
-                
-                    # Final attempt. Try cutting off the final line and executing.
-                    if ("\n" in orig_command.strip()):
-                        short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
-                        try:
-                            log.warning("Parsing failed on original command. Trying shortened command ...")
-                            obj = modules.module.parseString(short_command, parseAll=True)[0]
-                        except ParseException:
-                            if (len(orig_command) > 50):
-                                orig_command = orig_command[:50] + " ..."
-                            log.error("Parse error. Cannot evaluate '" + orig_command + "'")
-                            return "NULL"
+                    pass
 
-                    # No shorter command. Punt.
-                    else:
-                        if (len(orig_command) > 50):
-                            orig_command = orig_command[:50] + " ..."
-                        log.error("Parse error. Cannot evaluate '" + orig_command + "'")
-                        return "NULL"
+            # Was is parsed?
+            if (obj == None):
+                
+                # Next attempt. Try cutting off the final line and executing.
+                if ("\n" in orig_command.strip()):
+                    short_command = orig_command.strip()[:orig_command.strip().rindex("\n")]
+                    try:
+                        log.warning("Parsing failed on original command. Trying shortened command minus last line ...")
+                        obj = modules.module.parseString(short_command, parseAll=True)[0]
+                    except ParseException:
+                        pass
+
+            # Was is parsed?
+            if (obj == None):
+
+                # Try deleteing first non-alphabetic characters and reparsing.
+                pos = 0
+                ascii_pat = r"[A-Za-z]"
+                while (pos < len(orig_command)):
+                    if (re.match(ascii_pat, orig_command[pos])):
+                        break
+                short_command = orig_command[pos:]
+                try:
+                    log.warning("Parsing failed on original command. Trying shortened command up to first alphabetic character ...")
+                    obj = modules.module.parseString(short_command, parseAll=True)[0]
+                except ParseException:
+                    pass
+                
+            # Cannot ever parse this. Punt.
+            if (obj == None):
+                if (len(orig_command) > 50):
+                    orig_command = orig_command[:50] + " ..."
+                log.error("Parse error. Cannot evaluate '" + orig_command + "'")
+                return "NULL"
 
         # Cache the parsed VB.
         parse_cache[orig_command] = obj

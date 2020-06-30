@@ -614,6 +614,10 @@ class Dim_Statement(VBA_Object):
             # Handle untyped arrays.
             elif (var[1]):
                 curr_init_val = []
+                # Know # of elements?
+                if (var[3] is not None):
+                    # Assume NULL.
+                    curr_init_val = [0] * (var[3] + 1)
 
             # Handle uninitialized global variables.
             if ((context.global_scope) and (curr_init_val is None)):
@@ -1398,7 +1402,7 @@ class For_Statement(VBA_Object):
             end = int_convert(end)
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
-            return
+            return (None, None, None)
             
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
@@ -1763,6 +1767,9 @@ class For_Statement(VBA_Object):
         
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
+        if (start is None):
+            log.warn("Cannot resolve lop index information, not doing JIT loop emulation.")
+            return
             
         # Set the loop index variable to the start value.
         context.set(self.name, start)
