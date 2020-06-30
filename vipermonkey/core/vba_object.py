@@ -594,7 +594,11 @@ def _loop_vars_to_python(loop, context, indent):
     for var in sorted_vars:
         val = to_python(init_vals[var], context)
         loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
-    hash_object = hashlib.md5(str(loop).encode())
+    try:
+        hash_object = hashlib.md5(str(loop).encode())
+    except UnicodeDecodeError:
+        hash_object = hashlib.md5(filter(isprint, str(loop)).encode())
+
     prog_var = "pct_" + hash_object.hexdigest()
     loop_init += indent_str + prog_var + " = 0\n"
     loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
@@ -666,9 +670,9 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             try:
                 r += to_python(statement, context, indent=indent+4) + "\n"
             except Exception as e:
-                #print statement
-                #print e
-                #traceback.print_exc(file=sys.stdout)
+                print statement
+                print e
+                traceback.print_exc(file=sys.stdout)
                 return "ERROR! to_python failed! " + str(e)
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):

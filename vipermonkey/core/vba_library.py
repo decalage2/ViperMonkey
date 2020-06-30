@@ -956,7 +956,8 @@ class Execute(VbaLibraryFunc):
                 while (pos < len(orig_command)):
                     if (re.match(ascii_pat, orig_command[pos])):
                         break
-                short_command = orig_command[pos:]
+                    pos += 1
+                short_command = orig_command[pos:].replace("\x1c", "\r").replace("\x1d", "\n")
                 try:
                     log.warning("Parsing failed on original command. Trying shortened command up to first alphabetic character ...")
                     obj = modules.module.parseString(short_command, parseAll=True)[0]
