@@ -70,6 +70,7 @@ import expressions
 from var_in_expr_visitor import *
 from lhs_var_visitor import *
 from utils import safe_print
+import utils
 from let_statement_visitor import *
 from vba_context import *
 
@@ -566,6 +567,9 @@ def _get_var_vals(item, context):
             else:
                 raise ValueError("Type " + str(var_type) + " not handled.")
 
+        # Rename some vars that overlap with python builtins.
+        var = utils.fix_python_overlap(var)
+            
         # Save the variable value.
         r[var] = val
 

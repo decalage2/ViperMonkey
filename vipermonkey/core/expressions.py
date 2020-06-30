@@ -64,6 +64,7 @@ from vba_object import strip_nonvb_chars
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
 import vba_context
+import utils
 
 from logger import log
 
@@ -122,15 +123,24 @@ class SimpleNameExpression(VBA_Object):
 
         # Is this a 0 argument builtin function call?
         import vba_library
-        if (self.name.lower() in vba_library.VBA_LIBRARY):
+        value = None
+        try:
+            value = context.get(self.name)
+        except KeyError:
+            pass
+        if ((self.name.lower() in vba_library.VBA_LIBRARY) and
+            (isinstance(value, VbaLibraryFunc))):
 
             # Call the function in python.
             args = "[]"
             r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
             return r
 
+        # Rename some vars that overlap with python builtins.
+        var_name = utils.fix_python_overlap(str(self).replace(".", ""))
+        
         # Just treat as a variable reference.
-        return str(self).replace(".", "")
+        return var_name
     
     def eval(self, context, params=None):
         if (log.getEffectiveLevel() == logging.DEBUG):

@@ -66,3 +66,10 @@ def safe_print(text):
             handler.setFormatter(logging.Formatter("%(message)s"))
             handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
             handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
+
+def fix_python_overlap(var_name):
+    builtins = set(["str", "list"])
+    if (var_name.lower() in builtins):
+        var_name = "MAKE_UNIQUE_" + var_name
+    return var_name
+
