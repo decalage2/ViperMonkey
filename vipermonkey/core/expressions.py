@@ -445,7 +445,7 @@ class MemberAccessExpression(VBA_Object):
             index = int(index.replace("'", "")) - 1
 
         except ParseException:
-            log.error("Parse error. Cannot evaluate '" + index + "'")
+            log.error("Parse error. Cannot evaluate '" + str(ids[0]) + "'")
             return None
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
