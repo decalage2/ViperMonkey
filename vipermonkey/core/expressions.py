@@ -879,7 +879,7 @@ class MemberAccessExpression(VBA_Object):
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
-        if (lhs.lower() != "ADODB.Stream".lower()):
+        if (str(lhs).lower() != "ADODB.Stream".lower()):
 
             # Maybe we need a sub field? Do we have a subfield?
             if (log.getEffectiveLevel() == logging.DEBUG):
