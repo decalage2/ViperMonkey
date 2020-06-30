@@ -594,6 +594,7 @@ class Dim_Statement(VBA_Object):
             if (curr_type is not None):
 
                 # Get the initial value.
+                curr_type = str(curr_type)
                 if ((curr_type == "Long") or (curr_type == "Integer")):
                     curr_init_val = 0
                 if (curr_type == "String"):

@@ -652,10 +652,10 @@ class Left(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) > 2):
-            params = params[-2:]
         if ((params is None) or (len(params) < 2)):
             return "NULL"
+        if (len(params) > 2):
+            params = params[-2:]
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
