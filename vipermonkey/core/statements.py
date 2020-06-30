@@ -569,7 +569,7 @@ class Dim_Statement(VBA_Object):
                 curr_init_val = "0"
                 
             # Set the initial value of the declared variable.
-            r = " " * indent + str(var[0]) + " = " + curr_init_val
+            r = " " * indent + str(var[0]) + " = " + str(curr_init_val)
 
             # Done.
             return r
@@ -1768,7 +1768,7 @@ class For_Statement(VBA_Object):
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices(context)
         if (start is None):
-            log.warn("Cannot resolve lop index information, not doing JIT loop emulation.")
+            log.warn("Cannot resolve loop index information, not doing JIT loop emulation.")
             return
             
         # Set the loop index variable to the start value.
