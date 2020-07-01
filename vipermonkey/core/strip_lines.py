@@ -1419,6 +1419,30 @@ def fix_vba_code(vba_code):
     if (len(brackets) > 0):
         log.warning("([a1]) style constructs are not currently handled. Rewriting them...")
     for bracket in brackets:
+
+        # Skip this if it appears in a string.
+        start = vba_code.index(bracket)
+        in_str1 = False
+        pos = start
+        while (pos > 0):
+            if (vba_code[pos] == "\n"):
+                break
+            if (vba_code[pos] == '"'):
+                in_str1 = True
+                break
+            pos -= 1
+        in_str2 = False
+        while (pos < len(vba_code)):
+            if (vba_code[pos] == "\n"):
+                break
+            if (vba_code[pos] == '"'):
+                in_str2 = True
+                break
+            pos += 1
+        if (in_str1 and in_str2):
+            continue
+
+        # Cannot be in a string. Replace it.
         vba_code = vba_code.replace(bracket, "(" + bracket[2:-2] + ")")
     
     # Clear out lines broken up on multiple lines.

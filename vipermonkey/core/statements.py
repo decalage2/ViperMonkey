@@ -3568,8 +3568,8 @@ class Call_Statement(VBA_Object):
             
         # Is this a VBA internal function?
         func_name = str(self.name)
-        if (func_name.startswith(".")):
-            func_name = func_name[1:]
+        if ("." in func_name):
+            func_name = func_name[func_name.index(".") + 1:]
         import vba_library
         if (func_name.lower() in vba_library.VBA_LIBRARY):
 

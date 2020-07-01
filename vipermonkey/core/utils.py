@@ -33,6 +33,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
+
 import logging
 from logger import log
 
@@ -72,4 +74,44 @@ def fix_python_overlap(var_name):
     if (var_name.lower() in builtins):
         var_name = "MAKE_UNIQUE_" + var_name
     return var_name
+
+class vb_RegExp(object):
+    """
+    Class to simulate a VBS RegEx object in python.
+    """
+
+    def __init__(self):
+        self.Pattern = None
+        self.Global = False
+
+    def _get_python_pattern(self):
+        pat = self.Pattern
+        if (pat is None):
+            return None
+        if (pat.strip() != "."):
+            pat1 = pat.replace("$", "\\$").replace("-", "\\-")
+            fix_dash_pat = r"(\[.\w+)\\\-(\w+\])"
+            pat1 = re.sub(fix_dash_pat, r"\1-\2", pat1)
+            fix_dash_pat1 = r"\((\w+)\\\-(\w+)\)"
+            pat1 = re.sub(fix_dash_pat1, r"[\1-\2]", pat1)
+            pat = pat1
+        return pat
+        
+    def Test(self, string):
+        pat = self._get_python_pattern()
+        if (pat is None):
+            return False
+        return (re.match(pat, string) is not None)
+
+    def Replace(self, string, rep):
+        pat = self._get_python_pattern()
+        if (pat is None):
+            return s
+        rep = re.sub(r"\$(\d)", r"\\\1", rep)
+        r = string
+        try:
+            r = re.sub(pat, rep, string)
+        except Exception as e:
+            pass
+        return r
 

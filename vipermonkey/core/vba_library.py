@@ -86,8 +86,12 @@ def run_function(func_name, context, params):
     Run a VBA library function with the given parameters.
     """
 
-    # Create an object for emulating the function.
+    # Rename python WScript.Shell.Run() calls.
     func_name = func_name.lower()
+    if (func_name == "run"):
+        func_name = "runshell"
+    
+    # Create an object for emulating the function.
     if (func_name not in VBA_LIBRARY):
         return None
     func_obj = VBA_LIBRARY[func_name]
@@ -1623,6 +1627,16 @@ class Replace(VbaLibraryFunc):
             log.debug("Replace: return %r" % r)
         return r
 
+class RunShell(VbaLibraryFunc):
+    """
+    Stubbed WScript.Shell Run() method.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        context.report_action('Execute Command', str(params[0]), 'WScript.Shell.Run()', strip_null_bytes=True)
+    
 class SaveToFile(VbaLibraryFunc):
     """
     SaveToFile() ADODB.Stream method.
@@ -4112,7 +4126,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory):
+               WriteProcessMemory, RunShell):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

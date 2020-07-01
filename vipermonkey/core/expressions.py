@@ -288,7 +288,20 @@ class MemberAccessExpression(VBA_Object):
 
         # For now just pick off the last item in the expression.
         if (len(self.rhs) > 0):
-            return to_python(self.rhs[-1], context, params)
+
+            # RegExp operations?
+            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")")
+            if ((not raw_last_func.startswith("Test(")) and (not raw_last_func.startswith("Replace("))):
+
+                # No RegExp operations.
+                last_func = to_python(self.rhs[-1], context, params)
+                return last_func
+
+            # Use the simulated RegExp object for this.
+            exp_str = str(self)
+            r = exp_str[:exp_str.rindex(".")] + "." + raw_last_func
+            return r
+        
         return ""
     
     def _handle_indexed_pages_access(self, context):
@@ -2576,6 +2589,15 @@ class New_Expression(VBA_Object):
     def __repr__(self):
         return ('New %r' % self.obj)
 
+    def to_python(self, context, params=None, indent=0):
+
+        # We can fake RegEx objects.
+        if (str(self.obj).strip().lower() == "regexp"):
+            return "core.utils.vb_RegExp()"
+
+        # Not faking other objects at this point.
+        return "ERROR: Not emulating " + str(self)
+    
     def eval(self, context, params=None):
         # TODO: Not sure how to handle this. For now just return what is being created.
         return self.obj
