@@ -4033,6 +4033,16 @@ class Send(VbaLibraryFunc):
     def eval(self, context, params=None):
         return 200
     
+class WriteProcessMemory(VbaLibraryFunc):
+    """
+    WriteProcessMemory() external method.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
+        context.report_action('Write Process Memory', str(params), 'External Function: kernel32.dll / WriteProcessMemory', strip_null_bytes=True)
+    
 class Write(VbaLibraryFunc):
     """
     Write() method.
@@ -4101,7 +4111,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                MonthName, GetSpecialFolder, IsEmpty, Date, DeleteFile, MoveFile, DateAdd,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
-               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy):
+               GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
+               WriteProcessMemory):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

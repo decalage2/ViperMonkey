@@ -3901,6 +3901,7 @@ class Redim_Statement(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
         self.item = str(tokens.item)
+        self.raw_item = tokens.item
         self.start = None
         if (hasattr(tokens, "start")):
             self.start = tokens.start
@@ -3918,6 +3919,10 @@ class Redim_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
+        print "REDIM!!"
+        print self
+        print self.raw_item
+        print type(self.raw_item)
         # Is this a Variant type?
         if (str(context.get_type(self.item)) == "Variant"):
 
@@ -3926,7 +3931,7 @@ class Redim_Statement(VBA_Object):
             context.set(self.item, [])
 
         # Is this a Byte array?
-        if (str(context.get_type(self.item)) == "Byte Array"):
+        elif (str(context.get_type(self.item)) == "Byte Array"):
 
             # Do we have a start and end for the new size?
             if ((self.start is not None) and (self.end is not None)):
@@ -3946,6 +3951,23 @@ class Redim_Statement(VBA_Object):
 
                 except:
                     pass
+
+        # Resize array?
+        elif (isinstance(self.raw_item, Function_Call)):
+
+            # Got a new size?
+            if (len(self.raw_item.params) > 0):
+
+                # Get the new size.
+                new_size = eval_arg(self.raw_item.params[0], context=context)
+                print "NEW SIZE!!"
+                print new_size
+
+                # Got a value we can work with?
+                if (isinstance(new_size, int)):
+                    new_list = [0] * (new_size)
+                    var_name = self.raw_item.name
+                    context.set(var_name, new_list)
                     
         return
 
