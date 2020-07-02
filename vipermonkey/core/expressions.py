@@ -121,7 +121,8 @@ class SimpleNameExpression(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
-        # Is this a 0 argument builtin function call?
+        # Is this a 0 argument builtin function call? Make sure this is not a
+        # local variable shadowing the name of a VBA builtin.
         import vba_library
         value = None
         try:
@@ -129,7 +130,8 @@ class SimpleNameExpression(VBA_Object):
         except KeyError:
             pass
         if ((self.name.lower() in vba_library.VBA_LIBRARY) and
-            (isinstance(value, VbaLibraryFunc))):
+            (isinstance(value, VbaLibraryFunc)) and
+            (value.num_args() == 0)):
 
             # Call the function in python.
             args = "[]"

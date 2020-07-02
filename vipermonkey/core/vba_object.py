@@ -80,7 +80,13 @@ class VbaLibraryFunc(object):
     """
     Marker class to tell if a class implements a VBA function.
     """
-    pass
+
+    def num_args(self):
+        """
+        Get the # of arguments (minimum) required by the functio.
+        """
+        log.warning("Using default # args of 1 for " + str(type(self)))
+        return 1
 
 def excel_col_letter_to_index(x): 
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
@@ -480,7 +486,7 @@ def _infer_type(var, code_chunk, context):
     # Look at each assignment statement and check out the ones where the current
     # variable is assigned.
     str_funcs = ["cstr(", "chr(", "left(", "right(", "mid(", "join(", "lcase(",
-                 "replace(", "trim(", "ucase(", "chrw("]
+                 "replace(", "trim(", "ucase(", "chrw(", " & "]
     for assign in visitor.let_statements:
 
         # Does a VBA function that returns a string appear on the RHS?
@@ -703,11 +709,12 @@ def _updated_vars_to_python(loop, context, indent):
     var_dict_str = "{"
     first = True
     for var in lhs_var_names:
+        py_var = utils.fix_python_overlap(var)
         if (not first):
             var_dict_str += ", "
         first = False
         var = var.replace(".", "")
-        var_dict_str += '"' + var + '" : ' + var
+        var_dict_str += '"' + var + '" : ' + py_var
     var_dict_str += "}"
     save_vals = indent_str + "try:\n"
     save_vals += indent_str + " " * 4 + "var_updates\n"
@@ -755,7 +762,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
                           var_inits + "\n" + \
                           code_python + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
-        #safe_print(code_python)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            safe_print("JIT CODE!!")
+            safe_print(code_python)
 
         # Run the Python code.
         if (namespace is None):

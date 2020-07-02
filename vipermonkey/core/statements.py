@@ -70,6 +70,7 @@ from function_call_visitor import *
 import vb_str
 import loop_transform
 from utils import safe_print
+import utils
 
 import traceback
 import string
@@ -798,11 +799,11 @@ class Let_Statement(VBA_Object):
 
             # Basic assignment.
             else:
-                r = str(self.name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
-
+                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+                
         # Array assignment?
         else:
-            r = str(self.name) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
+            r = utils.fix_python_overlap(str(self.name)) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
         if (r.startswith(".")):
             r = r[1:]
         r = " " * indent + r

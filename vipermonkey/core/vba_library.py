@@ -112,6 +112,9 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
         context.report_action('XLM Macro Execution', xlm, 'Dynamic XLM Macro Execution', strip_null_bytes=True)
         return 0
 
+    def num_args(self):
+        return 1
+    
 class GetSaveAsFilename(VbaLibraryFunc):
     """
     GetSaveAsFilename() function (stubbed).
@@ -119,7 +122,10 @@ class GetSaveAsFilename(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return 'C:\\Users\\admin\\AppData\\Local\\Faked_SaveAs_File_Name.dat'
-        
+
+    def num_args(self):
+        return 0
+    
 class GetSpecialFolder(VbaLibraryFunc):
     """
     GetSpecialFolder() function
@@ -140,7 +146,10 @@ class GetSpecialFolder(VbaLibraryFunc):
                 return "UNKNOWN_FOLDER\\"
         except:
             return "UNKNOWN_FOLDER\\"
-            
+
+    def num_args(self):
+        return 1
+        
 class MonthName(VbaLibraryFunc):
     """
     MonthName() function. Currently only returns results in Italian.
@@ -156,6 +165,9 @@ class MonthName(VbaLibraryFunc):
         months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
         return months[num-1]
 
+    def num_args(self):
+        return 1
+    
 class MultiByteToWideChar(VbaLibraryFunc):
     """
     MultiByteToWideChar() kernel32.dll function. 
@@ -202,6 +214,9 @@ class MultiByteToWideChar(VbaLibraryFunc):
         context.set(name, r)
         return len(r)
 
+    def num_args(self):
+        return 5
+    
 class IsEmpty(VbaLibraryFunc):
     """
     IsEmpty() function.
@@ -217,6 +232,9 @@ class IsEmpty(VbaLibraryFunc):
             return True
         return False
 
+    def num_args(self):
+        return 1
+    
 class LanguageID(VbaLibraryFunc):
     """
     Stubbed LanguageID() reference.
@@ -227,6 +245,9 @@ class LanguageID(VbaLibraryFunc):
         # This is usually used for gating, so have it match anything.
         return "**MATCH ANY**"
 
+    def num_args(self):
+        return 1
+    
 class URLDownloadToFile(VbaLibraryFunc):
     """
     URLDownloadToFile() external function
@@ -238,6 +259,9 @@ class URLDownloadToFile(VbaLibraryFunc):
         context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
         context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
         return 1
+
+    def num_args(self):
+        return 3
     
 class URLDownloadToFileA(URLDownloadToFile):
     pass
@@ -276,6 +300,9 @@ class WeekDay(VbaLibraryFunc):
             return r
         return 1
 
+    def num_args(self):
+        return 1
+    
 class Format(VbaLibraryFunc):
     """
     VBA Format function
@@ -302,6 +329,9 @@ class Format(VbaLibraryFunc):
             log.debug("Format(%r): return %r" % (self, r))
         return r
 
+    def num_args(self):
+        return 1
+    
 class MsgBox(VbaLibraryFunc):
     """
     6.1.2.8.1.13 MsgBox
@@ -311,6 +341,9 @@ class MsgBox(VbaLibraryFunc):
         context.report_action('Display Message', params[0], 'MsgBox', strip_null_bytes=True)
         return 1  # vbOK
 
+    def num_args(self):
+        return 1
+    
 class Kill(VbaLibraryFunc):
     """
     Kill statement.
@@ -321,6 +354,9 @@ class Kill(VbaLibraryFunc):
             context.report_action('Delete File', params[0], 'Kill', strip_null_bytes=True)
         return ""
 
+    def num_args(self):
+        return 1
+    
 class RmDir(VbaLibraryFunc):
     """
     RmDir statement.
@@ -331,6 +367,9 @@ class RmDir(VbaLibraryFunc):
             context.report_action('Delete Directory', params[0], 'RmDir', strip_null_bytes=True)
         return ""  # vbOK
 
+    def num_args(self):
+        return 1
+    
 class ChDir(VbaLibraryFunc):
     """
     ChDir() function.
@@ -341,6 +380,9 @@ class ChDir(VbaLibraryFunc):
             context.report_action('Change Directory', params[0], 'ChDir', strip_null_bytes=True)
         return ""  # vbOK
 
+    def num_args(self):
+        return 1
+    
 class Quit(VbaLibraryFunc):
     """
     Wscript.Quit(). Just keeps going.
@@ -350,6 +392,9 @@ class Quit(VbaLibraryFunc):
         log.warning("Ignoring Wscript.Quit() call. Execution is continuing...")
         return 1
 
+    def num_args(self):
+        return 0
+    
 class QBColor(VbaLibraryFunc):
     """
     QBColor() color lookup function.
@@ -381,6 +426,9 @@ class QBColor(VbaLibraryFunc):
         }
         return lookup[val]
 
+    def num_args(self):
+        return 1
+    
 class MakeSureDirectoryPathExists(VbaLibraryFunc):
     """
     MakeSureDirectoryPathExists() VB function (stubbed).
@@ -391,7 +439,10 @@ class MakeSureDirectoryPathExists(VbaLibraryFunc):
             return 1
         context.report_action("Create Folder", params[0], 'Interesting Function Call', strip_null_bytes=True)
         return 1
-        
+
+    def num_args(self):
+        return 1
+    
 class FolderExists(VbaLibraryFunc):
     """
     FolderExists() VB function (stubbed).
@@ -408,6 +459,9 @@ class FolderExists(VbaLibraryFunc):
         curr_dir = str(params[0]).lower()
         return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 
+    def num_args(self):
+        return 1
+    
 class FileCopy(VbaLibraryFunc):
     """
     FileCopy() VB function (stubbed).
@@ -417,7 +471,10 @@ class FileCopy(VbaLibraryFunc):
         if ((params is None) or (len(params) < 2)):
             return
         context.report_action('Copy File', "FileCopy(" + str(params) + ")", '---', strip_null_bytes=True)
-    
+
+    def num_args(self):
+        return 2
+        
 class FileExists(VbaLibraryFunc):
     """
     FileExists() VB function (stubbed).
@@ -436,7 +493,10 @@ class FileExists(VbaLibraryFunc):
         if ("c:\\programdata" in fname.lower()):
             return True
         return False
-        
+
+    def num_args(self):
+        return 1
+    
 class Switch(VbaLibraryFunc):
     """
     Switch() logic flow function.
@@ -460,7 +520,10 @@ class Switch(VbaLibraryFunc):
 
         # If we get here nothing is true.
         return 'NULL'
-            
+
+    def num_args(self):
+        return 2
+    
 class Len(VbaLibraryFunc):
     """
     Len() function.
@@ -486,6 +549,9 @@ class Len(VbaLibraryFunc):
             log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
             return 0
 
+    def num_args(self):
+        return 1
+        
 class LenB(VbaLibraryFunc):
     """
     LenB() function.
@@ -500,6 +566,9 @@ class LenB(VbaLibraryFunc):
         except TypeError:
             return 0
 
+    def num_args(self):
+        return 1
+        
 class Sleep(VbaLibraryFunc):
     """
     Stubbed Sleep() function.
@@ -508,6 +577,9 @@ class Sleep(VbaLibraryFunc):
     def eval(self, context, params=None):
         pass
 
+    def num_args(self):
+        return 1
+    
 class TypeName(VbaLibraryFunc):
     """
     TypeName() function.
@@ -533,6 +605,9 @@ class TypeName(VbaLibraryFunc):
             return "Double"
         return "NULL"
 
+    def num_args(self):
+        return 1
+    
 class VarType(VbaLibraryFunc):
     """
     VarType() function.
@@ -560,6 +635,9 @@ class VarType(VbaLibraryFunc):
             return 3
         return 0
 
+    def num_args(self):
+        return 1
+    
 class Mid(VbaLibraryFunc):
     """
     6.1.2.11.1.25 Mid / MidB function
@@ -647,6 +725,9 @@ class Mid(VbaLibraryFunc):
             log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
         return r
 
+    def num_args(self):
+        return 2
+    
 class MidB(Mid):
     pass
 
@@ -697,6 +778,9 @@ class Left(VbaLibraryFunc):
             log.debug('Left: return s[0:%d]=%r' % (start, r))
         return r
 
+    def num_args(self):
+        return 1
+    
 class PrivateProfileString(VbaLibraryFunc):
     """
     PrivateProfileString method.
@@ -705,6 +789,9 @@ class PrivateProfileString(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "**MATCH ANY**"
 
+    def num_args(self):
+        return 1
+    
 class EOF(VbaLibraryFunc):
     """
     Stubbed EOF file method.
@@ -713,6 +800,9 @@ class EOF(VbaLibraryFunc):
     def eval(self, context, params=None):
         return True
 
+    def num_args(self):
+        return 1
+    
 class Error(VbaLibraryFunc):
     """
     Stubbed Error() method.
@@ -721,6 +811,9 @@ class Error(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "Some error message..."
 
+    def num_args(self):
+        return 1
+    
 class Right(VbaLibraryFunc):
     """
     Right function.
@@ -768,6 +861,9 @@ class Right(VbaLibraryFunc):
             log.debug('Right: return s[%d:]=%r' % (start, r))
         return r
 
+    def num_args(self):
+        return 2
+    
 class BuiltInDocumentProperties(VbaLibraryFunc):
     """
     Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
@@ -784,6 +880,9 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
             return "NULL"
         return context.read_metadata_item(prop)
 
+    def num_args(self):
+        return 1
+    
 class Item(BuiltInDocumentProperties):
     """
     Assumes that Item() is only called on BuiltInDocumentProperties.
@@ -829,6 +928,9 @@ class Shell(VbaLibraryFunc):
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
 
+    def num_args(self):
+        return 1
+    
 class ExecuteStatement(Shell):
     pass
     
