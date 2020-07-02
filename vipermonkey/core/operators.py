@@ -597,7 +597,10 @@ class MultiOp(VBA_Object):
             args = coerce_args(evaluated_args)
             ret = args[0]
             for operator, arg in zip(self.operators, args[1:]):
-                ret = self.operator_map[operator](ret, arg)
+                try:
+                    ret = self.operator_map[operator](ret, arg)
+                except OverflowError:
+                    log.error("overflow trying eval: %r" % str(self))
             return ret
         except (TypeError, ValueError):
             # Try converting strings to ints.
