@@ -3920,10 +3920,6 @@ class Redim_Statement(VBA_Object):
 
     def eval(self, context, params=None):
 
-        print "REDIM!!"
-        print self
-        print self.raw_item
-        print type(self.raw_item)
         # Is this a Variant type?
         if (str(context.get_type(self.item)) == "Variant"):
 
@@ -3961,8 +3957,6 @@ class Redim_Statement(VBA_Object):
 
                 # Get the new size.
                 new_size = eval_arg(self.raw_item.params[0], context=context)
-                print "NEW SIZE!!"
-                print new_size
 
                 # Got a value we can work with?
                 if (isinstance(new_size, int)):

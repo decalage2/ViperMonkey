@@ -125,6 +125,9 @@ class GetSaveAsFilename(VbaLibraryFunc):
 
     def num_args(self):
         return 0
+
+    def return_type(self):
+        return "STRING"
     
 class GetSpecialFolder(VbaLibraryFunc):
     """
@@ -149,7 +152,10 @@ class GetSpecialFolder(VbaLibraryFunc):
 
     def num_args(self):
         return 1
-        
+
+    def return_type(self):
+        return "STRING"
+    
 class MonthName(VbaLibraryFunc):
     """
     MonthName() function. Currently only returns results in Italian.
@@ -167,6 +173,9 @@ class MonthName(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class MultiByteToWideChar(VbaLibraryFunc):
     """
@@ -331,6 +340,9 @@ class Format(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class MsgBox(VbaLibraryFunc):
     """
@@ -356,6 +368,9 @@ class Kill(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class RmDir(VbaLibraryFunc):
     """
@@ -369,6 +384,9 @@ class RmDir(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class ChDir(VbaLibraryFunc):
     """
@@ -382,6 +400,9 @@ class ChDir(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class Quit(VbaLibraryFunc):
     """
@@ -607,6 +628,9 @@ class TypeName(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class VarType(VbaLibraryFunc):
     """
@@ -727,6 +751,9 @@ class Mid(VbaLibraryFunc):
 
     def num_args(self):
         return 2
+
+    def return_type(self):
+        return "STRING"
     
 class MidB(Mid):
     pass
@@ -780,6 +807,9 @@ class Left(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class PrivateProfileString(VbaLibraryFunc):
     """
@@ -791,6 +821,9 @@ class PrivateProfileString(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class EOF(VbaLibraryFunc):
     """
@@ -813,6 +846,9 @@ class Error(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class Right(VbaLibraryFunc):
     """
@@ -863,6 +899,9 @@ class Right(VbaLibraryFunc):
 
     def num_args(self):
         return 2
+
+    def return_type(self):
+        return "STRING"
     
 class BuiltInDocumentProperties(VbaLibraryFunc):
     """
@@ -882,6 +921,9 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+    def return_type(self):
+        return "STRING"
     
 class Item(BuiltInDocumentProperties):
     """
@@ -1221,6 +1263,9 @@ class Trim(VbaLibraryFunc):
             log.debug("Trim: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class RTrim(VbaLibraryFunc):
     """
     RTrim() string function.
@@ -1238,6 +1283,9 @@ class RTrim(VbaLibraryFunc):
             log.debug("RTrim: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"    
+
 class LTrim(VbaLibraryFunc):
     """
     LTrim() string function.
@@ -1254,6 +1302,9 @@ class LTrim(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("LTrim: return %r" % r)
         return r
+
+    def return_type(self):
+        return "STRING"
 
 class AscW(VbaLibraryFunc):
     """
@@ -1343,6 +1394,9 @@ class StrPtr(VbaLibraryFunc):
 
         # We don't have a variable, so just turn it into a "pointer".
         return ("&" + str(params[0]))
+
+    def return_type(self):
+        return "STRING"
     
 class StrConv(VbaLibraryFunc):
     """
@@ -1411,6 +1465,9 @@ class StrConv(VbaLibraryFunc):
             log.debug("StrConv: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class Assert(VbaLibraryFunc):
     """
     Assert() debug function. Stubbed.
@@ -1545,7 +1602,10 @@ class TransformFinalBlock(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Decoded string: " + r)
         return r
-            
+
+    def return_type(self):
+        return "STRING"
+    
 class Split(VbaLibraryFunc):
     """
     Split() string function.
@@ -1646,6 +1706,9 @@ class StrReverse(VbaLibraryFunc):
             log.debug("StrReverse: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class RegWrite(VbaLibraryFunc):
     """
     RegWrite() function.
@@ -1729,6 +1792,9 @@ class Replace(VbaLibraryFunc):
             log.debug("Replace: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class RunShell(VbaLibraryFunc):
     """
     Stubbed WScript.Shell Run() method.
@@ -1755,6 +1821,9 @@ class SaveToFile(VbaLibraryFunc):
         r = str(params[0])
         context.last_saved_file = r
         return r
+
+    def return_type(self):
+        return "STRING"    
 
 class SaveAs(VbaLibraryFunc):
     """
@@ -1884,6 +1953,9 @@ class Join(VbaLibraryFunc):
             log.debug("Join: return %r" % r)
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class InStr(VbaLibraryFunc):
     """
     InStr() string function.
@@ -2246,6 +2318,9 @@ class CStr(VbaLibraryFunc):
             log.debug("CStr: %r returns %r" % (self, r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class CSng(VbaLibraryFunc):
     """
     CSng() type conversion function.
@@ -2386,6 +2461,9 @@ class Dir(VbaLibraryFunc):
             log.debug("Dir: %r returns %r" % (self, r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class RGB(VbaLibraryFunc):
     """
     RGB() color function.
@@ -2565,6 +2643,9 @@ class CleanString(VbaLibraryFunc):
             log.debug("CleanString: %r returns %r" % (self,r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class Pmt(VbaLibraryFunc):
     """
     Pmt() payment computation function.
@@ -2697,6 +2778,9 @@ class Space(VbaLibraryFunc):
         n = int_convert(params[0])
         r = " " * n
         return r
+
+    def return_type(self):
+        return "STRING"
     
 class UCase(VbaLibraryFunc):
     """
@@ -2709,6 +2793,9 @@ class UCase(VbaLibraryFunc):
             log.debug("UCase: %r returns %r" % (self, r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class LCase(VbaLibraryFunc):
     """
     LCase() string function.
@@ -2720,6 +2807,9 @@ class LCase(VbaLibraryFunc):
             log.debug("LCase: %r returns %r" % (self, r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class Randomize(VbaLibraryFunc):
     """
     Randomize RNG function.
@@ -2803,6 +2893,9 @@ class Environ(VbaLibraryFunc):
             log.debug("Environ: %r returns %r" % (self, r))
         return r
 
+    def return_type(self):
+        return "STRING"
+    
 class ExpandEnvironmentStrings(Environ):
     pass
     
@@ -3108,6 +3201,9 @@ class CurDir(VbaLibraryFunc):
     def eval(self, context, params=None):
         return "~"
 
+    def return_type(self):
+        return "STRING"
+    
 class Unprotect(VbaLibraryFunc):
     """
     Stubbed Unprotect() function.
@@ -3287,7 +3383,10 @@ class KeyString(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("KeyString: args = " + str(params) + ", return " + r)
         return r
-        
+
+    def return_type(self):
+        return "STRING"
+    
 class Run(VbaLibraryFunc):
     """
     Application.Run() function.
@@ -3438,6 +3537,9 @@ class ReadText(VbaLibraryFunc):
 
         # Return the data.
         return raw_data
+
+    def return_type(self):
+        return "STRING"
 
 class CheckSpelling(VbaLibraryFunc):
     """
@@ -4088,6 +4190,9 @@ class Unescape(VbaLibraryFunc):
         # Return the unsescaped string.
         return s
 
+    def return_type(self):
+        return "STRING"
+    
 class InternetGetConnectedState(VbaLibraryFunc):
     """
     InternetGetConnectedState() function from wininet.dll.

@@ -711,6 +711,8 @@ class MemberAccessExpression(VBA_Object):
             if (len(self.lhs.params) > 0):
                 index = eval_arg(self.lhs.params[0], context)
                 if ((isinstance(index, int)) and (index < len(val))):
+                    if ((index >= len(val)) or (index < 0)):
+                        return None
                     val = val[index]
 
         # Are we referencing a field?
@@ -2684,6 +2686,8 @@ class Literal_List_Expression(VBA_Object):
         return "[" + str(self.item) + "]"
 
     def eval(self, context, params=None):
+        if (isinstance(self.item, str)):
+            return self.item
         return self.item.eval(context)
     
 literal_list_expression <<= Suppress("[") + (unrestricted_name | decimal_literal)("item") + Suppress("]")

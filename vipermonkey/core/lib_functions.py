@@ -76,7 +76,10 @@ class Chr(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         arg_str = to_python(self.arg, context)
         return "chr(coerce_to_int(" + arg_str + ") if isinstance(" + arg_str + ", str)" + " else int(round(" + arg_str + ")))"
-            
+
+    def return_type(self):
+        return "STRING"
+    
     def eval(self, context, params=None):
         # NOTE: in the specification, the parameter is expected to be an integer
         # But in reality, VBA accepts a string containing the representation
@@ -158,6 +161,9 @@ class Asc(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         return "ord(" + to_python(self.arg, context) + ")"
+
+    def return_type(self):
+        return "INTEGER"
     
     def eval(self, context, params=None):
 
@@ -218,6 +224,9 @@ class StrReverse(VBA_Object):
         # Here the arg is expected to be either a string or a VBA_Object
         self.arg = tokens[0]
 
+    def return_type(self):
+        return "STRING"
+        
     def eval(self, context, params=None):
         # return the string with all characters in reverse order:
         return eval_arg(self.arg, context)[::-1]
@@ -241,6 +250,9 @@ class Environ(VBA_Object):
         # extract argument from the tokens:
         # Here the arg is expected to be either a string or a VBA_Object
         self.arg = tokens.arg
+
+    def return_type(self):
+        return "STRING"        
 
     def eval(self, context, params=None):
         # return the environment variable name surrounded by % signs:

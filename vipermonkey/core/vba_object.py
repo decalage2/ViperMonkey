@@ -88,6 +88,13 @@ class VbaLibraryFunc(object):
         log.warning("Using default # args of 1 for " + str(type(self)))
         return 1
 
+    def return_type(self):
+        """
+        Get the python type returned from the emulated function ('INTEGER' or 'STRING').
+        """
+        log.warning("Using default return type of 'INTEGER' for " + str(type(self)))
+        return "INTEGER"
+
 def excel_col_letter_to_index(x): 
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
@@ -474,9 +481,70 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + " " * 4 + "vm_context = context\n"
     return boilerplate
 
+def _infer_type_of_expression(expr):
+    """
+    Try to determine if a given expression is an "INTEGER" or "STRING" expression.
+    """
+
+    import operators
+    import vba_library
+
+    #print expr
+    #print type(expr)
+
+    # Function with a hard coded type?
+    if (hasattr(expr, "return_type")):
+        return expr.return_type()
+
+    # Call of builtin function?
+    if (isinstance(expr, expressions.Function_Call) and
+        (expr.name.lower() in vba_library.VBA_LIBRARY)):
+        builtin = vba_library.VBA_LIBRARY[expr.name.lower()]
+        if (hasattr(builtin, "return_type")):
+            return builtin.return_type()
+    
+    # Easy cases. These have to be integers.
+    if (isinstance(expr, operators.Xor) or
+        isinstance(expr, operators.And) or
+        isinstance(expr, operators.Or) or
+        isinstance(expr, operators.Not) or
+        isinstance(expr, operators.Neg) or
+        isinstance(expr, operators.Subtraction) or
+        isinstance(expr, operators.Multiplication) or
+        isinstance(expr, operators.Power) or
+        isinstance(expr, operators.Division) or
+        isinstance(expr, operators.MultiDiv) or
+        isinstance(expr, operators.FloorDivision) or
+        isinstance(expr, operators.Mod) or        
+        isinstance(expr, operators.Xor)):
+        return "INTEGER"
+
+    # Must be a string.
+    if (isinstance(expr, operators.Concatenation)):
+        return "STRING"
+    
+    # Harder case. This could be an int or a str (or some other numeric type, but
+    # we're not handling that).
+    if (isinstance(expr, operators.AddSub)):
+
+        # If we are doing subtraction we need numeric types.
+        if ("-" in expr.operators):
+            return "INTEGER"
+        
+        # We have only '+'. Try to figure out the type based on the parts of the expression.
+        for child in expr.get_children():
+            child_type = _infer_type_of_expression(child)
+            if (child_type is not None):
+                return child_type
+
+    # Can't figure out the type.
+    return None
+    
 def _infer_type(var, code_chunk, context):
     """
-    Try to infer the type of an undefined variable based on how it is used.
+    Try to infer the type of an undefined variable based on how it is used ("STRING" or "INTEGER").
+
+    This is currently purely a heuristic.
     """
 
     # Get all the assignments in the code chunk.
@@ -489,6 +557,11 @@ def _infer_type(var, code_chunk, context):
                  "replace(", "trim(", "ucase(", "chrw(", " & "]
     for assign in visitor.let_statements:
 
+        # Try to infer the type somewhat logically.
+        poss_type = _infer_type_of_expression(assign.expression)
+        if (poss_type is not None):
+            return poss_type
+        
         # Does a VBA function that returns a string appear on the RHS?
         rhs = str(assign.expression).lower()
         for str_func in str_funcs:
@@ -681,9 +754,9 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             try:
                 r += to_python(statement, context, indent=indent+4) + "\n"
             except Exception as e:
-                print statement
-                print e
-                traceback.print_exc(file=sys.stdout)
+                #print statement
+                #print e
+                #traceback.print_exc(file=sys.stdout)
                 return "ERROR! to_python failed! " + str(e)
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):

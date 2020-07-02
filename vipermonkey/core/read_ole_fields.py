@@ -61,7 +61,13 @@ def is_garbage_vba(vba):
     if (total_len == 0):
         return False
     num_bad = 0.0
+    in_string = False
     for c in vba[:total_len]:
+        if (c == '"'):
+            in_string = not in_string
+        # Don't count garbage in strings.
+        if in_string:
+            continue
         if (c not in string.printable):
             num_bad += 1
 
