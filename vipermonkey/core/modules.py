@@ -188,10 +188,12 @@ class Module(VBA_Object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing sub "%s" in globals' % name)
             context.set(name, _sub)
+            context.set(name, _sub, force_global=True)
         for name, _function in self.functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing function "%s" in globals' % name)
             context.set(name, _function)
+            context.set(name, _function, force_global=True)
         for name, _function in self.external_functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
@@ -201,8 +203,10 @@ class Module(VBA_Object):
                 log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
             if (isinstance(name, str)):
                 context.set(name, _var)
+                context.set(name, _var, force_global=True)
             if (isinstance(name, list)):
                 context.set(name[0], _var, var_type=name[1])
+                context.set(name[0], _var, var_type=name[1], force_global=True)
             
 # see MS-VBAL 4.2 Modules
 #

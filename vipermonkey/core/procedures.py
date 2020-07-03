@@ -565,7 +565,7 @@ class Function(VBA_Object):
                 log.debug('Function %s eval statement: %s' % (self.name, s))
             if (isinstance(s, VBA_Object)):
                 s.eval(context=context)
-                
+
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):
                 break
@@ -586,18 +586,18 @@ class Function(VBA_Object):
             
         # Reset variable update scoping.
         context.global_scope = old_global_scope
-
+        
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-            
+        
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-
+        
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
 
@@ -650,7 +650,12 @@ class Function(VBA_Object):
                 # Function does not return array.
                 else:
                     log.warn(str(self) + " does not return an array. Not doing array access.")
-
+                    
+            # Copy all the global variables from the function context to the caller
+            # context so global updates are tracked.
+            for global_var in context.globals.keys():
+                caller_context.globals[global_var] = context.globals[global_var]
+                    
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Returning from func " + str(self))
             return return_value

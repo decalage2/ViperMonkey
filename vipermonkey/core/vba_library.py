@@ -1130,7 +1130,7 @@ class Execute(VbaLibraryFunc):
             return "NULL"
 
         # No JIT. Do regular emulation.
-        
+
         # Evaluate the expression in the current context.
         # TODO: Does this actually get evalled in the current context?
         r = obj
