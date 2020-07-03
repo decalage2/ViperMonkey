@@ -79,6 +79,9 @@ from logger import log
 import vba_context
 from random import randint
 
+#debug_strip = True
+debug_strip = False
+
 def is_useless_dim(line):
     """
     See if we can skip this Dim statement and still successfully emulate.
@@ -679,9 +682,21 @@ def fix_unhandled_named_params(vba_code):
 
             # Do we actually have a named parameter?
             if (got_marker):
+
+                # Is this call part of a With statement?
                 log.warning("Named parameters are not currently handled. Commenting them out...")
                 line = line[:-1]
-                new_line = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", line) + "\n"
+                new_line = None
+                if (line.strip().lower().startswith("with ")):
+
+                    # Replace the with line with a bogus line and hope for the best.
+                    new_line = "with UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
+
+                # Comment out entire line.
+                else:
+                    new_line = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", line) + "\n"
+
+                # Replace the line in the VB code.
                 vba_code = vba_code.replace(line, new_line)
                 
     return vba_code
@@ -863,8 +878,9 @@ def fix_difficult_code(vba_code):
     """
 
     # Targeted fix for some maldocs.
-    #print "HERE: 1"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 1"
+        print vba_code
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
     vba_code = fix_unhandled_event_statements(vba_code)
@@ -886,8 +902,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 3"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 3"
+        print vba_code
     array_acc_pat = r'(\w+\([\d\w_\+\*/\-"]+\))(?:\([\d\w_\+\*/\-"]+\)){2,50}'
     if (re2.search(unicode(array_acc_pat), uni_vba_code) is not None):
         vba_code = re.sub(array_acc_pat, r"\1", vba_code)
@@ -899,8 +916,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 4"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 4"
+        print vba_code
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
@@ -910,8 +928,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 5"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 5"
+        print vba_code
     namespace_pat = r"(CreateObject\(.+\).[Nn]ame[Ss]pace\(.+\)\.CopyHere\s+.+),\s*[^\n]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
@@ -921,11 +940,13 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 6"
-    #print vba_code
-    namespace_pat = r"(\w+\.Run\(.+\)[^,\n]*),\s*[^\n]+"
+    if debug_strip:
+        print "HERE: 6"
+        print vba_code
+    namespace_pat = r"(\w+\.Run\(.+\)[^,\n]*),\s*[^\n\)]+"
     if (re2.search(unicode(namespace_pat), uni_vba_code) is not None):
-        #print "HERE: 6.1"
+        if debug_strip:
+            print "HERE: 6.1"
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
     # We don't handle boolean expressions treated as integers. Comment them out.
@@ -934,8 +955,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 7"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 7"
+        print vba_code
     bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)\s*[^" + r'"' + r"][^\n:']+[<>=]"
     if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_bool_pat, vba_code)
@@ -967,8 +989,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 8"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 8"
+        print vba_code
     bad_else_pat = r"\n\s*Else\s*'.*\n"
     if (re2.search(unicode(bad_else_pat), uni_vba_code) is not None):
         bad_exps = re.findall(bad_else_pat, vba_code)
@@ -976,8 +999,9 @@ def fix_difficult_code(vba_code):
             vba_code = vba_code.replace(bad_exp, "\nElse\n")
         
     # Skip this if it is not needed.
-    #print "HERE: 9"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 9"
+        print vba_code
     if (("!" not in vba_code) and
         (":" not in vba_code) and
         ("&;" not in vba_code) and
@@ -997,15 +1021,17 @@ def fix_difficult_code(vba_code):
     #
     # We are now handling the 'baValue(0)' part in expressions.Function_Call.__init__()
     # Now just do a general replace for StrPtr()
-    #print "HERE: 10"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 10"
+        print vba_code
     if ("StrPtr" in vba_code):
         strptr_pat = r"(StrPtr\s*\(\s*)(\w+)(\s*\))"
         vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
 
     # Break out labels that are not on their own line.
-    #print "HERE: 11"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 11"
+        print vba_code
     if (":" in vba_code):
         label_pat = r"(\n\s*\w+:)([^\n])"
         vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
@@ -1016,8 +1042,9 @@ def fix_difficult_code(vba_code):
         
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
-    #print "HERE: 12"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 12"
+        print vba_code
     vba_code = vba_code.replace("#if", "HASH__if")
     vba_code = vba_code.replace("#If", "HASH__if")
     vba_code = vba_code.replace("#else", "HASH__else")    
@@ -1026,8 +1053,9 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace("#End If", "HASH__endif")
 
     # Same thing with Put and Close of file descriptors.
-    #print "HERE: 13"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 13"
+        print vba_code
     vba_code = re.sub(r"[Aa]s\s+#", "as__HASH", vba_code)
     vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
@@ -1040,8 +1068,9 @@ def fix_difficult_code(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #print "HERE: 14"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 14"
+        print vba_code
     pat = r"(?i)If\s+.{1,100}\s+Then\s*:[^\n]{1,100}\n"
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         for curr_if in re.findall(pat, vba_code):
@@ -1051,8 +1080,9 @@ def fix_difficult_code(vba_code):
     # Replace the ':' in single line if statements so they don't get broken up.
     # If ip < ILen Then i2 = IBuf(ip): ip = ip + 1 Else i2 = Asc("A")
     # If op < OLen Then Out(op) = o1: op = op + 1
-    #print "HERE: 15"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 15"
+        print vba_code
     uni_vba_code = u""
     try:
         uni_vba_code = vba_code.decode("utf-8")
@@ -1070,8 +1100,9 @@ def fix_difficult_code(vba_code):
             single_line_ifs.append((if_name, curr_if))
             
     # Replace ':=' so they don't get modified.
-    #print "HERE: 16"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 16"
+        print vba_code
     vba_code = vba_code.replace(":=", "__COLON_EQUAL__")
         
     # Replace 'Rem fff' style comments with "' fff" comments.
@@ -1079,8 +1110,9 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
 
     # Replace ':' with new lines.
-    #print "HERE: 17"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 17"
+        print vba_code
     vba_code = convert_colons_to_linefeeds(vba_code)
     
     # Characters that change how we modify the code.
@@ -1098,8 +1130,9 @@ def fix_difficult_code(vba_code):
     next_char = ""
     r = ""
     pos = -1
-    #print "HERE: 18"
-    #print vba_code
+    if debug_strip:
+        print "HERE: 18"
+        print vba_code
     while (pos < (len(vba_code) - 1)):
 
         #print "DONE: " + str((0.0 + pos)/len(vba_code)*100)
@@ -1310,12 +1343,12 @@ def fix_difficult_code(vba_code):
     known_funcs = ["Randomize"]
     for func in known_funcs:
         r = r.replace("\n" + func + ":", "\n" + func)
+
     
-    #print "******************"
-    #print r
-    #print "******************"
-    #sys.exit(0)
-    #print "HERE: 19"
+    if debug_strip:
+        print "HERE: 19"
+        print r
+
     return r
 
 def strip_comments(vba_code):
@@ -1347,24 +1380,28 @@ def fix_vba_code(vba_code):
     """
 
     # Strip comment lines from the code.
-    #print "FIX_VBA_CODE: 1"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 1"
+        print vba_code
     vba_code = strip_comments(vba_code)
     
     # Fix dumb typo in some maldocs VBA.
-    #print "FIX_VBA_CODE: 2"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 2"
+        print vba_code
     vba_code = vba_code.replace("End SubPrivate", "End Sub\nPrivate")
 
     # No null bytes in VB to process.
-    #print "FIX_VBA_CODE: 3"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 3"
+        print vba_code
     vba_code = vba_code.replace("\x00", "")
     
     # Make "End Try" in try/catch blocks easier to parse.
-    #print "FIX_VBA_CODE: 4"
     vba_code = re.sub(r"End\s+Try", "##End ##Try", vba_code)
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 4"
+        print vba_code
     
     # Super specific. Some malicious VBScript has a floating '\n}\n'
     # in the code. Remove it if needed.
@@ -1373,8 +1410,9 @@ def fix_vba_code(vba_code):
     
     # We don't handle Line Input constructs for now. Delete them.
     # TODO: Actually handle Line Input consructs.
-    #print "FIX_VBA_CODE: 5"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 5"
+        print vba_code
     linputs = re.findall(r"Line\s+Input\s+#\d+\s*,\s*\w+", vba_code, re.DOTALL)
     if (len(linputs) > 0):
         log.warning("VB Line Input constructs are not currently handled. Stripping them from code...")
@@ -1383,8 +1421,9 @@ def fix_vba_code(vba_code):
     
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
-    #print "FIX_VBA_CODE: 6"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 6"
+        print vba_code
     props = re.findall(r"(?:Public\s+|Private\s+|Friend\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
     if (len(props) > 0):
         log.warning("VB Property constructs are not currently handled. Stripping them from code...")
@@ -1393,8 +1432,9 @@ def fix_vba_code(vba_code):
 
     # We don't handle Implements constructs for now. Delete them.
     # TODO: Figure out if we need to worry about Implements.
-    #print "FIX_VBA_CODE: 7"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 7"
+        print vba_code
     implements = re.findall(r"Implements \w+", vba_code, re.DOTALL)
     if (len(implements) > 0):
         log.warning("VB Implements constructs are not currently handled. Stripping them from code...")
@@ -1403,8 +1443,9 @@ def fix_vba_code(vba_code):
         
     # We don't handle Enum constructs for now. Delete them.
     # TODO: Actually handle Enum consructs.
-    #print "FIX_VBA_CODE: 8"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 8"
+        print vba_code
     enums = re.findall(r"(?:(?:Public|Private)\s+)?Enum\s+.+?End\s+Enum", vba_code, re.DOTALL)
     if (len(enums) > 0):
         log.warning("VB Enum constructs are not currently handled. Stripping them from code...")
@@ -1413,8 +1454,9 @@ def fix_vba_code(vba_code):
 
     # We don't handle ([a1]) constructs for now. Delete them.
     # TODO: Actually handle these things.
-    #print "FIX_VBA_CODE: 9"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 9"
+        print vba_code
     brackets = re.findall(r"\(\[[^\]]+\]\)", vba_code, re.DOTALL)
     if (len(brackets) > 0):
         log.warning("([a1]) style constructs are not currently handled. Rewriting them...")
@@ -1446,8 +1488,9 @@ def fix_vba_code(vba_code):
         vba_code = vba_code.replace(bracket, "(" + bracket[2:-2] + ")")
     
     # Clear out lines broken up on multiple lines.
-    #print "FIX_VBA_CODE: 10"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 10"
+        print vba_code
     vba_code = re.sub(r" _ *\r?\n", "", vba_code)
     vba_code = re.sub(r"&_ *\r?\n", "&", vba_code)
     vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
@@ -1457,8 +1500,9 @@ def fix_vba_code(vba_code):
 
     # Some maldocs have single line member access expressions that end with a '.'.
     # Comment those out.
-    #print "FIX_VBA_CODE: 11"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 11"
+        print vba_code
     dumb_member_exps = re.findall(r"\n(?:\w+\.)+\n", vba_code)
     for dumb_exp in dumb_member_exps:
         log.warning("Commenting out bad line '" + dumb_exp.replace("\n", "") + "'.")
@@ -1466,8 +1510,9 @@ def fix_vba_code(vba_code):
         vba_code = vba_code.replace(dumb_exp, safe_exp)
 
     # How about maldocs with Subs with spaces in their names?
-    #print "FIX_VBA_CODE: 12"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 12"
+        print vba_code
     space_subs = re.findall(r"\n\s*Sub\s*\w+\s+\w+\s*\(", vba_code)
     for space_sub in space_subs:
         start = space_sub.index("Sub") + len("Sub")
@@ -1478,8 +1523,9 @@ def fix_vba_code(vba_code):
         vba_code = vba_code.replace(sub_name, new_name)
     
     # Clear out some garbage characters.
-    #print "FIX_VBA_CODE: 13"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 13"
+        print vba_code
     if (vba_code.count('\x0b') > 20):
         vba_code = vba_code.replace('\x0b', '')
     if (vba_code.count('\x88') > 20):
@@ -1490,31 +1536,37 @@ def fix_vba_code(vba_code):
     # (or impossible), so convert the non-ASCII names to ASCII.
     #
     # Break up lines with multiple statements onto their own lines.
-    #print "FIX_VBA_CODE: 14"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 14"
+        print vba_code
     vba_code = fix_difficult_code(vba_code)
     
     # Fix function calls with a skipped 1st argument.
-    #print "FIX_VBA_CODE: 15.0"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 15.0"
+        print vba_code
     vba_code = fix_skipped_1st_arg1(vba_code)
-    #print "FIX_VBA_CODE: 15.1"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 15.1"
+        print vba_code
     vba_code = fix_skipped_1st_arg2(vba_code)
 
     # Fix lines with missing double quotes.
-    #print "FIX_VBA_CODE: 16"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 16"
+        print vba_code
     vba_code = fix_unbalanced_quotes(vba_code)
 
     # For each const integer defined, replace it inline in the code to reduce lookups
-    #print "FIX_VBA_CODE: 17"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 17"
+        print vba_code
     vba_code = replace_constant_int_inline(vba_code)
 
     # Skip the next part if unnneeded.
-    #print "FIX_VBA_CODE: 18"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 18"
+        print vba_code
     uni_vba_code = None
     try:
         uni_vba_code = vba_code.decode("utf-8")
@@ -1531,8 +1583,9 @@ def fix_vba_code(vba_code):
     
     # Change things like 'If+foo > 12 ..." to "If foo > 12 ...".
     r = ""
-    #print "FIX_VBA_CODE: 19"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 19"
+        print vba_code
     for line in vba_code.split("\n"):
 
         # Fix up assignments like 'cat = dog = frog = 12'.
@@ -1572,8 +1625,9 @@ def fix_vba_code(vba_code):
         r += new_line + "\n"
         
     # Return the updated code.
-    #print "FIX_VBA_CODE: 20"
-    #print vba_code
+    if debug_strip:
+        print "FIX_VBA_CODE: 20"
+        print vba_code
     return r
 
 def replace_constant_int_inline(vba_code):
