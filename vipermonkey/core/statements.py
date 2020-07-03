@@ -710,8 +710,8 @@ class_type_name = defined_type_expression
 as_auto_object = CaselessKeyword('as').suppress() + CaselessKeyword('new').suppress() + expression
 as_clause = as_auto_object | as_type
 array_clause = array_dim('bounds') + Optional(as_clause)
-untyped_variable_dcl = identifier + Optional(array_clause('bounds') | as_clause)
-typed_variable_dcl = typed_name + Optional(array_dim)
+untyped_variable_dcl = Suppress(Optional(CaselessKeyword("WithEvents"))) + identifier + Optional(array_clause('bounds') | as_clause)
+typed_variable_dcl = Suppress(Optional(CaselessKeyword("WithEvents"))) + typed_name + Optional(array_dim)
 # TODO: Set the initial value of the global var in the context.
 variable_dcl = (typed_variable_dcl | untyped_variable_dcl) + Optional('=' + expression('expression'))
 variable_declaration_list = delimitedList(Group(variable_dcl))
