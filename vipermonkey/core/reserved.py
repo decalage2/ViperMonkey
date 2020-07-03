@@ -137,7 +137,7 @@ literal_identifier = boolean_literal_identifier | object_literal_identifier
 # A <reserved-for-implementation-use> is a <reserved-identifier> that currently has no defined
 # meaning to the VBA language but is reserved for use by language implementers.
 reserved_for_implementation_use = caselessKeywordsList((
-    "Attribute", "LINEINPUT", "VB_Base", "VB_Control",
+    "LINEINPUT", "VB_Base", "VB_Control",
     "VB_Creatable", "VB_Customizable", "VB_Description", "VB_Exposed", "VB_Ext_KEY ",
     "VB_GlobalNameSpace", "VB_HelpID", "VB_Invoke_Func", "VB_Invoke_Property ",
     "VB_Invoke_PropertyPut", "VB_Invoke_PropertyPutRefVB_MemberFlags", "VB_Name",
