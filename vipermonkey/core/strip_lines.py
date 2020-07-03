@@ -1766,6 +1766,12 @@ def strip_useless_code(vba_code, local_funcs):
                     log.debug("SKIP: Loop statement. Keep it.")
                 continue
 
+            # Skip While statements.
+            if ("while" in line.lower()):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("SKIP: While statement. Keep it.")
+                continue
+
             # Skip Mid() updates of strings.
             if (line.strip().startswith("Mid")):
                 if (log.getEffectiveLevel() == logging.DEBUG):

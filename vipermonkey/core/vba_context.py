@@ -3619,10 +3619,24 @@ class Context(object):
                     log.debug("Short circuited change handler lookup of " + name)
                 raise KeyError('Object %r not found' % name)
 
+        # First try a case sensitive search. If that fails try case insensitive.
+        r = None
         try:
-            return self._get(name, search_wildcard=search_wildcard, case_insensitive=False, local_only=local_only)
+            r = self._get(name, search_wildcard=search_wildcard, case_insensitive=False, local_only=local_only)
         except KeyError:
-            return self._get(name, search_wildcard=search_wildcard, case_insensitive=True, local_only=local_only)
+            r = self._get(name, search_wildcard=search_wildcard, case_insensitive=True, local_only=local_only)
+
+        # Did we get something useful?
+        if ((r is None) or (r == "NULL")):
+
+            # See if we have a more useful version of this variable stored as an object
+            # field.
+            tmp_name = "." + name
+            if (self.contains(tmp_name)):
+                r = self._get(tmp_name)
+            
+        # Done.
+        return r
             
     def contains(self, name, local=False):
         if (local):
@@ -3803,6 +3817,8 @@ class Context(object):
                 force_global = True
             
         # Set the variable
+
+        # Forced save in global context?
         if (force_global):
             try:
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3810,6 +3826,8 @@ class Context(object):
             except:
                 pass
             self.globals[name] = value
+
+        # Forced save in local context?
         elif ((name in self.locals) or force_local):
             try:
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3817,7 +3835,8 @@ class Context(object):
             except:
                 pass
             self.locals[name] = value
-        # check globals, but avoid to overwrite subs and functions:
+
+        # Check globals, but avoid to overwrite subs and functions:
         elif name in self.globals and not is_procedure(self.globals[name]):
             self.globals[name] = value
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3827,8 +3846,9 @@ class Context(object):
                 self.globals[text_name] = value
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Set global var " + text_name + " = " + str(value))
+
+        # New name, typically store in local scope.
         else:
-            # new name, typically store in local scope.
             if (not self.global_scope):
                 try:
                     if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3845,6 +3865,10 @@ class Context(object):
                     pass
                 if ("." in name):
                     text_name = name + ".text"
+                    self.globals[text_name] = value
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Set global var " + text_name + " = " + str(value))
+                    text_name = name[name.rindex("."):]
                     self.globals[text_name] = value
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Set global var " + text_name + " = " + str(value))
