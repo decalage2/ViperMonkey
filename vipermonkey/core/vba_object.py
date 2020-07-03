@@ -1282,6 +1282,7 @@ def coerce_to_int(obj):
         if ("." in obj):
             try:
                 obj = float(obj)
+                return int(obj)
             except:
                 pass
 
