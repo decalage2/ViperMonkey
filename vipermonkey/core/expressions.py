@@ -2022,13 +2022,18 @@ class Function_Call(VBA_Object):
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
 expr_item = Forward()
+expr_item_strict = Forward()
 # The 'ByVal' or 'ByRef' keyword can be given when the expr_list_item appears as an
 # expression given as a function call parameter. Allowing these keywords for all expressions is
 # not strictly correct (invalid VB could be parsed and treated as valid), but we assume that
 # ViperMonkey is working with valid VB to begin with so this should not be a problem.
 expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression ^ member_access_expression_loose
+expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
+                        NotAny(CaselessKeyword("End")) + \
+                        (expression ^ boolean_expression ^ member_access_expression_loose)
 # NOTE: This helps to speed up parsing and prevent recursion loops.
 expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
+expr_list_item_strict = (expr_item_strict + FollowedBy(',')) | expr_list_item_strict
 
 def quick_parse_int_or_var(text):
     text = str(text).strip()
@@ -2059,6 +2064,11 @@ expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
 #expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 expr_list = (
     expr_list_item
+    + NotAny(':=')
+    + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+)
+expr_list_strict = (
+    expr_list_item_strict
     + NotAny(':=')
     + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
 )
@@ -2175,6 +2185,28 @@ literal_list_expression = Forward()
 literal_range_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
+    + (
+        date_string
+        | file_pointer
+        | float_literal
+        | named_argument
+        | l_expression
+        | (chr_ ^ function_call ^ func_call_array_access)
+        | simple_name_expression
+        | asc
+        | strReverse
+        | literal
+        | placeholder
+        | typeof_expression
+        | addressof_expression
+        | excel_expression
+        | literal_range_expression
+        | literal_list_expression
+    )
+)
+expr_item_strict <<= (
+    Optional(CaselessKeyword("ByVal").suppress())
+    + NotAny(CaselessKeyword("End"))
     + (
         date_string
         | file_pointer

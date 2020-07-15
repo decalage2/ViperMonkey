@@ -3805,15 +3805,20 @@ call_params = (
     # Handle missing 1st call argument.
     ^ (White(" \t") + Optional(Literal(",")) + expr_list('params'))
 )
+call_params_strict = (
+    (Suppress('(') + Optional(expr_list_strict('params')) + Suppress(')'))
+    # Handle missing 1st call argument.
+    ^ (White(" \t") + Optional(Literal(",")) + expr_list_strict('params'))
+)
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (member_access_expression('name') | TODO_identifier_or_object_attrib_loose('name')) + \
+                  (member_access_expression('name'))  + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
                            Optional(NotAny(White()) + '%') + \
                            Optional(NotAny(White()) + '!')) + \
-                           Optional(call_params) + \
+                           Optional(call_params_strict) + \
                            Suppress(Optional("," + CaselessKeyword("0")) + \
                                     Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
 call_statement1 = NotAny(known_keywords_statement_start) + \

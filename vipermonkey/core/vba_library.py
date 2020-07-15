@@ -155,6 +155,23 @@ class GetSpecialFolder(VbaLibraryFunc):
 
     def return_type(self):
         return "STRING"
+
+class GetFolder(VbaLibraryFunc):
+    """
+    GetFolder() function
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "UNKNOWN_FOLDER\\"
+        context.report_action('Get Folder', "GetFolder(" + str(params) + ")", '---', strip_null_bytes=True)
+        return params[0]
+
+    def num_args(self):
+        return 1
+
+    def return_type(self):
+        return "STRING"
     
 class MonthName(VbaLibraryFunc):
     """
@@ -495,6 +512,19 @@ class FileCopy(VbaLibraryFunc):
 
     def num_args(self):
         return 2
+
+class CopyHere(VbaLibraryFunc):
+    """
+    CopyHere() VB function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        context.report_action('Copy File', "CopyHere(" + str(params) + ")", '---', strip_null_bytes=True)
+
+    def num_args(self):
+        return 1
         
 class FileExists(VbaLibraryFunc):
     """
@@ -4333,7 +4363,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory, RunShell):
+               WriteProcessMemory, RunShell, CopyHere, GetFolder):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
