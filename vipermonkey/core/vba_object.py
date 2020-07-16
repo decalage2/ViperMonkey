@@ -839,6 +839,18 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             safe_print("JIT CODE!!")
             safe_print(code_python)
 
+        # Extended ASCII strings are handled differently in VBScript and VBA.
+        # Punt if we are emulating VBA and we have what appears to be extended ASCII
+        # strings. For performance we are not handling the MS VBA extended ASCII in the python
+        # JIT code.
+        if (not context.is_vbscript):
+
+            # Look for non-ASCII strings.
+            non_ascii_pat = r'"[^"]*[\x7f-\xff][^"]*"'
+            if (re.search(ascii_pat, code_python) is not None):
+                log.warning("VBA code contains Microsoft specific extended ASCII strings. Not JIT emulating.")
+                return False
+            
         # Run the Python code.
         if (namespace is None):
             exec(code_python)
