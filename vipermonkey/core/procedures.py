@@ -219,9 +219,9 @@ class Sub(VBA_Object):
                 break
             context.clear_error()
 
+            #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            #if (isinstance(s, Goto_Statement)):
             if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
@@ -576,9 +576,9 @@ class Function(VBA_Object):
                 break
             context.clear_error()
 
+            #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            #if (isinstance(s, Goto_Statement)):
             if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")

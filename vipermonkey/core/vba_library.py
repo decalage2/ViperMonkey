@@ -2220,6 +2220,14 @@ class Round(VbaLibraryFunc):
             log.debug("Round: %r returns %r" % (self, r))
         return r
 
+class Hour(VbaLibraryFunc):
+    """
+    Hour() time function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        return 13
+    
 class Hex(VbaLibraryFunc):
     """
     Hex() math function.
@@ -4363,7 +4371,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory, RunShell, CopyHere, GetFolder):
+               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

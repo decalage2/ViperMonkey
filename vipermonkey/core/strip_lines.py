@@ -264,26 +264,48 @@ def fix_unbalanced_quotes(vba_code):
         # Punt.
         return vba_code
 
-    if (re2.search(u"(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
-        vba_code = re.sub(r"(\w+)\s+=\s+\"\r?\n", r'\1 = ""\n', vba_code)
+    if debug_strip:
+        print "UNBALANCED_QUOTES: 1"
+        print vba_code
+    if (re2.search(u"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
+        print re2.findall(u"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", uni_vba_code)
+        vba_code = re.sub(r"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", r'\n\1 = ""\n', vba_code)
+        if debug_strip:
+            print "UNBALANCED_QUOTES: 2"
+            print vba_code
     if (re2.search(u"(\w+\s+=\s+\")(:[^\"]+)\r?\n", uni_vba_code) is not None):
         vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
+        if debug_strip:
+            print "UNBALANCED_QUOTES: 2"
+            print vba_code
     if (re2.search(u"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", uni_vba_code) is not None):
         vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
-    
+        if debug_strip:
+            print "UNBALANCED_QUOTES: 3"
+            print vba_code
+        
     # Fix ambiguous EOL comment lines like ".foo '' A comment". "''" could be parsed as
     # an argument to .foo or as an EOL comment. Here we change things like ".foo '' A comment"
     # to ".foo ' A comment" so it is not ambiguous (parse as comment).
     vba_code += "\n"
     vba_code = re.sub(r"'('[^'^\"]+\n)", r"\1", vba_code, re.DOTALL)
-
+    if debug_strip:
+        print "UNBALANCED_QUOTES: 4"
+        print vba_code
+    
     # More ambiguous EOL comments. Something like "a = 12 : 'stuff 'more stuff" could have
     # 'stuff ' potentially parsed as a string. Just wipe out the comments in this case
     # (ex. "a = 12 : 'stuff 'more stuff" => "a = 12 :").
     vba_code = re.sub(r"(\n[^'^\n]+)'[^'^\"^\n]+'[^'^\"^\n]+\n", r"\1\n", vba_code, re.DOTALL)
+    if debug_strip:
+        print "UNBALANCED_QUOTES: 5"
+        print vba_code
     
     # Fix Execute statements with no space between the execute and the argument.
     vba_code = re.sub(r"\n\s*([Ee][Xx][Ee][Cc][Uu][Tt][Ee])\"", r'\nExecute "', vba_code)
+    if debug_strip:
+        print "UNBALANCED_QUOTES: 6"
+        print vba_code
     
     # See if we have lines with unbalanced double quotes.
     r = ""
@@ -332,6 +354,9 @@ def fix_unbalanced_quotes(vba_code):
         r += line + "\n"
 
     # Return the balanced code.
+    if debug_strip:
+        print "UNBALANCED_QUOTES: 7"
+        print r
     return r
 
 MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"

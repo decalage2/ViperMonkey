@@ -3372,6 +3372,12 @@ class Context(object):
         for fname in self.open_files.keys():
             self.dump_file(fname, autoclose=autoclose)
 
+    def get_num_open_files(self):
+        """
+        Get the # of currently open files being tracked.
+        """
+        return len(self.open_files)
+            
     def close_file(self, fname):
         """
         Simulate closing a file.

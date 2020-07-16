@@ -4277,7 +4277,13 @@ class File_Open(VBA_Object):
         if self.file_id:
             file_id = str(self.file_id)
             if not file_id.startswith('#'):
-                file_id = '#' + file_id
+
+                # Might be a variable containing the number of the file.
+                try:
+                    file_id = "#" + str(context.get(file_id))
+                except KeyError:
+                    # Punt and hope this si referring to the next open file ID.
+                    file_id = "#" + str(context.get_num_open_files() + 1)
             context.set(file_id, name, force_global=True)
 
         # Save that the file is opened.
