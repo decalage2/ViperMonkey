@@ -3667,11 +3667,13 @@ class Cells(VbaLibraryFunc):
         
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
+            context.increase_general_errors()
             log.warning("Cannot process Cells() call. No Excel file loaded.")
             return "NULL"
         
         # Currently only handles Cells(x, y) calls.
         if (len(params) != 2):
+            context.increase_general_errors()
             log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
             return "NULL"
 
@@ -3683,12 +3685,14 @@ class Cells(VbaLibraryFunc):
             try:
                 col = excel_col_letter_to_index(params[1])
             except:
+                context.increase_general_errors()
                 log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
                 return "NULL"
         row = None
         try:
             row = int(params[0]) - 1
         except:
+            context.increase_general_errors()
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
         
@@ -3701,6 +3705,7 @@ class Cells(VbaLibraryFunc):
             try:
                 sheet = context.loaded_excel.sheet_by_index(sheet_index)
             except:
+                context.increase_general_errors()
                 log.warning("Cannot process Cells() call. No sheets in file.")
                 return "NULL"
 
@@ -3719,6 +3724,7 @@ class Cells(VbaLibraryFunc):
                 continue
 
         # Can't read the cell.
+        context.increase_general_errors()
         log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ").")
         return "NULL"
 
@@ -3834,11 +3840,13 @@ class Range(VbaLibraryFunc):
                 return context.globals["activedocument.content.text"][params[0]:params[1]]
 
             else:
+                context.increase_general_errors()
                 log.warning("Cannot process Range() call. No Excel file loaded.")
                 return "NULL"
         
         # Currently only handles Range(x) calls.
         if (len(params) != 1):
+            context.increase_general_errors()
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
             
@@ -3847,6 +3855,7 @@ class Range(VbaLibraryFunc):
         try:
             sheet = context.loaded_excel.sheet_by_index(0)
         except:
+            context.increase_general_errors()
             log.warning("Cannot process Cells() call. No sheets in file.")
             return "NULL"
 
@@ -3855,6 +3864,7 @@ class Range(VbaLibraryFunc):
             try:
                 return self._read_cell_list(sheet, str(params[0]))
             except Exception as e:
+                context.increase_general_errors()
                 return "NULL"
         
         # Get the cell contents.
@@ -3873,6 +3883,7 @@ class Range(VbaLibraryFunc):
         except Exception as e:
         
             # Failed to read cell.
+            context.increase_general_errors()
             log.warning("Failed to read Range(" + str(params[0]) + "). " + str(e))
             return "NULL"
 
