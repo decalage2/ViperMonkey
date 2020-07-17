@@ -898,19 +898,19 @@ class Let_Statement(VBA_Object):
             
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
-                log.error("Assigning " + str(self.name) + " failed. " + str(the_str_var) + " not str or list.")
+                context.report_general_error("Assigning " + str(self.name) + " failed. " + str(the_str_var) + " not str or list.")
                 return False
             if (type(the_str) != type(rhs)):
-                log.error("Assigning " + str(self.name) + " failed. " + str(type(the_str)) + " != " + str(type(rhs)))
+                context.report_general_error("Assigning " + str(self.name) + " failed. " + str(type(the_str)) + " != " + str(type(rhs)))
                 return False
             if (not isinstance(start, int)):
-                log.error("Assigning " + str(self.name) + " failed. Start is not int (" + str(type(start)) + ").")
+                context.report_general_error("Assigning " + str(self.name) + " failed. Start is not int (" + str(type(start)) + ").")
                 return False
             if (not isinstance(size, int)):
-                log.error("Assigning " + str(self.name) + " failed. Size is not int (" + str(type(size)) + ").")
+                context.report_general_error("Assigning " + str(self.name) + " failed. Size is not int (" + str(type(size)) + ").")
                 return False
             if (((start-1 + size) > len(the_str)) or (start < 1)):
-                log.error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
+                context.report_general_error("Assigning " + str(self.name) + " failed. " + str(start + size) + " out of range.")
                 return False
 
             # Convert to a VB string to handle mixed ASCII/wide char weirdness.
@@ -1009,7 +1009,7 @@ class Let_Statement(VBA_Object):
                 func.eval(context)
                 return
             except KeyError:
-                log.error("WARNING: Cannot find OnSheetActivate handler function %s" % func_name)
+                context.report_general_error("WARNING: Cannot find OnSheetActivate handler function %s" % func_name)
 
         # Handle auto increment/decrement.
         if ((self.op == "+=") or (self.op == "-=")):
@@ -1106,7 +1106,7 @@ class Let_Statement(VBA_Object):
                     else:
                         value = int(value)
                 except:
-                    log.error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
+                    context.report_general_error("Cannot convert '" + str(value) + "' to int. Defaulting to 0.")
                     value = 0
 
             # Update the variable, if there was no error.
@@ -1146,9 +1146,9 @@ class Let_Statement(VBA_Object):
                         if (hasattr(expr, "eval")):
                             num = str(expr.eval(context))
                     except ParseException:
-                        log.error("Cannot parse '" + value + "' to integer.")
+                        context.report_general_error("Cannot parse '" + value + "' to integer.")
                     if (not num.isdigit()):
-                        log.error("Cannot convert '" + value + "' to integer. Setting to 0.")
+                        context.report_general_error("Cannot convert '" + value + "' to integer. Setting to 0.")
                         num = 0
                     else:
                         num = int(num)
@@ -1168,7 +1168,7 @@ class Let_Statement(VBA_Object):
             try:
                 arr_var = context.get(self.name)
             except KeyError:
-                log.error("WARNING: Cannot find array variable %s" % self.name)
+                context.report_general_error("WARNING: Cannot find array variable %s" % self.name)
             if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.
@@ -1211,9 +1211,9 @@ class Let_Statement(VBA_Object):
                         arr_var = arr_var[:index] + chr(value) + arr_var[(index + 1):]
                     except Exception as e:
                         log.error(str(e))
-                        log.error(str(value) + " cannot be converted to ASCII.")
+                        context.report_general_error(str(value) + " cannot be converted to ASCII.")
                 else:
-                    log.error("Unhandled value type " + str(type(value)) + " for array update.")
+                    context.report_general_error("Unhandled value type " + str(type(value)) + " for array update.")
                         
             # Finally save the updated variable in the context, if there was no error.
             if (value != "ERROR"):
@@ -1828,6 +1828,7 @@ class For_Statement(VBA_Object):
             return
 
         # Loop until the loop is broken out of or we hit the last index.
+        context.clear_general_errors()
         while (((step > 0) and (context.get(self.name) <= end)) or
                ((step < 0) and (context.get(self.name) >= end))):
 
@@ -1865,7 +1866,12 @@ class For_Statement(VBA_Object):
                 context.throttle_logging):
                 log.warning("Output is throttled...")
                 context.throttle_logging = False
-            
+
+            # Break long running loops that appear to be generating a lot of errors.
+            if (context.get_general_errors() > (VBA_Object.loop_upper_bound/10000)):
+                log.error("Loop is generating too many errors. Breaking loop.")
+                break
+                
             # Execute the loop body.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop: %s = %r' % (self.name, context.get(self.name)))
@@ -1916,7 +1922,7 @@ class For_Statement(VBA_Object):
                 val = int(val)
                 step = int(step)
             except Exception as e:
-                log.error("Cannot update loop counter. Breaking loop. " + str(e))
+                context.report_general_error("Cannot update loop counter. Breaking loop. " + str(e))
                 break
             new_index = val + step
             context.set(self.name, new_index)
@@ -2626,6 +2632,7 @@ class While_Statement(VBA_Object):
         # Loop until the loop is broken out of or we violate the loop guard.
         num_iters = 0
         num_no_change = 0
+        context.clear_general_errors()
         while (True):
             
             # For performance don't check for loops that don't change the state unless it looks like
@@ -2649,7 +2656,12 @@ class While_Statement(VBA_Object):
                 log.error("Maximum loop iterations exceeded. Breaking loop.")
                 break
             num_iters += 1
-            
+
+            # Break long running loops that appear to be generating a lot of errors.
+            if (context.get_general_errors() > (max_loop_iters/10000)):
+                log.error("Loop is generating too many errors. Breaking loop.")
+                break
+                
             # Test the loop guard to see if we should exit the loop.
             guard_val = eval_arg(self.guard, context)
             if (self.loop_type.lower() == "until"):
@@ -3713,9 +3725,11 @@ class Call_Statement(VBA_Object):
                 (not func_name.endswith("Write")) and
                 (len(tmp_call_params) > 0)):
                 context.report_action('Object.Method Call', tmp_call_params, func_name, strip_null_bytes=True)
+
+        # Emulate the function body.
         try:
 
-            # Emulate the function body.
+            # Get the function.
             s = context.get(func_name)
             if (s is None):
                 raise KeyError("func not found")
@@ -3787,10 +3801,18 @@ class Call_Statement(VBA_Object):
                             
                         # Return the function result. This is "NULL" if we did not run a function.
                         return r
+
                     except KeyError:
 
                         # Return the function result. This is "NULL" if we did not run a function.
+                        context.increase_general_errors()
+                        log.warning('Function %r not found' % func_name)
                         return r
+
+                # Report that we could not find the function.
+                context.increase_general_errors()
+                log.warning('Function %r not found' % func_name)
+                    
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4102,7 +4124,7 @@ class Goto_Statement(VBA_Object):
         if (self.label not in context.tagged_blocks):
 
             # We don't know where to go. Punt.
-            log.error("GOTO target " + str(self.label) + " is unknown.")
+            context.report_general_error("GOTO target " + str(self.label) + " is unknown.")
             return
 
         # We know where to go. Get the code block to execute.
@@ -4472,13 +4494,13 @@ class External_Function(VBA_Object):
 
         # Make sure the file exists.
         if (file_id not in context.open_files):
-            log.error("File " + str(file_id) + " not open. Cannot write.")
+            context.report_general_error("File " + str(file_id) + " not open. Cannot write.")
             return 1
         
         # We can only write single byte values for now.
         data = params[1]
         if (not isinstance(data, int)):
-            log.error("Cannot WriteFile() data that is not int.")
+            context.report_general_error("Cannot WriteFile() data that is not int.")
             return 0
         context.write_file(file_id, chr(data))
         return 0

@@ -306,7 +306,7 @@ def _read_from_excel(arg, context):
             return val
         
         except Exception as e:
-            log.error("Cannot read cell from Excel spreadsheet. " + str(e))
+            context.report_general_error("Cannot read cell from Excel spreadsheet. " + str(e))
 
 def _read_from_object_text(arg, context):
     """

@@ -166,6 +166,9 @@ class Context(object):
 
         # Track the error handler to execute when an error is raised.
         self.error_handler = None
+
+        # Track the numebr of reported general errors.
+        self.num_general_errors = 0
         
         # Track mapping from bogus alias name of DLL imported functions to
         # real names.
@@ -233,6 +236,7 @@ class Context(object):
             self.expand_env_vars = context.expand_env_vars
             self.metadata = context.metadata
             self.external_funcs = context.external_funcs
+            self.num_general_errors = context.num_general_errors
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -3223,7 +3227,34 @@ class Context(object):
         """
 
         self.got_error = True
+        self.increase_general_errors()
         log.error("A VB error has occurred. Reason: " + str(reason))
+
+    def report_general_error(self, reason):
+        """
+        Report and track general ViperMonkey errors. Note that these may not just be
+        VBA errors.
+        """
+        self.num_general_errors += 1
+        log.error(reason)
+
+    def clear_general_errors(self):
+        """
+        Clear the count of general errors.
+        """
+        self.num_general_errors = 0
+
+    def get_general_errors(self):
+        """
+        Get the number of reported general errors.
+        """
+        return self.num_general_errors
+
+    def increase_general_errors(self):
+        """
+        Add one to the number of reported general errors.
+        """
+        self.num_general_errors += 1
         
     def get_true_name(self, name):
         """

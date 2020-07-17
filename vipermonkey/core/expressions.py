@@ -1961,6 +1961,7 @@ class Function_Call(VBA_Object):
                     return (var_val + params[0])
                 
             # Return result.                
+            context.increase_general_errors()
             log.warning('Function %r not found' % self.name)
             return None
 
