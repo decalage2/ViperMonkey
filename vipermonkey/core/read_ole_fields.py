@@ -1443,9 +1443,15 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Fix Page1 values.
     longest_val = ""
+    page_names = set()
+    page_val = ""
     for pair in r:
         name = pair[0]
         val = pair[1]
+        if (name.startswith("Page")):
+            page_names.add(name)
+            if (len(val) > len(page_val)):
+                page_val = val
         if (name != "Page1"):
             continue
         if (len(val) > len(longest_val)):
@@ -1463,7 +1469,13 @@ def get_ole_textbox_values(obj, vba_code):
                 tmp_r.append((name, longest_val))
                 updated_page1 = True
         r = tmp_r
-                
+
+    # Fill in missing PageNN variables.
+    for i in range(1, 5):
+        curr_name = "Page" + str(i)
+        if ((curr_name not in page_names) and (page_val != "")):
+            r.append((curr_name, page_val))
+    
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
