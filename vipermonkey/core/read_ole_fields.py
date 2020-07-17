@@ -916,7 +916,8 @@ def get_ole_textbox_values(obj, vba_code):
     data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
 
     # Normalize Page object naming.
-    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
+    # Page1M3A
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+[a-zA-Z0-9]*)"
     data = re.sub(page_name_pat, r"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
@@ -980,7 +981,7 @@ def get_ole_textbox_values(obj, vba_code):
         chunk = data[index : end]
         strs = re.findall(pat, chunk)
         if debug:
-            print "\n\n-----------------------------"
+            print "\n\n-------------- CHUNK ---------------"
             print chunk
             print str(strs).replace("\\x00", "").replace("\\xff", "")
 
@@ -999,13 +1000,17 @@ def get_ole_textbox_values(obj, vba_code):
         curr_pos = 0
         name_pos = 0
         name = None
-        for field in strs:
+        # Look through the strings in reverse to get the last referenced name.
+        for field in strs[::-1]:
             poss_name = field.replace("\x00", "").replace("\xff", "").strip()
+            # Fix strings like "Page2M3A"
+            page_pat = r"(Page\d+)(?:[A-Za-z]+[A-Za-z0-9]*)?"
+            if (re.search(page_pat, poss_name) is not None):
+                poss_name = re.findall(page_pat, poss_name)[0]
             if ((poss_name in object_names) and (poss_name not in found_names)):
 
                 # Looks like this is one of the objects we are looking for.
                 name = poss_name
-                found_names.add(name)
                 name_pos = curr_pos
                 if debug:
                     print "Found referenced name: " + name
@@ -1036,7 +1041,6 @@ def get_ole_textbox_values(obj, vba_code):
     
                         # We have found the name.
                         name = poss_name
-                        found_names.add(name)
                         name_pos = curr_pos + 1
     
                     # Seems like there is only 1 'Forms.TextBox.1', so we are
@@ -1089,7 +1093,6 @@ def get_ole_textbox_values(obj, vba_code):
 
                                 # We have found the name.
                                 name = poss_name
-                                found_names.add(name)
                                 name_pos = curr_pos + 2
                                 break
 
@@ -1103,7 +1106,6 @@ def get_ole_textbox_values(obj, vba_code):
                                     # CompObj is not an object name.
                                     if (poss_name != "CompObj"):
                                         name = poss_name
-                                        found_names.add(name)
                                         name_pos = curr_pos + 3
                                         break
 
@@ -1118,7 +1120,6 @@ def get_ole_textbox_values(obj, vba_code):
                                             # ObjInfo is not an object name.
                                             if (poss_name != "ObjInfo"):
                                                 name = poss_name
-                                                found_names.add(name)
                                                 name_pos = curr_pos + 4
                                                 break
 
@@ -1131,7 +1132,6 @@ def get_ole_textbox_values(obj, vba_code):
                                                 # ObjInfo is not an object name.
                                                 if (poss_name != "ObjInfo"):
                                                     name = poss_name
-                                                    found_names.add(name)
                                                     name_pos = curr_pos + 5
                                                     break
 
@@ -1139,7 +1139,6 @@ def get_ole_textbox_values(obj, vba_code):
 
                             # We have found the name.
                             name = poss_name
-                            found_names.add(name)
                             break
 
                 # Move to the next field.
@@ -1295,11 +1294,19 @@ def get_ole_textbox_values(obj, vba_code):
             if debug:
                 print "BAD: Binary in Val. Set to ''"
             text = ""
+
+        # Eliminate form references.
+        if ((text.startswith("Forms.")) and (len(text) < 20)):
+            text = ""
             
         # Save the form name and text value.
         if debug:
             print "SET '" + name + "' = '" + text + "'"
         r.append((name, text))
+
+        # Save that we found something for this variable.
+        if (text != ""):
+            found_names.add(name)
 
         # Move to next chunk.
         index = end
