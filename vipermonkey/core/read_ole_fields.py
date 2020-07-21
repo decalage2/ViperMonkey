@@ -170,13 +170,13 @@ def get_customxml_text(data):
 
     # We can only do this with 2007+ files.
     if (not filetype.is_office2007_file(data, True)):
-        return None
+        return []
 
     # Unzip the file contents.
     unzipped_data, fname = unzip_data(data)
     delete_file = (fname is not None)
     if (unzipped_data is None):
-        return None
+        return []
 
     # ActiveDocument.CustomXMLParts(ActiveDocument.CustomXMLParts.Count).SelectNodes("//Items")(1).ChildNodes(2).Text
     
