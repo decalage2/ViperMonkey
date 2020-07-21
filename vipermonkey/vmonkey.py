@@ -1240,6 +1240,7 @@ def _process_file (filename,
             log.info("Reading TextBox and RichEdit object text fields...")
             object_data = read_ole_fields.get_ole_textbox_values(data, vba_code)
             object_data.extend(read_ole_fields.get_msftedit_variables(data))
+            object_data.extend(read_ole_fields.get_customxml_text(data))
             for (var_name, var_val) in object_data:
                 var_name_variants = [var_name,
                                      "ActiveDocument." + var_name,
@@ -1517,7 +1518,7 @@ def _process_file (filename,
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
-            # Save DefaultTargetFrame value. This only works for 200+ files.
+            # Save DefaultTargetFrame value. This only works for 2007+ files.
             def_targ_frame_val = read_ole_fields.get_defaulttargetframe_text(data)
             if (def_targ_frame_val is not None):
                 vm.globals["DefaultTargetFrame"] = def_targ_frame_val

@@ -162,6 +162,57 @@ def get_defaulttargetframe_text(data):
     if (re.search(pat, contents) is None):
         return None
     return re.findall(pat, contents)[0]
+
+def get_customxml_text(data):
+    """
+    Read custom CustomXMLParts text values from an Office 2007+ file.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return None
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return None
+
+    # ActiveDocument.CustomXMLParts(ActiveDocument.CustomXMLParts.Count).SelectNodes("//Items")(1).ChildNodes(2).Text
+    
+    # Process each customXml/itemNN.xml file.
+    r = []
+    for nn in range(1, 6):
+
+        # Does customXml/itemNN.xml exist?
+        zip_subfile = 'customXml/item' + str(nn) + ".xml"
+        if (zip_subfile not in unzipped_data.namelist()):
+            continue
+
+        # Read customXml/itemNN.xml.
+        f1 = unzipped_data.open(zip_subfile)
+        contents = f1.read()
+        f1.close()
+    
+        # <Item1>VALUE HERE</Item1>
+        # Pull out the string value.
+        pat = r"<Item\d+>([^<]+)</Item\d+>"
+        if (re.search(pat, contents) is None):
+            continue
+        txt_val = re.findall(pat, contents)[0]
+
+        # Save it.
+        # This var name may need to be generalized.
+        # customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(1).childnodes('2').text
+        var_name = "customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(" + str(nn) + ").childnodes('2').text"
+        r.append((var_name, txt_val))
+
+    # Delete the temporary Office file.
+    if (delete_file):
+        os.remove(fname)
+
+    # Return the results.
+    return r
     
 def get_msftedit_variables_97(data):
     """
