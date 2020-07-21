@@ -1300,9 +1300,10 @@ def get_ole_textbox_values(obj, vba_code):
             text = ""
             
         # Save the form name and text value.
-        if debug:
-            print "SET '" + name + "' = '" + text + "'"
-        r.append((name, text))
+        if ((text != "") or (not name.startswith("Page"))):
+            if debug:
+                print "SET '" + name + "' = '" + text + "'"
+            r.append((name, text))
 
         # Save that we found something for this variable.
         if (text != ""):
@@ -1364,7 +1365,7 @@ def get_ole_textbox_values(obj, vba_code):
     pos = -1
     last_val = ""
     if debug:
-        print "&&&&&&&&&&&&"
+        print "\nLONG STRS!!"
         print long_strs
     for dat in r:
 
@@ -1445,6 +1446,8 @@ def get_ole_textbox_values(obj, vba_code):
     longest_val = ""
     page_names = set()
     page_val = ""
+
+    # Find the longest string assigned to Page1.
     for pair in r:
         name = pair[0]
         val = pair[1]
@@ -1456,6 +1459,8 @@ def get_ole_textbox_values(obj, vba_code):
             continue
         if (len(val) > len(longest_val)):
             longest_val = val
+
+    # Just have 1 var/val assignment pair assigning Page1 to the longest val.
     if (longest_val != ""):
         tmp_r = []
         updated_page1 = False
@@ -1470,6 +1475,16 @@ def get_ole_textbox_values(obj, vba_code):
                 updated_page1 = True
         r = tmp_r
 
+    # If we have nothing assigned to Page1, just pick the longest string seen
+    # to assign to missing PageNN variables and hope for the best.
+    if debug:
+        print "\nPAGE VAL!!"
+        print page_val
+    if (page_val == ""):
+        for s in long_strs:
+            if (len(s) > len(page_val)):
+                page_val = s
+        
     # Fill in missing PageNN variables.
     for i in range(1, 5):
         curr_name = "Page" + str(i)
