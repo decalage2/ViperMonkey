@@ -1341,6 +1341,7 @@ def get_ole_textbox_values(obj, vba_code):
                 print "BAD: Set Val to '" + text + "'"
 
         # Eliminate text values that look like binary chunks.
+        text = text.replace("\x00", "")
         if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
             if debug:
                 print "BAD: Binary in Val. Set to ''"

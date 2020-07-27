@@ -946,11 +946,18 @@ class MemberAccessExpression(VBA_Object):
         #r = eval_arg(rhs, context)
         return None
 
-    def _handle_0_arg_call(self, context, rhs):
+    def _handle_0_arg_call(self, context, rhs=None):
         """
         Handle calls to 0 argument functions.
         """
 
+        # Get the last item in the member access, if needed.
+        if (rhs is None):
+            if (len(self.rhs1) > 0):
+                rhs = self.rhs1
+            else:
+                rhs = self.rhs[len(self.rhs) - 1]
+        
         # Got possible function name?
         if ((not isinstance(rhs, str)) or (not context.contains(rhs))):
             return None
@@ -1223,13 +1230,6 @@ class MemberAccessExpression(VBA_Object):
                 func_str += str(param)
             func_str += ")"
             memb_str += func_str
-
-        if (log.getEffectiveLevel() == logging.DEBUG):            
-            print "MEMBER EVAL!!"
-            print self.lhs
-            print self.rhs
-            print self.rhs1
-            print memb_str
                         
         # Now try looking up the member access expression with resolved function args as a
         # variable.
@@ -1244,9 +1244,6 @@ class MemberAccessExpression(VBA_Object):
         # Maybe this is a Pages() access?
         if ("Pages(" in memb_str):
             tmp_str = memb_str[memb_str.index("Pages("):]
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                print "SHORT FORM"
-                print tmp_str
             try:
                 r = context.get(tmp_str, search_wildcard=False)
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1257,12 +1254,17 @@ class MemberAccessExpression(VBA_Object):
             
         # Can't find the expression as a variable.
         return None
-    
+
     def eval(self, context, params=None):
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("MemberAccess eval of " + str(self))
 
+        # 0 argument call to local function?
+        r = self._handle_0_arg_call(context)
+        if (r is not None):
+            return r
+            
         # Easy case. Do we have this saved as a variable?
         r = self._read_member_expression_as_var(context)
         if (r is not None):
