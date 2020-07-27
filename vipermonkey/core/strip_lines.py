@@ -268,7 +268,6 @@ def fix_unbalanced_quotes(vba_code):
         print "UNBALANCED_QUOTES: 1"
         print vba_code
     if (re2.search(u"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
-        print re2.findall(u"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", uni_vba_code)
         vba_code = re.sub(r"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", r'\n\1 = ""\n', vba_code)
         if debug_strip:
             print "UNBALANCED_QUOTES: 2"
@@ -651,6 +650,10 @@ def fix_bad_var_names(vba_code):
     Change things like a& = b& + 1 to a = b + 1.
     """
 
+    # TODO: Has problems with things like &a* that appear in strings like "foo&+hh".
+    # Skip this until fixed.
+    return vba_code
+    
     uni_vba_code = None
     try:
         uni_vba_code = vba_code.decode("utf-8")
@@ -908,12 +911,33 @@ def fix_difficult_code(vba_code):
         print vba_code
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = fix_unhandled_array_assigns(vba_code)
+    if debug_strip:
+        print "HERE: 2.1"
+        print vba_code
     vba_code = fix_unhandled_event_statements(vba_code)
+    if debug_strip:
+        print "HERE: 2.2"
+        print vba_code
     vba_code = fix_unhandled_raiseevent_statements(vba_code)
+    if debug_strip:
+        print "HERE: 2.3"
+        print vba_code
     vba_code = fix_unhandled_named_params(vba_code)
+    if debug_strip:
+        print "HERE: 2.4"
+        print vba_code
     vba_code = fix_bad_var_names(vba_code)
+    if debug_strip:
+        print "HERE: 2.5"
+        print vba_code
     vba_code = fix_bad_exponents(vba_code)
+    if debug_strip:
+        print "HERE: 2.6"
+        print vba_code
     vba_code = fix_bad_next_statements(vba_code)
+    if debug_strip:
+        print "HERE: 2.7"
+        print vba_code
     vba_code = fix_varptr_calls(vba_code)
     # Bad double quotes.
     #print "HERE: 2"

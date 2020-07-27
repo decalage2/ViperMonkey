@@ -1174,12 +1174,9 @@ class MemberAccessExpression(VBA_Object):
         r = re.findall(pat, mod_str)
         return r
         
-    def eval(self, context, params=None):
+    def _read_member_expression_as_var(self, context):
 
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("MemberAccess eval of " + str(self))
-
-        # Easy case. Do we have this saved as a variable?
+        # Easiest case. Do we have this saved as a variable?
         try:
             r = context.get(str(self), search_wildcard=False)
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1187,6 +1184,89 @@ class MemberAccessExpression(VBA_Object):
             return r
         except KeyError:
             pass
+
+        # Harder case. Resolve any arguments to function calls in the member access expression
+        # and try looking that up as a variable.
+        expr_list = [self.lhs]
+        if (isinstance(self.rhs, list)):
+            expr_list += self.rhs
+        if (isinstance(self.rhs1, list)):
+            expr_list += self.rhs1
+        memb_str = ""
+        first = True
+        for expr in expr_list:
+
+            # Just add this in as-is if this piece of the member access expression is not
+            # a function call.
+            if (not first):
+                memb_str += "."
+            first = False
+            if (not isinstance(expr, Function_Call)):
+                memb_str += str(expr)
+                continue
+
+            # Evaluate the arguments of the function call to use in the member access string
+            # representation.
+            evaled_params = eval_args(expr.params, context)
+
+            # Add in the func call with the resolved args to the member access string.
+            func_str = str(expr.name) + "("
+            func_first = True
+            for param in evaled_params:
+                if (not func_first):
+                    func_str += ", "
+                func_first = False
+                if (isinstance(param, float)):
+                    param = int(param)
+                if (isinstance(param, int)):
+                    param = "'" + str(param) + "'"
+                func_str += str(param)
+            func_str += ")"
+            memb_str += func_str
+
+        if (log.getEffectiveLevel() == logging.DEBUG):            
+            print "MEMBER EVAL!!"
+            print self.lhs
+            print self.rhs
+            print self.rhs1
+            print memb_str
+                        
+        # Now try looking up the member access expression with resolved function args as a
+        # variable.
+        try:
+            r = context.get(memb_str, search_wildcard=False)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+            return r
+        except KeyError:
+            pass
+
+        # Maybe this is a Pages() access?
+        if ("Pages(" in memb_str):
+            tmp_str = memb_str[memb_str.index("Pages("):]
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                print "SHORT FORM"
+                print tmp_str
+            try:
+                r = context.get(tmp_str, search_wildcard=False)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+                return r
+            except KeyError:
+                pass
+            
+        # Can't find the expression as a variable.
+        return None
+    
+    def eval(self, context, params=None):
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("MemberAccess eval of " + str(self))
+
+        # Easy case. Do we have this saved as a variable?
+        r = self._read_member_expression_as_var(context)
+        if (r is not None):
+            return r
 
         # TODO: Need to actually have some sort of object model. For now
         # just treat this as a variable access.
@@ -1211,6 +1291,7 @@ class MemberAccessExpression(VBA_Object):
             except KeyError:
                 pass
 
+        # Handle reading the caption of a Pages() object accessed by index.
         call_retval = self._handle_indexed_pages_access(context)
         if (call_retval is not None):
             return call_retval
