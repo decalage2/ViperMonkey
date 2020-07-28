@@ -36,11 +36,16 @@ https://github.com/decalage2/ViperMonkey
 import re
 
 import logging
-from logger import log
 
 # for logging
-from core.logger import log
-from core.logger import CappedFileHandler
+try:
+    from core.logger import log
+except ImportError:
+    from logger import log
+try:
+    from core.logger import CappedFileHandler
+except ImportError:
+    from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
 
