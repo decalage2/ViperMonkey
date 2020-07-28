@@ -365,7 +365,7 @@ def _read_chunk(anchor, pat, data):
         return re.findall(pat, data, re.DOTALL)
     return None
 
-def get_ole_textbox_values2(data, debug, vba_code):
+def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a really NASTY hack.
@@ -472,6 +472,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
             (val.startswith("_DELETED_NAME_"))):
             continue
 
+        # No stream names.
+        if (val in stream_names):
+            continue
+        
         # Save modified string.
         tmp_vals.append(val)
 
@@ -588,6 +592,10 @@ def get_ole_textbox_values2(data, debug, vba_code):
         if (val in seen):
             continue
         seen.add(val)
+
+        # No stream names.
+        if (val in stream_names):
+            continue
         
         # Save modified string.
         tmp_vals.append(val)
@@ -695,7 +703,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print r
     return r
 
-def get_ole_textbox_values1(data, debug):
+def get_ole_textbox_values1(data, debug, stream_names):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a really NASTY hack.
@@ -740,6 +748,9 @@ def get_ole_textbox_values1(data, debug):
 
         # Skip fonts.
         if (val.startswith("Taho")):
+            continue
+        # Skip stream names.
+        if (val in stream_names):
             continue
         tmp_vals.append(val)
     vals = tmp_vals
@@ -889,6 +900,41 @@ def clean_names(names):
             r.add(poss_name)
     return r
 
+def _get_stream_names(vba_code):
+    """
+    Pull the names of OLE streams from olevba output.
+    """
+    stream_pat = r'Attribute VB_Name = "([\w_]+)"'
+    return re.findall(stream_pat, vba_code)    
+
+def _find_name_in_data(object_names, found_names, strs, debug):
+    """
+    Look for a VBA name in the string vals of a chunk of data.
+    """
+
+    # Look through the strings in reverse to get the last referenced name.
+    curr_pos = 0
+    name_pos = 0
+    name = None
+    page_pat = r"(Page\d+)(?:[A-Za-z]+[A-Za-z0-9]*)?"
+    for field in strs[::-1]:
+        poss_name = field.replace("\x00", "").replace("\xff", "").strip()
+        # Fix strings like "Page2M3A"
+        if (re.search(page_pat, poss_name) is not None):
+            poss_name = re.findall(page_pat, poss_name)[0]
+        # Found unhandled name?
+        if ((poss_name in object_names) and (poss_name not in found_names)):
+
+            # Looks like this is one of the objects we are looking for.
+            name = poss_name
+            name_pos = curr_pos
+            if debug:
+                print "Found referenced name: " + name
+            break
+        curr_pos += 1
+
+    return (len(strs) - curr_pos - 1, len(strs) - name_pos - 1, name)
+
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -922,16 +968,21 @@ def get_ole_textbox_values(obj, vba_code):
     if debug:
         print "Extracting OLE/ActiveX TextBox strings..."
 
+    # Pull out the stream names so we don't treat those as data values.
+    stream_names = _get_stream_names(vba_code)
+    if debug:
+        print "\nStream Names: " + str(stream_names) + "\n"
+        
     # Clear out some troublesome byte sequences.
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
     data = data.replace("o" + "\x00" * 40, "\x00" * 40)
     data = re.sub("Tahoma\w{0,5}", "\x00", data)
     
     # First try alternate method of pulling data. These will be merged in later.
-    v1_vals = get_ole_textbox_values1(data, debug)
+    v1_vals = get_ole_textbox_values1(data, debug, stream_names)
 
     # And try another alternate method of pulling data. These will be merged in later.
-    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code)
+    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code, stream_names)
 
     if debug:
         print "\nget_ole_textbox_values()\n"
@@ -943,11 +994,13 @@ def get_ole_textbox_values(obj, vba_code):
     
     # Are we refering to Page objects by index?
     page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
+    page_names = set()
     if (re.search(page_pat, vba_code) is not None):
 
         # Add some Page objects to look for.
         for i in range(1, 10):
             object_names.add("Page" + str(i))
+            page_names.add("Page" + str(i))
 
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
@@ -1030,6 +1083,8 @@ def get_ole_textbox_values(obj, vba_code):
 
         # Pull out the current form data chunk.
         chunk = data[index : end]
+
+        # Pull strings from the chunk.
         strs = re.findall(pat, chunk)
         if debug:
             print "\n\n-------------- CHUNK ---------------"
@@ -1045,28 +1100,15 @@ def get_ole_textbox_values(obj, vba_code):
                 (not field.startswith("Microsoft "))):
                 longest_str = field
         long_strs.append(longest_str)
-            
-        # Easy case first. Does this look like it might be 1 of the objects
-        # referenced in the VBA code?
-        curr_pos = 0
-        name_pos = 0
-        name = None
-        # Look through the strings in reverse to get the last referenced name.
-        for field in strs[::-1]:
-            poss_name = field.replace("\x00", "").replace("\xff", "").strip()
-            # Fix strings like "Page2M3A"
-            page_pat = r"(Page\d+)(?:[A-Za-z]+[A-Za-z0-9]*)?"
-            if (re.search(page_pat, poss_name) is not None):
-                poss_name = re.findall(page_pat, poss_name)[0]
-            if ((poss_name in object_names) and (poss_name not in found_names)):
 
-                # Looks like this is one of the objects we are looking for.
-                name = poss_name
-                name_pos = curr_pos
-                if debug:
-                    print "Found referenced name: " + name
-                break
-            curr_pos += 1
+        # We want to handle Page objects first.
+        curr_pos, name_pos, name = _find_name_in_data(page_names, found_names, strs, debug)
+
+        # No Page names?
+        if (name is None):
+
+            # Does this look like it might be 1 of the objects referenced in the VBA code?
+            curr_pos, name_pos, name = _find_name_in_data(object_names, found_names, strs, debug)
 
         # Did we find the name?
         if (name is None):
@@ -1314,11 +1356,12 @@ def get_ole_textbox_values(obj, vba_code):
             if (debug):
                 print "SIZE: "
                 print size
-            if (len(text) > size):
+            if ((len(text) > size) and (not name.startswith("Page"))):
                 text = text[:size]
 
         # Eliminate text values that look like variable names.
-        if (strip_name(text) in object_names):
+        if ((strip_name(text) in object_names) or
+            (strip_name(text) in stream_names)):
             if debug:
                 print "BAD: Val is name '" + text + "'"
 
