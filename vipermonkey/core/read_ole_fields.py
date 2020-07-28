@@ -1753,6 +1753,28 @@ def _get_shapes_text_values_direct_2007(data):
     r = [(name, val)]
     return r
 
+def _get_shapes_text_values_direct_2007_1(data):
+    """
+    Read in shapes name/value mappings directly from word/document.xml from an 
+    unzipped Word 2007+ file another way.
+    """
+
+    # TODO: This only handles a single Shapes object.
+    
+    # Get the shape text from a docPr element.
+    # <wp:docPr id="1" name="Picture 1" descr="h95tb8tccpa0:02/d7/15n10ld2xdb68838ao28o10.95c9co0cmf9/3ex4cea1m93cdal39/a5i7db13abd.b8p93h64pdd?53la5=66u61n2dt831e7462.0acfea1dbc7"/>
+    pat1 = r'<wp\:docPr +id="(\d+)" +name="[^"]*" +descr="([^"]*)"'
+    shape_info = re.findall(pat1, data)
+    if (len(shape_info) == 0):
+        return []
+    shape_info = shape_info[0]
+    name = shape_info[0]
+    val = shape_info[1].replace("&amp", "&")
+        
+    # Return the Shape name and text value.
+    r = [(name, val)]
+    return r
+
 def _parse_activex_chunk(data):
     """
     Parse out ActiveX text values from 2007+ activeXN.bin file contents.
@@ -1941,6 +1963,10 @@ def _get_shapes_text_values_2007(fname):
     r = _get_shapes_text_values_direct_2007(data)
     if (len(r) > 0):
         return r
+    r = _get_shapes_text_values_direct_2007_1(data)
+    if (len(r) > 0):
+        #print r
+        return r
     
     # Pull out any shape name to internal ID mappings.
     # <w:control r:id="rId10" w:name="ziPOVJ5" w:shapeid="_x0000_i1028"/>
@@ -1964,12 +1990,14 @@ def _get_shapes_text_values_2007(fname):
     r = []
     f1 = unzipped_data.open(zip_subfile)
     data = f1.read()
+    #print data
     f1.close()
 
     # Pull out any shape name to activeX object ID mappings.
     # <Relationship Id="rId10" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/control" Target="activeX/activeX3.xml"/>
     pat = r'<Relationship[^>]+Id="(\w+)"[^>]+Target="([^"]+)"'
     var_info = re.findall(pat, data)
+    #print var_info
     id_activex_map = {}
     for shape in var_info:
         if (shape[0] not in id_name_map):
