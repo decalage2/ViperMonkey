@@ -933,7 +933,22 @@ def _find_name_in_data(object_names, found_names, strs, debug):
             break
         curr_pos += 1
 
-    return (len(strs) - curr_pos - 1, len(strs) - name_pos - 1, name)
+    # If we found a name, see if it shows up multiple times and pick the one
+    # with the largest value.
+    curr_pos = len(strs) - curr_pos - 1 # handle reversed list.
+    name_pos = len(strs) - name_pos - 1 # handle reversed list.
+    if (name is not None):
+        curr_pos = -1
+        max_val = ""
+        for field in strs:
+            curr_pos += 1
+            if ((field == name) and
+                ((curr_pos + 1) < len(strs)) and
+                (len(strs[curr_pos + 1]) > len(max_val))):
+                max_val = strs[curr_pos + 1]
+                name_pos = curr_pos
+        
+    return (curr_pos, name_pos, name)
 
 def get_ole_textbox_values(obj, vba_code):
     """
@@ -1021,7 +1036,7 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Normalize Page object naming.
     # Page1M3A
-    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+[a-zA-Z0-9]*)"
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
     data = re.sub(page_name_pat, r"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
