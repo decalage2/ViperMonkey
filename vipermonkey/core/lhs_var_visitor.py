@@ -57,7 +57,7 @@ class lhs_var_visitor(visitor):
             if (isinstance(item.name, str)):
                 self.variables.add(item.name)
             elif (isinstance(item.name, pyparsing.ParseResults) and
-                  (item.name[0].lower() == "mid")):
+                  (item.name[0].lower().replace("$", "").replace("#", "").replace("%", "") == "mid")):
                 self.variables.add(str(item.name[1]))
 
         return True

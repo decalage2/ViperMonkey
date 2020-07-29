@@ -254,7 +254,7 @@ class Parameter(VBA_Object):
         if (len(self.mechanism) == 0):
             self.mechanism = 'ByRef'
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % self)
+            log.debug('parsed %r as Parameter' % self)
 
     def __repr__(self):
         r = ""
@@ -2253,6 +2253,7 @@ class While_Statement(VBA_Object):
         
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
+        loop_start += indent_str + "max_errors = " + str(VBA_Object.loop_upper_bound/10000) + "\n"
         loop_start += indent_str + "while " + until_pre + to_python(self.guard, context) + until_post + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
@@ -2277,7 +2278,8 @@ class While_Statement(VBA_Object):
         loop_body += indent_str + " " * 8 + "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + str(VBA_Object.loop_upper_bound) + "):\n"
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + str(VBA_Object.loop_upper_bound) + ") or " + \
+                     "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
             

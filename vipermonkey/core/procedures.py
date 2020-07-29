@@ -484,7 +484,7 @@ class Function(VBA_Object):
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
             call_info[param.name] = init_val
-
+            
         # Array accesses of calls to functions that return an array are parsed as
         # function calls with the array indices given as function call arguments. Note
         # that this parsing problem only occurs for 0 argument functions (foo(12)).
@@ -522,7 +522,11 @@ class Function(VBA_Object):
             # Add the parameter value to the local function context.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
-            call_info[param_name] = param_value
+            # Handle params with default values.
+            if ((param_name not in call_info) or
+                (call_info[param_name] == '') or
+                (param_value != "NULL")):
+                call_info[param_name] = param_value
 
             # Is this a ByRef parameter?
             if (defined_param.mechanism == "ByRef"):
@@ -543,7 +547,7 @@ class Function(VBA_Object):
 
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
-
+        
         # Assign all const variables first.
         do_const_assignments(self.statements, context)
         
@@ -576,7 +580,6 @@ class Function(VBA_Object):
                 break
             context.clear_error()
 
-            #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed):
