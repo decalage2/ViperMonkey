@@ -251,6 +251,26 @@ def collapse_macro_if_blocks(vba_code):
     # Return the stripped VBA.
     return r
     
+def hide_weird_calls(vba_code):
+    """
+    Hide weird calls like 'foo.bar (1,2), cat, dog'. These are hard to parse.
+    """
+
+    # coalitionist.advisementblackandwhite.amygdules (albarellos.bunyip(24796, krummhorns_Daphnia)), "corrupters blender chair disbandments Rheinland", instantaneousnessrestoratives
+    # Do we have these weird calls?
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    #pat = u"\r?\n\s*\w+(?:\.\w+)*\s*\(.{1,30}\)\s*"
+    pat = u"\r?\n\s*\w+(?:\.\w+)*\s*\(.{1,30}\)"
+    print re2.findall(pat, uni_vba_code)
+    if (re2.search(pat, uni_vba_code) is None):
+        return vba_code
+    return vba_code
+    
 def fix_unbalanced_quotes(vba_code):
     """
     Fix lines with missing double quotes.
@@ -1606,6 +1626,12 @@ def fix_vba_code(vba_code):
         print vba_code
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # Hide some weird hard to parse calls.
+    #if debug_strip:
+    #    print "FIX_VBA_CODE: 16.1"
+    #    print vba_code
+    #vba_code = hide_weird_calls(vba_code)
+    
     # For each const integer defined, replace it inline in the code to reduce lookups
     if debug_strip:
         print "FIX_VBA_CODE: 17"

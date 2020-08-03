@@ -2787,6 +2787,9 @@ class Day(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        # This is usually used for gating, so have it match anything.
+        return "**MATCH ANY**"
+    """
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         txt = params[0]
@@ -2806,6 +2809,7 @@ class Day(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Day: %r returns %r" % (self, r))
         return r
+    """
 
 class Space(VbaLibraryFunc):
     """
