@@ -3596,6 +3596,8 @@ class Context(object):
                 
         # Try to get the item using the current with context.
         if (name.startswith(".")):
+
+            # Add in the current With context.
             tmp_name = str(self.with_prefix) + str(name)
             try:
                 return self.__get(tmp_name, case_insensitive=case_insensitive, local_only=local_only)
@@ -3818,7 +3820,8 @@ class Context(object):
             force_local=False,
             force_global=False,
             no_conversion=False,
-            case_insensitive=True):
+            case_insensitive=True,
+            no_overwrite=False):
 
         # Does the name make sense?
         orig_name = name
@@ -3835,7 +3838,11 @@ class Context(object):
         # More name fixing.
         if (".." in name):
             self.set(name.replace("..", "."), value, var_type, do_with_prefix, force_local, force_global, no_conversion=no_conversion)
-        
+
+        # Skip this if this variable is already set and we are not allowing value overwrites.
+        if (no_overwrite and self.contains(name)):
+            return
+            
         # Save IOCs from intermediate values if needed.
         self.save_intermediate_iocs(value)
         

@@ -1557,6 +1557,12 @@ def get_ole_textbox_values(obj, vba_code):
     page_names = set()
     page_val = ""
 
+    # Find the longest string value overall.
+    longest_str = ""
+    for s in long_strs:
+        if (len(s) > len(longest_str)):
+            longest_str = s
+    
     # Find the longest string assigned to Page1.
     for pair in r:
         name = pair[0]
@@ -1577,6 +1583,10 @@ def get_ole_textbox_values(obj, vba_code):
         for pair in r:
             name = pair[0]
             val = pair[1]
+            # Super specific hack.
+            if (name == "Page2"):
+                tmp_r.append((name, longest_str))
+                continue
             if (name != "Page1"):
                 tmp_r.append(pair)
                 continue
@@ -1591,9 +1601,7 @@ def get_ole_textbox_values(obj, vba_code):
         print "\nPAGE VAL!!"
         print page_val
     if (page_val == ""):
-        for s in long_strs:
-            if (len(s) > len(page_val)):
-                page_val = s
+        page_val = longest_str
         
     # Fill in missing PageNN variables.
     for i in range(1, 5):

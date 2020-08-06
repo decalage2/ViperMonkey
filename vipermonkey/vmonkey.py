@@ -1245,10 +1245,12 @@ def _process_file (filename,
                 var_name_variants = [var_name,
                                      "ActiveDocument." + var_name,
                                      var_name + ".Text",
+                                     var_name + ".Value",
                                      var_name + ".Caption",
                                      var_name + ".ControlTipText",
                                      "me." + var_name,
                                      "me." + var_name + ".Text",
+                                     "me." + var_name + ".Value",
                                      "me." + var_name + ".Caption",
                                      "me." + var_name + ".ControlTipText"]
                 for tmp_var_name in var_name_variants:
@@ -1352,25 +1354,25 @@ def _process_file (filename,
                             continue
                         vm.globals[name] = val
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name, val))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name, val))
                         vm.globals[name + ".tag"] = tag
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", tag))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".Tag", tag))
                         vm.globals[name + ".caption"] = caption
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Caption", caption))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".Caption", caption))
                         vm.globals[name + ".controltiptext"] = control_tip_text
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".ControlTipText", control_tip_text))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".ControlTipText", control_tip_text))
                         vm.globals[name + ".text"] = val
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".Text", val))
                         vm.globals[name + ".value"] = val
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".Value", val))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".Value", val))
                         vm.globals[name + ".groupname"] = group_name
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name + ".GroupName", group_name))
+                            log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name + ".GroupName", group_name))
 
                         # Save control in a list so it can be accessed by index.
                         if ("." in name):
@@ -1401,22 +1403,22 @@ def _process_file (filename,
                             short_name = short_name[short_name.rindex(".") + 1:]
                             vm.globals[short_name] = val
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name, val))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name, val))
                             vm.globals[short_name + ".tag"] = tag
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Tag", tag))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name + ".Tag", tag))
                             vm.globals[short_name + ".caption"] = caption
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Caption", caption))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name + ".Caption", caption))
                             vm.globals[short_name + ".controltiptext"] = control_tip_text
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".ControlTipText", control_tip_text))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name + ".ControlTipText", control_tip_text))
                             vm.globals[short_name + ".text"] = val
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".Text", val))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name + ".Text", val))
                             vm.globals[short_name + ".groupname"] = group_name
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (short_name + ".GroupName", group_name))
+                                log.debug("1. Added VBA form variable %r = %r to globals." % (short_name + ".GroupName", group_name))
                 
             except Exception as e:
 
@@ -1459,13 +1461,14 @@ def _process_file (filename,
                         count += 1
                         vm.globals[global_var_name.lower()] = form_string
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added VBA form variable %r = %r to globals." % (global_var_name.lower(), form_string))
+                            log.debug("2. Added VBA form variable %r = %r to globals." % (global_var_name.lower(), form_string))
                         tmp_name = global_var_name_orig.lower() + ".*"
-                        if ((tmp_name not in vm.globals.keys()) or
-                            (len(form_string) > len(vm.globals[tmp_name]))):
+                        #if ((tmp_name not in vm.globals.keys()) or
+                        #    (len(form_string) > len(vm.globals[tmp_name]))):
+                        if (tmp_name not in vm.globals.keys()):
                             vm.globals[tmp_name] = form_string
                             if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                             # Probably not right, but needed to handle some maldocs that break olefile.
                             # 16555c7d12dfa6d1d001927c80e24659d683a29cb3cad243c9813536c2f8925e
                             # 99f4991450003a2bb92aaf5d1af187ec34d57085d8af7061c032e2455f0b3cd3
@@ -1476,23 +1479,23 @@ def _process_file (filename,
                                 tmp_name = specific_name
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
-                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                    log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                                 tmp_name = specific_name + ".caption"
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
-                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                    log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                                 tmp_name = global_var_name_orig.lower() + "." + specific_name + ".caption"
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
-                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                    log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                                 tmp_name = specific_name + ".text"
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
-                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                    log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                                 tmp_name = global_var_name_orig.lower() + "." + specific_name + ".text"
                                 vm.globals[tmp_name] = form_string
                                 if (log.getEffectiveLevel() == logging.DEBUG):
-                                    log.debug("Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
+                                    log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
                 except Exception as e:
                     log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 

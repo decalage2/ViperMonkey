@@ -1190,7 +1190,21 @@ class MemberAccessExpression(VBA_Object):
                 log.debug("Member access " + str(self) + " stored as variable = " + str(r))
             return r
         except KeyError:
-            pass
+
+            # Are we reading some text from an embedded object?
+            tmp_str = str(self).lower()
+            if (tmp_str.endswith(".caption") or
+                tmp_str.endswith(".text") or
+                tmp_str.endswith(".controltiptext")):
+
+                # See if a wildcard search can find it.
+                try:
+                    r = context.get(str(self), search_wildcard=True)
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Member access " + str(self) + " stored as wildcarded variable = " + str(r))
+                    return r
+                except KeyError:
+                    pass
 
         # Harder case. Resolve any arguments to function calls in the member access expression
         # and try looking that up as a variable.
@@ -2505,6 +2519,9 @@ class BoolExprItem(VBA_Object):
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):            
+            print "DOING EQUALS!!"
+            print "LHS: '" + str(lhs) + "'"
+            print "RHS: '" + str(rhs) + "'"
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
@@ -2618,7 +2635,7 @@ class BoolExpr(VBA_Object):
             try:
                 rhs = eval_arg(self.rhs, context)
             except:
-                log.error("Boolxpr: Cannot eval " + self.__repr__() + ".")
+                log.error("BoolExpr: Cannot eval " + self.__repr__() + ".")
                 return ''
 
             # Bitwise operation?

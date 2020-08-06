@@ -202,6 +202,7 @@ class ViperMonkey(StubbedEngine):
         self.callback_suffixes = ['_Activate',
                                   '_BeforeNavigate2',
                                   '_BeforeScriptExecute',
+                                  '_Calculate',
                                   '_Change',
                                   '_DocumentComplete',
                                   '_DownloadBegin',
