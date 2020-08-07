@@ -110,42 +110,7 @@ class String(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
-        self.value = tokens[0]
-
-        # TODO: Why are starting " being stripped?
-        #if (self.value.startswith('"') and self.value.endswith('"')):
-        #    self.value = self.value[1:-1]
-
-        # Replace Python control characters.
-        """
-        self.value = self.value.\
-                     replace("\0","\\0").\
-                     replace("\1","\\1").\
-                     replace("\2","\\2").\
-                     replace("\3","\\3").\
-                     replace("\4","\\4").\
-                     replace("\5","\\5").\
-                     replace("\6","\\6").\
-                     replace("\7","\\7").\
-                     replace("\n", "\\n").\
-                     replace("\t", "\\t").\
-                     replace("\f", "\\f").\
-                     replace("\a", "\\a").\
-                     replace("\b", "\\b").\
-                     replace("\r", "\\r").\
-                     replace("\v", "\\v").\
-                     replace("\0","\\0").\
-                     replace("\n", "\\n").\
-                     replace("\t", "\\t").\
-                     replace("\f", "\\f").\
-                     replace("\b", "\\b").\
-                     replace("\r", "\\r").\
-                     replace("\v", "\\v")
-        """
-        # Some maldocs use the above characters in strings to decode. Replacing
-        # them breaks decoding, so they are commented out until something else
-        # breaks.
-        
+        self.value = tokens[0]        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed "%r" as String' % self)
 
@@ -194,10 +159,10 @@ class String(VBA_Object):
 
 # NOTE: QuotedString creates a regex, so speed should not be an issue.
 #quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
-quoted_string = QuotedString('"', escQuote='""')('value')
+quoted_string = QuotedString('"', escQuote='""', convertWhitespaceEscapes=False)('value')
 quoted_string.setParseAction(String)
 
-quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False)
+quoted_string_keep_quotes = QuotedString('"', escQuote='""', unquoteResults=False, convertWhitespaceEscapes=False)
 quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 
 # --- DATE TOKENS ------------------------------------------------------------

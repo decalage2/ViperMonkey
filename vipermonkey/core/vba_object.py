@@ -605,6 +605,10 @@ def _get_var_vals(item, context):
             # Try to get the current value.
             val = context.get(var)
 
+            # Fix the Python escape character in the value if it is a string.
+            if (isinstance(val, str)):
+                pass
+            
             # Do not set function arguments to new values.
             # Do not set loop index variables to new values.
             if ((val == "__FUNC_ARG__") or

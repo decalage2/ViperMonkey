@@ -2519,9 +2519,6 @@ class BoolExprItem(VBA_Object):
         # Evaluate the expression.
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):            
-            print "DOING EQUALS!!"
-            print "LHS: '" + str(lhs) + "'"
-            print "RHS: '" + str(rhs) + "'"
             return lhs == rhs
         elif (self.op == ">"):
             return lhs > rhs
