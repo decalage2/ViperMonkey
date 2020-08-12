@@ -3670,7 +3670,7 @@ class Context(object):
 
             # See if we have a more useful version of this variable stored as an object
             # field.
-            tmp_name = "." + name
+            tmp_name = "." + str(name)
             if (self.contains(tmp_name)):
                 r = self._get(tmp_name)
             

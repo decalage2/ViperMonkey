@@ -75,60 +75,19 @@ class Chr(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         arg_str = to_python(self.arg, context)
-        return "chr(coerce_to_int(" + arg_str + ") if isinstance(" + arg_str + ", str)" + " else int(round(" + arg_str + ")))"
+        r = "core.vba_library.run_function(\"_Chr\", vm_context, [" + arg_str + "])"
+        return r
 
     def return_type(self):
         return "STRING"
     
     def eval(self, context, params=None):
-        # NOTE: in the specification, the parameter is expected to be an integer
-        # But in reality, VBA accepts a string containing the representation
-        # of an integer in decimal, hexadecimal or octal form.
-        # It also ignores leading and trailing spaces.
-        # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
-        # => need to parse the string as integer
-        # It also looks like floating point numbers are allowed.
-        # First, eval the argument:
-        param = eval_arg(self.arg, context)
 
-        # Get the ordinal value.
-        if isinstance(param, basestring):
-            try:
-                param = integer.parseString(param.strip())[0]
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''            
-        elif isinstance(param, float):
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Chr: converting float %r to integer' % param)
-            try:
-                param = int(round(param))
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''
-        elif isinstance(param, int):
-            pass
-        else:
-            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
-            return ''
-            
-        # Figure out whether to create a unicode or ascii character.
-        converter = chr
-        if (param < 0):
-            param = param * -1
-        if (param > 255):
-            converter = unichr
-            
-        # Do the conversion.
-        try:
-            r = converter(param)
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Chr(" + str(param) + ") = " + r)
-            return r
-        except Exception as e:
-            log.error(str(e))
-            log.error("%r is not a valid chr() value. Returning ''." % param)
-            return ""
+        # This is implemented in the common vba_library._Chr handler class.
+        import vba_library
+        chr_handler = vba_library._Chr()
+        param = eval_arg(self.arg, context)
+        return chr_handler.eval(context, [param])
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)

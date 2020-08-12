@@ -742,8 +742,7 @@ class Concatenation(VBA_Object):
             if (not first):
                 r += " + "
             first = False
-            # Could be str or int, don't convert anf hope for the best.
-            r += "str(" + to_python(arg, context, params=params) + ")"
+            r += "coerce_to_str(" + to_python(arg, context, params=params) + ")"
         return "(" + r + ")"
 
 # --- MOD OPERATOR -----------------------------------------------------------

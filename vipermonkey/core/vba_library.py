@@ -56,6 +56,7 @@ from from_unicode_str import *
 import decimal
 from curses_ascii import isprint
 import sys
+import traceback
 
 from pyparsing import *
 
@@ -398,6 +399,70 @@ class RmDir(VbaLibraryFunc):
         if ((params is not None) and (len(params) > 0)):
             context.report_action('Delete Directory', params[0], 'RmDir', strip_null_bytes=True)
         return ""  # vbOK
+
+    def num_args(self):
+        return 1
+
+    def return_type(self):
+        return "STRING"
+
+class _Chr(VbaLibraryFunc):
+    """
+    Implementation of Chr() and ChrW() used in Python JIT code.
+    This is also used under the covers by lib_functions.Chr.eval().
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # NOTE: in the specification, the parameter is expected to be an integer
+        # But in reality, VBA accepts a string containing the representation
+        # of an integer in decimal, hexadecimal or octal form.
+        # It also ignores leading and trailing spaces.
+        # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
+        # => need to parse the string as integer
+        # It also looks like floating point numbers are allowed.
+        param = params[0]
+        
+        # Get the ordinal value.
+        if isinstance(param, basestring):
+            try:
+                param = integer.parseString(param.strip())[0]
+            except:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ''            
+        elif isinstance(param, float):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Chr: converting float %r to integer' % param)
+            try:
+                param = int(round(param))
+            except:
+                log.error("%r is not a valid chr() value. Returning ''." % param)
+                return ''
+        elif isinstance(param, int):
+            pass
+        else:
+            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
+            return ''
+            
+        # Figure out whether to create a unicode or ascii character.
+        converter = chr
+        if (param < 0):
+            param = param * -1
+        if (param > 255):
+            converter = unichr
+            
+        # Do the conversion.
+        try:
+            r = converter(param)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Chr(" + str(param) + ") = " + r)
+            return r
+        except Exception as e:
+            log.error(str(e))
+            log.error("%r is not a valid chr() value. Returning ''." % param)
+            return ""
 
     def num_args(self):
         return 1
@@ -4386,7 +4451,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour):
+               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
