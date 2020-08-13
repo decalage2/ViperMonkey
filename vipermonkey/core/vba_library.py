@@ -62,6 +62,7 @@ from pyparsing import *
 
 import vb_str
 from vba_context import VBA_LIBRARY
+from vba_object import coerce_to_int
 from vba_object import str_convert
 from vba_object import int_convert
 from vba_object import eval_arg
@@ -423,29 +424,13 @@ class _Chr(VbaLibraryFunc):
         # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
         # => need to parse the string as integer
         # It also looks like floating point numbers are allowed.
-        param = params[0]
-        
-        # Get the ordinal value.
-        if isinstance(param, basestring):
-            try:
-                param = integer.parseString(param.strip())[0]
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''            
-        elif isinstance(param, float):
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Chr: converting float %r to integer' % param)
-            try:
-                param = int(round(param))
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''
-        elif isinstance(param, int):
-            pass
-        else:
-            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
+        param = None
+        try:
+            param = coerce_to_int(params[0])
+        except:
+            log.error("%r is not a valid chr() value. Returning ''." % params[0])
             return ''
-            
+        
         # Figure out whether to create a unicode or ascii character.
         converter = chr
         if (param < 0):
