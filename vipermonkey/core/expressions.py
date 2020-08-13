@@ -60,6 +60,7 @@ import procedures
 from vba_object import eval_arg
 from vba_object import to_python
 from vba_object import coerce_to_int
+from vba_object import coerce_to_str
 from vba_object import strip_nonvb_chars
 from vba_object import int_convert
 from vba_object import VbaLibraryFunc
@@ -1241,7 +1242,7 @@ class MemberAccessExpression(VBA_Object):
                     param = int(param)
                 if (isinstance(param, int)):
                     param = "'" + str(param) + "'"
-                func_str += str(param)
+                func_str += coerce_to_str(param)
             func_str += ")"
             memb_str += func_str
                         

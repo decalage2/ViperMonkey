@@ -139,6 +139,10 @@ class Asc(VBA_Object):
         # Don't modify the "**MATCH ANY**" special value.
         if (str(c).strip() == "**MATCH ANY**"):
             return c
+
+        # Looks like Asc(NULL) is NULL?
+        if (c == "NULL"):
+            return 0
         
         # Calling Asc() on int?
         if (isinstance(c, int)):

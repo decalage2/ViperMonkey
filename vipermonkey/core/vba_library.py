@@ -790,7 +790,7 @@ class Mid(VbaLibraryFunc):
 
         # What to do when start<=0 is not specified:
         if (start <= 0):
-            start = 1
+            return "NULL"
 
         # If length not specified, return up to the end of the string:
         if (len(params) == 2):
@@ -1395,6 +1395,8 @@ class AscW(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
         c = params[0]
+        if (c == "NULL"):
+            return 0
         if (isinstance(c, int)):
             r = c
         else:
@@ -1733,8 +1735,10 @@ class Int(VbaLibraryFunc):
                 r = int(decimal.Decimal(val))
             else:
                 r = int_convert(val)
-            if ((r > 2147483647) or (r < -2147483647)):
-                r = "ERROR"
+            # -32,768 to 32,767
+            if ((r > 32767) or (r < -32768)):
+                # Overflow. Assume On Error Resume Next.
+                r = "NULL"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Int: return %r" % r)
             return r
@@ -2356,6 +2360,9 @@ class CLng(VbaLibraryFunc):
                 elif (len(tmp) == 1):
                     tmp = ord(tmp)
             r = int(tmp)
+            if ((r > 2147483647) or (r < -2147483647)):
+                # Overflow. Assume On Error Resume Next.
+                r = "NULL"
         except:
             pass 
         if (log.getEffectiveLevel() == logging.DEBUG):
