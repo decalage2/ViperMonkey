@@ -1929,6 +1929,8 @@ class SaveAs(VbaLibraryFunc):
         except:
             return 0
 
+        # Save the current doc to a file.
+
         # Handle saving as text.
         # wdFormatText = 2
         if (fmt != 2):
@@ -1958,7 +1960,10 @@ class SaveAs(VbaLibraryFunc):
 
         # Done.
         return 1
-            
+
+class SaveAs2(SaveAs):
+    pass
+    
 class LoadXML(VbaLibraryFunc):
     """
     LoadXML() MSXML2.DOMDocument.3.0 method.
@@ -4443,7 +4448,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr):
+               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
