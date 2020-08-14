@@ -818,7 +818,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     # that Execute() dynamic VB.
     code_vba = str(loop).replace("\n", "\\n")[:20]
     log.info("Starting JIT emulation of '" + code_vba + "...' ...")
-    if (("Execute(" in str(loop)) or ("ExecuteGlobal(" in str(loop))):
+    if (("Execute(" in str(loop)) or
+        ("ExecuteGlobal(" in str(loop)) or
+        ("Eval(" in str(loop))):
         log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
         return False
     

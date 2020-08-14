@@ -1933,7 +1933,7 @@ class Function_Call(VBA_Object):
             if (f is not None):
                 if (isinstance(f, procedures.Function) or
                     isinstance(f, procedures.Sub) or
-                    isinstance(f, VbaLibraryFunc)):
+                    ("vba_library." in str(type(f)))):
                     try:
 
                         # Call function.
