@@ -792,6 +792,10 @@ def get_ole_textbox_values1(data, debug, stream_names):
     if (len(names) > 0):
         names = names[:-1]
     if (len(names) == 0):
+        if ("Document" not in chunk_orig):
+            if debug:
+                print "\nNO NAMES, NO Document IN CHUNK"
+            return []
         start = chunk_orig.index("Document")
         chunk = chunk_orig[start + len("Document"):]
         names = re.findall(ascii_pat, chunk)
