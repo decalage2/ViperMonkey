@@ -124,6 +124,65 @@ def unzip_data(data):
     # Return the unzipped data and temp file name.
     return (unzipped_data, fname)
 
+def get_drawing_titles(data):
+    """
+    Read custom Drawing element title values from an Office 2007+ file.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        print "OUT: 1"
+        return []
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        print "OUT: 2"
+        return []
+
+    # Pull out word/document.xml, if it is there.
+    zip_subfile = 'word/document.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        if (delete_file):
+            os.remove(fname)
+        print "OUT: 3"
+        return []
+
+    # Read word/document.xml.
+    f1 = unzipped_data.open(zip_subfile)
+    contents = f1.read()
+    f1.close()
+
+    # Delete the temporary Office file.
+    if (delete_file):
+        os.remove(fname)
+    
+    # <wp:docPr id="1" name="the name" title="the title text"/>
+    # Find all the drawing titles.
+    pat = r"<wp\:docPr id=\"(\d+)\" name=\"([^\"]*)\" title=\"([^\"]*)\""
+    if (re.search(pat, contents) is None):
+        print "OUT: 4"
+        return []
+    drawings = re.findall(pat, contents)
+
+    # Return the text as Shapes(NN) variables.
+    r = []
+    for drawing_info in drawings:
+        drawing_id = drawing_info[0]
+        drawing_name = drawing_info[1]
+        drawing_text = drawing_info[2]
+        drawing_text = drawing_text.replace("&amp;", "&")\
+                                   .replace("&gt;", ">")\
+                                   .replace("&lt;", "<")\
+                                   .replace("&apos;", "'")\
+                                   .replace("&quot;", '"')
+        var_name = "Shapes('" + drawing_id + "')"
+        r.append((var_name, drawing_text))
+
+    # Done.
+    return r
+
 def get_defaulttargetframe_text(data):
     """
     Read custom DefaultTargetFrame value from an Office 2007+ file.
