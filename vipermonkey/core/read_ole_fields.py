@@ -131,14 +131,12 @@ def get_drawing_titles(data):
 
     # We can only do this with 2007+ files.
     if (not filetype.is_office2007_file(data, True)):
-        print "OUT: 1"
         return []
 
     # Unzip the file contents.
     unzipped_data, fname = unzip_data(data)
     delete_file = (fname is not None)
     if (unzipped_data is None):
-        print "OUT: 2"
         return []
 
     # Pull out word/document.xml, if it is there.
@@ -146,7 +144,6 @@ def get_drawing_titles(data):
     if (zip_subfile not in unzipped_data.namelist()):
         if (delete_file):
             os.remove(fname)
-        print "OUT: 3"
         return []
 
     # Read word/document.xml.
@@ -162,7 +159,6 @@ def get_drawing_titles(data):
     # Find all the drawing titles.
     pat = r"<wp\:docPr id=\"(\d+)\" name=\"([^\"]*)\" title=\"([^\"]*)\""
     if (re.search(pat, contents) is None):
-        print "OUT: 4"
         return []
     drawings = re.findall(pat, contents)
 
