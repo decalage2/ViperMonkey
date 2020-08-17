@@ -1241,17 +1241,20 @@ def _process_file (filename,
             object_data = read_ole_fields.get_ole_textbox_values(data, vba_code)
             object_data.extend(read_ole_fields.get_msftedit_variables(data))
             object_data.extend(read_ole_fields.get_customxml_text(data))
+            object_data.extend(read_ole_fields.get_drawing_titles(data))
             for (var_name, var_val) in object_data:
                 var_name_variants = [var_name,
                                      "ActiveDocument." + var_name,
                                      var_name + ".Tag",
                                      var_name + ".Text",
+                                     var_name + ".Title",
                                      var_name + ".Value",
                                      var_name + ".Caption",
                                      var_name + ".ControlTipText",
                                      "me." + var_name,
                                      "me." + var_name + ".Tag",
                                      "me." + var_name + ".Text",
+                                     "me." + var_name + ".Title",
                                      "me." + var_name + ".Value",
                                      "me." + var_name + ".Caption",
                                      "me." + var_name + ".ControlTipText"]
