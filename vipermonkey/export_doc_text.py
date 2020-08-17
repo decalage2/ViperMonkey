@@ -33,7 +33,9 @@ def is_word_file(file):
     @return (bool) True if the file is a Word file, False if not.
     """
     typ = subprocess.check_output(["file", file])
-    return ((b"Microsoft Office Word" in typ) or (b"Word 2007+" in typ))
+    return ((b"Microsoft Office Word" in typ) or
+            (b"Word 2007+" in typ) or
+            (b"Microsoft OOXML" in typ))
 
 ###################################################################################################
 def wait_for_uno_api():
