@@ -497,6 +497,10 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
             pos += 1
             if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
 
+                # Skip values that are not valid.
+                if (vals[pos + 1].startswith("ControlTipText")):
+                    continue
+                
                 # Save the current name/value pair.
                 if debug:
                     print (name, vals[pos + 1])
@@ -584,7 +588,8 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
         # Skip fonts and other things.
         if ((val.startswith("Taho")) or
             (val.startswith("PROJECT")) or
-            (val.startswith("_DELETED_NAME_"))):
+            (val.startswith("_DELETED_NAME_")) or
+            ("Normal.ThisDocument" in val)):
             continue
 
         # Skip duplicates.
@@ -953,6 +958,164 @@ def _find_name_in_data(object_names, found_names, strs, debug):
         
     return (curr_pos, name_pos, name)
 
+def _find_repeated_substrings(s, chunk_size, min_str_size):
+    """
+    Find all of the repeated substrings in a given string that are longer
+    than a certain length. This assumes that repeated substrings of interest
+    show up in a prefix of a given size.
+    """
+    
+    # If there is a repeated string it will show up in the 1st NN characters
+    # of the string.
+    if (chunk_size > len(s)):
+        return set()
+    chunk = s[:chunk_size]
+
+    # Start looking for repeats of substrings of length 2 in the chunk.
+    pos = -1
+    window_size = 2
+    r = set()
+    while ((pos + window_size) < len(chunk)):
+
+        # Is this 2 character chunk repeated?
+        pos += 1
+        curr_str = chunk[pos:pos + window_size]
+        if (s.count(curr_str) > 1):
+
+            # Start adding 1 character at at time to the substring until
+            # we find no more repeats. This should give us the longest
+            # repeated substring with the current prefix.
+            tmp_window_size = 3
+            old_curr_str = None
+            while ((s.count(curr_str) > 1) and
+                   ((pos + tmp_window_size) < len(chunk))):
+                old_curr_str = curr_str
+                curr_str = chunk[pos:pos + tmp_window_size]
+                tmp_window_size += 1
+
+            # Found an acceptable repeated substring?
+            if ((old_curr_str is not None) and
+                (len(old_curr_str.strip()) >= min_str_size)):
+                r.add(old_curr_str)
+
+    # Done
+    return r
+
+def _find_most_repeated_substring(strs):
+    """
+    Find the most common repeated substring in a given list of strings.
+    """
+    
+    # Find all the repeated substrings in all the given strings.
+    all_substs = set()
+    for s in strs:
+        all_substs = all_substs.union(_find_repeated_substrings(s, 30, 4))
+
+    # Found any repeated substrings?
+    if (len(all_substs) == 0):
+        return None
+        
+    # Find the substring that is repeated the most.
+    max_repeats = -1
+    max_subst = None
+    for curr_subst in all_substs:
+        curr_repeats = 0
+        for s in strs:
+            curr_repeats += s.count(curr_subst)
+        if (curr_repeats > max_repeats):
+            max_repeats = curr_repeats
+            max_subst = curr_subst
+
+    # Return the most repeated substring.
+    return max_subst
+
+def _find_str_with_most_repeats(strs):
+    """
+    Find the string in the given list of strings that contains the most
+    instances of some repeated substring.
+    """
+    
+    # Find the substring that is repeated most overall. This substring
+    # could show up in multiple strings.
+    max_subst = _find_most_repeated_substring(strs)
+    if (max_subst is None):
+        return None
+    
+    # Now find which given string has the most instances of the reported
+    # substring.
+    max_count = -1
+    max_str = None
+    for s in strs:
+        curr_count = s.count(max_subst)
+        if (curr_count > max_count):
+            max_count = curr_count
+            max_str = s
+
+    # Done.
+    return (max_str, max_subst)
+
+def get_ole_text_method_1(vba_code, data):
+
+    # Strip some red herring strings from the data.
+    data = data.replace("\x02$", "").replace("\x01@", "")
+    
+    # Pull out the strings from the data.
+    ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
+    vals = re.findall(ascii_pat, data)
+    tmp_vals = []
+    for val in vals:
+
+        # No wide char strings.
+        val = val.replace("\x00", "")
+        
+        # Eliminate cruft.
+        for cruft_pat in cruft_pats:
+            val = re.sub(cruft_pat, "", val)
+            
+        # Skip strings that were pure cruft.
+        if (len(val) == 0):
+            continue
+            
+        # Skip fonts and other things.
+        if ((val.startswith("Taho")) or
+            (val.startswith("PROJECT")) or
+            (val.startswith("_DELETED_NAME_"))):
+            continue
+
+        # Save modified string.
+        tmp_vals.append(val)
+
+    # Find the string with the most repeated substrings.
+    max_substs, repeated_subst = _find_str_with_most_repeats(tmp_vals)
+    #print max_substs
+    #print repeated_subst
+    #sys.exit(0)
+    
+    # Is this big enough to be interesting?
+    if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 30)):
+        return None
+
+    # Get the names of ActiveX/OLE items accessed in the VBA.
+    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
+    object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
+    
+    # Are we refering to Page objects by index?
+    page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
+    if (re.search(page_pat, vba_code) is not None):
+
+        # Add some Page objects to look for.
+        for i in range(1, 10):
+            object_names.add("Page" + str(i))
+
+    # Eliminate any obviously bad names.
+    object_names = clean_names(object_names)
+    
+    # Just assign every item accessed in the VBA to this value and hope for the best.
+    r = []
+    for object in object_names:
+        r.append((object, max_substs))
+    return r
+    
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -985,7 +1148,7 @@ def get_ole_textbox_values(obj, vba_code):
     debug = False
     if debug:
         print "\nExtracting OLE/ActiveX TextBox strings..."
-
+        
     # Pull out the stream names so we don't treat those as data values.
     stream_names = _get_stream_names(vba_code)
     if debug:
@@ -995,8 +1158,13 @@ def get_ole_textbox_values(obj, vba_code):
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
     data = data.replace("o" + "\x00" * 40, "\x00" * 40)
     data = re.sub("Tahoma\w{0,5}", "\x00", data)
+
+    # Try a method specific to a certain maldoc campaign first.
+    r = get_ole_text_method_1(vba_code, data)
+    if (r is not None):
+        return r
     
-    # First try alternate method of pulling data. These will be merged in later.
+    # And try alternate method of pulling data. These will be merged in later.
     v1_vals = get_ole_textbox_values1(data, debug, stream_names)
 
     # And try another alternate method of pulling data. These will be merged in later.
@@ -1611,7 +1779,15 @@ def get_ole_textbox_values(obj, vba_code):
         curr_name = "Page" + str(i)
         if ((curr_name not in page_names) and (page_val != "")):
             r.append((curr_name, page_val))
-    
+
+    # Fill in other missing variables referred to in the VBA.
+    handled_names = set()
+    for mapping in r:
+        handled_names.add(mapping[0])
+    for curr_name in object_names:
+        if ((curr_name not in handled_names) and (longest_str != "")):
+            r.append((curr_name, longest_str))
+            
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
