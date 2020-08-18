@@ -2762,6 +2762,63 @@ class Do_Statement(VBA_Object):
         r += "Loop " + str(self.loop_type) + " " + str(self.guard)
         return r
 
+    def to_python(self, context, params=None, indent=0):
+        """
+        Convert this loop to Python code.
+        """
+
+        # Boilerplate used by the Python.
+        boilerplate = _boilerplate_to_python(indent)
+        indent_str = " " * indent
+
+        # Set up doing this for loop in Python.
+        loop_start = indent_str + "exit_all_loops = False\n"
+        loop_start += indent_str + "max_errors = " + str(VBA_Object.loop_upper_bound/10000) + "\n"
+        loop_start += indent_str + "while (True):\n"
+        loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
+        loop_start += indent_str + " " * 8 + "break\n"
+        loop_start = indent_str + "# Start emulated loop.\n" + loop_start
+
+        # Set up initialization of variables used in the loop.
+        loop_init, prog_var = _loop_vars_to_python(self, context, indent)
+            
+        # Define the local VBA functions called by the loop.
+        func_defns = _called_funcs_to_python(self, context, indent)
+            
+        # Save the updated variable values.
+        save_vals = _updated_vars_to_python(self, context, indent)
+        
+        # Set up the loop body.
+        loop_str = str(self).replace('"', '\\"').replace("\\n", " :: ")
+        if (len(loop_str) > 100):
+            loop_str = loop_str[:100] + " ..."
+        loop_body = ""
+        # Report progress.
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " % 100) == 0:\n"
+        loop_body += indent_str + " " * 8 + "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of Do While loop '" + loop_str + "'\")\n"
+        loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
+        # No infinite loops.
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + str(VBA_Object.loop_upper_bound) + ") or " + \
+                     "(vm_context.get_general_errors() > max_errors):\n"
+        loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
+        loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
+
+        # Simulate the do-while loop by checking the not of the guard and exiting if needed at
+        # the end of the loop body.
+        loop_body += indent_str + " " * 4 + "if (not (" + to_python(self.guard, context) + ")):\n"
+        loop_body += indent_str + " " * 8 + "break\n"
+        
+        # Full python code for the loop.
+        python_code = boilerplate + "\n" + \
+                      func_defns + "\n" + \
+                      loop_init + "\n" + \
+                      loop_start + "\n" + \
+                      loop_body + "\n" + \
+                      save_vals + "\n"
+
+        # Done.
+        return python_code
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -2777,10 +2834,6 @@ class Do_Statement(VBA_Object):
                 log.debug("DO loop: empty body. Skipping.")
             return
         
-        # Track that the current loop is running.
-        context.loop_stack.append(True)
-        context.loop_object_stack.append(self)
-
         # Assign all const variables first.
         do_const_assignments(self.body, context)
         
@@ -2791,6 +2844,14 @@ class Do_Statement(VBA_Object):
             log.info("Limiting # of iterations of a .readyState loop.")
             max_loop_iters = 5
 
+        # See if we can convert the loop to Python and directly emulate it.
+        if (_eval_python(self, context, params=params)):
+            return
+
+        # Track that the current loop is running.
+        context.loop_stack.append(True)
+        context.loop_object_stack.append(self)
+        
         # Get the initial values of all the variables that appear in the loop guard.
         old_guard_vals = _get_guard_variables(self, context)
             
