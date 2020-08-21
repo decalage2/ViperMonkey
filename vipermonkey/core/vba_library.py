@@ -417,6 +417,11 @@ class _Chr(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
 
+        # Proper float conversion for Chr().
+        param = params[0]
+        if (isinstance(param, float)):
+            param = int(round(param))
+        
         # NOTE: in the specification, the parameter is expected to be an integer
         # But in reality, VBA accepts a string containing the representation
         # of an integer in decimal, hexadecimal or octal form.
@@ -424,9 +429,8 @@ class _Chr(VbaLibraryFunc):
         # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
         # => need to parse the string as integer
         # It also looks like floating point numbers are allowed.
-        param = None
         try:
-            param = coerce_to_int(params[0])
+            param = coerce_to_int(param)
         except:
             log.error("%r is not a valid chr() value. Returning ''." % params[0])
             return ''
