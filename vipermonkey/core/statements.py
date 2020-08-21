@@ -949,7 +949,23 @@ class Let_Statement(VBA_Object):
         except:
             pass
         return r
-            
+
+    def _handle_lhs_call(self, context):
+
+        # See if the LHS is actually a valid function call.
+        if (self.index is None):
+            return None
+        func_name = str(self.name)
+        if ("." in func_name):
+            func_name = func_name[func_name.rindex(".") + 1:]
+        func_call_str = func_name + "(" + str(self.index).replace("'", "") + ")"
+        try:
+            func_call = function_call.parseString(func_call_str, parseAll=True)[0]
+            return func_call.eval(context)
+        except ParseException:
+            pass
+        return None
+    
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
@@ -1169,6 +1185,11 @@ class Let_Statement(VBA_Object):
                 arr_var = context.get(self.name)
             except KeyError:
                 context.report_general_error("WARNING: Cannot find array variable %s" % self.name)
+
+                # Maybe this is a goofy function call?
+                call_r = self._handle_lhs_call(context)
+                if (call_r is not None):
+                    return
             if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.
