@@ -738,7 +738,7 @@ def fix_unhandled_named_params(vba_code):
                 if (line.strip().lower().startswith("with ")):
 
                     # Replace the with line with a bogus line and hope for the best.
-                    new_line = "with UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
+                    new_line = "\nwith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
 
                 # Comment out entire line.
                 else:
@@ -872,13 +872,15 @@ def convert_colons_to_linefeeds(vba_code):
             # Pull out the text to change.
             change_chunk = vba_code[pos:marker_pos1+1]
             change_chunk = change_chunk.replace(":", "\n")
-
+            
             # Find the chunk of text to leave alone.
             marker_pos2 = len(vba_code)
             if (use_end_marker in vba_code[marker_pos1+1:]):
                 marker_pos2 = vba_code[marker_pos1+1:].index(use_end_marker) + marker_pos1 + 2
+            if (use_start_marker == use_end_marker):
+                marker_pos2 -= 1
             leave_chunk = vba_code[marker_pos1+1:marker_pos2]
-                
+            
             # Save the modified chunk and the unmodified chunk.
             r += change_chunk + leave_chunk
             pos = marker_pos2
