@@ -2036,6 +2036,8 @@ class Join(VbaLibraryFunc):
         sep = " "
         if (len(params) > 1):
             sep = str(params[1])
+        if (sep == "NULL"):
+            sep = ""
         r = ""
         if (isinstance(strings, list)):
             for s in strings:

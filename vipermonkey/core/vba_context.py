@@ -3462,9 +3462,9 @@ class Context(object):
                 log.warning('File {} not closed. Closing file.'.format(fname))
                 self.close_file(fname)
                 
+        # Hash the data to be saved.
         raw_data = self.closed_files[fname]
         file_hash = sha256(raw_data).hexdigest()
-        self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
 
         # TODO: Set a flag to control whether to dump file contents.
 
@@ -3475,7 +3475,7 @@ class Context(object):
         # Dump the file.
         try:
             # Get a unique name for the file.
-            fname = re.sub(r"[^ -~]", "__", fname)
+            fname = re.sub(r"[^ -~\r\n]", "__", fname)
             if ("/" in fname):
                 fname = fname[fname.rindex("/") + 1:]
             if ("\\" in fname):
@@ -3483,6 +3483,14 @@ class Context(object):
             fname = fname.replace("\x00", "").replace("..", "")
             if (fname.startswith(".")):
                 fname = "_dot_" + fname[1:]
+
+            # Handle really huge file names.
+            if (len(fname) > 50):
+                fname = "REALLY_LONG_NAME_" + str(file_hash) + ".dat"
+                log.warning("Filename of dropped file is too long, replacing with " + fname)
+
+            # Make the name truely unique.
+            self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
             count = 0
