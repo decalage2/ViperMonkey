@@ -1132,6 +1132,7 @@ def get_ole_text_method_1(vba_code, data):
            replace("0\x00\xe5", "").\
            replace("\xfc", "").\
            replace("\x19 ", "").\
+           replace("_epx" + chr(223), "").\
            replace("\x00\x00", "\x00")
     if debug1:
         print data
