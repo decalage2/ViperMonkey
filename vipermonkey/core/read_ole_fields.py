@@ -1103,7 +1103,7 @@ def _find_str_with_most_repeats(strs):
     # could show up in multiple strings.
     max_subst = _find_most_repeated_substring(strs)
     if (max_subst is None):
-        return None
+        return (None, None)
     
     # Now find which given string has the most instances of the reported
     # substring.
@@ -1120,15 +1120,22 @@ def _find_str_with_most_repeats(strs):
 
 def get_ole_text_method_1(vba_code, data):
 
+    # Debug this thing.
+    debug1 = False
+    #debug1 = True
+    
     # Strip some red herring strings from the data.
+    if debug1:
+        print "\n\nSTART get_ole_text_method_1 !!!!"
     data = data.replace("\x02$", "").\
            replace("\x01@", "").\
            replace("0\x00\xe5", "").\
            replace("\xfc", "").\
            replace("\x19 ", "").\
            replace("\x00\x00", "\x00")
-    #print data
-    #print "\n\n\n"
+    if debug1:
+        print data
+        print "\n\n\n"
 
     # Pull out the strings from the data.
     ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
@@ -1137,7 +1144,7 @@ def get_ole_text_method_1(vba_code, data):
               r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
               r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
               r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
-              r' {1,10}ClientTop {1,30}= {1,30}\d{1,20}'
+              r' {1,10}ClientTop {1,30}= {1,30}\d{1}'
     vals = re.findall(ascii_pat, data)
     tmp_vals = []
     for val in vals:
@@ -1162,22 +1169,27 @@ def get_ole_text_method_1(vba_code, data):
 
         # Save modified string.
         tmp_vals.append(val)
-        #print "+++++++++++++++"
-        #print val
+        if debug1:
+            print "+++++++++++++++"
+            print val
 
     # Find the string with the most repeated substrings.
     max_substs, repeated_subst = _find_str_with_most_repeats(tmp_vals)
-    #print "\n"
-    #print "*************"
-    #print max_substs
-    #print "\n"
-    #print "*************"
-    #print repeated_subst
+    if (max_substs is None):
+        return None
+    if debug1:
+        print "\n"
+        print "*************"
+        print max_substs
+        print "\n"
+        print "*************"
+        print repeated_subst
     
     # Is this big enough to be interesting?
-    #print len(max_substs)
-    #print max_substs.count(repeated_subst)
-    #print "'" + repeated_subst + "'"
+    if debug1:
+        print len(max_substs)
+        print max_substs.count(repeated_subst)
+        print "'" + repeated_subst + "'"
     if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
         return None
 
@@ -1185,19 +1197,54 @@ def get_ole_text_method_1(vba_code, data):
     # percentage of their string.
     aggregate_str = ""
     for val in tmp_vals:
-        val = val.replace("\x00", "").strip()
+
+        # Ignore empty strings.
+        val = val.replace("\x00", "")
         if (len(val) == 0):
             continue
+
+        # Is a large percentage of the current string the repeated substring?
         pct = (val.count(repeated_subst) * len(repeated_subst)) / float(len(val)) * 100
         if (pct > 50):
-            aggregate_str += val.strip()
-        #print "-------"
-        #print val.strip()
-        #print pct
+
+            # Yes it is. Add it to the payload.
+
+            # The repeated substring may be split between the new substring and
+            # the previous string. Make sure the strings are properly glued in this
+            # case with the substring.
+
+            # Find the portion of the repeated string in the 1st half of the string.
+            first_half_rep = None
+            second_half_rep = None
+            for i in range(1, len(repeated_subst)):
+                curr_first_half = repeated_subst[:i]
+                if aggregate_str.endswith(curr_first_half):
+                    first_half_rep = curr_first_half
+                    second_half_rep = repeated_subst[i:]
+                    break
+
+            # There could be extra characters in front of the 2nd half of the string.
+            if (first_half_rep is not None):
+
+                # Figure out characters to skip in the 2nd half.
+                start_pos = 0
+                while (start_pos < len(val)):
+                    if (val[start_pos:].startswith(second_half_rep)):
+                        break
+                    start_pos += 1
+                val = val[start_pos:]
+
+            # Add in another payload piece.
+            aggregate_str += val
+        if debug1:
+            print "-------"
+            print val.strip()
+            print pct
     if (len(aggregate_str) == 0):
         aggregate_str = max_substs
-    #print aggregate_str
-    #sys.exit(0)
+    if debug1:
+        print aggregate_str
+        sys.exit(0)
         
     # Get the names of ActiveX/OLE items accessed in the VBA.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
