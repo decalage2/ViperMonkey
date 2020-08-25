@@ -1145,7 +1145,7 @@ def get_ole_text_method_1(vba_code, data):
               r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
               r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
               r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
-              r' {1,10}ClientTop {1,30}= {1,30}\d{1}'
+              r' {1,10}ClientTop {1,30}= {1,30}\d{3}'
     vals = re.findall(ascii_pat, data)
     tmp_vals = []
     for val in vals:
