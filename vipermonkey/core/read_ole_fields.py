@@ -1140,12 +1140,6 @@ def get_ole_text_method_1(vba_code, data):
 
     # Pull out the strings from the data.
     ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
-    obj_pat = r'VERSION \d\.\d{1,5}\r\n' + \
-              r'Begin \{\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\} \w{2,20} \r\n' + \
-              r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
-              r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
-              r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
-              r' {1,10}ClientTop {1,30}= {1,30}\d{3}'
     vals = re.findall(ascii_pat, data)
     tmp_vals = []
     for val in vals:
@@ -1154,7 +1148,6 @@ def get_ole_text_method_1(vba_code, data):
         val = val.replace("\x00", "")
         
         # Eliminate cruft.
-        val = re.sub(obj_pat, "", val)
         for cruft_pat in cruft_pats:
             val = re.sub(cruft_pat, "", val)
             
@@ -1197,6 +1190,12 @@ def get_ole_text_method_1(vba_code, data):
     # Tack together all the substrings that have the repeated substring as a large
     # percentage of their string.
     aggregate_str = ""
+    obj_pat = r'VERSION \d\.\d{1,5}\r\n' + \
+              r'Begin \{\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\} \w{2,20} \r\n' + \
+              r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
+              r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
+              r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
+              r' {1,10}ClientTop {1,30}= {1,30}\d{3}'
     for val in tmp_vals:
 
         # Ignore empty strings.
@@ -1235,6 +1234,12 @@ def get_ole_text_method_1(vba_code, data):
                     start_pos += 1
                 val = val[start_pos:]
 
+            # The repeated string was not split.
+            else:
+
+                # Clear some stupid Office 97 cruft from the 2nd half of the string.
+                val = re.sub(obj_pat, "", val)
+                
             # Add in another payload piece.
             aggregate_str += val
         if debug1:
