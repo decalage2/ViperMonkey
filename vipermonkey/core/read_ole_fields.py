@@ -1133,6 +1133,7 @@ def get_ole_text_method_1(vba_code, data):
            replace("\xfc", "").\
            replace("\x19 ", "").\
            replace("_epx" + chr(223), "").\
+           replace("jd\x00\x00", "\x00").\
            replace("\x00\x00", "\x00")
     if debug1:
         print data
@@ -1195,7 +1196,7 @@ def get_ole_text_method_1(vba_code, data):
               r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
               r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
               r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
-              r' {1,10}ClientTop {1,30}= {0,30}(?:\d{3})?'
+              r' {1,10}ClientTop {1,30}=? {0,30}(?:\d{3})?'
     for val in tmp_vals:
 
         # Ignore empty strings.
