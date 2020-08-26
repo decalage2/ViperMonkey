@@ -1215,24 +1215,40 @@ def get_ole_text_method_1(vba_code, data):
             # case with the substring.
 
             # Find the portion of the repeated string in the 1st half of the string.
+            # 112345
+            # foo11
+            # 2345bar
             first_half_rep = None
             second_half_rep = None
+            got_match = False
             for i in range(1, len(repeated_subst)):
                 curr_first_half = repeated_subst[:i]
                 if aggregate_str.endswith(curr_first_half):
-                    first_half_rep = curr_first_half
-                    second_half_rep = repeated_subst[i:]
+                    got_match = True
+                    continue
+                if ((not aggregate_str.endswith(curr_first_half)) and got_match):
+                    first_half_rep = curr_first_half[:-1]
+                    second_half_rep = repeated_subst[i-1:]
                     break
 
             # There could be extra characters in front of the 2nd half of the string.
             if (first_half_rep is not None):
 
+                if debug1:
+                    print "FIRST HALF!!"
+                    print first_half_rep
+                    print "SECOND HALF!!"
+                    print second_half_rep
+                
                 # Figure out characters to skip in the 2nd half.
                 start_pos = 0
                 while (start_pos < len(val)):
                     if (val[start_pos:].startswith(second_half_rep)):
                         break
                     start_pos += 1
+                if debug1:
+                    print "SKIP 2nd HALF!!"
+                    print val[:start_pos]
                 val = val[start_pos:]
 
             # The repeated string was not split.
