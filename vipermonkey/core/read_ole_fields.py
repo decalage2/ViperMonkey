@@ -1256,7 +1256,11 @@ def get_ole_text_method_1(vba_code, data):
 
                 # Clear some stupid Office 97 cruft from the 2nd half of the string.
                 if (repeated_subst in val):
-                    val = val[val.index(repeated_subst):]
+                    start_pos = val.index(repeated_subst)                    
+                    while (((start_pos - 1) >= 0) and
+                           (re.match("[A-Za-z]", val[start_pos - 1]) is not None)):
+                        start_pos -= 1
+                    val = val[start_pos:]
                 else:
                     val = re.sub(obj_pat, "", val)
                 
