@@ -50,7 +50,7 @@ from __future__ import print_function
 # 2018-08-17 v0.07 KS: - lots of bug fixes and additions by Kirk Sayre (PR #34)
 #                  PL: - added ASCII art banner
 
-__version__ = '0.08'
+__version__ = '1.01'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -1692,6 +1692,7 @@ def print_version():
     """
 
     safe_print("Version Information:\n")
+    safe_print("ViperMonkey:\t\t" + str(__version__))
     safe_print("Python:\t\t\t" + str(sys.version_info))
     import pyparsing
     safe_print("pyparsing:\t\t" + str(pyparsing.__version__))
