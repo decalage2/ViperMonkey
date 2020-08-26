@@ -1255,7 +1255,10 @@ def get_ole_text_method_1(vba_code, data):
             else:
 
                 # Clear some stupid Office 97 cruft from the 2nd half of the string.
-                val = re.sub(obj_pat, "", val)
+                if (repeated_subst in val):
+                    val = val[val.index(repeated_subst):]
+                else:
+                    val = re.sub(obj_pat, "", val)
                 
             # Add in another payload piece.
             aggregate_str += val
