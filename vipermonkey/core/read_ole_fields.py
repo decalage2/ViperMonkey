@@ -1118,10 +1118,10 @@ def _find_str_with_most_repeats(strs):
     # Done.
     return (max_str, max_subst)
 
-def get_ole_text_method_1(vba_code, data):
+def get_ole_text_method_1(vba_code, data, debug=False):
 
     # Debug this thing.
-    debug1 = False
+    debug1 = debug
     #debug1 = True
     
     # Strip some red herring strings from the data.
@@ -1134,6 +1134,15 @@ def get_ole_text_method_1(vba_code, data):
            replace("\x19 ", "").\
            replace("_epx" + chr(223), "").\
            replace("," + chr(0) + chr(229), "").\
+           replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "").\
+           replace("Embedded Object", "").\
+           replace("mbedded Object", "").\
+           replace("bedded Object", "").\
+           replace("edded Object", "").\
+           replace("dded Object", "").\
+           replace("ded Object", "").\
+           replace("ed Object", "").\
+           replace("d Object", "").\
            replace("jd\x00\x00", "\x00").\
            replace("\x00\x00", "\x00")
     if debug1:
@@ -1222,16 +1231,20 @@ def get_ole_text_method_1(vba_code, data):
             first_half_rep = None
             second_half_rep = None
             got_match = False
-            for i in range(1, len(repeated_subst)):
+            #print "CHECK !!!!!!!!!!!!!"
+            for i in range(1, len(repeated_subst) + 1):
                 curr_first_half = repeated_subst[:i]
+                #print "++++"
+                #print curr_first_half
                 if aggregate_str.endswith(curr_first_half):
-                    got_match = True
-                    continue
-                if ((not aggregate_str.endswith(curr_first_half)) and got_match):
-                    first_half_rep = curr_first_half[:-1]
-                    second_half_rep = repeated_subst[i-1:]
-                    break
+                    first_half_rep = curr_first_half
+                    second_half_rep = repeated_subst[i:]
 
+            # Repeated string not split up (1st string ends with repeated string)?
+            if (first_half_rep == repeated_subst):
+                first_half_rep = None
+                second_half_rep = None
+                    
             # There could be extra characters in front of the 2nd half of the string.
             if (first_half_rep is not None):
 
