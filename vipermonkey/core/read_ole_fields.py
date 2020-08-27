@@ -1133,6 +1133,7 @@ def get_ole_text_method_1(vba_code, data):
            replace("\xfc", "").\
            replace("\x19 ", "").\
            replace("_epx" + chr(223), "").\
+           replace("," + chr(0) + chr(229), "").\
            replace("jd\x00\x00", "\x00").\
            replace("\x00\x00", "\x00")
     if debug1:
