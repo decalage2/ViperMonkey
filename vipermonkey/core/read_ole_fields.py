@@ -1127,13 +1127,13 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     # Strip some red herring strings from the data.
     if debug1:
         print "\n\nSTART get_ole_text_method_1 !!!!"
+    data = re.sub(r"[\x20-\x7e]\x00\xe5", "", data)
     data = data.replace("\x02$", "").\
            replace("\x01@", "").\
            replace("0\x00\xe5", "").\
            replace("\xfc", "").\
            replace("\x19 ", "").\
            replace("_epx" + chr(223), "").\
-           replace("," + chr(0) + chr(229), "").\
            replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "").\
            replace("Embedded Object", "").\
            replace("mbedded Object", "").\
