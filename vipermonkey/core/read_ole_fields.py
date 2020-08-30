@@ -1073,6 +1073,7 @@ def _find_most_repeated_substring(strs):
     # Find the substring that is repeated the most.
     max_repeats = -1
     max_subst = ""
+    #print "FIND MAX REPEATS!!"
     for curr_subst in all_substs:
         curr_repeats = 0
         for s in strs:
@@ -1150,11 +1151,11 @@ def get_ole_text_method_1(vba_code, data, debug=False):
         print "\n\n\n"
 
     # Pull out the strings from the data.
-    ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
+    ascii_pat = r"(?:[\r\n\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\r\n\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
     vals = re.findall(ascii_pat, data)
     tmp_vals = []
     for val in vals:
-
+        
         # No wide char strings.
         val = val.replace("\x00", "")
         
@@ -1172,6 +1173,10 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             (val.startswith("_DELETED_NAME_"))):
             continue
 
+        # No HTML.
+        if (val.strip().startswith("<!DOCTYPE html")):
+            continue
+        
         # Save modified string.
         tmp_vals.append(val)
         if debug1:
@@ -1181,6 +1186,8 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     # Find the string with the most repeated substrings.
     max_substs, repeated_subst = _find_str_with_most_repeats(tmp_vals)
     if (max_substs is None):
+        if debug1:
+            print "DONE!! NO REPEATED SUBSTRINGS!!"
         return None
     if debug1:
         print "\n"
@@ -1192,10 +1199,12 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     
     # Is this big enough to be interesting?
     if debug1:
-        print len(max_substs)
-        print max_substs.count(repeated_subst)
-        print "'" + repeated_subst + "'"
+        print "LEN MAX STR: " + str(len(max_substs))
+        print "MAX REPEATS IN 1 STR: " + str(max_substs.count(repeated_subst))
+        print "REPEATED STR: '" + repeated_subst + "'"
     if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
+        if debug1:
+            print "DONE!! TOO FEW REPEATED SUBSTRINGS!!"
         return None
 
     # Tack together all the substrings that have the repeated substring as a large
