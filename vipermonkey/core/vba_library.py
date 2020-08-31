@@ -458,6 +458,9 @@ class _Chr(VbaLibraryFunc):
 
     def return_type(self):
         return "STRING"
+
+class Chr(_Chr):
+    pass
     
 class ChDir(VbaLibraryFunc):
     """
@@ -4454,7 +4457,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Error, LanguageID, MultiByteToWideChar, IsNull, SetStringValue, TypeName,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
-               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2):
+               WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
+               Chr):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
