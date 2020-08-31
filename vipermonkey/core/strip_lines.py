@@ -1484,6 +1484,34 @@ def strip_comments(vba_code):
     # Return stripped code.
     return r
 
+def rename_constants(vba_code):
+    """
+    Make sure constants have unique names to avoid overlap with function
+    names.
+    """
+
+    # Only do this if needed.
+    if ("Const " not in vba_code):
+        return vba_code
+
+    # Find the names of all the declared const variables.
+    const_pat = r" Const +([\w_]+) "
+    const_names = re.findall(const_pat, vba_code)
+    print const_names
+
+    # Punt if no const declarations.
+    if (len(const_names) == 0):
+        return vba_code
+
+    # Replace all non-function call references to the const variables
+    # with unique names.
+    for const_name in const_names:
+        rep_pat = const_name + r"(\s*[^\(^=^ ])"
+        vba_code = re.sub(rep_pat, const_name + r"_CONST\1", vba_code)
+
+    # Done.
+    return vba_code
+
 def fix_vba_code(vba_code):
     """
     Fix up some substrings that ViperMonkey has problems parsing.
@@ -1679,6 +1707,13 @@ def fix_vba_code(vba_code):
         print vba_code
     vba_code = replace_constant_int_inline(vba_code)
 
+    # Rename existing constants to avoid name overlaps with functions.
+    # Why does VB allow that? GRRRR.
+    if debug_strip:
+        print "FIX_VBA_CODE: 17.5"
+        print vba_code
+    vba_code = rename_constants(vba_code)
+    
     # Skip the next part if unnneeded.
     if debug_strip:
         print "FIX_VBA_CODE: 18"

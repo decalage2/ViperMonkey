@@ -78,7 +78,7 @@ def fix_python_overlap(var_name):
     builtins = set(["str", "list"])
     if (var_name.lower() in builtins):
         var_name = "MAKE_UNIQUE_" + var_name
-    var_name = var_name.replace(".", "")
+    var_name = var_name.replace(".", "").replace("$", "__DOLLAR__")
     return var_name
 
 class vb_RegExp(object):
