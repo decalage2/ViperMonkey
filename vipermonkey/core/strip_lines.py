@@ -1510,7 +1510,7 @@ def rename_constants(vba_code):
     # Only do this if needed.
     if (len(defined_constants) == 0):
         return vba_code
-    print defined_constants
+    #print defined_constants
 
     # Punt if we have no const declarations.
     if (len(defined_constants) == 0):
@@ -1520,10 +1520,10 @@ def rename_constants(vba_code):
     # with unique names.
     for const_name in defined_constants:
         rep_pat = const_name + r"(\s*[^\(^=^ ])"
-        print "--------"
-        print rep_pat
+        #print "--------"
+        #print rep_pat
         t = const_name + r"\s*[^\(^=^ ]"
-        print re.findall(t, vba_code)
+        #print re.findall(t, vba_code)
         vba_code = re.sub(rep_pat, const_name + r"_CONST\1", vba_code)
 
     # Done.
