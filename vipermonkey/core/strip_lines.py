@@ -1484,6 +1484,23 @@ def strip_comments(vba_code):
     # Return stripped code.
     return r
 
+defined_constants = set()
+def find_defined_constants(vba_code):
+    """
+    Get the names of all the defined constants in the given VB code.
+    """
+
+    # Only do this if needed.
+    if ("Const " not in vba_code):
+        return
+
+    # Find the names of all the declared const variables in current VBA code chunk.
+    const_pat = r" Const +([\w_]+) "
+    const_names = re.findall(const_pat, vba_code)
+
+    # Save the names of the constants for later use.
+    defined_constants.update(const_names)
+    
 def rename_constants(vba_code):
     """
     Make sure constants have unique names to avoid overlap with function
@@ -1491,24 +1508,22 @@ def rename_constants(vba_code):
     """
 
     # Only do this if needed.
-    print "FIX THIS!!"
-    return vba_code
-    if ("Const " not in vba_code):
+    if (len(defined_constants) == 0):
         return vba_code
+    print defined_constants
 
-    # Find the names of all the declared const variables.
-    const_pat = r" Const +([\w_]+) "
-    const_names = re.findall(const_pat, vba_code)
-    print const_names
-
-    # Punt if no const declarations.
-    if (len(const_names) == 0):
+    # Punt if we have no const declarations.
+    if (len(defined_constants) == 0):
         return vba_code
 
     # Replace all non-function call references to the const variables
     # with unique names.
-    for const_name in const_names:
+    for const_name in defined_constants:
         rep_pat = const_name + r"(\s*[^\(^=^ ])"
+        print "--------"
+        print rep_pat
+        t = const_name + r"\s*[^\(^=^ ]"
+        print re.findall(t, vba_code)
         vba_code = re.sub(rep_pat, const_name + r"_CONST\1", vba_code)
 
     # Done.

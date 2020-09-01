@@ -681,15 +681,23 @@ def parse_stream(subfilename,
 def get_all_local_funcs(vba):
     """
     Get the names of all locally defined functions.
+    Also get the names of all defined constants.
     """
     pat = r"(?:Sub |Function )([^\(]+)"
     r = []
     for (_, _, _, vba_code) in vba.extract_macros():
         if (vba_code is None):
             continue
+
+        # Get local func names.
         for line in vba_code.split("\n"):
             names = re.findall(pat, line)
             r.extend(names)
+
+        # Get constant defs. This is saved in strip_lines.defined_constants.
+        strip_lines.find_defined_constants(vba_code)
+
+    # Return local function names.
     return r
             
 def parse_streams_serial(vba, strip_useless=False):
