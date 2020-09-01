@@ -1491,6 +1491,8 @@ def rename_constants(vba_code):
     """
 
     # Only do this if needed.
+    print "FIX THIS!!"
+    return vba_code
     if ("Const " not in vba_code):
         return vba_code
 
