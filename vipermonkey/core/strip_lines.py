@@ -1519,12 +1519,15 @@ def rename_constants(vba_code):
     # Replace all non-function call references to the const variables
     # with unique names.
     for const_name in defined_constants:
-        rep_pat = const_name + r"(\s*[^\(^=^ ])"
-        #print "--------"
-        #print rep_pat
-        t = const_name + r"\s*[^\(^=^ ]"
-        #print re.findall(t, vba_code)
+
+        # Regular reference as a variable.
+        rep_pat = const_name + r"(\s*[^\(^=^ ^\w^_])"
         vba_code = re.sub(rep_pat, const_name + r"_CONST\1", vba_code)
+
+        # Initial Const assignment.
+        # Const foo = 12
+        rep_pat = r"Const\s+(" + const_name + r")\s*"
+        vba_code = re.sub(rep_pat, r"Const \1_CONST ", vba_code)
 
     # Done.
     return vba_code
@@ -1730,7 +1733,21 @@ def fix_vba_code(vba_code):
         print "FIX_VBA_CODE: 17.5"
         print vba_code
     vba_code = rename_constants(vba_code)
-    
+
+    # Fix bogus calls like 'foo"ARG STR"'.
+    if debug_strip:
+        print "FIX_VBA_CODE: 17.6"
+        print vba_code
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    if (uni_vba_code is not None):
+        bad_call_pat = "(\r?\n\s*[\w_]{2,50})\""
+        if (re2.search(unicode(bad_call_pat), uni_vba_code)):
+            vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
+
     # Skip the next part if unnneeded.
     if debug_strip:
         print "FIX_VBA_CODE: 18"
@@ -1791,7 +1808,7 @@ def fix_vba_code(vba_code):
 
         # Save the updated line.
         r += new_line + "\n"
-        
+            
     # Return the updated code.
     if debug_strip:
         print "FIX_VBA_CODE: 20"
