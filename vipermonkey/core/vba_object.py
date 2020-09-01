@@ -875,7 +875,16 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         #safe_print("REMOVE THIS!!")
         #raise e
         return False
+
     except Exception as e:
+
+        # If we bombed out due to a potential infinite loop we
+        # are done.
+        if ("Infinite Loop" in str(e)):
+            log.warning("Detected infinite loop. Terminating loop.")
+            return True
+
+        # We had some other error. Emulating the loop in Python failed.
         log.error("JIT emulation failed. " + str(e))
         traceback.print_exc(file=sys.stdout)
         safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
