@@ -1051,7 +1051,15 @@ def _find_repeated_substrings(s, chunk_size, min_str_size):
             # Found an acceptable repeated substring?
             if ((old_curr_str is not None) and
                 (len(old_curr_str.strip()) >= min_str_size)):
+
+                # Save the full string.
                 r.add(old_curr_str)
+
+                # If this is a large string some substrings may be more
+                # common repeats. Add some of those.
+                if (len(old_curr_str) > min_str_size*3):
+                    for i in range(1, len(old_curr_str) - min_str_size*3):
+                        r.add(old_curr_str[:i*-1])
 
     # Done
     return r
@@ -1065,7 +1073,8 @@ def _find_most_repeated_substring(strs):
     all_substs = set()
     for s in strs:
         all_substs = all_substs.union(_find_repeated_substrings(s, 300, 4))
-
+    #print all_substs
+        
     # Found any repeated substrings?
     if (len(all_substs) == 0):
         return None
