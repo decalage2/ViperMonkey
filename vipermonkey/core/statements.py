@@ -4039,7 +4039,9 @@ class Redim_Statement(VBA_Object):
             context.set(self.item, [])
 
         # Is this a Byte array?
-        elif (str(context.get_type(self.item)) == "Byte Array"):
+        # Or calling ReDim on something that does not exist (grrr)?
+        elif ((str(context.get_type(self.item)) == "Byte Array") or
+              (not context.contains(self.item))):
 
             # Do we have a start and end for the new size?
             if ((self.start is not None) and (self.end is not None)):
