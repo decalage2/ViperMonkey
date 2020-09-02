@@ -36,6 +36,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 from visitor import *
 import pyparsing
 
@@ -50,9 +52,10 @@ class lhs_var_visitor(visitor):
     
     def visit(self, item):
         from statements import Let_Statement
-        if (item in self.visited):
+
+        if (str(item) in self.visited):
             return False
-        self.visited.add(item)        
+        self.visited.add(str(item))
         if ("Let_Statement" in str(type(item))):
             if (isinstance(item.name, str)):
                 self.variables.add(item.name)

@@ -197,7 +197,7 @@ class VBA_Object(object):
 
         # Check for timeouts.
         limits_exceeded(throw_error=True)
-
+        
         # Skipping visiting embedded loops? Check to see if we are already
         # in a loop and the current VBA object is a loop.
         if (no_embedded_loops and
@@ -217,7 +217,8 @@ class VBA_Object(object):
             visitor.in_loop = True
 
         # Visit the current item.
-        if (not visitor.visit(self)):
+        visit_status = visitor.visit(self)
+        if (not visit_status):
             return
 
         # Save the in loop status so we can restore it after visiting the children.
@@ -581,7 +582,7 @@ def _get_var_vals(item, context):
     """
 
     import procedures
-    
+
     # Get all the variables.
 
     # Vars on RHS.
@@ -619,9 +620,11 @@ def _get_var_vals(item, context):
                 continue
             
             # Function definitions are not valid values.
-            if (isinstance(val, procedures.Function) or
-                isinstance(val, procedures.Sub) or
-                isinstance(val, VbaLibraryFunc)):
+            if ((isinstance(val, procedures.Function) or
+                 isinstance(val, procedures.Sub) or
+                 isinstance(val, VbaLibraryFunc)) and
+                # 0 arg func calls should only appear on the RHS
+                (var not in lhs_var_names)):
                 zero_arg_funcs.add(var)
 
                 # Don't treat these function calls as variables and
