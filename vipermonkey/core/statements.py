@@ -795,7 +795,8 @@ class Let_Statement(VBA_Object):
                 rhs = to_python(self.expression, context)
                 
                 # Modify the string in Python.
-                r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
+                #r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
+                r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + " + " + size + "):]"
 
             # Basic assignment.
             else:
