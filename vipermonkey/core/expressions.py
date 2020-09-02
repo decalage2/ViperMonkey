@@ -142,6 +142,11 @@ class SimpleNameExpression(VBA_Object):
         # Rename some vars that overlap with python builtins.
         var_name = utils.fix_python_overlap(str(self).replace(".", ""))
         
+        # This could be a call to a 0 argument local function (thanks VB syntax :( ).
+        if (isinstance(value, procedures.Function) and
+            (value.min_param_length == 0)):
+            return var_name + "()"
+        
         # Just treat as a variable reference.
         return var_name
     

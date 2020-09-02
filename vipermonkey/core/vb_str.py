@@ -416,13 +416,13 @@ class VbStr(object):
         if ((start < 0) or (start >= len(self.vb_str))):
             raise ValueError("start index " + str(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(start) + " out of bounds.")
+            raise ValueError("end index " + str(end) + " out of bounds.")
         if (start > end):
             raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
 
         # Pull out the unchanged prefix and suffix.
         prefix = self.get_chunk(0, start).to_python_str()
-        suffix = self.get_chunk(end + 1, self.len()).to_python_str()
+        suffix = self.get_chunk(end, self.len()).to_python_str()
 
         # Put string together as a Python string.
         if (isinstance(new_str, VbStr)):

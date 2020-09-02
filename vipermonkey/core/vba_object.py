@@ -597,6 +597,7 @@ def _get_var_vals(item, context):
     # Get a value for each variable.
     var_names = var_names.union(lhs_var_names)
     r = {}
+    zero_arg_funcs = set()
     for var in var_names:
 
         # Do we already know the variable value?
@@ -621,7 +622,11 @@ def _get_var_vals(item, context):
             if (isinstance(val, procedures.Function) or
                 isinstance(val, procedures.Sub) or
                 isinstance(val, VbaLibraryFunc)):
-                val = None
+                zero_arg_funcs.add(var)
+
+                # Don't treat these function calls as variables and
+                # assign initial values to them.
+                continue
 
             # 'inf' is not a valid value.
             if ((str(val).strip() == "inf") or
@@ -669,7 +674,7 @@ def _get_var_vals(item, context):
         context.set("__ORIG__" + var, val, force_global=True)
 
     # Done.
-    return r
+    return (r, zero_arg_funcs)
 
 def _loop_vars_to_python(loop, context, indent):
     """
@@ -677,7 +682,7 @@ def _loop_vars_to_python(loop, context, indent):
     """
     indent_str = " " * indent
     loop_init = ""
-    init_vals = _get_var_vals(loop, context)
+    init_vals, _ = _get_var_vals(loop, context)
     sorted_vars = list(init_vals.keys())
     sorted_vars.sort()
     for var in sorted_vars:
