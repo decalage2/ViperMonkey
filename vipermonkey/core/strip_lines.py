@@ -1215,13 +1215,12 @@ def fix_difficult_code(vba_code):
     # We have just broken up single line statements seperated by ":" into
     # multiple lines. Now fix some elseif lines if needed.
     # "ElseIf c >= 65 And c <= 90 Then f = 65"
-    uni_vba_code = ""
+    uni_vba_code = u""
     try:
         uni_vba_code = u"\n" + vba_code.decode("utf-8") + u"\n"
     except UnicodeDecodeError:
         pass
     elif_pat = "(ElseIf.{5,50}Then)"
-    print re2.findall(unicode(elif_pat), uni_vba_code)
     if (re2.search(unicode(elif_pat), uni_vba_code) is not None):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)
     
