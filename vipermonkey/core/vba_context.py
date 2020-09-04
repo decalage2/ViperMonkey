@@ -51,6 +51,7 @@ import re
 import random
 import string
 import codecs
+import copy
 import struct
 
 from curses_ascii import isascii
@@ -205,7 +206,7 @@ class Context(object):
         # because each statement should be able to change global variables
         if _globals is not None:
             if (copy_globals):
-                self.globals = dict(_globals)
+                self.globals = copy.deepcopy(_globals)
             else:
                 self.globals = _globals
 
@@ -215,7 +216,7 @@ class Context(object):
                 
         elif context is not None:
             if (copy_globals):
-                self.globals = dict(context.globals)
+                self.globals = copy.deepcopy(context.globals)
             else:
                 self.globals = context.globals
             self.last_saved_file = context.last_saved_file

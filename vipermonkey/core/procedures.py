@@ -47,6 +47,7 @@ import sys
 from vba_context import *
 from statements import *
 from identifiers import *
+import utils
 
 from logger import log
 from tagged_block_finder_visitor import *
@@ -97,7 +98,7 @@ class Sub(VBA_Object):
             if (not first):
                 func_args += ", "
             first = False
-            func_args += to_python(param, tmp_context)
+            func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
         r = indent_str + "def " + str(self.name) + func_args + ":\n"
 
@@ -429,7 +430,7 @@ class Function(VBA_Object):
             if (not first):
                 func_args += ", "
             first = False
-            func_args += to_python(param, tmp_context)
+            func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
         r = indent_str + "def " + str(self.name) + func_args + ":\n"
 
@@ -470,20 +471,20 @@ class Function(VBA_Object):
 
         # Compute the argument values.
         call_info = {}
-        call_info["FUNCTION_NAME -->"] = self.name
+        call_info["FUNCTION_NAME -->"] = (self.name, None)
 
         # add function name in locals if the function takes 0 arguments. This is
         # needed since otherwise it is not possible to differentiate a function call
         # from a reference to the function return value in the function body.
         if (len(self.params) == 0):
-            call_info[self.name] = 'NULL'
+            call_info[self.name] = ('NULL', None)
 
         # Set the default parameter values.
         for param in self.params:
             init_val = None
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
-            call_info[param.name] = init_val
+            call_info[param.name] = (init_val, None)
             
         # Array accesses of calls to functions that return an array are parsed as
         # function calls with the array indices given as function call arguments. Note
@@ -524,9 +525,9 @@ class Function(VBA_Object):
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
             # Handle params with default values.
             if ((param_name not in call_info) or
-                (call_info[param_name] == '') or
+                (call_info[param_name] == ('', None)) or
                 (param_value != "NULL")):
-                call_info[param_name] = param_value
+                call_info[param_name] = (param_value, defined_param.my_type)
 
             # Is this a ByRef parameter?
             if (defined_param.mechanism == "ByRef"):
@@ -553,7 +554,8 @@ class Function(VBA_Object):
         
         # Set the parameter values in the current context.
         for param_name in call_info.keys():
-            context.set(param_name, call_info[param_name], force_local=True)
+            param_val, param_type = call_info[param_name]
+            context.set(param_name, param_val, var_type=param_type, force_local=True)
         
         # Variable updates can go in the local scope.
         old_global_scope = context.global_scope

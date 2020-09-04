@@ -474,9 +474,11 @@ def _boilerplate_to_python(indent):
     boilerplate = indent_str + "import core.vba_library\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
     boilerplate += indent_str + "import core.utils\n"
+    boilerplate += indent_str + "from core.vba_object import update_array\n"
     boilerplate += indent_str + "from core.vba_object import coerce_to_num\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_int\n\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_str\n\n"
+    boilerplate += indent_str + "from core.vba_object import coerce_to_int\n"
+    boilerplate += indent_str + "from core.vba_object import coerce_to_str\n"
+    boilerplate += indent_str + "from core.vba_object import coerce_to_int_list\n\n"
     boilerplate += indent_str + "try:\n"
     boilerplate += indent_str + " " * 4 + "vm_context\n"
     boilerplate += indent_str + "except NameError:\n"
@@ -608,10 +610,6 @@ def _get_var_vals(item, context):
             # Try to get the current value.
             val = context.get(var)
 
-            # Fix the Python escape character in the value if it is a string.
-            if (isinstance(val, str)):
-                pass
-            
             # Do not set function arguments to new values.
             # Do not set loop index variables to new values.
             if ((val == "__FUNC_ARG__") or
@@ -670,7 +668,7 @@ def _get_var_vals(item, context):
         # embedded loop Python code generation stomping on the value.
         context.set(var, "__ALREADY_SET__")
         context.set(var, "__ALREADY_SET__", force_global=True)
-
+        
         # Save the original value so we know it's data type for later use in JIT
         # code generation.
         context.set("__ORIG__" + var, val)
@@ -859,7 +857,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         # strings. For performance we are not handling the MS VBA extended ASCII in the python
         # JIT code.
         if (not context.is_vbscript):
-
+            
             # Look for non-ASCII strings.
             non_ascii_pat = r'"[^"]*[\x7f-\xff][^"]*"'
             if (re.search(non_ascii_pat, code_python) is not None):
@@ -1245,6 +1243,37 @@ def eval_args(args, context, treat_as_var_name=False):
     if (not got_vba_objects):
         return args
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    return r
+
+def update_array(old_array, index, val):
+    """
+    Add an item to a Python list.
+    """
+
+    # Sanity check.
+    if (not isinstance(old_array, list)):
+        old_array = []
+    
+    # Do we need to extend the length of the list to include the indices?
+    if (index >= len(old_array)):
+        old_array.extend([0] * (index - len(old_array) + 1))
+    old_array[index] = val
+    return old_array
+
+def coerce_to_int_list(obj):
+    """
+    Coerce a constant string VBA object to a list of ASCII codes.
+    :param obj: VBA object
+    :return: list
+    """
+
+    # Make sure we have a string.
+    s = coerce_to_str(obj)
+
+    # Convert this to a list of ASCII char codes.
+    r = []
+    for c in s:
+        r.append(ord(c))
     return r
 
 def coerce_to_str(obj):

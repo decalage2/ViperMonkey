@@ -569,9 +569,14 @@ class Dim_Statement(VBA_Object):
             # Handle VB NULL values.
             if (curr_init_val == '"NULL"'):
                 curr_init_val = "0"
+
+            # Save the current variable in the copy of the context so
+            # later calls of to_python() know the type of the variable.
+            context.set(str(var[0]), curr_init_val, var_type=curr_type)
                 
             # Set the initial value of the declared variable.
-            r = " " * indent + str(var[0]) + " = " + str(curr_init_val)
+            var_name = utils.fix_python_overlap(str(var[0]))
+            r = " " * indent + var_name + " = " + str(curr_init_val)
 
             # Done.
             return r
@@ -798,13 +803,34 @@ class Let_Statement(VBA_Object):
                 # Modify the string in Python.
                 r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
 
+            # Handle conversion of strings to byte arrays, if needed.
+            elif (context.get_type(self.name) == "Byte Array"):
+                val = "coerce_to_int_list(" + to_python(self.expression, context, params=params) + ")"
+                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+
+            # Handle conversion of byte arrays to strings, if needed.
+            elif (context.get_type(self.name) == "String"):
+                val = "coerce_to_str(" + to_python(self.expression, context, params=params) + ")"
+                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+
             # Basic assignment.
             else:
                 r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
                 
         # Array assignment?
         else:
-            r = utils.fix_python_overlap(str(self.name)) + "[" + to_python(self.index, context, params=params) + "] " + str(self.op) + " " + to_python(self.expression, context, params=params)
+            py_var = utils.fix_python_overlap(str(self.name))
+            if (py_var.startswith(".")):
+                py_var = py_var[1:]
+            index = to_python(self.index, context, params=params)
+            val = to_python(self.expression, context, params=params)
+            op = str(self.op)
+            if (op == "="):
+                r = py_var + " = update_array(" + py_var + ", " + index + ", " + val + ")"
+            else:
+                r = py_var + "[" + index + "] " + op + " " + val
+
+        # Done.
         if (r.startswith(".")):
             r = r[1:]
         r = " " * indent + r
@@ -1090,7 +1116,8 @@ class Let_Statement(VBA_Object):
                         pos = 0
                         # TODO: Only handles ASCII strings.
                         step = 2
-                        if (rhs_type == "Byte Array"):
+                        if ((rhs_type == "Byte Array") or
+                            (rhs_type == "Byte")):
                             step = 1
                         while (pos < len(value)):
                             tmp += chr(value[pos])
@@ -1362,18 +1389,19 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
 # --- FOR statement -----------------------------------------------------------
 
-def _called_funcs_to_python(loop, context, indent):
+def _get_all_called_funcs(item, context):
     """
-    Convert all the functions called in the loop to Python.
+    Get all of the local functions called in the given VBA object.
     """
 
-    # Get all the functions called in the loop.
+    # Get all the functions called in the VBA object.
     call_visitor = function_call_visitor()
-    loop.accept(call_visitor)
+    item.accept(call_visitor)
     func_names = call_visitor.called_funcs
 
-    # Get all of the 0 argument functions called in the loop.
-    _, zero_arg_funcs = _get_var_vals(loop, context)
+    # Get all of the 0 argument functions called in the VBA object.
+    tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+    _, zero_arg_funcs = _get_var_vals(item, tmp_context)
     func_names.update(zero_arg_funcs)
     
     # Get the definitions for all local functions called.
@@ -1384,6 +1412,48 @@ def _called_funcs_to_python(loop, context, indent):
             if (isinstance(curr_func, VBA_Object)):
                 local_funcs.append(curr_func)
 
+    # Done. Return the definitions of all the local functions
+    # that were called.
+    return local_funcs
+
+def _called_funcs_to_python(loop, context, indent):
+    """
+    Convert all the functions called in the loop to Python.
+    """
+    
+    # Get the definitions for all local functions called directly in the loop.
+    local_funcs = _get_all_called_funcs(loop, context)
+    local_func_hashes = set()
+    for curr_func in local_funcs:
+        curr_func_hash = hashlib.md5(str(curr_func).encode()).hexdigest()
+        local_func_hashes.add(curr_func_hash)
+        
+    # Now get the definitions of all the local functions called by the local
+    # functions.
+    seen_funcs = set()
+    funcs_to_handle = list(local_funcs)
+    while (len(funcs_to_handle) > 0):
+
+        # Get the current function definition to check for calls.
+        curr_func = funcs_to_handle.pop()
+        curr_func_hash = hashlib.md5(str(curr_func).encode()).hexdigest()
+        
+        # Already looked at this one?
+        if (curr_func_hash in seen_funcs):
+            continue
+        seen_funcs.add(curr_func_hash)
+
+        # Get the functions called in the current function.
+        curr_local_funcs = _get_all_called_funcs(curr_func, context)
+
+        # Save the new functions for processing.
+        for new_func in curr_local_funcs:
+            new_func_hash = hashlib.md5(str(new_func).encode()).hexdigest()
+            if (new_func_hash not in local_func_hashes):
+                local_func_hashes.add(new_func_hash)
+                local_funcs.append(new_func)
+                funcs_to_handle.append(new_func)
+                
     # Convert each local function to Python.
     r = ""
     for local_func in local_funcs:
@@ -4032,8 +4102,68 @@ class Redim_Statement(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'ReDim ' + str(self.item)
+        r = 'ReDim ' + str(self.item)
+        if ((self.start is not None) and (self.end is not None)):
+            r += "(" + str(self.start) + " To " + str(self.end) + ")"
+        if (self.data_type is not None):
+            r += " As " + self.data_type
+        return r
 
+    def to_python(self, context, params=None, indent=0):
+
+        # TODO: Needs work.
+        return "ERROR: ReDim JIT generation needs work."
+        
+        # Is this a Variant type?
+        indent_str = " " * indent
+        var_name = utils.fix_python_overlap(str(self.item))
+        if (str(context.get_type(self.item)) == "Variant"):
+
+            # Variant types cannot hold string values, so assume that the variable
+            # should hold an array.
+            return indent_str + var_name + " = []"
+
+        # Is this a Byte array?
+        # Or calling ReDim on something that does not exist (grrr)?
+        elif ((str(context.get_type(self.item)) == "Byte Array") or
+              (self.data_type == "Byte") or
+              (not context.contains(self.item))):
+
+            # Do we have a start and end for the new size?
+            if ((self.start is not None) and (self.end is not None)):
+
+                # Compute the new array size.
+                start = None
+                end = None
+                try:
+
+                    # Get the start and end of the new array. Must be integer constants.
+                    start = "int(" + to_python(self.start, context=context) + ")"
+                    end = "int(" + to_python(self.end, context=context) + ")"
+
+                    # Resize the list.
+                    new_list = "[0] * (" + end + " - " + start + ")"
+                    return indent_str + var_name + " = " + new_list
+
+                except:
+                    pass
+
+        # Resize array?
+        elif (isinstance(self.raw_item, Function_Call)):
+
+            # Got a new size?
+            if (len(self.raw_item.params) > 0):
+
+                # Get the new size.
+                new_size = "int(" + to_python(self.raw_item.params[0], context=context) + ")"
+
+                # Resize list.
+                new_list = "[0] * (" + new_size + ")"
+                var_name = utils.fix_python_overlap(str(self.raw_item.name))
+                return indent_str + var_name + " = " + new_list
+                    
+        return "ERROR: Cannot generate python code for '" + str(self) + "'"
+        
     def eval(self, context, params=None):
 
         # Is this a Variant type?
