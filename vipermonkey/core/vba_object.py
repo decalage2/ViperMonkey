@@ -1356,6 +1356,13 @@ def coerce_to_int(obj):
     # Do we have a float string?
     if (isinstance(obj, str)):
 
+        # Do we have a null byte string?
+        if (obj.count('\x00') == len(obj)):
+            return 0
+        
+        # No NULLS.
+        obj = obj.replace("\x00", "")
+        
         # Float string?
         if ("." in obj):
             try:
@@ -1363,11 +1370,7 @@ def coerce_to_int(obj):
                 return int(obj)
             except:
                 pass
-
-        # Do we have a null byte string?
-        if (obj.count('\x00') == len(obj)):
-            return 0
-
+            
         # Hex string?
         hex_pat = r"&h[0-9a-f]+"
         if (re.match(hex_pat, obj.lower()) is not None):

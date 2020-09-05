@@ -2662,6 +2662,9 @@ class Val(VbaLibraryFunc):
         # Ignore whitespace.
         tmp = str_convert(params[0]).strip().replace(" ", "")
 
+        # No nulls.
+        tmp = tmp.replace("\x00", "")
+        
         # The VB Val() function is ugly. Look for VB hex encoding.
         nums = re.compile(r"&[Hh][0-9A-Fa-f]+")
         matches = nums.search(tmp)
