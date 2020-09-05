@@ -1120,7 +1120,15 @@ class Let_Statement(VBA_Object):
                             (rhs_type == "Byte")):
                             step = 1
                         while (pos < len(value)):
-                            tmp += chr(value[pos])
+
+                            # Skip null bytes.
+                            c = value[pos]
+                            if (c == 0):
+                                pos += step
+                                continue
+
+                            # Append the byte converted to a character.
+                            tmp += chr(c)
                             pos += step
                         value = tmp
                     except:
@@ -1225,7 +1233,7 @@ class Let_Statement(VBA_Object):
 
             # Handle lists
             if ((isinstance(arr_var, list)) and (index >= 0)):
-            
+
                 # Do we need to extend the length of the list to include the indices?
                 if (index >= len(arr_var)):
                     arr_var.extend([0] * (index - len(arr_var) + 1))
