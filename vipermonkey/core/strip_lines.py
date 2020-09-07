@@ -1525,7 +1525,7 @@ def rename_constants(vba_code):
 
         # Initial Const assignment.
         # Const foo = 12
-        rep_pat = r"Const\s+(" + const_name + r")\s*"
+        rep_pat = r"Const\s+(" + const_name + r")[\s=]"
         vba_code = re.sub(rep_pat, r"Const \1_CONST ", vba_code)
 
     # Done.
