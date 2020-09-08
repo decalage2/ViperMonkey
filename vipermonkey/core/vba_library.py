@@ -556,7 +556,20 @@ class FolderExists(VbaLibraryFunc):
 
     def num_args(self):
         return 1
-    
+
+class GetFile(VbaLibraryFunc):
+    """
+    GetFile() VB method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        if (params is None):
+            return
+        context.report_action('Get File', "GetFile(" + str(params) + ")", '---', strip_null_bytes=True)
+
+    def num_args(self):
+        return 1
+
 class FileCopy(VbaLibraryFunc):
     """
     FileCopy() VB function (stubbed).
@@ -570,6 +583,9 @@ class FileCopy(VbaLibraryFunc):
     def num_args(self):
         return 2
 
+class CopyFile(FileCopy):
+    pass
+    
 class CopyHere(VbaLibraryFunc):
     """
     CopyHere() VB function (stubbed).
@@ -4461,7 +4477,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
-               Chr):
+               Chr, CopyFile, GetFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

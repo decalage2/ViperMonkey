@@ -863,6 +863,13 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             if (re.search(non_ascii_pat, code_python) is not None):
                 log.warning("VBA code contains Microsoft specific extended ASCII strings. Not JIT emulating.")
                 return False
+
+        # Check for dynamic code execution in called functions.
+        if (('"Execute", ' in code_python) or
+            ('"ExecuteGlobal", ' in code_python) or
+            ('"Eval", ' in code_python)):
+            log.warning("Functions called by loop Execute() dynamic code. Not JIT emulating.")
+            return False
             
         # Run the Python code.
         if (namespace is None):

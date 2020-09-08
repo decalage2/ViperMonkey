@@ -303,6 +303,15 @@ class MemberAccessExpression(VBA_Object):
 
                 # No RegExp operations.
                 last_func = to_python(self.rhs[-1], context, params)
+
+                # Handle accessing name of a process from a process list.
+                if (last_func.lower() == '"name"'):
+                    lhs_str = to_python(self.lhs, context, params)
+                    if (lhs_str.startswith('"')):
+                        lhs_str = lhs_str[1:]
+                    if (lhs_str.endswith('"')):
+                        lhs_str = lhs_str[:-1]
+                    last_func = lhs_str + "['name']"
                 return last_func
 
             # Use the simulated RegExp object for this.
@@ -1277,17 +1286,21 @@ class MemberAccessExpression(VBA_Object):
 
     def eval(self, context, params=None):
 
+        #print self
+        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("MemberAccess eval of " + str(self))
 
         # 0 argument call to local function?
         r = self._handle_0_arg_call(context)
         if (r is not None):
+            #print "OUT: 1"
             return r
             
         # Easy case. Do we have this saved as a variable?
         r = self._read_member_expression_as_var(context)
         if (r is not None):
+            #print "OUT: 2"
             return r
 
         # TODO: Need to actually have some sort of object model. For now
@@ -1316,57 +1329,68 @@ class MemberAccessExpression(VBA_Object):
         # Handle reading the caption of a Pages() object accessed by index.
         call_retval = self._handle_indexed_pages_access(context)
         if (call_retval is not None):
+            #print "OUT: 3"
             return call_retval
             
         # Handle accessing control values from a form by index.
         call_retval = self._handle_indexed_form_access(context)
         if (call_retval is not None):
+            #print "OUT: 4"
             return call_retval
         
         # See if this is reading form text by index.
         call_retval = self._handle_control_read(context)
         if (call_retval is not None):
+            #print "OUT: 5"
             return call_retval        
         
         # See if this is reading the OSlanguage.
         call_retval = self._handle_oslanguage(context)
         if (call_retval is not None):
+            #print "OUT: 6"
             return call_retval
 
         # See if this is reading the doc paragraphs.
         call_retval = self._handle_paragraphs(context)
         if (call_retval is not None):
+            #print "OUT: 7"
             return call_retval
 
         # See if this is reading the doc comments.
         call_retval = self._handle_comments(context)
         if (call_retval is not None):
+            #print "OUT: 8"
             return call_retval
         
         # See if this is a function call like Application.Run("foo", 12, 13).
         call_retval = self._handle_application_run(context)
         if (call_retval is not None):
+            #print "OUT: 9"
             return call_retval
 
         # See if this is a function call like ActiveDocument.BuiltInDocumentProperties("foo").
         call_retval = self._handle_docprops_read(context)
         if (call_retval is not None):
+            #print "OUT: 10"
             return call_retval
         
         # Handle accessing document variables as a special case.
         if (not calling_func):
             call_retval = self._handle_docvars_read(context)
             if (call_retval is not None):
+                #print "OUT: 11"
                 return call_retval
 
         # Handle setting the clipboard text.
         call_retval = self._handle_set_clipboard(context)
         if (call_retval is not None):
+            #print "OUT: 12"
             return call_retval
 
         # Handle getting the clipboard text.
         call_retval = self._handle_get_clipboard(context)
         if (call_retval is not None):
+            #print "OUT: 13"
             return call_retval
         
         # Pull out the left hand side of the member access.
@@ -1381,6 +1405,7 @@ class MemberAccessExpression(VBA_Object):
         # See if this is reading a table cell value.
         call_retval = self._handle_table_cell(context)
         if (call_retval is not None):
+            #print "OUT: 14"
             return call_retval
             
         # Is the LHS a python dict and are we looking for a field?
@@ -1391,40 +1416,48 @@ class MemberAccessExpression(VBA_Object):
             if (key in tmp_lhs.keys()):
 
                 # Return the field value.
+                #print "OUT: 15"
                 return tmp_lhs[key]
             
         # Handle getting the .Count of a data collection..
         call_retval = self._handle_count(context, tmp_lhs)
         if (call_retval is not None):
+            #print "OUT: 16"
             return call_retval
 
         # Handle reading an item from a data collection.
         call_retval = self._handle_item(context, tmp_lhs)
         if (call_retval is not None):
+            #print "OUT: 17"
             return call_retval
 
         # Handle Regex object applications.
         call_retval = self._handle_regex_execute(context, tmp_lhs)
         if (call_retval is not None):
+            #print "OUT: 18"
             return call_retval
 
         # Handle simple 0-argument function calls.
         call_retval = self._handle_0_arg_call(context, rhs)
         if (call_retval is not None):
+            #print "OUT: 19"
             return call_retval
         
         # Handle reading the contents of a text file.
         call_retval = self._handle_text_file_read(context)
         if (call_retval is not None):
+            #print "OUT: 20"
             return call_retval
 
         # Handle writes of text to ADODB.Stream variables.
         if (self._handle_adodb_writes(self.lhs, tmp_lhs, rhs, context)):
+            #print "OUT: 21"
             return "NULL"
 
         # See if this is accessing the Path field of a file/folder object.
         call_retval = self._handle_path_access()
         if (call_retval is not None):
+            #print "OUT: 22"
             return call_retval
         
         # If the final element in the member expression is a function call,
@@ -1441,21 +1474,25 @@ class MemberAccessExpression(VBA_Object):
             if (context.contains_user_defined(rhs_name)):
                 for func in Function_Call.log_funcs:
                     if (rhs_name.lower() == func.lower()):
+                        #print "OUT: 23"
                         return str(self)
 
             # Handle things like foo.Replace(bar, baz).
             call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
+                #print "OUT: 24"
                 return call_retval
 
             # Handle things like foo.Add(bar, baz).
             call_retval = self._handle_add(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
+                #print "OUT: 25"
                 return call_retval
 
             # Handle Excel cells() references.
             call_retval = self._handle_excel_read(context, self.rhs)
             if (call_retval is not None):
+                #print "OUT: 26"
                 return call_retval
                     
             # This is not a builtin. Evaluate it
@@ -1463,13 +1500,16 @@ class MemberAccessExpression(VBA_Object):
 
             # Was this a call to LoadXML()?
             if (self._handle_loadxml(context, tmp_rhs)):
+                #print "OUT: 27"
                 return "NULL"
 
             # Was this a call to SaveToFile()?
             if (self._handle_savetofile(context, tmp_rhs)):
+                #print "OUT: 28"
                 return "NULL"
 
             # It was a regular call.
+            #print "OUT: 29"
             return tmp_rhs
 
         # Arracy access of function call as the RHS?
@@ -1479,6 +1519,7 @@ class MemberAccessExpression(VBA_Object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('rhs {!r} is a Function_Call_Array_Access'.format(rhs))
             tmp_rhs = eval_arg(rhs, context)
+            #print "OUT: 30"
             return tmp_rhs
             
         # Did the lhs resolve to something new?
@@ -1494,16 +1535,19 @@ class MemberAccessExpression(VBA_Object):
                 (not context.contains(self.lhs))):
 
                 # Just work with the returned string value.
+                #print "OUT: 31"
                 return tmp_lhs
 
             # See if this is reading a doc var name or item.
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
             if (call_retval is not None):
+                #print "OUT: 32"
                 return call_retval
 
             # See if this is closing a file.
             call_retval = self._handle_file_close(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
+                #print "OUT: 33"
                 return call_retval
 
             # Is the LHS a 0 argument function?
@@ -1513,12 +1557,14 @@ class MemberAccessExpression(VBA_Object):
                 # The LHS is actually a function call. Emulate the function
                 # in the current context.
                 r = tmp_lhs.eval(context)
+                #print "OUT: 34"
                 return r
 
             # Are we reading the text of an object that we resolved?
             if (((str(self.rhs) == "['Text']") or (str(self.rhs).lower() == "['value']")) and (isinstance(tmp_lhs, str))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Returning .Text value.")
+                #print "OUT: 35"
                 return tmp_lhs
             
             # Construct a new partially resolved member access object.
@@ -1529,6 +1575,7 @@ class MemberAccessExpression(VBA_Object):
             if (call_retval is not None):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
+                #print "OUT: 36"
                 return call_retval
 
             # Do we know what the RHS variable evaluates to?
@@ -1541,19 +1588,23 @@ class MemberAccessExpression(VBA_Object):
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Resolved member access variable.")
+                #print "OUT: 37"
                 return tmp_rhs        
             
             # Cannot resolve directly. Return the member access object.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("MemberAccess: Return new access object " + str(r))
+            #print "OUT: 38"
             return r
 
         # Try reading as variable.
         elif (context.contains(rhs)):
+            #print "OUT: 39"
             return context.get(rhs)
         
         # Punt and just try to eval this as a string.
         else:
+            #print "OUT: 40"
             return eval_arg(self.__repr__(), context)
         
 # need to use Forward(), because the definition of l-expression is recursive:

@@ -2701,12 +2701,14 @@ class While_Statement(VBA_Object):
         # (infinite loop). Just run those loops a few times.
         init_guard_val = self._has_constant_loop_guard(context)
         max_loop_iters = VBA_Object.loop_upper_bound
+        is_infinite_loop = False
         if (init_guard_val is not None):
 
             # Always runs?
             if (init_guard_val):
                 log.warn("Found infinite loop w. constant loop guard. Limiting iterations.")
-                max_loop_iters = 5
+                max_loop_iters = 2
+                is_infinite_loop = True
 
             # Never runs?
             else:
@@ -2714,7 +2716,8 @@ class While_Statement(VBA_Object):
                 return
 
         # Try converting the loop to Python and running that.
-        if (_eval_python(self, context)):
+        # Don't do Python JIT on short circuited infinite loops.
+        if ((not is_infinite_loop) and (_eval_python(self, context))):
             return
         
         # Track that the current loop is running.
