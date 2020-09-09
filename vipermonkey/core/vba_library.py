@@ -2960,6 +2960,9 @@ class Rnd(VbaLibraryFunc):
     def eval(self, context, params=None):
         return random.random()
 
+    def num_args(self):
+        return 0
+    
 class Environ(VbaLibraryFunc):
     """
     Environ() function for getting environment variable values.

@@ -52,6 +52,7 @@ import utils
 from logger import log
 from tagged_block_finder_visitor import *
 from vba_object import to_python
+from vba_object import _get_var_vals
 
 # --- SUB --------------------------------------------------------------------
 
@@ -81,6 +82,17 @@ class Sub(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
+        # Get the global variables read in the function body.
+        tmp_context = Context(context=context)
+        global_var_info, _ = _get_var_vals(self, tmp_context, global_only=True)
+        
+        # Set up the initial values for the global variables.
+        global_var_init_str = ""
+        indent_str = " " * indent
+        for global_var in global_var_info.keys():
+            val = global_var_info[global_var]
+            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+
         # Make a copy of the context so we can mark variables as function
         # arguments.
         tmp_context = Context(context=context)
@@ -89,7 +101,10 @@ class Sub(VBA_Object):
 
         # Save the name of the current function so we can handle exit function calls.
         tmp_context.curr_func_name = str(self.name)
-            
+
+        # Global variable initialization goes first.
+        r = global_var_init_str
+        
         # Define the function prototype.
         indent_str = " " * indent
         func_args = "("
@@ -100,12 +115,19 @@ class Sub(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r = indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + str(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
-        r += indent_str + " " * 4 + "global vm_context\n"
+        r += indent_str + " " * 4 + "global vm_context\n\n"
+        r += indent_str + " " * 4 + "# Function return value.\n"
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+
+        # Global variables used in the function.
+        r += indent_str + " " * 4 + "# Referenced global variables.\n"
+        for global_var in global_var_info.keys():
+            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+        r += "\n"
         
         # Function body.
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
@@ -413,6 +435,17 @@ class Function(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         
+        # Get the global variables read in the function body.
+        tmp_context = Context(context=context)
+        global_var_info, _ = _get_var_vals(self, tmp_context, global_only=True)
+        
+        # Set up the initial values for the global variables.
+        global_var_init_str = ""
+        indent_str = " " * indent
+        for global_var in global_var_info.keys():
+            val = global_var_info[global_var]
+            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+        
         # Make a copy of the context so we can mark variables as function
         # arguments.
         tmp_context = Context(context=context)
@@ -421,9 +454,11 @@ class Function(VBA_Object):
 
         # Save the name of the current function so we can handle exit function calls.
         tmp_context.curr_func_name = str(self.name)
-            
+
+        # Global variable initialization goes first.
+        r = global_var_init_str
+        
         # Define the function prototype.
-        indent_str = " " * indent
         func_args = "("
         first = True
         for param in self.params:
@@ -432,13 +467,20 @@ class Function(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r = indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + str(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
-        r += indent_str + " " * 4 + "global vm_context\n"
+        r += indent_str + " " * 4 + "global vm_context\n\n"
+        r += indent_str + " " * 4 + "# Function return value.\n"
         r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
-        
+
+        # Global variables used in the function.
+        r += indent_str + " " * 4 + "# Referenced global variables.\n"
+        for global_var in global_var_info.keys():
+            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+        r += "\n"
+            
         # Function body.
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
 

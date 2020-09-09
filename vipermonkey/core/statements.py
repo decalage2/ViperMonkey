@@ -572,7 +572,7 @@ class Dim_Statement(VBA_Object):
 
             # Save the current variable in the copy of the context so
             # later calls of to_python() know the type of the variable.
-            context.set(str(var[0]), curr_init_val, var_type=curr_type)
+            context.set(var[0], "__ALREADY_SET__", var_type=curr_type)
                 
             # Set the initial value of the declared variable.
             var_name = utils.fix_python_overlap(str(var[0]))
@@ -638,7 +638,7 @@ class Dim_Statement(VBA_Object):
             # Set the initial value of the declared variable. And the type.
             is_const = (self.decl_type.lower() == "const")
             is_local = context.in_procedure and (not is_const)
-            context.set(var[0], curr_init_val, curr_type, force_global=is_const, force_local=is_local)
+            context.set(var[0], curr_init_val, var_type=curr_type, force_global=is_const, force_local=is_local)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("DIM " + str(var[0]) + " As " + str(curr_type) + " = " + str(curr_init_val))
     
@@ -1572,7 +1572,7 @@ class For_Statement(VBA_Object):
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)        
         
         # Boilerplate used by the Python.
-        boilerplate = _boilerplate_to_python(indent)
+        #boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
         
         # Get the start index, end index, and step of the loop.
@@ -1613,8 +1613,7 @@ class For_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + loop_var + " += " + str(step) + "\n"
         
         # Full python code for the loop.
-        python_code = boilerplate + "\n" + \
-                      func_defns + "\n" + \
+        python_code = func_defns + "\n" + \
                       loop_init + "\n" + \
                       loop_start + "\n" + \
                       loop_body + "\n" + \
@@ -1895,7 +1894,7 @@ class For_Statement(VBA_Object):
             return
 
         # See if we can convert the loop to Python and directly emulate it.
-        if (_eval_python(self, context, params=params)):
+        if (_eval_python(self, context, params=params, add_boilerplate=True)):
             return
         
         # Set end to valid values.
@@ -2136,7 +2135,7 @@ class For_Each_Statement(VBA_Object):
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
         
         # Boilerplate used by the Python.
-        boilerplate = _boilerplate_to_python(indent)
+        #boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
         
         # Get the values to iterate over.
@@ -2172,8 +2171,7 @@ class For_Each_Statement(VBA_Object):
         loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
-        python_code = boilerplate + "\n" + \
-                      func_defns + "\n" + \
+        python_code = func_defns + "\n" + \
                       loop_init + "\n" + \
                       loop_start + "\n" + \
                       loop_body + "\n" + \
@@ -2208,7 +2206,7 @@ class For_Each_Statement(VBA_Object):
         do_const_assignments(self.statements, context)
 
         # See if we can convert the loop to Python and directly emulate it.
-        if (_eval_python(self, context, params=params)):
+        if (_eval_python(self, context, params=params, add_boilerplate=True)):
             return
         
         # Try iterating over the values in the container.
@@ -2345,7 +2343,7 @@ class While_Statement(VBA_Object):
         """
 
         # Boilerplate used by the Python.
-        boilerplate = _boilerplate_to_python(indent)
+        #boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
 
         # Logic is flipped for do until loops.
@@ -2388,8 +2386,7 @@ class While_Statement(VBA_Object):
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
             
         # Full python code for the loop.
-        python_code = boilerplate + "\n" + \
-                      func_defns + "\n" + \
+        python_code = func_defns + "\n" + \
                       loop_init + "\n" + \
                       loop_start + "\n" + \
                       loop_body + "\n" + \
@@ -2717,7 +2714,8 @@ class While_Statement(VBA_Object):
 
         # Try converting the loop to Python and running that.
         # Don't do Python JIT on short circuited infinite loops.
-        if ((not is_infinite_loop) and (_eval_python(self, context))):
+        if ((not is_infinite_loop) and
+            (_eval_python(self, context, add_boilerplate=True))):
             return
         
         # Track that the current loop is running.
@@ -2875,7 +2873,7 @@ class Do_Statement(VBA_Object):
         """
 
         # Boilerplate used by the Python.
-        boilerplate = _boilerplate_to_python(indent)
+        #boilerplate = _boilerplate_to_python(indent)
         indent_str = " " * indent
 
         # Set up doing this for loop in Python.
@@ -2912,12 +2910,14 @@ class Do_Statement(VBA_Object):
 
         # Simulate the do-while loop by checking the not of the guard and exiting if needed at
         # the end of the loop body.
-        loop_body += indent_str + " " * 4 + "if (not (" + to_python(self.guard, context) + ")):\n"
+        if (self.loop_type.lower() == "until"):
+            loop_body += indent_str + " " * 4 + "if (" + to_python(self.guard, context) + "):\n"
+        else:
+            loop_body += indent_str + " " * 4 + "if (not (" + to_python(self.guard, context) + ")):\n"
         loop_body += indent_str + " " * 8 + "break\n"
         
         # Full python code for the loop.
-        python_code = boilerplate + "\n" + \
-                      func_defns + "\n" + \
+        python_code = func_defns + "\n" + \
                       loop_init + "\n" + \
                       loop_start + "\n" + \
                       loop_body + "\n" + \
@@ -2952,7 +2952,7 @@ class Do_Statement(VBA_Object):
             max_loop_iters = 5
 
         # See if we can convert the loop to Python and directly emulate it.
-        if (_eval_python(self, context, params=params)):
+        if (_eval_python(self, context, params=params, add_boilerplate=True)):
             return
 
         # Track that the current loop is running.
@@ -3075,6 +3075,7 @@ class Select_Statement(VBA_Object):
         select_val_str = to_python(self.select_val, context)
 
         # Figure out the Python for the value being checked in this case.
+        case.case_val.var_to_check = select_val_str
         case_guard_str = to_python(case.case_val, context)
         
         # Figure out the Python control flow construct to use.
@@ -3084,10 +3085,10 @@ class Select_Statement(VBA_Object):
             flow_str = "elif "
 
         # Set up the check for this case.
-        r = indent_str + flow_str + "(" + select_val_str + " in " + case_guard_str + "):\n"
+        r = indent_str + flow_str + "(" + case_guard_str + "):\n"
             
         # Final catchall case?
-        if (case_guard_str == '["Else"]'):
+        if ('in ["Else"]' in case_guard_str):
             r = indent_str + "else:\n"
 
         # Add in the case body.
@@ -3335,14 +3336,13 @@ class Case_Clause(VBA_Object):
         first = True
         for clause in self.clauses:
             if (not first):
-                r += ", "
+                r += " or "
             first = False
             curr_str = to_python(clause, context)
-            if (curr_str.startswith("[") and curr_str.endswith("]")):
-                curr_str = curr_str[1:-1]
-            r += curr_str
-        if (not r.startswith("range(")):
-            r = "[" + r + "]"
+            if ((not curr_str.startswith("range(")) and
+                (not curr_str.startswith("["))):
+                curr_str = "[" + curr_str + "]"
+            r += self.var_to_check + " in " + curr_str
         return r
         
     def eval(self, context, params=None):
