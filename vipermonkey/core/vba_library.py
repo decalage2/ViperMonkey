@@ -1872,7 +1872,7 @@ class Replace(VbaLibraryFunc):
             # Convert the string to change to ASCII.
             log.warning("Replace() called on wide string w. ASCII pattern and replacement. Converting to ASCII ...")
             string = vb_str.convert_wide_to_ascii(string)
-            
+
         # regex replacement?
         if (params[-1] == "<-- USE REGEX -->"):
             
@@ -3808,7 +3808,10 @@ class Cells(VbaLibraryFunc):
 
             # Return the cell contents.
             try:
-                r = str(sheet.cell(row, col)).replace("text:", "").replace("'", "")
+                raw_cell = sheet.cell(row, col)
+                r = str(raw_cell).replace("text:", "")
+                if (r.startswith("'") and r.endswith("'")):
+                    r = r[1:-1]
                 if (r.startswith('u')):
                     r = r[1:]
                 if (log.getEffectiveLevel() == logging.DEBUG):

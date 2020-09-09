@@ -830,6 +830,10 @@ class Let_Statement(VBA_Object):
             else:
                 r = py_var + "[" + index + "] " + op + " " + val
 
+        # Mark this variable as set so it does not get overwritten by
+        # future to_python() code generation.
+        context.set(self.name, "__ALREADY_SET__")
+                
         # Done.
         if (r.startswith(".")):
             r = r[1:]
