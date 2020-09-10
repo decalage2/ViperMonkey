@@ -45,7 +45,7 @@ def get_metadata_exif(filename):
         if ((len(line) == 0) or (":" not in line)):
             continue        
         field = line[:line.index(":")].strip().lower()
-        val = line[line.index(":") + 1:].strip()
+        val = line[line.index(":") + 1:].strip().replace("...", "\r\n")
         setattr(r, field, val)
 
     # Done.

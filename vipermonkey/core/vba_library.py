@@ -1018,9 +1018,10 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
 
         # Get the property we are looking for.
         prop = str(params[0])
-        if (not context.contains(prop)):
-            return "NULL"
-        return context.read_metadata_item(prop)
+        r = context.read_metadata_item(prop)
+        if (r == ""):
+            r = "NULL"
+        return r
 
     def num_args(self):
         return 1
