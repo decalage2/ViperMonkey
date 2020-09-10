@@ -2259,9 +2259,49 @@ def _parse_activex_rich_edit(data):
         return None
     return val[0]
 
+def _get_comments_docprops_2007(unzipped_data):
+    """
+    Read in the comments in a document saved in the 2007+ format.
+    Gets comments from docProps/core.xml.
+    """
+
+    # Comments with are in docProps/core.xml. Does that file exist?
+    zip_subfile = 'docProps/core.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        zip_subfile = 'docProps\\core.xml'
+        if (zip_subfile not in unzipped_data.namelist()):
+            return []
+
+    # Read the contents of core.xml.
+    f1 = unzipped_data.open(zip_subfile)
+    data = f1.read()
+    f1.close()
+
+    # Looks like the comments are in the <dc:description>...</dc:description> block.
+    comm_pat = r"<dc:description>.*</dc:description>"
+    comment_blocks = re.findall(comm_pat, data, re.DOTALL)
+    if (len(comment_blocks) == 0):
+        return []
+
+    # Pack up the comment blocks and give them arbitrary IDs.
+    pos = 1
+    r = []
+    for text in comment_blocks:
+        text = text.replace("&amp;", "&")
+        text = text.replace("&gt;", ">")
+        text = text.replace("&lt;", "<")
+        text = text.replace("&apos;", "'")
+        text = text.replace("&quot;", '"')
+        r.append((pos, text))
+        pos += 1
+
+    # Done.
+    return r
+        
 def _get_comments_2007(fname):
     """
     Read in the comments in a document saved in the 2007+ format.
+    Gets comments from word/comments.xml.
     """
         
     # This might be a 2007+ Office file. Unzip it.
@@ -2275,9 +2315,13 @@ def _get_comments_2007(fname):
     if (zip_subfile not in unzipped_data.namelist()):
         zip_subfile = 'word\\comments.xml'
         if (zip_subfile not in unzipped_data.namelist()):
+
+            # See if comments are defined in docProps/core.xml.
+            r = _get_comments_docprops_2007(unzipped_data)
+            unzipped_data.close()
             if (delete_file):
                 os.remove(fname)
-            return []
+            return r
 
     # Read the contents of comments.xml.
     r = []

@@ -548,6 +548,11 @@ class ViperMonkey(StubbedEngine):
         else:
             context.globals["ActiveDocument.Comments".lower()] = self.comments
             context.globals["ThisDocument.Comments".lower()] = self.comments
+            if (self.metadata is not None):
+                all_comments = ""
+                for comment in self.comments:
+                    all_comments += comment + "/n"
+                self.metadata.comments = all_comments
             
         # reset the actions list, in case it is called several times
         self.actions = []
