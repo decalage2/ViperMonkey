@@ -53,6 +53,7 @@ from logger import log
 from tagged_block_finder_visitor import *
 from vba_object import to_python
 from vba_object import _get_var_vals
+from vba_object import _check_for_iocs
 
 # --- SUB --------------------------------------------------------------------
 
@@ -132,6 +133,9 @@ class Sub(VBA_Object):
         # Function body.
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
 
+        # Check for IOCs.
+        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
+        
         # Done.
         return r
     
@@ -484,6 +488,9 @@ class Function(VBA_Object):
         # Function body.
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
 
+        # Check for IOCs.
+        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
+        
         # Return the function return val.
         r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"
 

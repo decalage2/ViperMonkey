@@ -796,6 +796,21 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     # Done.
     return r
 
+def _check_for_iocs(loop, context, indent):
+    """
+    Check the variables modified in a loop to see if they were
+    set to interesting IOCs.
+    """
+    indent_str = " " * indent
+    lhs_visitor = lhs_var_visitor()
+    loop.accept(lhs_visitor)
+    lhs_var_names = lhs_visitor.variables
+    ioc_str = indent_str + "# Check for IOCs in intermediate variables.\n"
+    for var in lhs_var_names:
+        py_var = utils.fix_python_overlap(var)
+        ioc_str += indent_str + "vm_context.save_intermediate_iocs(" + py_var + ")\n"
+    return ioc_str
+
 def _updated_vars_to_python(loop, context, indent):
     """
     Save the variables updated in a loop in Python.
@@ -861,6 +876,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             code_python = _boilerplate_to_python(0) + "\n" + \
                           var_inits + "\n" + \
                           code_python + "\n" + \
+                          _check_for_iocs(loop, tmp_context, 0) + "\n" + \
                           _updated_vars_to_python(loop, tmp_context, 0)
         if (log.getEffectiveLevel() == logging.DEBUG):
             safe_print("JIT CODE!!")
@@ -887,7 +903,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             
         # Run the Python code.
         if (namespace is None):
-            exec(code_python)
+            # Magic. For some reason exec'ing in locals() makes the dynamically generated
+            # code recognize functions defined in the dynamic code. I don't know why.
+            exec code_python in locals()
         else:
             exec(code_python, namespace)
             var_updates = namespace["var_updates"]
