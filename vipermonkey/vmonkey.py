@@ -905,8 +905,9 @@ def read_sheet_from_csv(filename):
 
     # Make an object with a subset of the xlrd book methods.
     r = excel.make_book(r)
-    #print "EXCEL:\n"
-    #print r
+    #print("EXCEL:\n")
+    #print(r)
+    #sys.exit(0)
     return r
 
 def load_excel_libreoffice(data):
