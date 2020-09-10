@@ -2278,7 +2278,7 @@ def _get_comments_docprops_2007(unzipped_data):
     f1.close()
 
     # Looks like the comments are in the <dc:description>...</dc:description> block.
-    comm_pat = r"<dc:description>.*</dc:description>"
+    comm_pat = r"<dc:description>(.*)</dc:description>"
     comment_blocks = re.findall(comm_pat, data, re.DOTALL)
     if (len(comment_blocks) == 0):
         return []
