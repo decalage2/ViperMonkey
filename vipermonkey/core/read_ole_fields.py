@@ -2292,6 +2292,7 @@ def _get_comments_docprops_2007(unzipped_data):
         text = text.replace("&lt;", "<")
         text = text.replace("&apos;", "'")
         text = text.replace("&quot;", '"')
+        text = text.replace("_x000d_", "\r")
         r.append((pos, text))
         pos += 1
 
@@ -2366,6 +2367,7 @@ def _get_comments_2007(fname):
             text = text.replace("&lt;", "<")
             text = text.replace("&apos;", "'")
             text = text.replace("&quot;", '"')
+            text = text.replace("_x000d_", "\r")
             block_text += text
 
         # Save the comment.
