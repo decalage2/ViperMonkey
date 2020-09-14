@@ -1201,9 +1201,11 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     if debug1:
         print "\n"
         print "*************"
+        print "MAX SUBSTS"
         print max_substs
         print "\n"
         print "*************"
+        print "REPEATED SUBST"
         print repeated_subst
     
     # Is this big enough to be interesting?
@@ -1234,7 +1236,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
 
         # Is a large percentage of the current string the repeated substring?
         pct = (val.count(repeated_subst) * len(repeated_subst)) / float(len(val)) * 100
-        if (pct > 50):
+        if (pct > 30):
 
             # Yes it is. Add it to the payload.
 
@@ -1305,6 +1307,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     if (len(aggregate_str) == 0):
         aggregate_str = max_substs
     if debug1:
+        print "\nFINAL:"
         print aggregate_str
         sys.exit(0)
         
