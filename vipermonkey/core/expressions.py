@@ -2229,11 +2229,13 @@ expr_list_strict = (
 )
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
+"""
 function_call <<= (
     CaselessKeyword("nothing")
     | (
         ~(strict_reserved_keywords + Literal("(")) +
-        (member_access_expression('name') ^ lex_identifier('name'))
+        ((member_access_expression('name') ^ lex_identifier('name')) |
+         (Suppress('[') + lex_identifier('name') + Suppress(']'))) +
         + Suppress(
             Optional('$')
             + Optional('#')
@@ -2245,10 +2247,36 @@ function_call <<= (
            (Suppress('[') + Optional(expr_list('params')) + Suppress(']')))
     )
     | (
-        Suppress('[')
-        + CaselessKeyword("Shell")('name')
-        + Suppress(']')
-        + expr_list('params')
+        Suppress('[') +
+        CaselessKeyword("Shell")('name') +
+        Suppress(']') +
+        expr_list('params')
+    )
+)
+"""
+function_call <<= (
+    CaselessKeyword("nothing")
+    | (
+        ~(strict_reserved_keywords + Literal("(")) +
+        (
+            (member_access_expression('name') ^ lex_identifier('name')) |
+            (Suppress('[') + lex_identifier('name') + Suppress(']'))
+        ) +
+        Suppress(
+            Optional('$')
+            + Optional('#')
+            + Optional('!')
+            + Optional('%')
+            + Optional('@')
+        )
+        + ((Suppress('(') + Optional(expr_list('params')) + Suppress(')')) |
+           (Suppress('[') + Optional(expr_list('params')) + Suppress(']')))
+    )
+    | (
+        Suppress('[') +
+        CaselessKeyword("Shell")('name') +
+        Suppress(']') +
+        expr_list('params')
     )
 )
 function_call.setParseAction(Function_Call)
