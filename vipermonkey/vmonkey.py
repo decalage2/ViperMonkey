@@ -1558,7 +1558,7 @@ def _process_file (filename,
                 vm.globals["DefaultTargetFrame"] = def_targ_frame_val
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
-                
+
             safe_print("")
             safe_print('-'*79)
             safe_print('TRACING VBA CODE (entrypoint = Auto*):')

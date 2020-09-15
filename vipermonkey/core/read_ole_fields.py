@@ -124,6 +124,19 @@ def unzip_data(data):
     # Return the unzipped data and temp file name.
     return (unzipped_data, fname)
 
+def _clean_2007_text(s):
+    """
+    Replace special 2007 formatting strings with actual text,
+    """    
+    s = s.replace("&amp;", "&")\
+         .replace("&gt;", ">")\
+         .replace("&lt;", "<")\
+         .replace("&apos;", "'")\
+         .replace("&quot;", '"')\
+         .replace("_x000d_", "\r")
+    
+    return s
+
 def get_drawing_titles(data):
     """
     Read custom Drawing element title values from an Office 2007+ file.
@@ -167,12 +180,7 @@ def get_drawing_titles(data):
     for drawing_info in drawings:
         drawing_id = drawing_info[0]
         drawing_name = drawing_info[1]
-        drawing_text = drawing_info[2]
-        drawing_text = drawing_text.replace("&amp;", "&")\
-                                   .replace("&gt;", ">")\
-                                   .replace("&lt;", "<")\
-                                   .replace("&apos;", "'")\
-                                   .replace("&quot;", '"')
+        drawing_text = _clean_2007_text(drawing_info[2])
         var_name = "Shapes('" + drawing_id + "')"
         r.append((var_name, drawing_text))
 
@@ -216,7 +224,8 @@ def get_defaulttargetframe_text(data):
     pat = r"<vt:lpwstr>([^<]+)</vt:lpwstr>"
     if (re.search(pat, contents) is None):
         return None
-    return re.findall(pat, contents)[0]
+    r = _clean_2007_text(re.findall(pat, contents)[0])
+    return r
 
 def get_customxml_text(data):
     """
@@ -254,7 +263,7 @@ def get_customxml_text(data):
         pat = r"<Item\d+>([^<]+)</Item\d+>"
         if (re.search(pat, contents) is None):
             continue
-        txt_val = re.findall(pat, contents)[0]
+        txt_val = _clean_2007_text(re.findall(pat, contents)[0])
 
         # Save it.
         # This var name may need to be generalized.
@@ -2165,8 +2174,8 @@ def _get_shapes_text_values_direct_2007(data):
     val = ""
     for v in vals:
         val += v
-    val = val.replace("&amp", "&")
-        
+    val = _clean_2007_text(val)
+    
     # Return the Shape name and text value.
     r = [(name, val)]
     return r
@@ -2187,7 +2196,7 @@ def _get_shapes_text_values_direct_2007_1(data):
         return []
     shape_info = shape_info[0]
     name = shape_info[0]
-    val = shape_info[1].replace("&amp", "&")
+    val = _clean_2007_text(shape_info[1])
         
     # Return the Shape name and text value.
     r = [(name, val)]
@@ -2260,7 +2269,7 @@ def _parse_activex_rich_edit(data):
     val = re.findall(pat, data)
     if (len(val) == 0):
         return None
-    return val[0]
+    return _clean_2007_text(val[0])
 
 def _get_comments_docprops_2007(unzipped_data):
     """
@@ -2290,13 +2299,7 @@ def _get_comments_docprops_2007(unzipped_data):
     pos = 1
     r = []
     for text in comment_blocks:
-        text = text.replace("&amp;", "&")
-        text = text.replace("&gt;", ">")
-        text = text.replace("&lt;", "<")
-        text = text.replace("&apos;", "'")
-        text = text.replace("&quot;", '"')
-        text = text.replace("_x000d_", "\r")
-        r.append((pos, text))
+        r.append((pos, _clean_2007_text(text)))
         pos += 1
 
     # Done.
@@ -2365,13 +2368,7 @@ def _get_comments_2007(fname):
         block_text = ""
 
         for text in texts:
-            text = text.replace("&amp;", "&")
-            text = text.replace("&gt;", ">")
-            text = text.replace("&lt;", "<")
-            text = text.replace("&apos;", "'")
-            text = text.replace("&quot;", '"')
-            text = text.replace("_x000d_", "\r")
-            block_text += text
+            block_text += _clean_2007_text(text)
 
         # Save the comment.
         r.append((curr_id, block_text))
@@ -2494,7 +2491,7 @@ def _get_shapes_text_values_2007(fname):
             continue
             
         # Save the text associated with the variable name.
-        r.append((id_name_map[shape], text))
+        r.append((id_name_map[shape], _clean_2007_text(text)))
     
     # Done.
     unzipped_data.close()

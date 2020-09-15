@@ -5642,6 +5642,7 @@ class Context(object):
 
         # We have the attribute. Return it.
         r = getattr(self.metadata, var)
+        r = r.replace("_x000d_", "\r")
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("BuiltInDocumentProperties: return %r -> %r" % (var, r))
         return r
