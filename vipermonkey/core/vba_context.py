@@ -6384,7 +6384,12 @@ class Context(object):
             name_str = name_str[:name_str.index("(")].strip()
             if (name_str in self.globals.keys()):
                 force_global = True
-            
+
+        # This should be a global variable if we are not in a function.
+        if ((not self.in_procedure) and (not force_global)):
+            self.set(name, value, force_global=True)
+            return
+                
         # Set the variable
 
         # Forced save in global context?

@@ -596,14 +596,22 @@ def _get_var_vals(item, context, global_only=False):
     lhs_visitor = lhs_var_visitor()
     item.accept(lhs_visitor, no_embedded_loops=False)
     lhs_var_names = lhs_visitor.variables
+
+    # Handle member access expressions.
+    var_names = var_names.union(lhs_var_names)
+    tmp = set()
+    for var in var_names:
+        tmp.add(var)
+        if ("." in var):
+            tmp.add(var[:var.index(".")])
+    var_names = tmp
     
     # Get a value for each variable.
-    var_names = var_names.union(lhs_var_names)
     r = {}
     zero_arg_funcs = set()
     for var in var_names:
 
-        # Do we already know the variable value?
+        # Do we already know the variable value?        
         val = None
         try:
 
@@ -720,9 +728,6 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     #print "--- to_python() ---"
     #print arg
     #print type(arg)
-    #print hasattr(arg, "to_python")
-    #if (hasattr(arg, "to_python")):
-    #    print type(arg.to_python)
         
     # VBA Object?
     r = None

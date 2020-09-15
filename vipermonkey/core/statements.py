@@ -1230,6 +1230,10 @@ class Let_Statement(VBA_Object):
                 call_r = self._handle_lhs_call(context)
                 if (call_r is not None):
                     return
+
+                # Not a goofy function call. Assume this is an undefined array variable.
+                arr_var = []
+                
             if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.

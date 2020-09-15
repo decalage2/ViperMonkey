@@ -122,6 +122,10 @@ class SimpleNameExpression(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
+        # VB regex object?
+        if (self.name == "RegExp"):
+            return "core.utils.vb_RegExp()"
+        
         # Is this a 0 argument builtin function call? Make sure this is not a
         # local variable shadowing the name of a VBA builtin.
         import vba_library
@@ -140,7 +144,8 @@ class SimpleNameExpression(VBA_Object):
             return r
 
         # Rename some vars that overlap with python builtins.
-        var_name = utils.fix_python_overlap(str(self).replace(".", ""))
+        var_name = str(self)
+        var_name = utils.fix_python_overlap(var_name)
         
         # This could be a call to a 0 argument local function (thanks VB syntax :( ).
         if (isinstance(value, procedures.Function) and
@@ -299,7 +304,9 @@ class MemberAccessExpression(VBA_Object):
 
             # RegExp operations?
             raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")")
-            if ((not raw_last_func.startswith("Test(")) and (not raw_last_func.startswith("Replace("))):
+            if ((not raw_last_func.startswith("Test(")) and
+                (not raw_last_func.startswith("Replace(")) and
+                (not raw_last_func.startswith("Pattern"))):
 
                 # No RegExp operations.
                 last_func = to_python(self.rhs[-1], context, params)
