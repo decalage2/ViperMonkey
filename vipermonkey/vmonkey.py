@@ -109,6 +109,7 @@ from datetime import timedelta
 import subprocess
 import zipfile
 import io
+import distutils.spawn
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -133,6 +134,14 @@ from core.logger import log
 from core.logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
+
+tempdir = tempfile.gettempdir()
+
+if ("Python3") in distutils.spawn.find_executable("python.exe"):
+    python = distutils.spawn.find_executable("python.exe")
+elif ("Python2") in distutils.spawn.find_executable("python.exe"):
+    print("ViperMonkey uses Python3 to run helper scripts - install Python3, then try again.")
+    sys.exit()
 
 def safe_print(text):
     """
@@ -173,7 +182,7 @@ def _read_doc_text_libreoffice(data):
         return None
     
     # Save the Word data to a temporary file.
-    out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+    out_dir = tempdir + "/tmp_word_file_" + str(random.randrange(0, 10000000000))
     f = open(out_dir, 'wb')
     f.write(data)
     f.close()
@@ -181,7 +190,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the text using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+        output = subprocess.check_output([python, _thismodule_dir + "/export_doc_text.py",
                                           "--text", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
@@ -217,7 +226,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the tables using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+        output = subprocess.check_output([python, _thismodule_dir + "/export_doc_text.py",
                                           "--tables", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
@@ -933,7 +942,7 @@ def load_excel_libreoffice(data):
         return None
     
     # Save the Excel data to a temporary file.
-    out_dir = "/tmp/tmp_excel_file_" + str(random.randrange(0, 10000000000))
+    out_dir = tempdir + "tmp_excel_file_" + str(random.randrange(0, 10000000000))
     f = open(out_dir, 'wb')
     f.write(data)
     f.close()
@@ -941,7 +950,7 @@ def load_excel_libreoffice(data):
     # Dump all the sheets as CSV files using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
+        output = subprocess.check_output([python, _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
     except Exception as e:
         log.error("Running export_all_excel_sheets.py failed. " + str(e))
         os.remove(out_dir)
