@@ -137,11 +137,20 @@ from logging import FileHandler
 
 tempdir = tempfile.gettempdir()
 
-if ("Python3") in distutils.spawn.find_executable("python.exe"):
-    python = distutils.spawn.find_executable("python.exe")
-elif ("Python2") in distutils.spawn.find_executable("python.exe"):
-    print("ViperMonkey uses Python3 to run helper scripts - install Python3, then try again.")
-    sys.exit()
+if os.name == "nt":
+    if ("Python3") in distutils.spawn.find_executable("python.exe"):
+        python = distutils.spawn.find_executable("python.exe")
+    elif ("Python2") in distutils.spawn.find_executable("python.exe"):
+        print("Can't find python3 - make sure it's installed, then try again.")
+        sys.exit()
+elif os.name == "posix":
+    if ("python3") in distutils.spawn.find_executable("python3"):
+        python = distutils.spawn.find_executable("python3")
+    elif ("python3") in distutils.spawn.find_executable("python"):
+        python = distutils.spawn.find_executable("python3")
+    elif ("python3") not in distutils.spawn.find_executable("python") and ("python3") not in distutils.spawn.find_executable("python3"):
+        print("Can't find python3 - make sure it's installed, then try again.")
+        sys.exit()
 
 def safe_print(text):
     """
