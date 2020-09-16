@@ -1225,15 +1225,18 @@ def _process_file (filename,
 
             # Pull text associated with InlineShapes() objects.
             log.info("Reading InlineShapes object text fields...")
-            got_it = False
+            got_inline_shapes = False
             for (var_name, var_val) in _get_inlineshapes_text_values(data):
-                got_it = True
+                got_inline_shapes = True
                 vm.doc_vars[var_name.lower()] = var_val
                 log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+            """
+            # TODO: Why is this here?
             if (not got_it):
                 for (var_name, var_val) in _get_inlineshapes_text_values(data):
                     vm.doc_vars[var_name.lower()] = var_val
                     log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+            """
 
             # Get the VBA code.
             vba_code = ""
@@ -1278,9 +1281,9 @@ def _process_file (filename,
                 # Handle Pages(NN) and Tabs(NN) references.
                 page_pat = r"Page(\d+)"
                 if (re.match(page_pat, var_name)):
-                    page_index = int(re.findall(page_pat, var_name)[0]) - 1
-                    page_var_name = "Pages('" + str(page_index) + "')"
-                    tab_var_name = "Tabs('" + str(page_index) + "')"
+                    page_index = str(int(re.findall(page_pat, var_name)[0]) - 1)
+                    page_var_name = "Pages('" + page_index + "')"
+                    tab_var_name = "Tabs('" + page_index + "')"
                     var_name_variants = [page_var_name,
                                          "ActiveDocument." + page_var_name,
                                          page_var_name + ".Tag",
@@ -1303,12 +1306,20 @@ def _process_file (filename,
                                          "me." + tab_var_name + ".Text",
                                          "me." + tab_var_name + ".Caption",
                                          "me." + tab_var_name + ".ControlTipText"]
+                    # Handle InlineShapes.
+                    if (not got_inline_shapes):
+                        # InlineShapes().Item(1).AlternativeText
+                        var_name_variants.extend(["InlineShapes('" + page_index + "').TextFrame.TextRange.Text",
+                                                  "InlineShapes('" + page_index + "').TextFrame.ContainingRange",
+                                                  "InlineShapes('" + page_index + "').AlternativeText",
+                                                  "InlineShapes().Item(" + page_index + ").TextFrame.TextRange.Text",
+                                                  "InlineShapes().Item(" + page_index + ").TextFrame.ContainingRange",
+                                                  "InlineShapes().Item(" + page_index + ").AlternativeText"])
                     for tmp_var_name in var_name_variants:
                         vm.doc_vars[tmp_var_name.lower()] = var_val
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
-                    
-                    
+                            
             # Pull out custom document properties.
             log.info("Reading custom document properties...")
             for (var_name, var_val) in _read_custom_doc_props(data):

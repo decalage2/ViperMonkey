@@ -837,10 +837,11 @@ def hide_string_content(s):
 def convert_colons_to_linefeeds(vba_code):
     """
     Convert things like 'a=1:b=2' to 'a=1\n:b=2'
+    Also change things like 'a&"ff"' to 'a & "ff"'
     """
 
     # Skip if not needed.
-    if (":" not in vba_code):
+    if ((":" not in vba_code) and ("&" not in vba_code)):
         return vba_code
     
     # Track the characters that start and end blocks of text we won't change.
@@ -875,7 +876,7 @@ def convert_colons_to_linefeeds(vba_code):
 
             # Pull out the text to change.
             change_chunk = vba_code[pos:marker_pos1+1]
-            change_chunk = change_chunk.replace(":", "\n")
+            change_chunk = change_chunk.replace(":", "\n").replace("&", " & ")
             
             # Find the chunk of text to leave alone.
             marker_pos2a = len(vba_code)
@@ -1095,7 +1096,7 @@ def fix_difficult_code(vba_code):
     if (("!" not in vba_code) and
         (":" not in vba_code) and
         ("ElseIf" not in vba_code) and
-        ("&;" not in vba_code) and
+        ("&" not in vba_code) and
         ("^" not in vba_code) and
         ("Rem " not in vba_code) and
         ("MultiByteToWideChar" not in vba_code) and
@@ -1648,10 +1649,10 @@ def fix_vba_code(vba_code):
     if debug_strip:
         print "FIX_VBA_CODE: 10"
         print vba_code
-    vba_code = re.sub(r" _ *\r?\n", "", vba_code)
-    vba_code = re.sub(r"&_ *\r?\n", "&", vba_code)
-    vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
-    #vba_code = re.sub(r":\s*[Ee]nd\s+[Ss]ub", r"\nEnd Sub", vba_code)
+    #vba_code = re.sub(r" _ *\r?\n", "", vba_code)
+    #vba_code = re.sub(r"&_ *\r?\n", "&", vba_code)
+    #vba_code = re.sub(r"\(_ *\r?\n", "(", vba_code)
+    vba_code = re.sub(r"([^\w_])_ *\r?\n", r"\1", vba_code)
     vba_code = "\n" + vba_code
     vba_code = re.sub(r"\n:", "\n", vba_code)
 
