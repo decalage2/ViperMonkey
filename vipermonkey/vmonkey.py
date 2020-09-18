@@ -280,6 +280,8 @@ def _get_inlineshapes_text_values(data):
             # Access value with .AlternativeText accessor.
             var = "InlineShapes('" + str(pos) + "').AlternativeText"
             r.append((var, shape_text))
+            var = "InlineShapes('" + str(pos) + "').AlternativeText$"
+            r.append((var, shape_text))
             
             # Move to next shape.
             pos += 1
@@ -1230,13 +1232,6 @@ def _process_file (filename,
                 got_inline_shapes = True
                 vm.doc_vars[var_name.lower()] = var_val
                 log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
-            """
-            # TODO: Why is this here?
-            if (not got_it):
-                for (var_name, var_val) in _get_inlineshapes_text_values(data):
-                    vm.doc_vars[var_name.lower()] = var_val
-                    log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
-            """
 
             # Get the VBA code.
             vba_code = ""
@@ -1306,15 +1301,18 @@ def _process_file (filename,
                                          "me." + tab_var_name + ".Text",
                                          "me." + tab_var_name + ".Caption",
                                          "me." + tab_var_name + ".ControlTipText"]
-                    # Handle InlineShapes.
+
+                    # Handle InlineShapes.                    
                     if (not got_inline_shapes):
                         # InlineShapes().Item(1).AlternativeText
                         var_name_variants.extend(["InlineShapes('" + page_index + "').TextFrame.TextRange.Text",
                                                   "InlineShapes('" + page_index + "').TextFrame.ContainingRange",
                                                   "InlineShapes('" + page_index + "').AlternativeText",
+                                                  "InlineShapes('" + page_index + "').AlternativeText$",
                                                   "InlineShapes.Item('" + page_index + "').TextFrame.TextRange.Text",
                                                   "InlineShapes.Item('" + page_index + "').TextFrame.ContainingRange",
-                                                  "InlineShapes.Item('" + page_index + "').AlternativeText"])
+                                                  "InlineShapes.Item('" + page_index + "').AlternativeText",
+                                                  "InlineShapes.Item('" + page_index + "').AlternativeText$"])
                     for tmp_var_name in var_name_variants:
                         vm.doc_vars[tmp_var_name.lower()] = var_val
                         if (log.getEffectiveLevel() == logging.DEBUG):

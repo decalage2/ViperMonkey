@@ -1325,7 +1325,8 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
     
     # Are we refering to Page or Tab or InlineShape objects by index?
-    page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.((?:Pages|Tabs|InlineShapes|Item)\(.+\))"
+    #page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.{1,5}((?:Pages|Tabs|InlineShapes|Item)\(.+\))"
+    page_pat = r"((?:Pages|Tabs|InlineShapes|Item).?\(.+\))"
     if (re.search(page_pat, vba_code) is not None):
 
         # Add some Page objects to look for.

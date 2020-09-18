@@ -2268,7 +2268,7 @@ function_call_limited <<= (
     | (
         #~(strict_reserved_keywords + Literal("("))
         #~(reserved_keywords + Literal("("))
-        lex_identifier('name')
+        (lex_identifier('name') | (Suppress('[') + lex_identifier('name') + Suppress(']')))
         + Suppress(Optional('$'))
         + Suppress(Optional('#'))
         + Suppress(Optional('!'))
