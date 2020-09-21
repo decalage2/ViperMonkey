@@ -1099,6 +1099,7 @@ def fix_difficult_code(vba_code):
         ("&" not in vba_code) and
         ("^" not in vba_code) and
         ("Rem " not in vba_code) and
+        ("REM " not in vba_code) and
         ("MultiByteToWideChar" not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
         (re.match(r".*=\+.*", vba_code, re.DOTALL) is None)):
@@ -1206,6 +1207,8 @@ def fix_difficult_code(vba_code):
     # Replace 'Rem fff' style comments with "' fff" comments.
     vba_code = vba_code.replace("\nRem ", "\n' ")
     vba_code = vba_code.replace(" Rem ", " ' ")
+    vba_code = vba_code.replace("\nREM ", "\n' ")
+    vba_code = vba_code.replace(" REM ", " ' ")
 
     # Replace ':' with new lines.
     if debug_strip:
@@ -1808,11 +1811,14 @@ def fix_vba_code(vba_code):
 
         # Save the updated line.
         r += new_line + "\n"
-            
+
+    # Wipe out all comments.
+    r = strip_comments(r)
+        
     # Return the updated code.
     if debug_strip:
         print "FIX_VBA_CODE: 20"
-        print vba_code
+        print r
     return r
 
 def replace_constant_int_inline(vba_code):
@@ -1875,6 +1881,9 @@ def strip_useless_code(vba_code, local_funcs):
     # Preprocess the code to make it easier to parse.
     log.info("Modifying VB code...")
     vba_code = fix_vba_code(vba_code)
+
+    # Wipe out all comments.
+    vba_code = strip_comments(vba_code)
     
     # Don't strip lines if Execute() is called since the stripped variables
     # could be used in the execed code strings.
