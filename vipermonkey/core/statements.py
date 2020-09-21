@@ -3717,7 +3717,6 @@ class Call_Statement(VBA_Object):
         super(Call_Statement, self).__init__(original_str, location, tokens)
 
         # Direct creation.
-        print tokens
         if ((name is not None) and (params is not None)):
             self.name = name
             self.params = params
