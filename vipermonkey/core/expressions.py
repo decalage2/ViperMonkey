@@ -439,8 +439,21 @@ class MemberAccessExpression(VBA_Object):
         """
         Handle references to the .Paragraphs field of the current doc.
         """
+
+        # Get all paragraphs?
         if (str(self).lower().endswith(".paragraphs")):
             return context.get("ActiveDocument.Paragraphs".lower())
+
+        # Get a single paragraph?
+        if (len(self.rhs) == 0):
+            return None
+        first_rhs = self.rhs[0]
+        if (not str(first_rhs).startswith("Paragraphs('")):
+            return None
+
+        # Return the single paragraph.
+        r = eval_arg(first_rhs, context)
+        return r
 
     def _handle_comments(self, context):
         """
@@ -1293,8 +1306,6 @@ class MemberAccessExpression(VBA_Object):
 
     def eval(self, context, params=None):
 
-        #print self
-        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("MemberAccess eval of " + str(self))
 
@@ -1704,7 +1715,28 @@ addressof_expression = CaselessKeyword("addressof").suppress() + procedure_point
 
 argument_expression = (Optional(CaselessKeyword("byval")) + expression) | addressof_expression
 
-named_argument = unrestricted_name + Suppress(":=") + argument_expression
+class NamedArgument(VBA_Object):
+
+    def __init__(self, original_str, location, tokens, name=None):
+        super(NamedArgument, self).__init__(original_str, location, tokens)
+
+        self.name = tokens.name
+        self.value = tokens.value
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed "%r" as NamedArgument' % self)
+
+    def __repr__(self):
+        return '%s:=%s' % (self.name, self.value)
+
+    def eval(self, context, params=None):
+        try:
+            return eval_arg(self.value, context)
+        except:
+            log.error("NamedArgument: Cannot eval " + self.__repr__() + ".")
+            return ''
+    
+named_argument = unrestricted_name('name') + Suppress(":=") + argument_expression('value')
+named_argument.setParseAction(NamedArgument)
 named_argument_list = delimitedList(named_argument)
 required_positional_argument = argument_expression
 positional_argument = Optional(argument_expression)

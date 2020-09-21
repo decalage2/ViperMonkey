@@ -1933,6 +1933,42 @@ class SaveToFile(VbaLibraryFunc):
     def return_type(self):
         return "STRING"    
 
+class Paragraphs(VbaLibraryFunc):
+    """
+    Get a specific paragraph.
+    """
+
+    def eval(self, context, params=None):
+
+        # Get the paragraphs.
+        paragraphs = None
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+        except KeyError:
+            return "NULL"
+        
+        # Sanity check.
+        if (len(params) == 0):
+            log.error("Paragraphs() called with no arguments. Returning all paragraphs.")
+            return paragraphs
+
+        # Get the paragraph index.
+        index = None
+        try:
+            index = coerce_to_int(params[0])
+        except:
+            log.error("%r is not a valid index value. Returning NULL." % params[0])
+            return "NULL"
+
+        # Do we have a paragraph at this index?
+        if (index >= len(paragraphs)):
+            log.error("Paragraphs(" + str(index) + ") out of range. Returning NULL.")
+            return "NULL"
+
+        # Return the paragraph.
+        r = paragraphs[index]
+        return r
+    
 class SaveAs(VbaLibraryFunc):
     """
     ActiveDocument.SaveAs() method.
@@ -1941,18 +1977,20 @@ class SaveAs(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) < 4):
+        if (len(params) < 2):
             return 0
 
         # Pull out the name of the file to save to and the format
         # for saving.
-        new_fname = str(params[1])
-        fmt = params[3]
-        try:
-            fmt = int(fmt)
-        except:
-            return 0
-
+        new_fname = str(params[0])
+        fmt = params[1]
+        for param in params:
+            if (isinstance(param, expressions.NamedArgument)):
+                if (param.name == "FileName"):
+                    new_fname = param.value
+                if (param.name == "FileFormat"):
+                    fmt = param.value
+                    
         # Save the current doc to a file.
 
         # Handle saving as text.
@@ -4484,7 +4522,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
-               Chr, CopyFile, GetFile):
+               Chr, CopyFile, GetFile, Paragraphs):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
