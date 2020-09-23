@@ -6392,7 +6392,7 @@ class Context(object):
                 force_global = True
 
         # This should be a global variable if we are not in a function.
-        if ((not self.in_procedure) and (not force_global)):
+        if ((not self.in_procedure) and (not force_global) and (not force_local)):
             self.set(name, value, force_global=True)
             return
                 

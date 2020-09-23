@@ -125,15 +125,23 @@ class SimpleNameExpression(VBA_Object):
         # VB regex object?
         if (self.name == "RegExp"):
             return "core.utils.vb_RegExp()"
-        
-        # Is this a 0 argument builtin function call? Make sure this is not a
-        # local variable shadowing the name of a VBA builtin.
-        import vba_library
+
+        # Get the value of the variable/function.
         value = None
         try:
             value = context.get(self.name)
         except KeyError:
             pass
+        # Use original value if possible.
+        if (value == "__ALREADY_SET__"):
+            try:
+                value = context.get("__ORIG__" + str(self.name))
+            except KeyError:
+                pass
+        
+        # Is this a 0 argument builtin function call? Make sure this is not a
+        # local variable shadowing the name of a VBA builtin.
+        import vba_library
         if ((self.name.lower() in vba_library.VBA_LIBRARY) and
             (isinstance(value, VbaLibraryFunc)) and
             (value.num_args() == 0)):

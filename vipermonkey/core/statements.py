@@ -573,6 +573,7 @@ class Dim_Statement(VBA_Object):
             # Save the current variable in the copy of the context so
             # later calls of to_python() know the type of the variable.
             context.set(var[0], "__ALREADY_SET__", var_type=curr_type)
+            context.set(var[0], "__ALREADY_SET__", var_type=curr_type, force_global=True)
                 
             # Set the initial value of the declared variable.
             var_name = utils.fix_python_overlap(str(var[0]))
@@ -1577,6 +1578,7 @@ class For_Statement(VBA_Object):
         # Make a copy of the context so we can mark variables as loop index variables.
         #tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         tmp_context = context
+        tmp_context.set(loop_var, "__LOOP_VAR__", force_local=True)
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)        
         
         # Boilerplate used by the Python.
@@ -1592,9 +1594,6 @@ class For_Statement(VBA_Object):
             rev_code = "[::-1]"
             step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
-        # range
-        #loop_start += indent_str + "for " + loop_var + " in range(" + str(start) + ", " + str(end) + "+1, " + str(step) + ")" + rev_code + ":\n"
-        # --while
         loop_start += indent_str + loop_var + " = " + str(start) + "\n"
         loop_start += indent_str + "while (((" + loop_var + " <= " + str(end) + ") and (" + str(step) + " > 0)) or " + \
                       "((" + loop_var + " >= " + str(end) + ") and (" + str(step) + " < 0))):\n"
@@ -2140,6 +2139,7 @@ class For_Each_Statement(VBA_Object):
         # Make a copy of the context so we can mark variables as loop index variables.
         #tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         tmp_context = context
+        tmp_context.set(loop_var, "__LOOP_VAR__")
         tmp_context.set(loop_var, "__LOOP_VAR__", force_global=True)
         
         # Boilerplate used by the Python.

@@ -613,10 +613,12 @@ def _get_var_vals(item, context, global_only=False):
 
         # Do we already know the variable value?        
         val = None
+        orig_val = None
         try:
 
             # Try to get the current value.
             val = context.get(var, global_only=global_only)
+            orig_val = val
             
             # We have been kind of fuzzing the distinction between global and
             # local variables, so tighten down on globals only by just picking
@@ -647,6 +649,8 @@ def _get_var_vals(item, context, global_only=False):
 
                     # Don't treat these function calls as variables and
                     # assign initial values to them.
+                    context.set("__ORIG__" + var, orig_val, force_local=True)
+                    context.set("__ORIG__" + var, orig_val, force_global=True)
                     continue
 
             # 'inf' is not a valid value.
@@ -687,14 +691,16 @@ def _get_var_vals(item, context, global_only=False):
 
         # Mark this variable as being set in the Python code to avoid
         # embedded loop Python code generation stomping on the value.
-        context.set(var, "__ALREADY_SET__")
+        context.set(var, "__ALREADY_SET__", force_local=True)
         context.set(var, "__ALREADY_SET__", force_global=True)
         
         # Save the original value so we know it's data type for later use in JIT
         # code generation.
-        context.set("__ORIG__" + var, val)
-        context.set("__ORIG__" + var, val, force_global=True)
-
+        if (orig_val is None):
+            orig_val = val
+        context.set("__ORIG__" + var, orig_val, force_local=True)
+        context.set("__ORIG__" + var, orig_val, force_global=True)
+        
     # Done.
     return (r, zero_arg_funcs)
 
@@ -813,7 +819,10 @@ def _check_for_iocs(loop, context, indent):
     ioc_str = indent_str + "# Check for IOCs in intermediate variables.\n"
     for var in lhs_var_names:
         py_var = utils.fix_python_overlap(var)
-        ioc_str += indent_str + "vm_context.save_intermediate_iocs(" + py_var + ")\n"
+        ioc_str += indent_str + "try:\n"
+        ioc_str += indent_str + " "*4 + "vm_context.save_intermediate_iocs(" + py_var + ")\n"
+        ioc_str += indent_str + "except:\n"
+        ioc_str += indent_str + " "* 4 + "pass\n"
     return ioc_str
 
 def _updated_vars_to_python(loop, context, indent):

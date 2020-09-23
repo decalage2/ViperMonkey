@@ -3855,6 +3855,12 @@ class Cells(VbaLibraryFunc):
                     r = r[1:]
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
+                if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
+                    r = r[1:-1]
+                if (r.startswith('"') and r.endswith('"') and (len(r) >= 2)):
+                    r = r[1:-1]
+                #print "CELL!!"
+                #print r
                 return r
 
             except Exception as e:
