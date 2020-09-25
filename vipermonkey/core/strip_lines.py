@@ -1224,7 +1224,7 @@ def fix_difficult_code(vba_code):
         uni_vba_code = u"\n" + vba_code.decode("utf-8") + u"\n"
     except UnicodeDecodeError:
         pass
-    elif_pat = "(ElseIf.{5,50}Then)"
+    elif_pat = "(\r?\n[^\"]*ElseIf.{5,50}Then)"
     if (re2.search(unicode(elif_pat), uni_vba_code) is not None):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)
     
