@@ -1308,6 +1308,7 @@ def update_array(old_array, index, val):
         old_array = []
     
     # Do we need to extend the length of the list to include the indices?
+    print "arr(" + str(index) + ") = " + str(val)
     if (index >= len(old_array)):
         old_array.extend([0] * (index - len(old_array) + 1))
     old_array[index] = val

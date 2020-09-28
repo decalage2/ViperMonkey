@@ -4020,7 +4020,7 @@ class Range(VbaLibraryFunc):
             val = str(sheet.cell_value(row, col))
             
             # Return the cell value.
-            log.info("Read cell (" + str(cell_index) + ") from sheet 1")
+            log.info("Read cell (" + str(params[0]) + ") from sheet 1 = " + str(val))
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Cell value = '" + val + "'")
             return val            
