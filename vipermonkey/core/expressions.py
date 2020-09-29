@@ -2402,6 +2402,9 @@ function_call <<= (
         Suppress(']') +
         expr_list('params')
     )
+    | (
+        Suppress('[') + lex_identifier('name') + Suppress('(') + expr_list('params') + Suppress(')') + Suppress(']')
+    )
 )
 function_call.setParseAction(Function_Call)
 

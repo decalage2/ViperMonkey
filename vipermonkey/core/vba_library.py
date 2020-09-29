@@ -4135,6 +4135,23 @@ class SpecialCells(VbaLibraryFunc):
 
         # Done.
         return r
+
+class RandBetween(VbaLibraryFunc):
+    """
+    Excel RANDBETWEEN() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
+        lower = coerce_to_int(params[0])
+        upper = coerce_to_int(params[1])
+        return random.randint(lower, upper)
+
+    def num_args(self):
+        return 2
     
 class Date(VbaLibraryFunc):
     """
@@ -4632,7 +4649,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
-               Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells):
+               Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
+               RandBetween):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
