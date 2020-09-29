@@ -52,6 +52,7 @@ class function_call_visitor(visitor):
     def visit(self, item):
 
         import statements
+        from expressions import *
 
         if (item in self.visited):
             return False

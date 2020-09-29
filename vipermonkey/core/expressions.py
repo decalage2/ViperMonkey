@@ -214,6 +214,9 @@ class SimpleNameExpression(VBA_Object):
 simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + TODO_identifier_or_object_attrib('name')
 simple_name_expression.setParseAction(SimpleNameExpression)
 
+unrestricted_name_expression = unrestricted_name('name')
+unrestricted_name_expression.setParseAction(SimpleNameExpression)
+
 # A placeholder representing a missing default value function call parameter.
 placeholder = Keyword("***PLACEHOLDER***")
 placeholder.setParseAction(lambda t: str(t[0]))
@@ -312,27 +315,47 @@ class MemberAccessExpression(VBA_Object):
 
             # RegExp operations?
             raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")")
-            if ((not raw_last_func.startswith("Test(")) and
-                (not raw_last_func.startswith("Replace(")) and
-                (not raw_last_func.startswith("Pattern"))):
+            if ((raw_last_func.startswith("Test(")) or
+                (raw_last_func.startswith("Replace(")) or
+                (raw_last_func.startswith("Pattern"))):
+            
+                # Use the simulated RegExp object for this.
+                exp_str = str(self)
+                r = exp_str[:exp_str.rindex(".")] + "." + raw_last_func
+                return r
 
-                # No RegExp operations.
-                last_func = to_python(self.rhs[-1], context, params)
+            # Excel SpecialCells() method call?
+            if (raw_last_func.startswith("SpecialCells(")):
 
-                # Handle accessing name of a process from a process list.
-                if (last_func.lower() == '"name"'):
-                    lhs_str = to_python(self.lhs, context, params)
-                    if (lhs_str.startswith('"')):
-                        lhs_str = lhs_str[1:]
-                    if (lhs_str.endswith('"')):
-                        lhs_str = lhs_str[:-1]
-                    last_func = lhs_str + "['name']"
-                return last_func
+                # Make the call with the cell range as the new 1st argument.
+                new_special_cells = Function_Call(None, None, None, old_call=self.rhs[-1])
+                cells = self._eval_cell_range(context, just_expr=True)
+                tmp = [cells, new_special_cells.params[0]]
+                new_special_cells.params = tmp
+                
+                # Convert the call with the cells as explicit parameters to python.
+                r = to_python(new_special_cells, context, params)
+                return r
 
-            # Use the simulated RegExp object for this.
-            exp_str = str(self)
-            r = exp_str[:exp_str.rindex(".")] + "." + raw_last_func
-            return r
+            # Getting the Text of an object?
+            if (str(self.rhs[-1]) == "Text"):
+
+                # Just use the value of the object variable itself in python.
+                r = to_python(self.lhs, context, params)
+                return r
+            
+            # No special operations.
+            last_func = to_python(self.rhs[-1], context, params)
+            
+            # Handle accessing name of a process from a process list.
+            if (last_func.lower() == '"name"'):
+                lhs_str = to_python(self.lhs, context, params)
+                if (lhs_str.startswith('"')):
+                    lhs_str = lhs_str[1:]
+                if (lhs_str.endswith('"')):
+                    lhs_str = lhs_str[:-1]
+                last_func = lhs_str + "['name']"
+            return last_func
         
         return ""
     
@@ -597,8 +620,8 @@ class MemberAccessExpression(VBA_Object):
 
             # Drill down through layers of indirection to get the name of the function to run.
             s = func_name
-            while (isinstance(s, str)):
-                s = context.get(s)
+            while ((isinstance(s, str)) or (isinstance(s, SimpleNameExpression))):
+                s = context.get(str(s))
                 if (isinstance(s, procedures.Function) or
                     isinstance(s, procedures.Sub) or
                     isinstance(s, VbaLibraryFunc)):
@@ -1002,15 +1025,22 @@ class MemberAccessExpression(VBA_Object):
                 rhs = self.rhs[len(self.rhs) - 1]
         
         # Got possible function name?
-        if ((not isinstance(rhs, str)) or (not context.contains(rhs))):
+        if (((not isinstance(rhs, str)) and (not isinstance(rhs, SimpleNameExpression))) or
+            (not context.contains(str(rhs)))):
             return None
-        func = context.get(rhs)
+        func = context.get(str(rhs))
         if ((not isinstance(func, procedures.Sub)) and
-            (not isinstance(func, procedures.Function))):
+            (not isinstance(func, procedures.Function)) and
+            (not isinstance(func, VbaLibraryFunc))):
             return None
 
         # Is this a 0 argument function?
-        if (len(func.params) > 0):
+        num_params = 100
+        if (hasattr(func, "params")):
+            num_params = len(func.params)
+        if (hasattr(func, "num_args")):
+            num_params = func.num_args()
+        if (num_params > 0):
             return None
 
         # 0 parameter function. Evaluate it.
@@ -1018,7 +1048,7 @@ class MemberAccessExpression(VBA_Object):
             log.debug('evaluating function %r' % func)
         r = func.eval(context)
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('evaluated function %r = %r' % (func.name, r))
+            log.debug('evaluated function %r = %r' % (str(func), r))
         return r
 
     def _handle_loadxml(self, context, load_xml_result):
@@ -1312,6 +1342,63 @@ class MemberAccessExpression(VBA_Object):
         # Can't find the expression as a variable.
         return None
 
+    def _eval_cell_range(self, context, just_expr=False):
+        """
+        Evaluate a member access expression that results in a range of Excel cells.
+        """
+
+        # Pull out just the cell range expression.
+        range_exp_str = str(self.lhs).replace("'", "")
+        for exp in self.rhs[:-1]:
+            range_exp_str += "." + str(exp).replace("'", "")
+        cells = None
+        try:
+
+            # Parse it. Assume this is an expression.
+            obj = expressions.expression.parseString(range_exp_str, parseAll=True)[0]
+            if just_expr:
+                return obj
+
+            # Evaluate it.
+            cells = eval_arg(obj, context)
+            return cells
+        except ParseException:
+            log.warning("Parse error. Cannot parse cell range expression '" + range_exp_str + "'")            
+            return None
+        except Exception as e:
+            log.error("Cannot eval cell range expression '" + range_exp_str + "'. " + str(e))
+            return None
+        
+    def _handle_specialcells_call(self, context):
+        """
+        Handle things like ActiveSheet.UsedRange.SpecialCells(xlCellTypeConstants)
+        """
+
+        # Do we have a SpecialCells() method call?
+        rhs = None
+        if (len(self.rhs1) > 0):
+            rhs = self.rhs1
+        else:
+            rhs = self.rhs[len(self.rhs) - 1]
+        if ((not isinstance(rhs, Function_Call)) or
+            (rhs.name != "SpecialCells")):
+            return None
+
+        # We have a SpecialCells() call. Evaluate to get the range
+        # of Excel cells.
+        cells = self._eval_cell_range(context)
+        if (cells is None):
+            return None
+
+        # Do the SpecialCells() call.
+        new_special_cells = Function_Call(None, None, None, old_call=rhs)
+        tmp = [cells, new_special_cells.params[0]]
+        new_special_cells.params = tmp
+        r = new_special_cells.eval(context)
+        
+        # Done
+        return r
+            
     def eval(self, context, params=None):
 
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1352,6 +1439,12 @@ class MemberAccessExpression(VBA_Object):
             except KeyError:
                 pass
 
+        # Handle calling the SpecialCells() method of an Excel Range object.
+        call_retval = self._handle_specialcells_call(context)
+        if (call_retval is not None):
+            #print "OUT: 2.5"
+            return call_retval
+        
         # Handle reading the caption of a Pages() object accessed by index.
         call_retval = self._handle_indexed_pages_access(context)
         if (call_retval is not None):
@@ -1554,15 +1647,15 @@ class MemberAccessExpression(VBA_Object):
             # Is this a read from an Excel cell?
             # TODO: Need to do this logic based on what IS an Excel read rather
             # than what IS NOT an Excel read.
-            if ((isinstance(tmp_lhs, str)) and
-                (tmp_lhs != "NULL") and
-                (not "Shapes(" in tmp_lhs) and
+            if (((isinstance(tmp_lhs, str)) or (isinstance(tmp_lhs, SimpleNameExpression))) and
+                (str(tmp_lhs) != "NULL") and
+                (not "Shapes(" in str(tmp_lhs)) and
                 (not "Close" in str(self.rhs)) and
-                (not context.contains(self.lhs))):
+                (not context.contains(str(self.lhs)))):
 
                 # Just work with the returned string value.
                 #print "OUT: 31"
-                return tmp_lhs
+                return str(tmp_lhs)
 
             # See if this is reading a doc var name or item.
             call_retval = self._handle_docvar_value(tmp_lhs, self.rhs)
@@ -1642,12 +1735,21 @@ function_call = Forward()
 excel_expression = Forward()
 
 member_object_limited = (
+    ((Suppress("[") + (unrestricted_name_expression | decimal_literal) + Suppress("]")) | unrestricted_name_expression | excel_expression)
+    + NotAny("(")
+    + NotAny("#")
+    + NotAny("$")
+    + NotAny("!")
+)
+"""
+member_object_limited = (
     ((Suppress("[") + (unrestricted_name | decimal_literal) + Suppress("]")) | unrestricted_name | excel_expression)
     + NotAny("(")
     + NotAny("#")
     + NotAny("$")
     + NotAny("!")
 )
+"""
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
 member_object_loose = Suppress(Literal("(")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited) + Suppress(Literal(")")) | \
                       ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)

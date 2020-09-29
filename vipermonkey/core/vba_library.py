@@ -3873,6 +3873,56 @@ class Cells(VbaLibraryFunc):
         log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ").")
         return "NULL"
 
+class UsedRange(VbaLibraryFunc):
+    """
+    Excel UsedRange() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Guess that we want the 1st sheet.
+        sheet = None
+        try:
+            sheet = context.loaded_excel.sheet_by_index(0)
+        except:
+            context.increase_general_errors()
+            log.warning("Cannot process UsedRange() call. No sheets in file.")
+            return "NULL"
+
+        # We are going to use the internal cells field to build the list of all
+        # cells, so this will only work with the ExcelSheet class defined in excel.py.
+        if (not hasattr(sheet, "cells")):
+            log.warning("Cannot process UsedRange() call. Sheet object has no 'cells' attribute.")
+            return "NULL"
+        
+        # Cycle row by row through the sheet, tracking all the cells.
+
+        # Find the max row and column for the cells.
+        max_row = -1
+        max_col = -1
+        for cell_index in sheet.cells.keys():
+            curr_row = cell_index[0]
+            curr_col = cell_index[1]
+            if (curr_row > max_row):
+                max_row = curr_row
+            if (curr_col > max_col):
+                max_col = curr_col
+
+        # Cycle through all the cells in order.
+        r = []
+        for curr_row in range(0, max_row + 1):
+            for curr_col in range(0, max_col + 1):
+                try:
+                    r.append(sheet.cell(curr_row, curr_col))
+                except KeyError:
+                    pass
+
+        # Return all of the defined cells.
+        return r
+
+    def num_args(self):
+        return 0
+    
 class Range(VbaLibraryFunc):
     """
     Excel Range() function.
@@ -4001,7 +4051,7 @@ class Range(VbaLibraryFunc):
             sheet = context.loaded_excel.sheet_by_index(0)
         except:
             context.increase_general_errors()
-            log.warning("Cannot process Cells() call. No sheets in file.")
+            log.warning("Cannot process Range() call. No sheets in file.")
             return "NULL"
 
         # Multiple cells?
@@ -4032,6 +4082,60 @@ class Range(VbaLibraryFunc):
             log.warning("Failed to read Range(" + str(params[0]) + "). " + str(e))
             return "NULL"
 
+class CountA(VbaLibraryFunc):
+    """
+    Excel CountA() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            log.warning("No arguments passed to CountA(). Returning NULL")
+            return "NULL"
+        if (not isinstance(params[0], list)):
+            log.warning("CountA() needs list argument, not " + str(type(params[0])) + ". Returning NULL")
+            return "NULL"
+
+        # Return a count of all the non-empty cells.
+        r = len(params[0])
+        return r
+
+class SpecialCells(VbaLibraryFunc):
+    """
+    Excel SpecialCells() method. Not directly used.
+    """
+
+    def eval(self, context, params=None):
+
+        # 1st arg should be a list of cell values, 2nd arg the type of cell to include.
+        if ((params is None) or (len(params) < 2)):
+            log.warning("Not enough arguments passed to CountA(). Returning NULL")
+            return "NULL"
+        cells = params[0]
+        if (not isinstance(cells, list)):
+            log.warning("1st arguments to CountA() not a list. Returning NULL")
+            return "NULL"
+        cell_type = params[1]
+        if (not isinstance(cell_type, int)):
+            log.warning("2nd arguments to CountA() not an int. Returning NULL")
+            return "NULL"
+        if (cell_type != 2):
+            log.warning("Only handling SpecialCells(xlCellTypeConstants). Returning NULL")
+            return "NULL"
+            
+        # Currently only handling cell type xlCellTypeConstants.
+        r = []
+        for cell in cells:
+            cell = str(cell)
+            if (len(cell) == 0):
+                continue
+            if (not cell.startswith("=")):
+                r.append(cell)
+
+        # Done.
+        return r
+    
 class Date(VbaLibraryFunc):
     """
     Date() function. Currently stubbed to just return the current date as 
@@ -4528,7 +4632,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                VarType, Send, CreateShortcut, Popup, MakeSureDirectoryPathExists,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
-               Chr, CopyFile, GetFile, Paragraphs):
+               Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
