@@ -1,4 +1,4 @@
-1#!/usr/bin/env python
+#!/usr/bin/env python
 """
 ViperMonkey: Execution context for global and local variables
 

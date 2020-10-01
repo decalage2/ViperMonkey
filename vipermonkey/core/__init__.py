@@ -529,6 +529,8 @@ class ViperMonkey(StubbedEngine):
         context.globals["me.Pages.Count".lower()] = 1
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
+        context.globals["ThisDocument.Sections".lower()] = list("\n".join(self.doc_text))
+        context.globals["ActiveDocument.Sections".lower()] = list("\n".join(self.doc_text))
 
         # Break out document words.
         doc_words = []

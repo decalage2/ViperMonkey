@@ -1269,9 +1269,13 @@ def _process_file (filename,
                                      "me." + var_name + ".Caption",
                                      "me." + var_name + ".ControlTipText"]
                 for tmp_var_name in var_name_variants:
-                    vm.doc_vars[tmp_var_name.lower()] = var_val
+                    tmp_var_val = var_val
+                    if ((tmp_var_name == 'ActiveDocument.Sections') or
+                        (tmp_var_name == 'Sections')):
+                        tmp_var_val = [var_val, var_val]
+                    vm.doc_vars[tmp_var_name.lower()] = tmp_var_val
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                        log.debug("Added potential VBA OLE form textbox text (1) %r = %r to doc_vars." % (tmp_var_name, tmp_var_val))
 
                 # Handle Pages(NN) and Tabs(NN) references.
                 page_pat = r"Page(\d+)"
@@ -1316,7 +1320,7 @@ def _process_file (filename,
                     for tmp_var_name in var_name_variants:
                         vm.doc_vars[tmp_var_name.lower()] = var_val
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Added potential VBA OLE form textbox text %r = %r to doc_vars." % (tmp_var_name, var_val))
+                            log.debug("Added potential VBA OLE form textbox text (2) %r = %r to doc_vars." % (tmp_var_name, var_val))
                             
             # Pull out custom document properties.
             log.info("Reading custom document properties...")
