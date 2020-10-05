@@ -486,7 +486,29 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + " " * 4 + "vm_context = context\n"
     return boilerplate
 
-def _infer_type_of_expression(expr):
+def _get_local_func_type(expr, context):
+    """
+    Get the return type of a locally defined funtion given a call
+    to the function.
+    """
+
+    # Sanity check.
+    if (not isinstance(expr, expressions.Function_Call)):
+        return None
+
+    # Do we have the function definition?
+    func_def = None
+    try:
+        func_def = context.get(expr.name)
+    except KeyError:
+        return None
+
+    # Return the return type of the called function.
+    if (hasattr(func_def, "return_type")):
+        return func_def.return_type
+    return None
+        
+def _infer_type_of_expression(expr, context):
     """
     Try to determine if a given expression is an "INTEGER" or "STRING" expression.
     """
@@ -499,15 +521,24 @@ def _infer_type_of_expression(expr):
 
     # Function with a hard coded type?
     if (hasattr(expr, "return_type")):
+        #print "POSSIBLE TYPE (1) '" + str(expr) + "' == " + str(expr.return_type())
         return expr.return_type()
 
-    # Call of builtin function?
-    if (isinstance(expr, expressions.Function_Call) and
-        (expr.name.lower() in vba_library.VBA_LIBRARY)):
-        builtin = vba_library.VBA_LIBRARY[expr.name.lower()]
-        if (hasattr(builtin, "return_type")):
-            return builtin.return_type()
-    
+    # Call of function?
+    if (isinstance(expr, expressions.Function_Call)):
+
+        # Call of builtin function?
+        if (expr.name.lower() in vba_library.VBA_LIBRARY):
+            builtin = vba_library.VBA_LIBRARY[expr.name.lower()]
+            if (hasattr(builtin, "return_type")):
+                #print "POSSIBLE TYPE (2.1) '" + str(expr) + "' == " + str(builtin.return_type())
+                return builtin.return_type()
+
+        # Call of locally defined function.
+        r = _get_local_func_type(expr, context)
+        #print "POSSIBLE TYPE (2.2) '" + str(expr) + "' == " + str(r)
+        return r
+        
     # Easy cases. These have to be integers.
     if (isinstance(expr, operators.Xor) or
         isinstance(expr, operators.And) or
@@ -522,10 +553,12 @@ def _infer_type_of_expression(expr):
         isinstance(expr, operators.FloorDivision) or
         isinstance(expr, operators.Mod) or        
         isinstance(expr, operators.Xor)):
+        #print "POSSIBLE TYPE (3) '" + str(expr) + "' == " + "INTEGER"
         return "INTEGER"
 
     # Must be a string.
     if (isinstance(expr, operators.Concatenation)):
+        #print "POSSIBLE TYPE (4) '" + str(expr) + "' == " + "STRING"
         return "STRING"
     
     # Harder case. This could be an int or a str (or some other numeric type, but
@@ -534,15 +567,20 @@ def _infer_type_of_expression(expr):
 
         # If we are doing subtraction we need numeric types.
         if ("-" in expr.operators):
+            #print "POSSIBLE TYPE (5) '" + str(expr) + "' == " + "INTEGER"
             return "INTEGER"
         
         # We have only '+'. Try to figure out the type based on the parts of the expression.
+        r_type = None
         for child in expr.get_children():
-            child_type = _infer_type_of_expression(child)
+            child_type = _infer_type_of_expression(child, context)
             if (child_type is not None):
-                return child_type
+                r_type = child_type
+                #print "POSSIBLE TYPE (6) '" + str(child) + "' == " + str(r_type)
+        return r_type
 
     # Can't figure out the type.
+    #print "POSSIBLE TYPE (7) '" + str(expr) + "' == " + "UNKNOWN!!"
     return None
     
 def _infer_type(var, code_chunk, context):
@@ -563,7 +601,7 @@ def _infer_type(var, code_chunk, context):
     for assign in visitor.let_statements:
 
         # Try to infer the type somewhat logically.
-        poss_type = _infer_type_of_expression(assign.expression)
+        poss_type = _infer_type_of_expression(assign.expression, context)
         if (poss_type is not None):
             return poss_type
         
