@@ -1165,10 +1165,17 @@ def get_ole_text_method_1(vba_code, data, debug=False):
            replace("jd\x00\x00", "\x00").\
            replace("\x00\x00", "\x00").\
            replace("\x0c%", "")
-    data = re.sub(r"\x00.%([^\x00])\x00", "\x00\\1\x00", data)
+    if (re.search(r"\x00.%([^\x00])\x00", data) is not None):
+        data = re.sub(r"\x00.%([^\x00])\x00", "\x00\\1\x00", data)
     data = data.replace("\r", "__CARRIAGE_RETURN__")
     data = data.replace("\n", "__LINE_FEED__")
+    if (re.search(r"\x00([ -~])[^ -~\x00]([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00([ -~])[^ -~\x00]([ -~])\x00", "\x00\\1\x00\\2\x00", data)
+    if (re.search(r"\x00[ -~]{2}([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00[ -~]{2}([ -~])\x00", "\x00\\1\x00", data)
     data = re.sub(r"\x00[^ -~]", "", data)
+    if (re.search(r"\x00([ -~])[^ -~\x00]([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00([ -~])[^ -~\x00]([ -~])\x00", "\x00\\1\x00\\2\x00", data)
     data = data.replace("__CARRIAGE_RETURN__", "\r")
     data = data.replace("__LINE_FEED__", "\n")
     if debug1:

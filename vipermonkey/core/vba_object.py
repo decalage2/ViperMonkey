@@ -1762,12 +1762,17 @@ def strip_nonvb_chars(s):
     if (not isinstance(s, str)):
         return s
 
+    # Do we need to do this?
+    if (re.search(r"[^\x09-\x7e]", s) is None):
+        return s
+    
     # Strip non-ascii printable characters.
-    r = ""
-    for c in s:
-        if ((ord(c) > 8) and (ord(c) < 127)):
-            r += c
-
+    #r = ""
+    #for c in s:
+    #    if ((ord(c) > 8) and (ord(c) < 127)):
+    #        r += c
+    r = re.sub(r"[^\x09-\x7e]", "", s)
+    
     # Strip multiple 'NULL' substrings from the string.
     if (r.count("NULL") > 10):
         r = r.replace("NULL", "")
