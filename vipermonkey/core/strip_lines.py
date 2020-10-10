@@ -1791,6 +1791,10 @@ def fix_vba_code(vba_code):
         if (re2.search(unicode(bad_call_pat), uni_vba_code)):
             vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
 
+    # Fix rewritten &HFF... assignments.
+    #  =   & H20A
+    vba_code = re.sub(r" = +& (H[\dA-Fa-f])", r" = &\1", vba_code)
+            
     # Skip the next part if unnneeded.
     if debug_strip:
         print "FIX_VBA_CODE: 18"
@@ -1854,7 +1858,7 @@ def fix_vba_code(vba_code):
 
     # Wipe out all comments.
     r = strip_comments(r)
-        
+    
     # Return the updated code.
     if debug_strip:
         print "FIX_VBA_CODE: 20"
@@ -2019,7 +2023,7 @@ def strip_useless_code(vba_code, local_funcs):
                 continue
 
             # Skip const definitions.
-            if (line.strip().lower().startswith("const ")):
+            if (" const " in line.lower()):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("SKIP: Const decl. Keep it.")
                 continue
@@ -2133,7 +2137,7 @@ def strip_useless_code(vba_code, local_funcs):
                     # Keep object creations.
                     if ("CreateObject" in val):
                         continue
-
+                    
                     # Keep updates of the LHS where the LHS appears on the RHS
                     # (ex. a = a + 1).
                     if (var.lower() in val.lower()):
