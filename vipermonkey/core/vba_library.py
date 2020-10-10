@@ -4412,6 +4412,10 @@ class Print(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if (params is None):
+            return
+        
         # Regular Debug.Print() ?
         if (len(params) != 1):
             log.warning("Wrong # of arguments for Print " + str(params))
