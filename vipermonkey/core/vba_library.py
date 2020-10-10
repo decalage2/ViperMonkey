@@ -4547,6 +4547,10 @@ class Open(CreateTextFile):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        
         # Is this a HTTP GET?
         if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
             url = str(params[1])
