@@ -623,6 +623,7 @@ def _get_var_vals(item, context, global_only=False):
     """
 
     import procedures
+    import statements
 
     # Get all the variables.
 
@@ -644,6 +645,10 @@ def _get_var_vals(item, context, global_only=False):
         if ("." in var):
             tmp.add(var[:var.index(".")])
     var_names = tmp
+
+    # Handle With variables if needed.
+    if (context.with_prefix_raw is not None):
+        var_names.add(str(context.with_prefix_raw))
     
     # Get a value for each variable.
     r = {}
@@ -677,6 +682,7 @@ def _get_var_vals(item, context, global_only=False):
             # Function definitions are not valid values.
             if (isinstance(val, procedures.Function) or
                 isinstance(val, procedures.Sub) or
+                isinstance(val, statements.External_Function) or
                 isinstance(val, VbaLibraryFunc)):
 
                 # Don't use the function definition as the value.
@@ -720,7 +726,9 @@ def _get_var_vals(item, context, global_only=False):
             elif (var_type == "STRING"):
                 val = ""
             else:
-                raise ValueError("Type " + str(var_type) + " not handled.")
+                log.warning("Type '" + str(var_type) + "' of var '" + str(var) + "' not handled." + \
+                            " Defaulting initial value to 0.")
+                val = 0
 
         # Rename some vars that overlap with python builtins.
         var = utils.fix_python_overlap(var)
@@ -868,10 +876,18 @@ def _updated_vars_to_python(loop, context, indent):
     """
     Save the variables updated in a loop in Python.
     """
+    import statements
+    
     indent_str = " " * indent
     lhs_visitor = lhs_var_visitor()
     loop.accept(lhs_visitor)
     lhs_var_names = lhs_visitor.variables
+    # Handle With variables if needed.
+    if (context.with_prefix_raw is not None):
+        lhs_var_names.add(str(context.with_prefix_raw))
+    # Handle For loop index variables if needed.
+    if (isinstance(loop, statements.For_Statement)):
+        lhs_var_names.add(str(loop.name))
     var_dict_str = "{"
     first = True
     for var in lhs_var_names:
@@ -1414,7 +1430,7 @@ def eval_args(args, context, treat_as_var_name=False):
     r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
     return r
 
-def update_array(old_array, index, val):
+def update_array(old_array, indices, val):
     """
     Add an item to a Python list.
     """
@@ -1422,11 +1438,33 @@ def update_array(old_array, index, val):
     # Sanity check.
     if (not isinstance(old_array, list)):
         old_array = []
-    
-    # Do we need to extend the length of the list to include the indices?
-    if (index >= len(old_array)):
-        old_array.extend([0] * (index - len(old_array) + 1))
-    old_array[index] = val
+
+    # 1-d array?
+    if (len(indices) == 1):
+        
+        # Do we need to extend the length of the list to include the indices?
+        index = indices[0]
+        if (index >= len(old_array)):
+            old_array.extend([0] * (index - len(old_array) + 1))
+        old_array[index] = val
+
+    # 2-d array?
+    elif (len(indices) == 2):
+
+        # Do we need to extend the length of the list to include the indices?
+        index = indices[0]
+        index1 = indices[1]
+        if (index >= len(old_array)):
+            # NOTE: Don't do 'old_array.extend([[]] * (index - len(old_array) + 1))' here.
+            # The [] added with extend refers to the same list so any modification
+            # to 1 sublist shows up in all of them.
+            for i in range(0, (index - len(old_array) + 1)):
+                old_array.append([])
+        if (index1 >= len(old_array[index])):
+            old_array[index].extend([0] * (index1 - len(old_array[index]) + 1))
+        old_array[index][index1] = val
+        
+    # Done.
     return old_array
 
 def coerce_to_int_list(obj):

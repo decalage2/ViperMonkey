@@ -823,10 +823,21 @@ class Let_Statement(VBA_Object):
             if (py_var.startswith(".")):
                 py_var = py_var[1:]
             index = to_python(self.index, context, params=params)
+            indices = [index]
+            if (self.index1 is not None):
+                indices.append(to_python(self.index1, context, params=params))
             val = to_python(self.expression, context, params=params)
             op = str(self.op)
+            index_str = ""
+            first = True
+            for i in indices:
+                if (not first):
+                    index_str += ", "
+                first = False
+                index_str += i
+            index_str = "[" + index_str + "]"
             if (op == "="):
-                r = py_var + " = update_array(" + py_var + ", " + index + ", " + val + ")"
+                r = py_var + " = update_array(" + py_var + ", " + index_str + ", " + val + ")"
             else:
                 r = py_var + "[" + index + "] " + op + " " + val
 
@@ -3647,11 +3658,40 @@ class Call_Statement(VBA_Object):
     def __repr__(self):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
+    def _to_python_handle_with_calls(self, context, indent):
+
+        # Is this a call like '.WriteText "foo"'?
+        func_name = str(self.name).strip()
+        if (not func_name.startswith(".")):
+            return None
+
+        # We have a call to a function whose name starts with '.'. Are
+        # we in a With block?
+        if (len(context.with_prefix) == 0):
+            return None
+
+        # We have a method call of the With object. Make a member
+        # access expression representing the method call of the
+        # With object.
+        tmp_var = SimpleNameExpression(None, None, None, name=str(context.with_prefix_raw))
+        call_obj = Function_Call(None, None, None, old_call=self)
+        call_obj.name = func_name[1:] # Get rid of initial '.'
+        full_expr = MemberAccessExpression(None, None, None, raw_fields=(tmp_var, [call_obj], []))
+        
+        # Get python code for the fully qualified object method call.
+        r = to_python(full_expr, context, indent=indent)
+        return r
+    
     def to_python(self, context, params=None, indent=0):
         """
         Convert this call to Python code.
         """
 
+        # With block call statement?
+        with_call_str = self._to_python_handle_with_calls(context, indent)
+        if (with_call_str is not None):
+            return with_call_str
+        
         # Get a list of the Python expressions for each parameter.
         py_params = []
         for p in self.params:
@@ -3727,7 +3767,7 @@ class Call_Statement(VBA_Object):
         call_obj = Function_Call(None, None, None, old_call=self)
         call_obj.name = func_name[1:] # Get rid of initial '.'
         full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
-
+        
         # Evaluate the fully qualified object method call.
         r = eval_arg(full_expr, context)
         return r
@@ -4169,10 +4209,24 @@ class With_Statement(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
-        # For now just convert the with body to Python and hope for the best.
+        # Currently we are only supporting JIT emulation of With blocks
+        # based on Scripting.Dictionary. Is that what we have?
+        with_dict = None
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            with_dict = context.get(str(context.with_prefix_raw))
+            if (not isinstance(with_dict, dict)):
+                with_dict = None
+        if (with_dict is None):
+            return "ERROR: Only doing JIT on Scripting.Dictionary With blocks."
+
+        # Save the dict representing the Scripting.Dictionary.
         r = ""
         indent_str = " " * indent
         r += indent_str + "# With block: " + str(self).replace("\\n", "\\\\n")[:50] + "...\n"
+        r += indent_str + "with_dict = " + str(with_dict) + "\n"
+        
+        # Convert the with body to Python.
         r += to_python(self.body, context, indent=indent, statements=True)
 
         # Done.
@@ -4189,6 +4243,7 @@ class With_Statement(VBA_Object):
         prefix_val = eval_arg(self.env, context)
 
         # Track the with prefix.
+        context.with_prefix_raw = self.env
         if (len(context.with_prefix) > 0):
             context.with_prefix += "." + str(self.env)
             #context.with_prefix += "." + str(prefix_val)
@@ -4231,6 +4286,7 @@ class With_Statement(VBA_Object):
             log.debug("END WITH")
             
         # Remove the current with prefix.
+        context.with_prefix_raw = None
         if ("." not in context.with_prefix):
             context.with_prefix = ""
         else:
@@ -4241,7 +4297,7 @@ class With_Statement(VBA_Object):
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-            
+        
         return
 
 # With statement

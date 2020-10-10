@@ -1033,7 +1033,96 @@ class Item(BuiltInDocumentProperties):
     """
     Assumes that Item() is only called on BuiltInDocumentProperties.
     """
-    pass
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Were we given the dict to work with?
+        with_dict = None
+        index = None
+        if ((len(params) >= 2) and (isinstance(params[0], dict))):
+
+            # Dict is 1st parameter.        
+            with_dict = params[0]
+            # Item index is 2nd parameter.
+            index = coerce_to_int(params[1])
+        
+        # Are we reading from a With Scripting.Dictionary?
+        elif ((context.with_prefix_raw is not None) and
+              (context.contains(str(context.with_prefix_raw)))):
+
+            # Get the item index.
+            index = coerce_to_int(params[0])
+            
+            # Is the With variable value a dict?
+            with_dict = context.get(str(context.with_prefix_raw))
+            if (not isinstance(with_dict, dict)):
+                with_dict = None
+
+        # Are we reading from a Scripting.Dictionary?
+        if (with_dict is not None):
+
+            # Valid key?
+            if (index in with_dict):
+                return with_dict[index]
+            return "NULL"
+            
+        # Not a workable Scripting.Dictionary.Item() call. Treat as
+        # BuiltInDocumentProperties.Item()
+        return super(Item, self).eval(context, params)
+
+class Items(VbaLibraryFunc):
+    """
+    Modified version of Scripting.Dcitionary.Items(). ViperMonkey modifies
+    these calls to take the underlying dict containing the items as the 1st
+    parameter.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        
+        # Were we given the dict to work with?
+        the_map = None
+        index = None
+        if ((len(params) >= 2) and (isinstance(params[0], dict))):
+
+            # Dict is 1st parameter.        
+            the_map = params[0]
+            # Item index is 2nd parameter.
+            index = coerce_to_int(params[1])
+            
+        # Are we reading from a With Scripting.Dictionary?
+        elif ((context.with_prefix_raw is not None) and
+              (context.contains(str(context.with_prefix_raw)))):
+
+            # Item index is 1st parameter.
+            index = coerce_to_int(params[0])
+            
+            # Is the With variable value a dict?
+            the_map = context.get(str(context.with_prefix_raw))
+            if (not isinstance(the_map, dict)):
+                return "NULL"
+        else:
+            return "NULL"
+        
+        # Items() handles the added entries in order, so this thing
+        # does not act like a standard hash map.
+        if ("__ADDED_ITEMS__" not in the_map):
+            return "NULL"
+        added_items = the_map["__ADDED_ITEMS__"]
+        
+        # Is the index valid?
+        if ((index < 0) or (index >= len(added_items))):
+            return "NULL"
+
+        # Return the item by index.
+        return added_items[index]
     
 class Shell(VbaLibraryFunc):
     """
@@ -1129,11 +1218,39 @@ class Eval(VbaLibraryFunc):
 
 class Exists(VbaLibraryFunc):
     """
-    Document Exists() method. Defaults to false.
+    Document or Scripting.Dictionary Exists() method.
     """
 
     def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return False
+
+        # Scripting.Dictionary Exists()?
+        if ((len(params) == 2) and (isinstance(params[0], dict))):
+            r = (params[1] in params[0])
+            return r
+
+        # Document Exists(). Default to False.
         return False
+
+class Count(VbaLibraryFunc):
+    """
+    Document or Scripting.Dictionary Count() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or
+            (len(params) == 0) or
+            (not isinstance(params[0], dict))):
+            return "NULL"
+
+        # Return the # of Added items.
+        # Subtract 1 due to "__ADDED_ITEMS__" entry in dict.
+        return (len(params[0]) - 1)
         
 parse_cache = {}
 class Execute(VbaLibraryFunc):
@@ -1300,7 +1417,15 @@ class Add(VbaLibraryFunc):
         val = params[2]
         if (not isinstance(obj, dict)):
             return
+
+        # Add to the map.
         obj[key] = val
+        if ("__ADDED_ITEMS__" not in obj):
+            obj["__ADDED_ITEMS__"] = []
+        obj["__ADDED_ITEMS__"].append(val)
+
+        # Done.
+        return obj
 
 class Array(VbaLibraryFunc):
     """
@@ -3676,7 +3801,10 @@ class CreateObject(VbaLibraryFunc):
 
         # Handle certain object types.
         if (obj_type == "Scripting.Dictionary"):
-            return {}
+            r = {}
+            # Track the added items in order as well as by key.
+            r["__ADDED_ITEMS__"] = []
+            return r
             
         # Just return a string representation of the name of the object
         # being created.
@@ -4650,7 +4778,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
-               RandBetween):
+               RandBetween, Items, Count):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

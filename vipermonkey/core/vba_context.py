@@ -207,6 +207,11 @@ class Context(object):
 
         # Track variable types, if known.
         self.types = {}
+
+        # Track the current with prefix for with statements. This has been evaluated
+        self.with_prefix = ""
+        # Track the current with prefix for with statements. This has not been evaluated
+        self.with_prefix_raw = None
         
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
@@ -246,6 +251,8 @@ class Context(object):
             self.metadata = context.metadata
             self.external_funcs = context.external_funcs
             self.num_general_errors = context.num_general_errors
+            self.with_prefix = context.with_prefix
+            self.with_prefix_raw = context.with_prefix_raw
         else:
             self.globals = {}
         # on the other hand, each Context should have its own private copy of locals
@@ -290,9 +297,6 @@ class Context(object):
         
         # Track whether we have exited from the current function.
         self.exit_func = False
-
-        # Track the current with prefix for with statements.
-        self.with_prefix = ""
 
         # Add in a global for the current time.
         self.globals["Now".lower()] = datetime.now()
@@ -6393,7 +6397,7 @@ class Context(object):
 
         # This should be a global variable if we are not in a function.
         if ((not self.in_procedure) and (not force_global) and (not force_local)):
-            self.set(name, value, force_global=True)
+            self.set(name, value, force_global=True, do_with_prefix=do_with_prefix)
             return
                 
         # Set the variable
@@ -6522,9 +6526,9 @@ class Context(object):
                         # Set the typed value of the node to the decoded value.
                         conv_val = base64.b64decode(tmp_str)
                         val_name = name
-                        self.set(val_name, conv_val, no_conversion=True)
+                        self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                         val_name = name.replace(".text", ".nodetypedvalue")
-                        self.set(val_name, conv_val, no_conversion=True)
+                        self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                         
                 # Base64 conversion error.
                 except Exception as e:
@@ -6546,11 +6550,11 @@ class Context(object):
 
                         # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(str(value).strip(), "hex")
-                        self.set(name, conv_val, no_conversion=True)
+                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     except Exception as e:
                         log.warning("hex conversion of '" + str(value) + "' FROM hex failed. Converting TO hex. " + str(e))
                         conv_val = to_hex(str(value).strip())
-                        self.set(name, conv_val, no_conversion=True)
+                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                         
             except KeyError:
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -6572,11 +6576,11 @@ class Context(object):
 
                         # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(str(node_value).strip(), "hex")
-                        self.set(node_value_name, conv_val, no_conversion=True)
+                        self.set(node_value_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     except Exception as e:
                         log.warning("hex conversion of '" + str(node_value) + "' FROM hex failed. Converting TO hex. " + str(e))
                         conv_val = to_hex(str(node_value).strip())
-                        self.set(node_value_name, conv_val, no_conversion=True)
+                        self.set(node_value_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
 
                 # Do we have data to convert from type "bin.base64"?
                 if (value.lower() == "bin.base64"):
@@ -6591,7 +6595,7 @@ class Context(object):
                         if missing_padding:
                             tmp_str += b'='* (4 - missing_padding)
                         conv_val = base64.b64decode(tmp_str)
-                        self.set(node_value_name, conv_val, no_conversion=True)
+                        self.set(node_value_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     except Exception as e:
                         log.error("base64 conversion of '" + str(node_value) + "' failed. " + str(e))
                         

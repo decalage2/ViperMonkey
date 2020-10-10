@@ -164,6 +164,9 @@ class SimpleNameExpression(VBA_Object):
         return var_name
     
     def eval(self, context, params=None):
+
+        import statements
+        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('try eval variable/function %r' % self.name)
         try:
@@ -172,6 +175,7 @@ class SimpleNameExpression(VBA_Object):
                 log.debug('get variable %r = %r' % (self.name, value))
             if (isinstance(value, procedures.Function) or
                 isinstance(value, procedures.Sub) or
+                isinstance(value, statements.External_Function) or
                 isinstance(value, VbaLibraryFunc)):
 
                 # Only evaluate functions with 0 args since we have no
@@ -308,8 +312,54 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _to_python_handle_add(self, context, indent):
+        """
+        Handle Add() object method calls like foo.Add(bar, baz). 
+        foo is (currently) a Scripting.Dictionary object.
+        """
+
+        # Currently we are only supporting JIT emulation of With blocks
+        # based on Scripting.Dictionary. Is that what we have?
+        with_dict = None
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            with_dict = context.get(str(context.with_prefix_raw))
+            if (with_dict == "__ALREADY_SET__"):
+
+                # Try getting the original value.
+                with_dict = context.get("__ORIG__" + str(context.with_prefix_raw))
+
+            # Got Scripting.Dictionary?
+            if (not isinstance(with_dict, dict)):                
+                with_dict = None
+
+        # Can we do JIT code for this?
+        if (with_dict is None):
+            return None
+
+        # Is this a Scripting.Dictionary method call?
+        expr_str = str(self)
+        if (".Add(" not in expr_str):
+            return None
+            
+        # Generate python for the dictionary method call.
+        tmp_var = SimpleNameExpression(None, None, None, name=str(context.with_prefix_raw))
+        new_add = Function_Call(None, None, None, old_call=self.rhs[0])
+        tmp = [tmp_var]
+        for p in new_add.params:
+            tmp.append(p)
+        new_add.params = tmp
+        indent_str = " " * indent
+        r = indent_str + to_python(new_add, context)        
+        return r
+    
     def to_python(self, context, params=None, indent=0):
 
+        # Handle Scripting.Dictionary.Add() calls.
+        add_code = self._to_python_handle_add(context, indent)
+        if (add_code is not None):
+            return add_code
+        
         # For now just pick off the last item in the expression.
         if (len(self.rhs) > 0):
 
@@ -917,10 +967,24 @@ class MemberAccessExpression(VBA_Object):
 
     def _handle_add(self, context, lhs, rhs):
         """
-        Handle Add() object method calls like foo.Replace(bar, baz). 
+        Handle Add() object method calls like foo.Add(bar, baz). 
         foo is (currently) a Scripting.Dictionary object.
         """
 
+        # Get the LHS as a dict if possible.
+        if (isinstance(lhs, str) and
+            lhs.startswith("{") and
+            lhs.endswith("}")):
+            try:
+                lhs = eval(lhs)
+            except SyntaxError:
+                pass
+
+        # Get the Dictionary if it is a With variable.
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            lhs = context.get(str(context.with_prefix_raw))
+            
         # Sanity check.
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("_handle_add(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
@@ -944,8 +1008,61 @@ class MemberAccessExpression(VBA_Object):
             log.debug("Add() func = " + str(new_add))
         
         # Evaluate the dictionary add.
-        new_add.eval(context)
-        return "updated dict"
+        new_dict = new_add.eval(context)
+
+        # Update the dict variable.
+        if (context.with_prefix_raw is not None):
+            context.set(str(context.with_prefix_raw), new_dict, do_with_prefix=False)
+        if (context.contains(str(self.lhs))):
+            context.set(str(self.lhs), new_dict, do_with_prefix=False)
+
+        # Done with the Add().
+        return new_dict
+
+    def _handle_exists(self, context, lhs, rhs):
+        """
+        Handle Exists() object method calls like foo.Exists(bar). 
+        foo is (currently) a Scripting.Dictionary object.
+        """
+
+        # Get the LHS as a dict if possible.
+        if (isinstance(lhs, str) and
+            lhs.startswith("{") and
+            lhs.endswith("}")):
+            try:
+                lhs = eval(lhs)
+            except SyntaxError:
+                pass
+
+        # Get the Dictionary if it is a With variable.
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            lhs = context.get(str(context.with_prefix_raw))
+            
+        # Sanity check.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_exists(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (not isinstance(rhs, Function_Call)):
+            return None
+        if (rhs.name != "Exists"):
+            return None
+        if (not isinstance(lhs, dict)):
+            return None
+
+        # Run the dictionary exists.
+        new_exists = Function_Call(None, None, None, old_call=rhs)
+        tmp = [lhs]
+        for p in new_exists.params:
+            tmp.append(p)
+        new_exists.params = tmp
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Exists() func = " + str(new_exists))
+        
+        # Evaluate the dictionary exists.
+        r = new_exists.eval(context)
+        return r
 
     def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
         """
@@ -1608,6 +1725,12 @@ class MemberAccessExpression(VBA_Object):
                 #print "OUT: 25"
                 return call_retval
 
+            # Handle things like foo.Exists(bar).
+            call_retval = self._handle_exists(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                #print "OUT: 25.1"
+                return call_retval
+
             # Handle Excel cells() references.
             call_retval = self._handle_excel_read(context, self.rhs)
             if (call_retval is not None):
@@ -1907,9 +2030,89 @@ class With_Member_Expression(VBA_Object):
         return "." + str(self.expr)
 
     def to_python(self, context, params=None, indent=0):
-        return to_python(self.expr, context)
-    
+
+        # Currently we are only supporting JIT emulation of With blocks
+        # based on Scripting.Dictionary. Is that what we have?
+        with_dict = None
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            with_dict = context.get(str(context.with_prefix_raw))
+            if (with_dict == "__ALREADY_SET__"):
+
+                # Try getting the original value.
+                with_dict = context.get("__ORIG__" + str(context.with_prefix_raw))
+
+            # Got Scripting.Dictionary?
+            if (not isinstance(with_dict, dict)):                
+                with_dict = None
+
+        # Can we do JIT code for this?
+        if (with_dict is None):
+            return "ERROR: Only doing JIT on Scripting.Dictionary With blocks."
+
+        # Is this a Scripting.Dictionary method call?
+        expr_str = str(self)
+        if ((not expr_str.startswith(".Exists")) and
+            (not expr_str.startswith(".Items")) and
+            (not expr_str.startswith(".Item")) and
+            (not expr_str.startswith(".Count"))):
+            return "ERROR: Only doing JIT on Scripting.Dictionary methods in With blocks."
+
+        # Count? Not parsed as a function call...
+        if (expr_str == ".Count"):
+            return "(len(" + context.with_prefix_raw + ") - 1)"
+
+        # Generate python for the dictionary method call.
+        tmp_var = SimpleNameExpression(None, None, None, name=str(context.with_prefix_raw))
+        new_exists = Function_Call(None, None, None, old_call=self.expr)
+        tmp = [tmp_var]
+        for p in new_exists.params:
+            tmp.append(p)
+        new_exists.params = tmp
+        r = to_python(new_exists, context, params)
+        return r
+        
+    def _handle_method_calls(self, context):
+        """
+        Handle Scripting.Dictionary...() calls.
+        """
+
+        # Is this a method call?
+        expr_str = str(self)
+        if ((not expr_str.startswith(".Exists")) and (not expr_str.startswith(".Count"))):
+            return None
+
+        # Get the Dictionary if it is a With variable.
+        if ((context.with_prefix_raw is None) or
+            (not context.contains(str(context.with_prefix_raw)))):
+            return None
+        with_dict = context.get(str(context.with_prefix_raw))
+
+        # Count? Not parsed as a function call...
+        if (expr_str == ".Count"):
+            return (len(with_dict) - 1)
+        
+        # Run the dictionary method call.
+        new_exists = Function_Call(None, None, None, old_call=self.expr)
+        tmp = [with_dict]
+        for p in new_exists.params:
+            tmp.append(p)
+        new_exists.params = tmp
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Dictionary NNNNNN() func = " + str(new_exists))
+        
+        # Evaluate the dictionary exists.
+        r = new_exists.eval(context)
+        return r
+        
     def eval(self, context, params=None):
+
+        # Handle Scripting.Dictionary....() calls.
+        call_retval = self._handle_method_calls(context)
+        if (call_retval is not None):
+            return call_retval
+
+        # Plain eval.
         return self.expr.eval(context, params)
 
 with_member_access_expression = Suppress(".") + (simple_name_expression("expr") ^ function_call_limited("expr") ^ member_access_expression("expr")) 
@@ -2067,7 +2270,8 @@ class Function_Call(VBA_Object):
             
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
-            context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
+            if ("Scripting.Dictionary" not in str(params)):
+                context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
 
             # Get the (possible) function.
@@ -2512,6 +2716,7 @@ expr_item <<= (
         | excel_expression
         | literal_range_expression
         | literal_list_expression
+        | Suppress(Literal("(")) + boolean_expression + Suppress(Literal(")"))
     )
 )
 expr_item_strict <<= (

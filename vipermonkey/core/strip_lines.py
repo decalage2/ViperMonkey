@@ -617,6 +617,38 @@ def fix_bad_next_statements(vba_code):
             r = r.replace(bad_next, new_nexts)
     return r
 
+def fix_items_ref(vba_code):
+    """
+    Change Scripting.Dictionary.Items() references to 
+    Scripting.Dictionary.Items.
+    """
+
+    # Do we need to do this?
+    if (".Items()(" not in vba_code):
+        return vba_code
+    r = vba_code.replace(".Items()(", ".Items(")
+    return r
+
+def fix_stupid_string_concats(vba_code):
+    """
+    Change garbage string concatentations like 's1 & s2 & + "foo"' to
+    's1 & s2 & "foo"'.
+    """
+
+    # Do we need to do this?
+    uni_vba_code = None
+    try:
+        uni_vba_code = vba_code.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return vba_code
+    if (re2.search(unicode(r"&\s+\+"), uni_vba_code) is None):
+        return vba_code
+
+    # Change the string concats to something sensible.
+    r = re.sub(r"&\s+\+", "& ", vba_code)
+    return r
+
 def fix_bad_exponents(vba_code):
     """
     Change things like '2^2' to '2 ^ 2'. 
@@ -975,6 +1007,14 @@ def fix_difficult_code(vba_code):
     vba_code = fix_bad_exponents(vba_code)
     if debug_strip:
         print "HERE: 2.6"
+        print vba_code
+    vba_code = fix_stupid_string_concats(vba_code)
+    if debug_strip:
+        print "HERE: 2.6.1"
+        print vba_code
+    vba_code = fix_items_ref(vba_code)
+    if debug_strip:
+        print "HERE: 2.6.2"
         print vba_code
     vba_code = fix_bad_next_statements(vba_code)
     if debug_strip:
