@@ -908,8 +908,12 @@ def convert_colons_to_linefeeds(vba_code):
 
             # Pull out the text to change.
             change_chunk = vba_code[pos:marker_pos1+1]
-            change_chunk = change_chunk.replace(":", "\n").replace("&", " & ")
-            
+            change_chunk = change_chunk.replace(":", "\n")
+            # 'a&"ff"'
+            change_chunk = re.sub(r"([\w_])&\"", r"\1 & \"", change_chunk)
+            # '"gg"&"ff"'
+            change_chunk = re.sub(r"\"&\"", r"\" & \"", change_chunk)
+
             # Find the chunk of text to leave alone.
             marker_pos2a = len(vba_code)
             marker_pos2b = len(vba_code)
@@ -1792,9 +1796,14 @@ def fix_vba_code(vba_code):
             vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
 
     # Fix rewritten &HFF... assignments.
-    #  =   & H20A
-    vba_code = re.sub(r" = +& (H[\dA-Fa-f])", r" = &\1", vba_code)
-            
+    # Should not be needed now.
+    ## ' & H20A'
+    #vba_code = re.sub(r" & (H[\dA-Fa-f])", r" &\1", vba_code)
+    ## ' &H20A &'
+    #vba_code = re.sub(r"(&H[\dA-Fa-f]+) & ", r"\1&", vba_code)
+    ## 'LastRow & ,'
+    #vba_code = re.sub(r"([\w_]+) & ,", r"\1&,", vba_code)
+    
     # Skip the next part if unnneeded.
     if debug_strip:
         print "FIX_VBA_CODE: 18"
