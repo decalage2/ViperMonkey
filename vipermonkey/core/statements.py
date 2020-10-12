@@ -1707,10 +1707,16 @@ class For_Statement(VBA_Object):
         if (op not in ['+', '-', '*']):
             return (None, None)
 
+        # Skip loops where the computation depends on the loop
+        # index.
+        for f in fields[2:]:
+            if (f.strip() == str(self.name).strip()):
+                return (None, None)
+                
         # Figure out the value to use to change the variable in the loop.
         expr_str = ""
         for e in fields[4:]:
-            expr_str += e
+            expr_str += " " + e
         num = None
         try:
             expr = expression.parseString(expr_str, parseAll=True)[0]
@@ -1723,6 +1729,7 @@ class For_Statement(VBA_Object):
             return (None, None)
         
         # Get the initial value of variable being modified in the loop.
+        print num
         init_val = None
         try:
 

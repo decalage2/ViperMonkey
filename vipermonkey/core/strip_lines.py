@@ -877,7 +877,7 @@ def convert_colons_to_linefeeds(vba_code):
         return vba_code
     
     # Track the characters that start and end blocks of text we won't change.
-    marker_chars = [('"', '"'), ('[', ']'), ("'", '\n'), ('#', '#')]
+    marker_chars = [('"', '"'), ('[', ']'), ("'", '\n'), ('#', '#'), ("If ", "\n")]
 
     # Loop through the text leaving some blocks unchanged and others with ':' changed to '\n'.
     pos = 0
