@@ -367,11 +367,23 @@ class MemberAccessExpression(VBA_Object):
             raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")")
             if ((raw_last_func.startswith("Test(")) or
                 (raw_last_func.startswith("Replace(")) or
+                (raw_last_func.startswith("Global")) or
                 (raw_last_func.startswith("Pattern"))):
             
                 # Use the simulated RegExp object for this.
                 exp_str = str(self)
-                r = exp_str[:exp_str.rindex(".")] + "." + raw_last_func
+                call_str = raw_last_func
+                if (isinstance(self.rhs[-1], Function_Call)):
+                    the_call = self.rhs[-1]
+                    call_str = str(the_call.name) + "("
+                    first = True
+                    for p in the_call.params:
+                        if (not first):
+                            call_str += ", "
+                        first = False
+                        call_str += to_python(p, context)
+                    call_str += ")"
+                r = exp_str[:exp_str.rindex(".")] + "." + call_str
                 return r
 
             # Excel SpecialCells() method call?

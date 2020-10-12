@@ -1548,7 +1548,10 @@ class For_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100) == " + prog_var + "):\n"
         loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100)) + \"% done with loop " + str(self) + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
-        loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
+        body_str = to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
+        if (body_str.strip() == '""'):
+            body_str = "\n"
+        loop_body += body_str
         # --while
         loop_body += indent_str + " " * 4 + loop_var + " += " + str(step) + "\n"
         

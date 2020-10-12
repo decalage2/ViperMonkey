@@ -79,7 +79,9 @@ def fix_python_overlap(var_name):
     if (var_name.lower() in builtins):
         var_name = "MAKE_UNIQUE_" + var_name
     var_name = var_name.replace("$", "__DOLLAR__")
-    if (not var_name.endswith(".Pattern")):
+    # RegExp object?
+    if ((not var_name.endswith(".Pattern")) and
+        (not var_name.endswith(".Global"))):
         var_name = var_name.replace(".", "")
     return var_name
 
@@ -92,6 +94,9 @@ class vb_RegExp(object):
         self.Pattern = None
         self.Global = False
 
+    def __repr__(self):
+        return "<RegExp Object: Pattern = '" + str(self.Pattern) + "', Global = " + str(self.Global) + ">"
+        
     def _get_python_pattern(self):
         pat = self.Pattern
         if (pat is None):
@@ -119,6 +124,10 @@ class vb_RegExp(object):
         if (pat is None):
             return s
         rep = re.sub(r"\$(\d)", r"\\\1", rep)
+        print "PAT: '" + pat + "'"
+        print "REP: '" + pat + "'"
+        print "STR: '" + string + "'"
+        print re.findall(pat, string)
         r = string
         try:
             r = re.sub(pat, rep, string)
