@@ -1217,6 +1217,10 @@ def _process_file (filename,
                 vm.doc_vars[tmp_name] = var_val
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+                tmp_name = "ActiveDocument.shapes('" + str(pos) + "').AlternativeText"
+                vm.doc_vars[tmp_name] = var_val
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
                 pos += 1
             if (not got_it):
                 shape_text = read_ole_fields._get_shapes_text_values(data, '1table')

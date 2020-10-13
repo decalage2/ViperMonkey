@@ -6102,12 +6102,18 @@ class Context(object):
             except KeyError:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Cached lookup failed.")
-                
+
+        # Use the evaluated With prefix value only when it makes sense.
+        with_prefix = self.with_prefix
+        if ((self.with_prefix_raw is not None) and
+            (str(self.with_prefix_raw).startswith("ActiveDocument"))):
+            with_prefix = self.with_prefix_raw
+                    
         # Try to get the item using the current with context.
         if (name.startswith(".")):
-
+            
             # Add in the current With context.
-            tmp_name = str(self.with_prefix) + str(name)
+            tmp_name = str(with_prefix) + str(name)
             try:
                 return self.__get(tmp_name,
                                   case_insensitive=case_insensitive,
@@ -6126,7 +6132,7 @@ class Context(object):
             pass
 
         # Try to get the item using the current with context, again.
-        tmp_name = str(self.with_prefix) + "." + str(name)
+        tmp_name = str(with_prefix) + "." + str(name)
         try:
             return self.__get(tmp_name,
                               case_insensitive=case_insensitive,
