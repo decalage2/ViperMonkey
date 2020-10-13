@@ -49,14 +49,14 @@ import olefile
 from logger import log
 import filetype
 
-def is_garbage_vba(vba):
+def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     """
     Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
     """
 
     # See if the 1st % of the string is mostly bad or mostly good.
     total_len = len(vba)
-    if (total_len > 50000):
+    if ((total_len > 50000) and (not test_all)):
         total_len = int(len(vba) * .25)
     if (total_len == 0):
         return False
@@ -71,8 +71,8 @@ def is_garbage_vba(vba):
         if (c not in string.printable):
             num_bad += 1
 
-    # It's bad if > 60% of the 1st % of the string is garbage.    
-    return ((num_bad/total_len) > .6)
+    # It's bad if > NN% of the 1st % of the string is garbage.
+    return ((num_bad/total_len) > bad_pct)
 
 def pull_base64(data):
     """

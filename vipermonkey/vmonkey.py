@@ -1034,6 +1034,13 @@ def _remove_duplicate_iocs(iocs):
     skip = set()
     log.info("Found " + str(len(iocs)) + " possible IOCs. Stripping duplicates...")
     for ioc1 in iocs:
+        
+        # Does this IOC look like straight up garbage?
+        if (read_ole_fields.is_garbage_vba(ioc1, test_all=True, bad_pct=.25)):
+            skip.add(ioc1)
+            continue
+
+        # Looks somewhat sensible. See if it is a duplicate.
         keep_curr = True
         for ioc2 in iocs:
             if (ioc2 in skip):
