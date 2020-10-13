@@ -1646,17 +1646,6 @@ def fix_vba_code(vba_code):
     for imp in implements:
         vba_code = vba_code.replace(imp, "")
         
-    # We don't handle Enum constructs for now. Delete them.
-    # TODO: Actually handle Enum consructs.
-    if debug_strip:
-        print "FIX_VBA_CODE: 8"
-        print vba_code
-    enums = re.findall(r"(?:(?:Public|Private)\s+)?Enum\s+.+?End\s+Enum", vba_code, re.DOTALL)
-    if (len(enums) > 0):
-        log.warning("VB Enum constructs are not currently handled. Stripping them from code...")
-    for enum in enums:
-        vba_code = vba_code.replace(enum, "")
-
     # We don't handle ([a1]) constructs for now. Delete them.
     # TODO: Actually handle these things.
     if debug_strip:

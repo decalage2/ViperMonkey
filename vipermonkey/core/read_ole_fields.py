@@ -1460,7 +1460,7 @@ def get_ole_textbox_values(obj, vba_code):
             sys.exit(0)
         return []
 
-    pat = r"(?:[\x20-\x7e]{3,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){3,})"
+    pat = r"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
     index = 0
     r = []
     found_names = set()
@@ -1503,7 +1503,7 @@ def get_ole_textbox_values(obj, vba_code):
         else:
 
             # Jump an arbitrary amount ahead.
-            end = index + 25000
+            end = index + 2500000
             if (end > len(data)):
                 end = len(data) - 1
 

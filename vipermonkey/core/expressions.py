@@ -221,7 +221,8 @@ class SimpleNameExpression(VBA_Object):
 #
 # MS-GRAMMAR: simple-name-expression = name
 
-simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + TODO_identifier_or_object_attrib('name')
+simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + \
+                         (TODO_identifier_or_object_attrib('name') | enum_val_id('name'))
 simple_name_expression.setParseAction(SimpleNameExpression)
 
 unrestricted_name_expression = unrestricted_name('name')

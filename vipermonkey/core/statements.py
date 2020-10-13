@@ -3569,7 +3569,8 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                                     Group(statement_block('statements')))
                           )
 
-_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(Optional(EOS)) + \
+#_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(Optional(EOS)) + \
+_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
                                    Group(simple_statements_line('statements')) )  + \
                                    ZeroOrMore(
                                        Group( CaselessKeyword("ElseIf").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
@@ -5034,6 +5035,71 @@ orphaned_marker = Suppress((CaselessKeyword("End") + CaselessKeyword("Function")
                            (CaselessKeyword("End") + CaselessKeyword("Sub")))
 orphaned_marker.setParseAction(Orphaned_Marker)
 
+# --- Enum Statement ----------------------------------------------------------
+# 
+# Enum SecurityLevel 
+#  IllegalEntry = -1 
+#  SecurityLevel1 = 0 
+#  SecurityLevel2 = 1 
+# End Enum 
+#
+# Enum flxMask
+#    [Ampersand (&)] = 1
+#    UpperA = 2
+#    LowerA = 3
+#    UpperC = 4
+#    LowerC = 5
+#    [Number Sign (#)] = 6
+#    [Nine Sign (9)] = 7
+#    [Question Mark (?)] = 8
+#    NoPos = 9
+#    [DecPoint (.)] = 10
+# End Enum
+#
+# Enum CarType
+#   Sedan         'Value = 0
+#   HatchBack = 2 'Value = 2
+#   SUV = 10      'Value = 10
+#   Truck         'Value = 11
+# End Enum
+
+class EnumStatement(VBA_Object):
+
+    def __init__(self, original_str, location, tokens):
+        super(EnumStatement, self).__init__(original_str, location, tokens)
+        self.name = str(tokens[0])
+        self.values = []
+        pos = 0
+        enum_vals = tokens[1]
+        last_val = -1
+        for enum_val in enum_vals:
+            last_val += 1
+            if (len(enum_val) == 2):
+                last_val = enum_val[1]
+            self.values.append((str(enum_val[0]), last_val))
+                
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Enum_Statement' % self)
+
+    def __repr__(self):
+        r = "Enum " + self.name + "\\n"
+        for enum_val in self.values:
+            r += "  " + enum_val[0] + " = " + str(enum_val[1]) + " \\n"
+        r += "End Enum"
+        return r
+
+    def eval(self, context, params=None):
+
+        # Add the enum values as variables to the context.
+        for enum_val in self.values:
+            context.set(enum_val[0], enum_val[1], force_global=True)
+
+enum_value = Group((lex_identifier | enum_val_id)("name") + Optional(Suppress(Literal("=")) + decimal_literal("value")))
+enum_statement = Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
+                 Group(OneOrMore(enum_value + Suppress(EOS))("enum_values")) + \
+                 Suppress(CaselessKeyword("End")) + Suppress(CaselessKeyword("Enum"))
+enum_statement.setParseAction(EnumStatement)
+    
 # WARNING: This is a NASTY hack to handle a cyclic import problem between procedures and
 # statements. To allow local function/sub definitions the grammar elements from procedure are
 # needed here in statements. But, procedures also needs the grammar elements defined here in
@@ -5054,12 +5120,15 @@ def extend_statement_grammar():
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | \
                   (procedures.simple_function ^ orphaned_marker) | (procedures.simple_sub ^ orphaned_marker) | \
-                  name_statement | stop_statement
+                  name_statement | stop_statement | enum_statement
+
     statement_no_orphan <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                             line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
-                            with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement 
+                            with_statement| simple_statement | rem_statement | procedures.simple_function | procedures.simple_sub | name_statement | stop_statement | \
+                            enum_statement
+
     statement_restricted <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                              line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | name_statement | \
                              with_statement| simple_statement_restricted | rem_statement | \
-                             procedures.simple_function | procedures.simple_sub | stop_statement
+                             procedures.simple_function | procedures.simple_sub | stop_statement | enum_statement
 
