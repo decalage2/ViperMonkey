@@ -2548,6 +2548,9 @@ class Function_Call(VBA_Object):
         
 # comma-separated list of parameters, each of them can be an expression:
 boolean_expression = Forward()
+# TODO: Since the VB designers in their infinite wisdom decided to use the same operators
+# for bitwise arithmetic as boolean logic, we somehow have to tell based on the context
+# whether we are doing bitwise or boolean operations. NEEDS WORK!!
 boolean_expression_bitwise = Forward()
 expr_item = Forward()
 expr_item_strict = Forward()
@@ -2555,10 +2558,14 @@ expr_item_strict = Forward()
 # expression given as a function call parameter. Allowing these keywords for all expressions is
 # not strictly correct (invalid VB could be parsed and treated as valid), but we assume that
 # ViperMonkey is working with valid VB to begin with so this should not be a problem.
-expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression_bitwise ^ member_access_expression_loose
+#expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression_bitwise ^ member_access_expression_loose
+expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression ^ member_access_expression_loose
+#expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
+#                        NotAny(CaselessKeyword("End")) + \
+#                        (expression ^ boolean_expression_bitwise ^ member_access_expression_loose)
 expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
                         NotAny(CaselessKeyword("End")) + \
-                        (expression ^ boolean_expression_bitwise ^ member_access_expression_loose)
+                        (expression ^ boolean_expression ^ member_access_expression_loose)
 # NOTE: This helps to speed up parsing and prevent recursion loops.
 expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 expr_list_item_strict = (expr_item_strict + FollowedBy(',')) | expr_list_item_strict
@@ -2717,6 +2724,7 @@ typeof_expression = Forward()
 addressof_expression = Forward()
 literal_list_expression = Forward()
 literal_range_expression = Forward()
+limited_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -2736,7 +2744,8 @@ expr_item <<= (
         | excel_expression
         | literal_range_expression
         | literal_list_expression
-        | Suppress(Literal("(")) + boolean_expression_bitwise + Suppress(Literal(")"))
+        #| Suppress(Literal("(")) + boolean_expression_bitwise + Suppress(Literal(")"))
+        | Suppress(Literal("(")) + boolean_expression + Suppress(Literal(")"))
     )
 )
 expr_item_strict <<= (
@@ -2794,18 +2803,18 @@ expression.setParseAction(lambda t: t[0])
 
 # Used in boolean expressions to limit confusion with boolean and/or and bitwise and/or.
 # Try to handle bitwise AND in boolean expressions. Needs work
-limited_expression = (infixNotation(expr_item,
-                                    [
-                                        ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
-                                        ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
-                                        (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
-                                        ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                        (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
-                                        (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
-                                        ("&", 2, opAssoc.LEFT, Concatenation),
-                                        (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
-                                    ])) | \
-                                    Suppress(Literal("(")) + expression + Suppress(")")
+limited_expression <<= (infixNotation(expr_item,
+                                      [
+                                          ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
+                                          ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
+                                          (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
+                                          ("\\", 2, opAssoc.LEFT, FloorDivision),
+                                          (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                          (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
+                                          ("&", 2, opAssoc.LEFT, Concatenation),
+                                          (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
+                                      ])) | \
+                                      Suppress(Literal("(")) + expression + Suppress(")")
 expression.setParseAction(lambda t: t[0])
 
 # constant expression: expression without variables or function calls, that can be evaluated to a literal:
@@ -2991,6 +3000,12 @@ class BoolExprItem(VBA_Object):
 
 class BoolExprItemBitwise(BoolExprItem):
 
+    def __init__(self, original_str, location, tokens):
+        super(BoolExprItemBitwise, self).__init__(original_str, location, tokens)
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('ACTUALLY parsed %r as BoolExprItemBitWise' % self)
+        
     def _vba_to_python_op(self, op):
         return _vba_to_python_op(op, False)
         
@@ -3000,8 +3015,12 @@ bool_expr_item = (limited_expression + \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
 
-bool_expr_item_bitwise = bool_expr_item
-bool_expr_item.setParseAction(BoolExprItemBitwise)
+#bool_expr_item_bitwise = bool_expr_item
+bool_expr_item_bitwise = (limited_expression + \
+                          (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
+                          limited_expression) | \
+                          limited_expression
+bool_expr_item_bitwise.setParseAction(BoolExprItemBitwise)
 
 class BoolExpr(VBA_Object):
     """
