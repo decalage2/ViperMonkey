@@ -1274,20 +1274,40 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             first_half_rep = None
             second_half_rep = None
             got_match = False
-            #print "CHECK !!!!!!!!!!!!!"
-            for i in range(1, len(repeated_subst) + 1):
-                curr_first_half = repeated_subst[:i]
-                #print "++++"
-                #print curr_first_half
-                if aggregate_str.endswith(curr_first_half):
-                    first_half_rep = curr_first_half
-                    second_half_rep = repeated_subst[i:]
+            matched_agg_str = ""
+            # Might have extra characters on the end of the aggregate string.
+            # Walk back from the end of the string trying to match up the
+            # repeated string chunks.
+            for end_pos in range(0, 3):
+                if debug1:
+                    print "CHECK !!!!!!!!!!!!!"
+                    print "chopping off " + str(end_pos)
+                curr_agg_str = aggregate_str[:-end_pos]
+                for i in range(1, len(repeated_subst) + 1):
+                    curr_first_half = repeated_subst[:i]
+                    if debug1:
+                        print "++++"
+                        print "curr 1st half"
+                        print curr_first_half
+                        print "curr 1st half string end"
+                        print curr_agg_str[-len(curr_first_half):]
+                    if (curr_agg_str.endswith(curr_first_half) and
+                        (len(curr_agg_str) > len(matched_agg_str))):
+                        if debug1:
+                            print "MATCH!!"
+                        matched_agg_str = curr_agg_str
+                        first_half_rep = curr_first_half
+                        second_half_rep = repeated_subst[i:]
 
             # Repeated string not split up (1st string ends with repeated string)?
             if (first_half_rep == repeated_subst):
                 first_half_rep = None
                 second_half_rep = None
-                    
+
+            # Handle chopping garbage characters from the end of the aggregate string.
+            if (matched_agg_str != ""):
+                aggregate_str = matched_agg_str
+                
             # There could be extra characters in front of the 2nd half of the string.
             if (first_half_rep is not None):
 
