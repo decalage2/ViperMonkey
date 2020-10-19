@@ -2551,18 +2551,13 @@ boolean_expression = Forward()
 # TODO: Since the VB designers in their infinite wisdom decided to use the same operators
 # for bitwise arithmetic as boolean logic, we somehow have to tell based on the context
 # whether we are doing bitwise or boolean operations. NEEDS WORK!!
-boolean_expression_bitwise = Forward()
 expr_item = Forward()
 expr_item_strict = Forward()
 # The 'ByVal' or 'ByRef' keyword can be given when the expr_list_item appears as an
 # expression given as a function call parameter. Allowing these keywords for all expressions is
 # not strictly correct (invalid VB could be parsed and treated as valid), but we assume that
 # ViperMonkey is working with valid VB to begin with so this should not be a problem.
-#expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression_bitwise ^ member_access_expression_loose
 expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression ^ member_access_expression_loose
-#expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
-#                        NotAny(CaselessKeyword("End")) + \
-#                        (expression ^ boolean_expression_bitwise ^ member_access_expression_loose)
 expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
                         NotAny(CaselessKeyword("End")) + \
                         (expression ^ boolean_expression ^ member_access_expression_loose)
@@ -2744,7 +2739,6 @@ expr_item <<= (
         | excel_expression
         | literal_range_expression
         | literal_list_expression
-        #| Suppress(Literal("(")) + boolean_expression_bitwise + Suppress(Literal(")"))
         | Suppress(Literal("(")) + boolean_expression + Suppress(Literal(")"))
     )
 )
@@ -2863,13 +2857,13 @@ class BoolExprItem(VBA_Object):
             log.error("BoolExprItem: Improperly parsed.")
             return ""
 
-    def _vba_to_python_op(self, op):
-        return _vba_to_python_op(op, True)
+    def _vba_to_python_op(self, op, context):
+        return _vba_to_python_op(op, not context.jit_non_boolean)
         
     def to_python(self, context, params=None, indent=0):
         r = " " * indent
         if (self.op is not None):
-            r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+            r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
             r += to_python(self.lhs, context, params)
         else:
@@ -2997,30 +2991,12 @@ class BoolExprItem(VBA_Object):
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
             return False
-
-class BoolExprItemBitwise(BoolExprItem):
-
-    def __init__(self, original_str, location, tokens):
-        super(BoolExprItemBitwise, self).__init__(original_str, location, tokens)
-
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('ACTUALLY parsed %r as BoolExprItemBitWise' % self)
-        
-    def _vba_to_python_op(self, op):
-        return _vba_to_python_op(op, False)
         
 bool_expr_item = (limited_expression + \
                   (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                   limited_expression) | \
                   limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
-
-#bool_expr_item_bitwise = bool_expr_item
-bool_expr_item_bitwise = (limited_expression + \
-                          (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
-                          limited_expression) | \
-                          limited_expression
-bool_expr_item_bitwise.setParseAction(BoolExprItemBitwise)
 
 class BoolExpr(VBA_Object):
     """
@@ -3071,16 +3047,16 @@ class BoolExpr(VBA_Object):
             log.error("BoolExpr: Improperly parsed.")
             return ""
 
-    def _vba_to_python_op(self, op):
-        return _vba_to_python_op(op, True)
+    def _vba_to_python_op(self, op, context):
+        return _vba_to_python_op(op, not context.jit_non_boolean)
         
     def to_python(self, context, params=None, indent=0):
         r = " " * indent + "("
         if (self.op is not None):
             if (self.lhs is not None):
-                r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+                r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
             else:
-                r += self._vba_to_python_op(self.op) + " " + to_python(self.rhs, context, params)
+                r += self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
             r += to_python(self.lhs, context, params)
         else:
@@ -3168,11 +3144,6 @@ class BoolExpr(VBA_Object):
             log.error("BoolExpr: Unknown operator boolean %r" % self.op)
             return False
 
-class BoolExprBitwise(BoolExpr):
-
-    def _vba_to_python_op(self, op):
-        return _vba_to_python_op(op, False)
-        
 boolean_expression <<= infixNotation(bool_expr_item,
                                      [
                                          (CaselessKeyword("Not"), 1, opAssoc.RIGHT),
@@ -3184,18 +3155,6 @@ boolean_expression <<= infixNotation(bool_expr_item,
                                          (CaselessKeyword("="), 2, opAssoc.LEFT),
                                      ])
 boolean_expression.setParseAction(BoolExpr)
-
-boolean_expression_bitwise <<= infixNotation(bool_expr_item_bitwise,
-                                             [
-                                                 (CaselessKeyword("Not"), 1, opAssoc.RIGHT),
-                                                 (CaselessKeyword("And"), 2, opAssoc.LEFT),
-                                                 (CaselessKeyword("AndAlso"), 2, opAssoc.LEFT),
-                                                 (CaselessKeyword("Or"), 2, opAssoc.LEFT),
-                                                 (CaselessKeyword("OrElse"), 2, opAssoc.LEFT),
-                                                 (CaselessKeyword("Eqv"), 2, opAssoc.LEFT),
-                                                 (CaselessKeyword("="), 2, opAssoc.LEFT),
-                                             ])
-boolean_expression_bitwise.setParseAction(BoolExprBitwise)
 
 # --- NEW EXPRESSION --------------------------------------------------------------
 

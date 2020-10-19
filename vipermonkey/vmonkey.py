@@ -779,7 +779,7 @@ def read_excel_sheets(fname):
         return load_excel_libreoffice(data)
     except:
         return None
-
+    
 def pull_urls_office97(fname):
     """
     Pull URLs directly from an Office97 file.
@@ -1137,7 +1137,7 @@ def _process_file (filename,
             data = data.replace("\x00", "")
             vba = _get_vba_parser(data)
             
-        if vba.detect_vba_macros():
+        if (vba.detect_vba_macros() or display_int_iocs):
 
             # Read in document metadata.
             try:

@@ -575,6 +575,16 @@ class MultiOp(VBA_Object):
         self.operators = tokens[0][1::2]
 
     def to_python(self, context, params=None, indent=0):
+
+        # We are generating Python code for some string or numeric
+        # expression. Therefore any boolean operators we find in the
+        # expression are actually bitwise operators.
+        # Track that in the context.
+        set_flag = False
+        if (not context.jit_non_boolean):
+            context.jit_non_boolean = True
+            set_flag = True
+            
         if (self.operators[0] == "+"):
             ret = [to_python(self.arg[0], context, params=params)]
         else:
@@ -584,6 +594,12 @@ class MultiOp(VBA_Object):
                 ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
             else:
                 ret.append(' {} {!s}'.format(operator, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
+
+        # Out of the string/numeric expression. Might have actual boolean
+        # expressions now.
+        if set_flag:
+            context.jit_non_boolean = False
+
         return '({})'.format(''.join(ret))
         
     def eval(self, context, params=None):

@@ -139,6 +139,28 @@ from vba_library import *
 
 from stubbed_engine import StubbedEngine
 
+def pull_urls_excel_sheets(workbook):
+    """
+    Pull URLs from cells in a given ExcelBook object.
+    """
+
+    # Got an Excel workbook?
+    if (workbook is None):
+        return []
+
+    # Look through each sheet.
+    r = set()
+    for sheet in workbook.sheets:
+
+        # Look through each cell.
+        for cell_index in sheet.cells.keys():
+            cell = sheet.cells[cell_index]
+            for url in re.findall(read_ole_fields.URL_REGEX, str(cell)):
+                r.add(url.strip())
+
+    # Return any URLs found in cells.
+    return r
+
 # === ViperMonkey class ======================================================
 
 class ViperMonkey(StubbedEngine):
@@ -472,6 +494,9 @@ class ViperMonkey(StubbedEngine):
             fname = self.data
             is_data = True
         direct_urls = read_ole_fields.pull_urls_office97(fname, is_data, self.vba)
+        for url in direct_urls:
+            context.save_intermediate_iocs(url)
+        direct_urls = pull_urls_excel_sheets(self.loaded_excel)
         for url in direct_urls:
             context.save_intermediate_iocs(url)
         

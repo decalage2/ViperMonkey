@@ -1085,6 +1085,7 @@ def fix_difficult_code(vba_code):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
     # We don't handle boolean expressions treated as integers. Comment them out.
+    """
     uni_vba_code = u""
     try:
         uni_vba_code = vba_code.decode("utf-8")
@@ -1116,6 +1117,7 @@ def fix_difficult_code(vba_code):
             # This is actually an integer expression with boolean logic.
             # Not handled.
             vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION " + bad_exp[1:])
+    """
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
     # Get rid of them.
