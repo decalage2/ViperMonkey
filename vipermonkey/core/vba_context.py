@@ -121,9 +121,8 @@ class Context(object):
         # Track the name of the last saved file.
         self.last_saved_file = None
 
-        # Track whether we are generating Python JIT code for a
-        # non-boolean expression.
-        self.jit_non_boolean = False
+        # Track whether we are handling a non-boolean (bitwise) expression.
+        self.in_bitwise_expression = False
         
         # Track whether emulation actions have been reported.
         self.got_actions = False
@@ -234,7 +233,7 @@ class Context(object):
                 self.globals = copy.deepcopy(context.globals)
             else:
                 self.globals = context.globals
-            self.jit_non_boolean = context.jit_non_boolean
+            self.in_bitwise_expression = context.in_bitwise_expression
             self.vb_constants = context.vb_constants
             self.last_saved_file = context.last_saved_file
             self.curr_func_name = context.curr_func_name

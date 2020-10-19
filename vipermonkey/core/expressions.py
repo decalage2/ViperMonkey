@@ -2858,17 +2858,24 @@ class BoolExprItem(VBA_Object):
             return ""
 
     def _vba_to_python_op(self, op, context):
-        return _vba_to_python_op(op, not context.jit_non_boolean)
+        return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
         r = " " * indent
+        expr_str = None
         if (self.op is not None):
-            r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
+            expr_str = to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
-            r += to_python(self.lhs, context, params)
+            expr_str = to_python(self.lhs, context, params)
         else:
             log.error("BoolExprItem: Improperly parsed.")
             return ""
+
+        # Ooof. True in VB is -1, not 1 in bitwise operations. Handle that in the generated code.
+        if context.in_bitwise_expression:
+            r += "(-1 if " + expr_str + " else 0)"
+        else:
+            r += expr_str
         return r
         
     def eval(self, context, params=None):
@@ -2956,23 +2963,28 @@ class BoolExprItem(VBA_Object):
         lhs_str = str(lhs)
         if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
             if (self.op == "<>"):
+                if (context.in_bitwise_expression):
+                    return 0
                 return False
+            if (context.in_bitwise_expression):
+                return -1
             return True
 
         # Evaluate the expression.
+        r = False
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):            
-            return lhs == rhs
+            r = lhs == rhs
         elif (self.op == ">"):
-            return lhs > rhs
+            r = lhs > rhs
         elif (self.op == "<"):
-            return lhs < rhs
+            r = lhs < rhs
         elif ((self.op == ">=") or (self.op == "=>")):
-            return lhs >= rhs
+            r = lhs >= rhs
         elif ((self.op == "<=") or (self.op == "=<")):
-            return lhs <= rhs
+            r = lhs <= rhs
         elif (self.op == "<>"):
-            return lhs != rhs
+            r = lhs != rhs
         elif (self.op.lower() == "like"):
 
             # Try as a Python regex.
@@ -2983,14 +2995,27 @@ class BoolExprItem(VBA_Object):
                 r = (re.match(rhs, lhs) is not None)
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
-                return r
             except Exception as e:
 
                 # Not a valid Pyhton regex. Just check string equality.
-                return (rhs == lhs)
+                r = (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
-            return False
+            r = False
+
+        # Yuck. In VB bitwise operations true == -1, not 1 as in Python.
+        # Handle that if this expression looks like it should be a bitwise expression.
+        if (context.in_bitwise_expression):
+            if r:
+                r = -1
+            else:
+                r = 0
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Evaled '" + str(self) + "' == " + str(r))
+                
+        # Done.                
+        return r
         
 bool_expr_item = (limited_expression + \
                   (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
@@ -3048,7 +3073,7 @@ class BoolExpr(VBA_Object):
             return ""
 
     def _vba_to_python_op(self, op, context):
-        return _vba_to_python_op(op, not context.jit_non_boolean)
+        return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
         r = " " * indent + "("
