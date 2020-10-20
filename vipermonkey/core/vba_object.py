@@ -1058,8 +1058,11 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         log.info("Done JIT emulation of '" + code_vba + "...' .")
 
         # Update the context with the variable values from the JIT code execution.
-        for updated_var in var_updates.keys():
-            context.set(updated_var, var_updates[updated_var])
+        try:
+            for updated_var in var_updates.keys():
+                context.set(updated_var, var_updates[updated_var])
+        except (NameError, UnboundLocalError):
+            log.warning("No variables set by Python JIT code.")
 
     except NotImplementedError as e:
         log.error("JIT emulation failed. " + str(e))

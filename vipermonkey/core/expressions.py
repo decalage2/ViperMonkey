@@ -1883,15 +1883,6 @@ member_object_limited = (
     + NotAny("$")
     + NotAny("!")
 )
-"""
-member_object_limited = (
-    ((Suppress("[") + (unrestricted_name | decimal_literal) + Suppress("]")) | unrestricted_name | excel_expression)
-    + NotAny("(")
-    + NotAny("#")
-    + NotAny("$")
-    + NotAny("!")
-)
-"""
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
 member_object_loose = Suppress(Literal("(")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited) + Suppress(Literal(")")) | \
                       ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
@@ -2156,9 +2147,12 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 # MS-GRAMMAR: l-expression = simple-name-expression / instance-expression / member-access-expression /
 # MS-GRAMMAR: index-expression / dictionary-access-expression / with-expression
 
+boolean_expression = Forward()
 new_expression = Forward()
-l_expression << (with_expression ^ member_access_expression ^ new_expression ^ member_access_expression_loose) | instance_expression | \
-    dictionary_access_expression | simple_name_expression 
+l_expression << (with_expression ^ member_access_expression ^ new_expression ^ member_access_expression_loose) | \
+    instance_expression | \
+    dictionary_access_expression | \
+    simple_name_expression
 
 # --- FUNCTION CALL ---------------------------------------------------------
 
@@ -2547,7 +2541,6 @@ class Function_Call(VBA_Object):
         return r
         
 # comma-separated list of parameters, each of them can be an expression:
-boolean_expression = Forward()
 # TODO: Since the VB designers in their infinite wisdom decided to use the same operators
 # for bitwise arithmetic as boolean logic, we somehow have to tell based on the context
 # whether we are doing bitwise or boolean operations. NEEDS WORK!!
@@ -2637,8 +2630,6 @@ function_call.setParseAction(Function_Call)
 function_call_limited <<= (
     CaselessKeyword("nothing")
     | (
-        #~(strict_reserved_keywords + Literal("("))
-        #~(reserved_keywords + Literal("("))
         (lex_identifier('name') | (Suppress('[') + lex_identifier('name') + Suppress(']')))
         + Suppress(Optional('$'))
         + Suppress(Optional('#'))
@@ -2720,6 +2711,7 @@ addressof_expression = Forward()
 literal_list_expression = Forward()
 literal_range_expression = Forward()
 limited_expression = Forward()
+bool_expr_item = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -2777,38 +2769,34 @@ expr_item_strict <<= (
 # operator (if present) is right-associative. Any assignment operators are
 # also typically right-associative."
 
-expression <<= (infixNotation(expr_item,
-                                  [
-                                      (CaselessKeyword("not"), 1, opAssoc.RIGHT, Not),
-                                      ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
-                                      ("^", 2, opAssoc.RIGHT, Power),
-                                      (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
-                                      ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                      (Regex(re.compile("mod", re.IGNORECASE)), 2, opAssoc.LEFT, Mod),
-                                      (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
-                                      ("&", 2, opAssoc.LEFT, Concatenation),
-                                      (";", 2, opAssoc.LEFT, Concatenation),
-                                      (Regex(re.compile("and", re.IGNORECASE)), 2, opAssoc.LEFT, And),
-                                      (Regex(re.compile("or", re.IGNORECASE)), 2, opAssoc.LEFT, Or),
-                                      (Regex(re.compile("xor", re.IGNORECASE)), 2, opAssoc.LEFT, Xor),
-                                      (Regex(re.compile("eqv", re.IGNORECASE)), 2, opAssoc.LEFT, Eqv),
-                                  ]))
+expression <<= infixNotation(expr_item,
+                             [(CaselessKeyword("not"), 1, opAssoc.RIGHT, Not),
+                              ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
+                              ("^", 2, opAssoc.RIGHT, Power),
+                              (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
+                              ("\\", 2, opAssoc.LEFT, FloorDivision),
+                              (Regex(re.compile("mod", re.IGNORECASE)), 2, opAssoc.LEFT, Mod),
+                              (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
+                              ("&", 2, opAssoc.LEFT, Concatenation),
+                              (";", 2, opAssoc.LEFT, Concatenation),
+                              (Regex(re.compile("and", re.IGNORECASE)), 2, opAssoc.LEFT, And),
+                              (Regex(re.compile("or", re.IGNORECASE)), 2, opAssoc.LEFT, Or),
+                              (Regex(re.compile("xor", re.IGNORECASE)), 2, opAssoc.LEFT, Xor),
+                              (Regex(re.compile("eqv", re.IGNORECASE)), 2, opAssoc.LEFT, Eqv),])
 expression.setParseAction(lambda t: t[0])
 
 # Used in boolean expressions to limit confusion with boolean and/or and bitwise and/or.
 # Try to handle bitwise AND in boolean expressions. Needs work
 limited_expression <<= (infixNotation(expr_item,
-                                      [
-                                          ("-", 1, opAssoc.RIGHT, Neg), # Unary negation
-                                          ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
-                                          (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
-                                          ("\\", 2, opAssoc.LEFT, FloorDivision),
-                                          (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
-                                          (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
-                                          ("&", 2, opAssoc.LEFT, Concatenation),
-                                          (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),
-                                      ])) | \
-                                      Suppress(Literal("(")) + expression + Suppress(")")
+                                      [("-", 1, opAssoc.RIGHT, Neg), # Unary negation
+                                       ("^", 2, opAssoc.RIGHT, Power), # Exponentiation
+                                       (Regex(re.compile("[*/]")), 2, opAssoc.LEFT, MultiDiv),
+                                       ("\\", 2, opAssoc.LEFT, FloorDivision),
+                                       (CaselessKeyword("mod"), 2, opAssoc.RIGHT, Mod),
+                                       (Regex(re.compile('[-+]')), 2, opAssoc.LEFT, AddSub),
+                                       ("&", 2, opAssoc.LEFT, Concatenation),
+                                       (CaselessKeyword("xor"), 2, opAssoc.LEFT, Xor),])) | \
+                                       Suppress(Literal("(")) + expression + Suppress(")")
 expression.setParseAction(lambda t: t[0])
 
 # constant expression: expression without variables or function calls, that can be evaluated to a literal:
@@ -2863,16 +2851,18 @@ class BoolExprItem(VBA_Object):
     def to_python(self, context, params=None, indent=0):
         r = " " * indent
         expr_str = None
+        got_op = True
         if (self.op is not None):
             expr_str = to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
         elif (self.lhs is not None):
+            got_op = False
             expr_str = to_python(self.lhs, context, params)
         else:
             log.error("BoolExprItem: Improperly parsed.")
             return ""
 
         # Ooof. True in VB is -1, not 1 in bitwise operations. Handle that in the generated code.
-        if context.in_bitwise_expression:
+        if (context.in_bitwise_expression and got_op):
             r += "(-1 if " + expr_str + " else 0)"
         else:
             r += expr_str
@@ -3017,10 +3007,10 @@ class BoolExprItem(VBA_Object):
         # Done.                
         return r
         
-bool_expr_item = (limited_expression + \
-                  (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
-                  limited_expression) | \
-                  limited_expression
+bool_expr_item <<= (limited_expression + \
+                    (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
+                    limited_expression) | \
+                    limited_expression
 bool_expr_item.setParseAction(BoolExprItem)
 
 class BoolExpr(VBA_Object):
