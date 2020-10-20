@@ -482,7 +482,7 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + "from core.vba_object import coerce_to_int_list\n\n"
     boilerplate += indent_str + "try:\n"
     boilerplate += indent_str + " " * 4 + "vm_context\n"
-    boilerplate += indent_str + "except NameError:\n"
+    boilerplate += indent_str + "except (NameError, UnboundLocalError):\n"
     boilerplate += indent_str + " " * 4 + "vm_context = context\n"
     return boilerplate
 
@@ -901,7 +901,7 @@ def _updated_vars_to_python(loop, context, indent):
     save_vals = indent_str + "try:\n"
     save_vals += indent_str + " " * 4 + "var_updates\n"
     save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
-    save_vals += indent_str + "except NameError:\n"
+    save_vals += indent_str + "except (NameError, UnboundLocalError):\n"
     save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
     if (log.getEffectiveLevel() == logging.DEBUG):
