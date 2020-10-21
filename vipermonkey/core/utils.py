@@ -49,6 +49,66 @@ except ImportError:
 from logging import LogRecord
 from logging import FileHandler
 
+class Infix:
+    """
+    Used to define our own infix operators.
+    """
+    def __init__(self, function):
+        self.function = function
+    def __ror__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __or__(self, other):
+        return self.function(other)
+    def __rlshift__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __rshift__(self, other):
+        return self.function(other)
+    def __call__(self, value1, value2):
+        return self.function(value1, value2)
+
+def safe_plus(x,y):
+    """
+    Handle "x + y" where x and y could be some combination of ints and strs.
+    """
+
+    # Handle NULLs.
+    if (x == "NULL"):
+        x = 0
+    if (y == "NULL"):
+        y = 0
+    
+    # Easy case first.
+    if ((isinstance(x, int) or isinstance(x, float)) and
+        (isinstance(y, int) or isinstance(y, float))):
+        return x + y
+    
+    # Fix data types.
+    if (isinstance(y, str)):
+
+        # NULL string in VB.
+        if (x == 0):
+            x = ""
+
+        # String concat.
+        return str(x) + y
+
+    if (isinstance(x, str)):
+
+        # NULL string in VB.
+        if (y == 0):
+            y = ""
+
+        # String concat.
+        return x + str(y)
+
+    # Punt. We are not doing pure numeric addition and
+    # we have already handled string concatentaion. Just
+    # convert things to strings and hope for the best.
+    return str(x) + str(y)
+
+# Safe plus infix operator. Ugh.
+plus=Infix(lambda x,y: safe_plus(x, y))
+
 def safe_print(text):
     """
     Sometimes printing large strings when running in a Docker container triggers exceptions.

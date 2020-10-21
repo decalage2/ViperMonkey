@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from curses_ascii import isprint
 import logging
 from pyparsing import *
 
@@ -137,7 +138,12 @@ class Asc(VBA_Object):
         c = eval_arg(self.arg, context)
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (str(c).strip() == "**MATCH ANY**"):
+        c_str = None
+        try:
+            c_str = str(c).strip()
+        except UnicodeEncodeError:
+            c_str = filter(isprint, c).strip()
+        if (c_str == "**MATCH ANY**"):
             return c
 
         # Looks like Asc(NULL) is NULL?
@@ -152,13 +158,12 @@ class Asc(VBA_Object):
             # Got a string.
 
             # Should this match anything?
-            c = str(c)
-            if (c == "**MATCH ANY**"):
+            if (c_str == "**MATCH ANY**"):
                 r = "**MATCH ANY**"
 
             # This is an unmodified Asc() call.
             else:
-                r = vb_str.get_ms_ascii_value(c)
+                r = vb_str.get_ms_ascii_value(c_str)
 
         # Return the result.
         if (log.getEffectiveLevel() == logging.DEBUG):

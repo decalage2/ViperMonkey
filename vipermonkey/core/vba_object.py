@@ -474,6 +474,7 @@ def _boilerplate_to_python(indent):
     indent_str = " " * indent
     boilerplate = indent_str + "import core.vba_library\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
+    boilerplate += indent_str + "from core.utils import plus\n"
     boilerplate += indent_str + "import core.utils\n"
     boilerplate += indent_str + "from core.vba_object import update_array\n"
     boilerplate += indent_str + "from core.vba_object import coerce_to_num\n"
@@ -699,16 +700,21 @@ def _get_var_vals(item, context, global_only=False):
                     continue
 
             # 'inf' is not a valid value.
-            if ((str(val).strip() == "inf") or
-                (str(val).strip() == "-inf")):
+            val_str = None
+            try:
+                val_str = str(val).strip()
+            except UnicodeEncodeError:
+                val_str = filter(isprint, val).strip()
+            if ((val_str == "inf") or
+                (val_str == "-inf")):
                 val = None
 
             # 'NULL' is not a valid value.
-            if (str(val).strip() == "NULL"):
+            if (val_str == "NULL"):
                 val = None
 
             # Weird bug.
-            if ("core.vba_library.run_function" in str(val)):
+            if ("core.vba_library.run_function" in val_str):
                 val = 0
             
         # Unedfined variable.

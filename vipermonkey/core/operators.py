@@ -591,7 +591,7 @@ class MultiOp(VBA_Object):
             ret = ["coerce_to_num(" + to_python(self.arg[0], context, params=params)  + ")"]
         for operator, arg in zip(self.operators, self.arg[1:]):
             if (operator == "+"):
-                ret.append(' {} {!s}'.format(operator, to_python(arg, context, params=params)))
+                ret.append(' {} {!s}'.format("|plus|", to_python(arg, context, params=params)))
             else:
                 ret.append(' {} {!s}'.format(operator, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
 
