@@ -1407,13 +1407,23 @@ def _process_file (filename,
                         if (len(group_name) > 10):
                             group_name = group_name[3:]
                         
-                        # Save full form variable names.
-                        name = global_var_name.lower()
                         # Maybe the caption is used for the text when the text is not there?
                         if (val == None):
                             val = caption
                         if ((val == '') and (tag == '') and (caption == '')):
                             continue
+
+                        # Skip variables for which we already have a value.
+                        if (((var_name.lower() in vm.globals) and
+                             (len(vm.globals[var_name.lower()]) > len(val))) or
+                            ((var_name.lower() in vm.doc_vars) and
+                             (len(vm.doc_vars[var_name.lower()]) > len(val)))):
+                            if (log.getEffectiveLevel() == logging.DEBUG):
+                                log.debug("Already have longer value for '" + var_name + "'. Skipping.")
+                            continue
+
+                        # Save full form variable names.
+                        name = global_var_name.lower()                        
                         vm.globals[name] = val
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("1. Added VBA form variable %r = %r to globals." % (global_var_name, val))
