@@ -150,14 +150,21 @@ def pull_urls_excel_sheets(workbook):
 
     # Look through each sheet.
     r = set()
-    for sheet in workbook.sheets:
+    try:
+        for sheet in workbook.sheets:
 
-        # Look through each cell.
-        for cell_index in sheet.cells.keys():
-            cell = sheet.cells[cell_index]
-            for url in re.findall(read_ole_fields.URL_REGEX, str(cell)):
-                r.add(url.strip())
+            # Look through each cell.
+            for cell_index in sheet.cells.keys():
+                cell = sheet.cells[cell_index]
+                for url in re.findall(read_ole_fields.URL_REGEX, str(cell)):
+                    r.add(url.strip())
 
+    except TypeError:
+
+        # Not using our internal ExcelBook class, so .sheets is not
+        # iterable.
+        pass
+                
     # Return any URLs found in cells.
     return r
 
