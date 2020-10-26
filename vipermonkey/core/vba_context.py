@@ -6630,6 +6630,7 @@ class Context(object):
         # Strip out bad characters if needed.
         if (strip_null_bytes):
 
+            # Strip bad characters.
             from vba_object import strip_nonvb_chars
 
             action = strip_nonvb_chars(action)
@@ -6637,9 +6638,16 @@ class Context(object):
             if (isinstance(params, list)):
                 new_params = []
                 for p in params:
-                    new_params.append(strip_nonvb_chars(p))
+                    tmp_p = strip_nonvb_chars(p)
+                    if (len(re.findall(r"NULL", str(tmp_p))) > 20):
+                        tmp_p = str(tmp_p).replace("NULL", "")
+                    new_params.append(tmp_p)
             params = new_params
             description = strip_nonvb_chars(description)
+
+            # Strip repeated NULLs in the action.
+            if (len(re.findall(r"NULL", action)) > 20):
+                action = action.replace("NULL", "")
             
         # Save the action for reporting.
         self.got_actions = True

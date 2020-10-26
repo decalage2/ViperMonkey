@@ -1988,7 +1988,7 @@ class Replace(VbaLibraryFunc):
         if ((pat is None) or (pat == '')):
             return string
         rep = str(params[2])
-        if ((rep is None) or (rep == 0)):
+        if ((rep is None) or (rep == 0) or (re == "NULL")):
             rep = ''
 
         # Wide string to change and not wide char pattern/replacement?
