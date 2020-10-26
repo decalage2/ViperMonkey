@@ -5095,7 +5095,8 @@ class EnumStatement(VBA_Object):
             context.set(enum_val[0], enum_val[1], force_global=True)
 
 enum_value = Group((lex_identifier | enum_val_id)("name") + Optional(Suppress(Literal("=")) + decimal_literal("value")))
-enum_statement = Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
+enum_statement = Suppress(Optional(CaselessKeyword('Public') | CaselessKeyword('Private'))) + \
+                 Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
                  Group(OneOrMore(enum_value + Suppress(EOS))("enum_values")) + \
                  Suppress(CaselessKeyword("End")) + Suppress(CaselessKeyword("Enum"))
 enum_statement.setParseAction(EnumStatement)

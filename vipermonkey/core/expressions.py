@@ -2717,6 +2717,7 @@ literal_list_expression = Forward()
 literal_range_expression = Forward()
 limited_expression = Forward()
 bool_expr_item = Forward()
+tuple_expression = Forward()
 expr_item <<= (
     Optional(CaselessKeyword("ByVal").suppress())
     + (
@@ -2737,6 +2738,7 @@ expr_item <<= (
         | literal_range_expression
         | literal_list_expression
         | Suppress(Literal("(")) + boolean_expression + Suppress(Literal(")"))
+        | tuple_expression
     )
 )
 expr_item_strict <<= (
@@ -3292,3 +3294,30 @@ literal_list_expression.setParseAction(Literal_List_Expression)
 
 literal_range_expression <<= Suppress(Literal("[")) + decimal_literal + Suppress(Literal(":")) + decimal_literal + Suppress(Literal("]"))
 literal_range_expression.setParseAction(lambda t: str(t[0]) + ":" + str(t[1]))
+
+# --- TUPLE EXPRESSION --------------------------------------------------------------
+class Tuple_Expression(VBA_Object):
+
+    def __init__(self, original_str, location, tokens):
+        super(Tuple_Expression, self).__init__(original_str, location, tokens)
+        self.expr_items = tokens.expr_items
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('parsed %r as Tuple_Expression' % self)
+
+    def __repr__(self):
+        r = "("
+        first = True
+        for i in self.expr_items:
+            if not first:
+                r += ", "
+            first = False
+            r += str(i)
+        r += ")"
+        return r
+
+    def eval(self, context, params=None):
+        # TODO: Fill this in if needed.
+        pass
+
+tuple_expression <<= Suppress(Literal("(")) + (expression + OneOrMore(Suppress(Literal(",")) + expression))("expr_items") + Suppress(Literal(")"))
+tuple_expression.setParseAction(Tuple_Expression)
