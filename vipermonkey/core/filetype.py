@@ -42,6 +42,9 @@ magic_nums = {
     "office2007" : "50 4B 3 4",                # Office 2007+ (PKZip)
 }
 
+# PE magic number.
+pe_magic_num = "4D 5A"
+
 def get_1st_8_bytes(fname, is_data):
 
     info = None
@@ -63,7 +66,20 @@ def get_1st_8_bytes(fname, is_data):
         curr_magic += hex(ord(b)).replace("0x", "").upper() + " "
         
     return curr_magic
-    
+
+def is_pe_file(fname, is_data):
+    """
+    Check to see if the given file is a PE executable.
+
+    return - True if it is a PE file, False if not.
+    """
+
+    # Read the 1st 8 bytes of the file.
+    curr_magic = get_1st_8_bytes(fname, is_data)
+
+    # See if we the known magic #.
+    return (curr_magic.startswith(pe_magic_num))
+
 def is_office_file(fname, is_data):
     """
     Check to see if the given file is a MS Office file format.

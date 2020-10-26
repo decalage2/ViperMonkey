@@ -54,6 +54,10 @@ def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
     """
 
+    # PE files are not analyzable.
+    if filetype.is_pe_file(vba, True):
+        return True
+    
     # See if the 1st % of the string is mostly bad or mostly good.
     total_len = len(vba)
     if ((total_len > 50000) and (not test_all)):
