@@ -4008,45 +4008,54 @@ class UsedRange(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
-        # Guess that we want the 1st sheet.
-        sheet = None
-        try:
-            sheet = context.loaded_excel.sheet_by_index(0)
-        except:
-            context.increase_general_errors()
-            log.warning("Cannot process UsedRange() call. No sheets in file.")
-            return "NULL"
-
-        # We are going to use the internal cells field to build the list of all
-        # cells, so this will only work with the ExcelSheet class defined in excel.py.
-        if (not hasattr(sheet, "cells")):
-            log.warning("Cannot process UsedRange() call. Sheet object has no 'cells' attribute.")
-            return "NULL"
+        # Try each sheet and return the cells from the sheet with the most cells.
+        # TODO: Figure out the actual sheet to load.
+        cells = []
+        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
         
-        # Cycle row by row through the sheet, tracking all the cells.
+            # Try the current sheet.
+            sheet = None
+            try:
+                sheet = context.loaded_excel.sheet_by_index(sheet_index)
+            except:
+                context.increase_general_errors()
+                log.warning("Cannot process UsedRange() call. No sheets in file.")
+                return "NULL"
 
-        # Find the max row and column for the cells.
-        max_row = -1
-        max_col = -1
-        for cell_index in sheet.cells.keys():
-            curr_row = cell_index[0]
-            curr_col = cell_index[1]
-            if (curr_row > max_row):
-                max_row = curr_row
-            if (curr_col > max_col):
-                max_col = curr_col
+            # We are going to use the internal cells field to build the list of all
+            # cells, so this will only work with the ExcelSheet class defined in excel.py.
+            if (not hasattr(sheet, "cells")):
+                log.warning("Cannot process UsedRange() call. Sheet object has no 'cells' attribute.")
+                return "NULL"
+        
+            # Cycle row by row through the sheet, tracking all the cells.
 
-        # Cycle through all the cells in order.
-        r = []
-        for curr_row in range(0, max_row + 1):
-            for curr_col in range(0, max_col + 1):
-                try:
-                    r.append(sheet.cell(curr_row, curr_col))
-                except KeyError:
-                    pass
+            # Find the max row and column for the cells.
+            max_row = -1
+            max_col = -1
+            for cell_index in sheet.cells.keys():
+                curr_row = cell_index[0]
+                curr_col = cell_index[1]
+                if (curr_row > max_row):
+                    max_row = curr_row
+                if (curr_col > max_col):
+                    max_col = curr_col
 
+            # Cycle through all the cells in order.
+            curr_cells = []
+            for curr_row in range(0, max_row + 1):
+                for curr_col in range(0, max_col + 1):
+                    try:
+                        curr_cells.append(sheet.cell(curr_row, curr_col))
+                    except KeyError:
+                        pass
+
+            # Does this sheet have the most cells?
+            if (len(curr_cells) > len(cells)):
+                cells = curr_cells
+                    
         # Return all of the defined cells.
-        return r
+        return cells
 
     def num_args(self):
         return 0
@@ -4248,9 +4257,9 @@ class SpecialCells(VbaLibraryFunc):
         if (not isinstance(cell_type, int)):
             log.warning("2nd arguments to CountA() not an int. Returning NULL")
             return "NULL"
-        if (cell_type != 2):
-            log.warning("Only handling SpecialCells(xlCellTypeConstants). Returning NULL")
-            return "NULL"
+        #if (cell_type != 2):
+        #    log.warning("Only handling SpecialCells(xlCellTypeConstants). Returning NULL")
+        #    return "NULL"
             
         # Currently only handling cell type xlCellTypeConstants.
         r = []

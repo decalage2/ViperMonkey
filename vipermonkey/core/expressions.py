@@ -2662,11 +2662,16 @@ class Function_Call_Array_Access(VBA_Object):
         super(Function_Call_Array_Access, self).__init__(original_str, location, tokens)
         self.array = tokens.array
         self.index = tokens.index
+        self.other_indices = None
+        if (hasattr(tokens, "other_indices")):
+            self.other_indices = tokens.other_indices
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Function_Call_Array_Access' % self)
 
     def __repr__(self):
         r = str(self.array) + "(" + str(self.index) + ")"
+        if (self.other_indices is not None):
+            r = str(self.array) + "(" + str(self.index) + ", " + str(self.other_indices) + ")"
         return r
 
     def eval(self, context, params=None):
@@ -2692,10 +2697,10 @@ class Function_Call_Array_Access(VBA_Object):
         # Everything is valid. Return the array element.
         return array_val[array_index]
             
-func_call_array_access = function_call("array") + Suppress("(") + expression("index") + Suppress(")")
+func_call_array_access = function_call("array") + Suppress("(") + expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + Suppress(")")
 func_call_array_access.setParseAction(Function_Call_Array_Access)
 
-func_call_array_access_limited <<= function_call_limited("array") + Suppress("(") + expression("index") + Suppress(")")
+func_call_array_access_limited <<= function_call_limited("array") + Suppress("(") + expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + Suppress(")")
 func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 
 # --- EXPRESSION ITEM --------------------------------------------------------
