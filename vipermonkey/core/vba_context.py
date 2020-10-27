@@ -6312,6 +6312,12 @@ class Context(object):
         """
         Save variable values that appear to contain base64 encoded or URL IOCs.
         """
+
+        # Strip NULLs and unprintable characters from the potential IOC.
+        from vba_object import strip_nonvb_chars
+        value = strip_nonvb_chars(value)
+        if (len(re.findall(r"NULL", str(value))) > 20):
+            value = str(value).replace("NULL", "")
         
         # Is there a URL in the data?
         got_ioc = False
