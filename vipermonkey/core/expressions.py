@@ -2101,6 +2101,11 @@ class With_Member_Expression(VBA_Object):
         # Count? Not parsed as a function call...
         if (expr_str == ".Count"):
             return (len(with_dict) - 1)
+
+        # Expression not a function call?
+        if ((not hasattr(self.expr, "name")) or
+            (not hasattr(self.expr, "params"))):
+            return None
         
         # Run the dictionary method call.
         new_exists = Function_Call(None, None, None, old_call=self.expr)
