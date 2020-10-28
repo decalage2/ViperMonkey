@@ -910,9 +910,9 @@ def convert_colons_to_linefeeds(vba_code):
             change_chunk = vba_code[pos:marker_pos1+1]
             change_chunk = change_chunk.replace(":", "\n")
             # 'a&"ff"'
-            change_chunk = re.sub(r"([\w_])&\"", r"\1 & \"", change_chunk)
+            change_chunk = re.sub(r"([\w_])&\"", r"\1 & " + "\"", change_chunk)
             # '"gg"&"ff"'
-            change_chunk = re.sub(r"\"&\"", r"\" & \"", change_chunk)
+            change_chunk = re.sub(r"\"&\"", r"\" & " + "\"", change_chunk)
 
             # Find the chunk of text to leave alone.
             marker_pos2a = len(vba_code)
@@ -1145,6 +1145,7 @@ def fix_difficult_code(vba_code):
         ("&" not in vba_code) and
         ("^" not in vba_code) and
         ("Rem " not in vba_code) and
+        ("rem " not in vba_code) and
         ("REM " not in vba_code) and
         ("MultiByteToWideChar" not in vba_code) and
         (re.match(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
@@ -1255,6 +1256,8 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace(" Rem ", " ' ")
     vba_code = vba_code.replace("\nREM ", "\n' ")
     vba_code = vba_code.replace(" REM ", " ' ")
+    vba_code = vba_code.replace("\nrem ", "\n' ")
+    vba_code = vba_code.replace(" rem ", " ' ")
 
     # Replace ':' with new lines.
     if debug_strip:
