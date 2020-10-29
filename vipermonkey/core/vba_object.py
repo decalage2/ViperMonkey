@@ -667,10 +667,8 @@ def _get_var_vals(item, context, global_only=False):
             
             # We have been kind of fuzzing the distinction between global and
             # local variables, so tighten down on globals only by just picking
-            # up VB constants.
-            if (global_only and
-                (var not in context.vb_constants) and
-                (var.lower() not in context.vb_constants)):
+            # up global variables that appear on the RHS but not LHS.
+            if (global_only and (var in lhs_var_names)):
                 continue
             
             # Do not set function arguments to new values.

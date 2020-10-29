@@ -383,7 +383,20 @@ def fix_multiple_assignments(line):
 
     # Skip comments.
     if ("'" in line):
-        line = line[:line.index("'")]
+
+        # Make sure the "'" is not in a string.
+        in_str = False
+        quote_pos = None
+        curr_pos = -1
+        for c in line:
+            curr_pos += 1
+            if (c == '"'):
+                in_str = not in_str
+            if ((c == "'") and (not in_str)):
+                quote_pos = curr_pos
+                break
+        if (quote_pos is not None):
+            line = line[:quote_pos]
     
     # Pull out multiple assignments and the final assignment value.
     items = re.findall(MULT_ASSIGN_RE, line)
