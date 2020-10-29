@@ -572,10 +572,11 @@ class Function(VBA_Object):
             # Add the parameter value to the local function context.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
+
             # Handle params with default values.
             if ((param_name not in call_info) or
                 (call_info[param_name] == ('', None)) or
-                (param_value != "NULL")):
+                (param_value != "")):
                 call_info[param_name] = (param_value, defined_param.my_type)
 
             # Is this a ByRef parameter?

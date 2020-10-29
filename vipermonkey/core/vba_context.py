@@ -6124,7 +6124,16 @@ class Context(object):
                                   local_only=local_only,
                                   global_only=global_only)
             except KeyError:
-                pass
+
+                # Try with the evaluated with context.
+                tmp_name = str(self.with_prefix) + str(name)
+                try:
+                    return self.__get(tmp_name,
+                                      case_insensitive=case_insensitive,
+                                      local_only=local_only,
+                                      global_only=global_only)
+                except KeyError:
+                    pass
 
         # Now try it without the current with context.
         try:
@@ -6143,7 +6152,14 @@ class Context(object):
                               local_only=local_only,
                               global_only=global_only)
         except KeyError:
-            pass
+
+            # If we are looking for a shapes title we may already have
+            # it.
+            if (isinstance(self.with_prefix, str) and
+                (self.with_prefix_raw is not None) and
+                ("Shapes" in str(self.with_prefix_raw)) and
+                (str(name) == "Title")):
+                return self.with_prefix
         
         # Are we referencing a field in an object?
         if ("." in name):
