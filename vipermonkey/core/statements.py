@@ -3642,7 +3642,8 @@ class Call_Statement(VBA_Object):
     log_funcs = ["CreateProcessA", "CreateProcessW", "CreateProcess", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
-                 "SetExpandedStringValue", "WinExec", "FileCopy", "Load"]
+                 "SetExpandedStringValue", "WinExec", "FileCopy", "Load",
+                 "FolderExists", "FileExists"]
     
     def __init__(self, original_str, location, tokens, name=None, params=None):
         super(Call_Statement, self).__init__(original_str, location, tokens)

@@ -550,7 +550,7 @@ class FolderExists(VbaLibraryFunc):
             return False
 
         # Is this a directory that is expected to exist?
-        expected_dirs = set(["c:\\users"])
+        expected_dirs = set(["c:\\users", "c:\\programdata"])
         curr_dir = str(params[0]).lower()
         return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 

@@ -2171,7 +2171,7 @@ class Function_Call(VBA_Object):
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
                  "CreateTextFile", ".CreateTextFile", ".Eval", "Run",
                  "SetExpandedStringValue", "WinExec", "FileExists", "SaveAs",
-                 "FileCopy", "Load", "ShellExecute"]
+                 "FileCopy", "Load", "ShellExecute", "FolderExists"]
     
     def __init__(self, original_str, location, tokens, old_call=None):
         super(Function_Call, self).__init__(original_str, location, tokens)
