@@ -67,7 +67,7 @@ def caselessKeywordsList(keywords):
 statement_keyword = caselessKeywordsList(
     ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
-     "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "EndIf",
+     "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End If",
      "Enum", "Event", "Exit", "Friend", "Function",
      "GoSub", "GoTo", "If", "Implements", "Let", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",

@@ -3569,7 +3569,6 @@ bad_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression 
                                     Group(statement_block('statements')))
                           )
 
-#_single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + Suppress(Optional(EOS)) + \
 _single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_expression + CaselessKeyword("Then").suppress() + \
                                    Group(simple_statements_line('statements')) )  + \
                                    ZeroOrMore(
@@ -3579,7 +3578,7 @@ _single_line_if_statement = Group( CaselessKeyword("If").suppress() + boolean_ex
                                    Optional(
                                        (Group(CaselessKeyword("Else").suppress() + Group(simple_statements_line('statements'))) ^
                                         Group(CaselessKeyword("Else").suppress()))
-                                   ) + Suppress(Optional(CaselessKeyword("End") + CaselessKeyword("If")))
+                                   ) + Suppress(Optional(Optional(Literal(":")) + CaselessKeyword("End") + CaselessKeyword("If")))
 single_line_if_statement = _single_line_if_statement
 single_line_if_statement.setParseAction(If_Statement)
 
@@ -4058,8 +4057,8 @@ class Exit_Function_Statement(VBA_Object):
 # Return from a function.
 exit_func_statement = (CaselessKeyword('Exit').suppress() + CaselessKeyword('Function').suppress()) | \
                       (CaselessKeyword('Exit').suppress() + CaselessKeyword('Sub').suppress()) | \
-                      (CaselessKeyword('Return').suppress()) | \
-                      ((CaselessKeyword('End').suppress()) + ~CaselessKeyword("Function"))
+                      (CaselessKeyword('Return').suppress()) #| \
+#                      ((CaselessKeyword('End').suppress()) + ~CaselessKeyword("Function"))
 exit_func_statement.setParseAction(Exit_Function_Statement)
 
 # --- REDIM statement ----------------------------------------------------------
