@@ -107,6 +107,7 @@ from function_import_visitor import *
 from var_defn_visitor import *
 import filetype
 import read_ole_fields
+from meta import FakeMeta
 
 # === FUNCTIONS ==============================================================
 
@@ -265,7 +266,14 @@ class ViperMonkey(StubbedEngine):
                                   '_BeforeDropOrPaste']
                                   
     def set_metadata(self, dat):
-        self.metadata = dat
+
+        # Handle meta information represented as a dict.
+        new_dat = dat
+        if (isinstance(dat, dict)):
+            new_dat = FakeMeta()
+            for field in dat.keys():
+                setattr(new_dat, str(field), dat[field])
+        self.metadata = new_dat
         
     def add_compiled_module(self, m):
         """
