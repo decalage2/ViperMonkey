@@ -116,7 +116,7 @@ from oletools.olevba import VBA_Parser, filter_vba, FileOpenError
 import olefile
 import xlrd
 
-import core.meta
+from core.meta import get_metadata_exif
 
 # add the vipermonkey folder to sys.path (absolute+normalized path):
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
@@ -1146,7 +1146,7 @@ def _process_file (filename,
                 vm.set_metadata(ole.get_metadata())
             except Exception as e:
                 log.warning("Reading in metadata failed. Trying fallback. " + str(e))
-                vm.set_metadata(meta.get_metadata_exif(orig_filename))
+                vm.set_metadata(get_metadata_exif(orig_filename))
 
             # If this is an Excel spreadsheet, read it in.
             vm.loaded_excel = load_excel(data)
@@ -1697,7 +1697,7 @@ def process_file_scanexpr (container, filename, data):
                 vm.set_metadata(ole.get_metadata())
             except Exception as e:
                 log.warning("Reading in metadata failed. Trying fallback. " + str(e))
-                vm.set_metadata(meta.get_metadata_exif(orig_filename))
+                vm.set_metadata(get_metadata_exif(orig_filename))
             
             #print 'Contains VBA Macros:'
             for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
