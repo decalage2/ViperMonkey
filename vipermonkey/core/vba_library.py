@@ -4106,59 +4106,48 @@ class Range(VbaLibraryFunc):
         start_row, start_col = self._get_row_and_column(start)
         end_row, end_col = self._get_row_and_column(end)
 
-        # Reading down a single column?
+        # Read all the cells, in row by row order.
         r = []
-        if (start_col == end_col):
-            next = (end_row - start_row)/abs(end_row - start_row)
-            curr_row = start_row
-            while (curr_row != end_row):
-                val = None
-                try:
-                    val = str(sheet.cell_value(curr_row, start_col))
-                except:
-                    pass
-                if (val is not None):
-                    r.append(val)
-                curr_row += next
-            val = None
-            try:
-                val = str(sheet.cell_value(curr_row, start_col))
-            except:
-                pass
-            if (val is not None):
-                r.append(val)
-
-        # Reading single row?
-        elif (start_row == end_row):
-            next = (end_col - start_col)/abs(end_col - start_col)
+        row_incr = 0
+        if ((end_row - start_row) != 0):
+            row_incr = (end_row - start_row)/abs(end_row - start_row)
+        col_incr = 0
+        if ((end_col - start_col) != 0):
+            col_incr = (end_col - start_col)/abs(end_col - start_col)
+        curr_row = start_row
+	#print "=========== READ CELLS!!! ================"
+        while (curr_row != end_row):
             curr_col = start_col
-            while (curr_col != end_col):
+            while True:
                 val = None
                 try:
-                    val = str(sheet.cell_value(start_row, curr_col))
+                    val = str(sheet.cell_value(curr_row, curr_col))
                 except:
                     pass
                 if (val is not None):
+                    #print "(" + str(curr_row) + ", " + str(curr_col) + ")"
+                    #print "'" + str(val) + "'"
                     r.append(val)
-                curr_col += next
-            val = None
-            try:
-                val = str(sheet.cell_value(start_row, curr_col))
-            except:
-                pass
-            if (val is not None):
-                r.append(val)
-
-        # Not reading single row or column.
-        else:
-            log.warning("Cell range " + cell_str + " does not specify a single row/column. Range() is returing NULL.")
-            return "NULL"
+                if (curr_col == end_col):
+                    break
+                curr_col += col_incr
+            if (curr_row == end_row):
+                break
+            curr_row += row_incr
 
         # Return the cell values.
+        #print "=========== CELLS!!! ================"
+        #print cell_str
+        #print r
+        #sys.exit(0)
         return r
     
     def eval(self, context, params=None):
 
+        # TODO: Need to track the index of each cell for full
+        # emulation of a range. Probably need a Range object
+        # implementation.
+        
         # Sanity check.
         if (params is None):
             log.warning("Range() called with no parameters.")
@@ -4192,9 +4181,10 @@ class Range(VbaLibraryFunc):
             return "NULL"
 
         # Multiple cells?
-        if (":" in str(params[0])):
+        range_index = str(params[0])
+        if (":" in range_index):
             try:
-                return self._read_cell_list(sheet, str(params[0]))
+                return self._read_cell_list(sheet, range_index)
             except Exception as e:
                 context.increase_general_errors()
                 return "NULL"
@@ -4207,7 +4197,7 @@ class Range(VbaLibraryFunc):
             val = str(sheet.cell_value(row, col))
             
             # Return the cell value.
-            log.info("Read cell (" + str(params[0]) + ") from sheet 1 = " + str(val))
+            log.info("Read cell (" + range_index + ") from sheet 1 = " + str(val))
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Cell value = '" + val + "'")
             return val            

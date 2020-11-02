@@ -97,6 +97,7 @@ class VbaLibraryFunc(object):
         return "INTEGER"
 
 def excel_col_letter_to_index(x): 
+    x = x.upper()
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
 def limits_exceeded(throw_error=False):
