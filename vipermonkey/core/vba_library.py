@@ -2073,7 +2073,7 @@ class Paragraphs(VbaLibraryFunc):
             return "NULL"
         
         # Sanity check.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             log.error("Paragraphs() called with no arguments. Returning all paragraphs.")
             return paragraphs
 
