@@ -3793,14 +3793,14 @@ class CreateObject(VbaLibraryFunc):
         # Track contents of data written to 'ADODB.Stream'.
         obj_type = None
         try:
-            obj_type = str(params[0])
+            obj_type = str(params[0]).lower()
         except UnicodeEncodeError:
             obj_type = filter(isprint, params[0])
-        if (obj_type == 'ADODB.Stream'):
+        if (obj_type == 'ADODB.Stream'.lower()):
             context.open_file('ADODB.Stream')
 
         # Handle certain object types.
-        if (obj_type == "Scripting.Dictionary"):
+        if (obj_type == "Scripting.Dictionary".lower()):
             r = {}
             # Track the added items in order as well as by key.
             r["__ADDED_ITEMS__"] = []

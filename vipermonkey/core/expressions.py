@@ -1232,8 +1232,25 @@ class MemberAccessExpression(VBA_Object):
         try:
             val = context.get(var_name)
         except KeyError:
-            return False
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("var_name '" + var_name + "' not found.")
 
+        # If we did not get it from .ReadText try it from .Text
+        if (val == None):
+            var_name = memb_str[:memb_str.lower().index(".savetofile")] + ".text"
+            # Microsoft.XMLDOM.CreateObject('Adodb.Stream').SaveToFile(...
+            if ("CreateObject(" in var_name):
+                var_name = var_name[:var_name.index("CreateObject(")] + ".text"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("var_name 1 = " + var_name)
+            val = None
+            try:
+                val = context.get(var_name)
+            except KeyError:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("var_name 1 '" + var_name + "' not found.")
+                return False
+            
         # TODO: Use context.open_file()/write_file()/close_file()
 
         # Make the dropped file directory if needed.
