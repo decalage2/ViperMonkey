@@ -6277,7 +6277,12 @@ class Context(object):
 
         # Are we pulling out all the doc vars?
         if (var == "activedocument.variables"):
-            return self.doc_vars.items()
+
+            # Return these as (name, value) tuples.
+            r = []
+            for var_name in self.doc_vars.keys():
+                r.append((var_name, self.doc_vars[var_name]))                
+            return r
         
         if (var not in self.doc_vars):
 

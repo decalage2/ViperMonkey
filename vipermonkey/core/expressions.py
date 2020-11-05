@@ -910,26 +910,40 @@ class MemberAccessExpression(VBA_Object):
         """
         Handle reading .Name and .Value fields from doc vars.
         """
-
+        
         # Pull out proper RHS.
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
-        
+        rhs = str(rhs).strip()
+            
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_docvar_value(): lhs = " + str(lhs) + ", rhs = '" + str(rhs) + "'")
+            
         # Do we have a tuple representing a doc var?
         if (not isinstance(lhs, tuple)):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("_handle_docvar_value(): LHS not tuple")
             return None
         if (len(lhs) < 2):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("_handle_docvar_value(): LHS not 2 element tuple")
             return None
         
         # Getting .Name?
         if (rhs == "Name"):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("_handle_docvar_value(): return name = '" + str(lhs[0]) + "'")
             return lhs[0]
 
         # Getting .Value?
         if (rhs == "Value"):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("_handle_docvar_value(): return value = '" + str(lhs[1]) + "'")
             return lhs[1]
 
         # Don't know what we are getting.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_docvar_value(): not getting name or value of '" + str(self) + "'")
         return None
 
     def _handle_file_close(self, context, lhs, rhs):
