@@ -565,10 +565,12 @@ def _infer_type_of_expression(expr, context):
     
     # Harder case. This could be an int or a str (or some other numeric type, but
     # we're not handling that).
-    if (isinstance(expr, operators.AddSub)):
+    if (isinstance(expr, operators.AddSub) or
+        isinstance(expr, expressions.BoolExpr) or
+        isinstance(expr, expressions.BoolExprItem)):
 
         # If we are doing subtraction we need numeric types.
-        if ("-" in expr.operators):
+        if ((hasattr(expr, "operators")) and ("-" in expr.operators)):
             #print "POSSIBLE TYPE (5) '" + str(expr) + "' == " + "INTEGER"
             return "INTEGER"
         
