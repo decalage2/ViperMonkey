@@ -3810,6 +3810,28 @@ class CreateObject(VbaLibraryFunc):
         # being created.
         return str(obj_type)
 
+class GetParentFolderName(VbaLibraryFunc):
+    """
+    GetParentFolderName() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Pull the parent directory.
+        curr_dir = str(params[0])
+        if ("\\" in curr_dir):
+            r = curr_dir[:curr_dir.rindex("\\")+1]
+        else:
+            r = "C:\\"
+        return r
+            
+    def num_args(self):
+        return 1
+        
 class ReadText(VbaLibraryFunc):
     """
     ReadText() stream method (stubbed).
@@ -4785,7 +4807,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
-               RandBetween, Items, Count):
+               RandBetween, Items, Count, GetParentFolderName):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
