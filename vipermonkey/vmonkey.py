@@ -156,7 +156,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the text using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/export_doc_text.py",
                                           "--text", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
