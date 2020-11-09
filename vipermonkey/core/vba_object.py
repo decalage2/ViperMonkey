@@ -991,6 +991,10 @@ def _called_funcs_to_python(loop, context, indent):
     r = indent_str + "# VBA Local Function Definitions\n" + r
     return r
 
+# Cache JIT loop results to avoid emulating the exact same loop
+# multiple times.
+jit_cache = {}
+
 def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=None):
     """
     Convert the loop to Python and emulate the loop directly in Python.
@@ -1055,7 +1059,17 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             return False
         
         # Run the Python code.
-        if (namespace is None):
+
+        # Have we already run this exact loop?
+        if (code_python in jit_cache):
+            var_updates = jit_cache[code_python]
+            log.info("Using cached JIT loop results.")
+            if (var_updates == "ERROR"):
+                log.error("Previous run of loop failed.")
+                return False
+
+        # No cached results. Run the loop.
+        elif (namespace is None):
             # Magic. For some reason exec'ing in locals() makes the dynamically generated
             # code recognize functions defined in the dynamic code. I don't know why.
             exec code_python in locals()
@@ -1064,6 +1078,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             var_updates = namespace["var_updates"]
         log.info("Done JIT emulation of '" + code_vba + "...' .")
 
+        # Cache the loop results.
+        jit_cache[code_python] = var_updates
+        
         # Update the context with the variable values from the JIT code execution.
         try:
             for updated_var in var_updates.keys():
@@ -1079,6 +1096,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     except Exception as e:
 
+        # Cache the error.
+        jit_cache[code_python] = "ERROR"
+        
         # If we bombed out due to a potential infinite loop we
         # are done.
         if ("Infinite Loop" in str(e)):

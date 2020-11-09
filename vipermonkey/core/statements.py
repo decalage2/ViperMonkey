@@ -499,7 +499,7 @@ class Dim_Statement(VBA_Object):
         self.variables = tmp_vars
         
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('parsed %r' % str(self))
+            log.debug('parsed %r as Dim_Statement' % str(self))
 
     def __repr__(self):
         r = "Dim "
@@ -3867,10 +3867,15 @@ class Call_Statement(VBA_Object):
         # Emulate the function body.
         try:
 
+            # Pull out the function name if referenced via a module, etc.
+            if ("." in func_name):
+                func_name = func_name[func_name.index(".") + 1:]
+            
             # Get the function.
             s = context.get(func_name)
             if (s is None):
                 raise KeyError("func not found")
+            print s
             if (hasattr(s, "eval")):
                 ret = s.eval(context=context, params=call_params)
                 
@@ -3995,7 +4000,7 @@ call_statement1 = NotAny(known_keywords_statement_start) + \
 call_statement0.setParseAction(Call_Statement)
 call_statement1.setParseAction(Call_Statement)
 
-call_statement = (call_statement0 ^ call_statement1)
+call_statement = (call_statement1 ^ call_statement0)
 
 # --- EXIT FOR statement ----------------------------------------------------------
 

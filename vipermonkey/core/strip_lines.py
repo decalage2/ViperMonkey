@@ -1930,6 +1930,23 @@ def strip_attribute_lines(vba_code):
             continue
         r += line + "\n"
     return r
+
+def strip_difficult_tuple_lines(vba_code):
+    """
+    Strip all calls like "foo.bar.baz (1,2)-(3,4),5" from the code.
+    They are awful to parse with PyParsing.
+    """
+    if (vba_code is None):
+        return vba_code
+    r = ""
+    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
+    for line in vba_code.split("\n"):
+        line = line.strip()
+        if (re.search(tuple_pat, line)):
+            log.warning("Difficult member access expression with tuple arg not handled. Stripping '" + line.strip() + "'.")
+            continue
+        r += line + "\n"
+    return r
         
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
@@ -1944,6 +1961,9 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Wipe out all comments.
     vba_code = strip_comments(vba_code)
+
+    # No hard to parse calls with tuple arguments.
+    vba_code = strip_difficult_tuple_lines(vba_code)
     
     # Don't strip lines if Execute() is called since the stripped variables
     # could be used in the execed code strings.

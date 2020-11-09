@@ -1055,8 +1055,12 @@ class Item(BuiltInDocumentProperties):
               (context.contains(str(context.with_prefix_raw)))):
 
             # Get the item index.
-            index = coerce_to_int(params[0])
-            
+            index = None
+            try:
+                index = coerce_to_int(params[0])
+            except:
+                return "NULL"
+
             # Is the With variable value a dict?
             with_dict = context.get(str(context.with_prefix_raw))
             if (not isinstance(with_dict, dict)):
