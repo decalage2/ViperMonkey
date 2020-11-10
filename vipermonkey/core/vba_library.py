@@ -3426,6 +3426,16 @@ class Put(VbaLibraryFunc):
 
         context.write_file(file_id, data)
 
+class WriteByte(VbaLibraryFunc):
+    """
+    MemoryStream WriteByte() method.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 1)):
+            return
+        context.report_action('Write Process Memory', str(params), 'MemoryStream.WriteByte', strip_null_bytes=True)
+        
 class WriteLine(VbaLibraryFunc):
     """
     File WriteLine() method.
@@ -4811,7 +4821,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
-               RandBetween, Items, Count, GetParentFolderName):
+               RandBetween, Items, Count, GetParentFolderName, WriteByte):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

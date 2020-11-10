@@ -890,7 +890,7 @@ def convert_colons_to_linefeeds(vba_code):
         return vba_code
     
     # Track the characters that start and end blocks of text we won't change.
-    marker_chars = [('"', '"'), ('[', ']'), ("'", '\n'), ('#', '#'), ("If ", "\n")]
+    marker_chars = [('"', '"', None), ('[', ']', None), ("'", '\n', None), ('#', '#', None), ("If ", "Then", "End If")]
 
     # Loop through the text leaving some blocks unchanged and others with ':' changed to '\n'.
     pos = 0
@@ -903,15 +903,22 @@ def convert_colons_to_linefeeds(vba_code):
         use_start_marker = None
         use_end_marker = None
         found_marker = False
-        for marker, end_marker in marker_chars:
+        for marker, end_marker, not_marker in marker_chars:
 
             # Do we have an unchangeable block?
-            if (marker in vba_code[pos:]):
-
+            if (marker in vba_code[pos:]):                    
+                
                 # Is this the most recent marker found?
-                found_marker = True
                 curr_marker_pos1 = vba_code[pos:].index(marker) + pos
                 if (curr_marker_pos1 < marker_pos1):
+
+                    # Make sure this is not a disallowed marker.
+                    if ((not_marker is not None) and (len(not_marker) < curr_marker_pos1)):
+                        prev_text = vba_code[curr_marker_pos1 - (len(not_marker) - len(marker) + 1):curr_marker_pos1 + 2]
+                        if (prev_text == not_marker):
+                            continue
+
+                    found_marker = True
                     marker_pos1 = curr_marker_pos1
                     use_end_marker = end_marker
                     use_start_marker = marker

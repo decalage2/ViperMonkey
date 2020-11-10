@@ -640,7 +640,7 @@ def _get_var_vals(item, context, global_only=False):
     lhs_visitor = lhs_var_visitor()
     item.accept(lhs_visitor, no_embedded_loops=False)
     lhs_var_names = lhs_visitor.variables
-
+    
     # Handle member access expressions.
     var_names = var_names.union(lhs_var_names)
     tmp = set()

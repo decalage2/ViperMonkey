@@ -627,6 +627,12 @@ class Context(object):
         # System info.
         self.globals["System.OperatingSystem".lower()] = "Windows NT"
         self.vb_constants.add("System.OperatingSystem".lower())
+        self.globals[".DNSHostName".lower()] = "acomputer.acompany.com"
+        self.vb_constants.add("".lower())
+        self.globals[".Domain".lower()] = "acompany.com"
+        self.vb_constants.add(".Domain".lower())
+        self.globals["wscript.network.UserName".lower()] = "humungulous"
+        self.vb_constants.add("wscript.network.UserName".lower())
 
         # Call type constants.
         self.globals["vbGet".lower()] = 2
