@@ -6367,8 +6367,6 @@ class Context(object):
                 log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
-        print "NUM B64 IOCS 1"
-        print num_b64_iocs
         if (num_b64_iocs < 200):
             B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
             b64_strs = re.findall(B64_REGEX, value)
@@ -6378,8 +6376,6 @@ class Context(object):
                     num_b64_iocs += 1
                     log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
 
-        print "NUM B64 IOCS 2"
-        print num_b64_iocs
         # Did we find anything?
         if (not got_ioc):
             return
