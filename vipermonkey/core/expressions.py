@@ -100,7 +100,8 @@ def _vba_to_python_op(op, is_boolean):
 
 # --- FILE POINTER -------------------------------------------------
 
-file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier) + NotAny("#")
+#file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier) + NotAny("#")
+file_pointer = Suppress('#') + expression + NotAny("#")
 file_pointer.setParseAction(lambda t: "#" + str(t[0]))
 file_pointer_loose = (decimal_literal ^ lex_identifier)
 file_pointer_loose.setParseAction(lambda t: "#" + str(t[0]))

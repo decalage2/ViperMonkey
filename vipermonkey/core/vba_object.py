@@ -1047,7 +1047,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             
             # Look for non-ASCII strings.
             non_ascii_pat = r'"[^"]*[\x7f-\xff][^"]*"'
-            if (re.search(non_ascii_pat, code_python) is not None):
+            non_ascii_pat1 = r'"[^"]*(?:\\x7f|\\x[89a-f][0-9a-f])[^"]*"'
+            if ((re.search(non_ascii_pat1, code_python) is not None) or
+                (re.search(non_ascii_pat, code_python) is not None)):
                 log.warning("VBA code contains Microsoft specific extended ASCII strings. Not JIT emulating.")
                 return False
 

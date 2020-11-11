@@ -1729,7 +1729,6 @@ class For_Statement(VBA_Object):
             return (None, None)
         
         # Get the initial value of variable being modified in the loop.
-        print num
         init_val = None
         try:
 
@@ -3875,7 +3874,6 @@ class Call_Statement(VBA_Object):
             s = context.get(func_name)
             if (s is None):
                 raise KeyError("func not found")
-            print s
             if (hasattr(s, "eval")):
                 ret = s.eval(context=context, params=call_params)
                 

@@ -184,10 +184,6 @@ class vb_RegExp(object):
         if (pat is None):
             return s
         rep = re.sub(r"\$(\d)", r"\\\1", rep)
-        print "PAT: '" + pat + "'"
-        print "REP: '" + pat + "'"
-        print "STR: '" + string + "'"
-        print re.findall(pat, string)
         r = string
         try:
             r = re.sub(pat, rep, string)
