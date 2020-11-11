@@ -1613,7 +1613,13 @@ def _process_file (filename,
             safe_print(vm.dump_actions())
             safe_print('')
             full_iocs = vba_context.intermediate_iocs
-            full_iocs = full_iocs.union(read_ole_fields.pull_base64(data))
+            raw_b64_iocs = read_ole_fields.pull_base64(data)
+            for ioc in raw_b64_iocs:
+                if (vba_context.num_b64_iocs > 200):
+                    log.warning("Found too many potential base64 IOCs. Skipping the rest.")
+                    break
+                full_iocs.add(ioc)
+                vba_context.num_b64_iocs += 1
             tmp_iocs = []
             if (len(full_iocs) > 0):
                 tmp_iocs = _remove_duplicate_iocs(full_iocs)

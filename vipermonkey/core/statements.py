@@ -4502,16 +4502,18 @@ class File_Open(VBA_Object):
             return
         
         # Get the file name.
-
-        # Might be an expression.
-        name = eval_arg(self.file_name, context=context)
-        try:
-            # Could be a variable.
-            name = context.get(self.file_name)
-        except KeyError:
-            pass
-        except AssertionError:
-            pass
+        name = self.file_name
+        
+        # Eval the name if it is not obviously a path.
+        if (not str(name).lower().startswith("c:")):
+            name = eval_arg(self.file_name, context=context)
+            try:
+                # Could be a variable.
+                name = context.get(self.file_name)
+            except KeyError:
+                pass
+            except AssertionError:
+                pass
 
         # Store file id variable in context.
         file_id = ""

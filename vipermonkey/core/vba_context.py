@@ -90,6 +90,9 @@ out_dir = None  # type: str
 # Track intermediate IOC values stored in variables during emulation.
 intermediate_iocs = set()
 
+# Track the # of base64 IOCs.
+num_b64_iocs = 0
+
 class Context(object):
     """
     a Context object contains the global and local named objects (variables, subs, functions)
@@ -6340,6 +6343,8 @@ class Context(object):
         Save variable values that appear to contain base64 encoded or URL IOCs.
         """
 
+        global num_b64_iocs
+        
         # Strip NULLs and unprintable characters from the potential IOC.
         from vba_object import strip_nonvb_chars
         value = strip_nonvb_chars(value)
@@ -6361,14 +6366,20 @@ class Context(object):
                 got_ioc = True
                 log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
 
-        # Is there base64 in the data?
-        B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-        b64_strs = re.findall(B64_REGEX, value)
-        for curr_value in b64_strs:
-            if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
-                got_ioc = True
-                log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
+        # Is there base64 in the data? Don't track too many base64 IOCs.
+        print "NUM B64 IOCS 1"
+        print num_b64_iocs
+        if (num_b64_iocs < 200):
+            B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+            b64_strs = re.findall(B64_REGEX, value)
+            for curr_value in b64_strs:
+                if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
+                    got_ioc = True
+                    num_b64_iocs += 1
+                    log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
 
+        print "NUM B64 IOCS 2"
+        print num_b64_iocs
         # Did we find anything?
         if (not got_ioc):
             return
