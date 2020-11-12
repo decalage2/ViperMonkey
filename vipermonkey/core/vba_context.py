@@ -6202,7 +6202,44 @@ class Context(object):
                           case_insensitive=case_insensitive,
                           local_only=local_only,
                           global_only=global_only)
+
+    def _get_all_metadata(self, name):
+        """
+        Return all items in something like ActiveDocument.BuiltInDocumentProperties.
+        """
+
+        # Reading all properties?
+        if ((name != "ActiveDocument.BuiltInDocumentProperties") and
+            (name != "ThisDocument.BuiltInDocumentProperties")):
+            return None
+
+        # Get the names of the metadata items.
+        meta_names = [a for a in dir(self.metadata) if not a.startswith('__') and not callable(getattr(self.metadata, a))]
+
+        # Add the names and values of the metadata items to the context.
+        for meta_name in meta_names:
+            self.set(meta_name + ".Name", meta_name, force_global=True)
+            self.set(meta_name + ".Value", getattr(self.metadata, meta_name), force_global=True)
+            self.save_intermediate_iocs(getattr(self.metadata, meta_name))
+
+        # Chuck the comments in there for good measure.
+        meta_names.append("Comments")
+        comments = ""
+        first = True
+        for comment in self.get("ActiveDocument.Comments"):
+            if (not first):
+                comments += "\n"
+            first = False
+            comments += comment
+        self.set("Comments.Name", "Comments", force_global=True)
+        self.set("Comments.Value", comments, force_global=True)
+        self.save_intermediate_iocs(comments)
         
+        # Return the metadata items as a list of their names. Accesses of their .Name and
+        # .Value fields will hit the synthetic variables that were just added to the
+        # context.
+        return meta_names
+    
     def get(self, name, search_wildcard=True, local_only=False, global_only=False):
 
         # Sanity check.
@@ -6220,6 +6257,13 @@ class Context(object):
                     log.debug("Short circuited change handler lookup of " + name)
                 raise KeyError('Object %r not found' % name)
 
+        # Reading all of the document metadata items?
+        r = self._get_all_metadata(name)
+        if (r is not None):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Read all metadata items.")
+            return r
+            
         # First try a case sensitive search. If that fails try case insensitive.
         r = None
         try:
