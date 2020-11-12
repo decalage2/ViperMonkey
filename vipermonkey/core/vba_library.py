@@ -461,6 +461,9 @@ class _Chr(VbaLibraryFunc):
 
 class Chr(_Chr):
     pass
+
+class ChrB(_Chr):
+    pass
     
 class ChDir(VbaLibraryFunc):
     """
@@ -4821,7 +4824,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                GetSaveAsFilename, ChDir, ExecuteExcel4Macro, VarPtr, WriteText, FileCopy,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
-               RandBetween, Items, Count, GetParentFolderName, WriteByte):
+               RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
