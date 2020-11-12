@@ -1045,11 +1045,6 @@ def fix_difficult_code(vba_code):
         print "HERE: 2.7"
         print vba_code
     vba_code = fix_varptr_calls(vba_code)
-    # Bad double quotes.
-    #print "HERE: 2"
-    #vba_code = vba_code.replace("\xe2\x80", '"')
-    #vba_code = vba_code.replace('\234"', '"')
-    #vba_code = vba_code.replace('"\235', '"')
 
     # Not handling array accesses more than 2 deep.
     uni_vba_code = u""
@@ -1104,41 +1099,6 @@ def fix_difficult_code(vba_code):
             print "HERE: 6.1"
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     
-    # We don't handle boolean expressions treated as integers. Comment them out.
-    """
-    uni_vba_code = u""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
-    if debug_strip:
-        print "HERE: 7"
-        print vba_code
-    bad_bool_pat = r"\n\s*(?:(?:\w+(?:\(.+\))?(?:\.\w+)?\s*=)|Call)\s*[^" + r'"' + r"][^\n:']+[<>=]"
-    if (re2.search(unicode(bad_bool_pat), uni_vba_code) is not None):
-        bad_exps = re.findall(bad_bool_pat, vba_code)
-        for bad_exp in bad_exps:
-
-            # Don't count matches where the [<>=] is in a string literal.
-            if ('"' in bad_exp):
-                tmp_exp = hide_string_content(bad_exp)
-                if (re.search(bad_bool_pat, tmp_exp) is None):
-                    continue
-
-            # Don't count multi-variable assignments.
-            multi_pat = r"(?:\w+ *= *){2,}"
-            if (re.search(multi_pat, bad_exp) is not None):
-                continue
-
-            # Don't count if this is obviously only assigning a boolean expression.
-            if (re.search(r"[\+\-\*/\^]", bad_exp) is None):
-                continue
-            
-            # This is actually an integer expression with boolean logic.
-            # Not handled.
-            vba_code = vba_code.replace(bad_exp, "\n' UNHANDLED BOOLEAN INT EXPRESSION " + bad_exp[1:])
-    """
-
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
     # Get rid of them.
     uni_vba_code = u""
@@ -1550,7 +1510,7 @@ def strip_comments(vba_code):
         if (not curr_line.strip().startswith("'")):
             r += curr_line + "\n"
 
-    # Return extra newlines.
+    # Replace extra newlines.
     r = r.replace("\n\n\n", "\n")
         
     # Return stripped code.
@@ -1614,6 +1574,20 @@ def fix_vba_code(vba_code):
         print "FIX_VBA_CODE: 1"
         print vba_code
     vba_code = strip_comments(vba_code)
+
+    # Remove the last line of code if it looks bad.
+    if ("\n" in vba_code.strip()):
+
+        # Pull out the last line
+        last_line = vba_code[vba_code.strip().rindex("\n") + 1:].strip()
+        if ("'" in last_line):
+            last_line = last_line[:last_line.index("'")]
+
+        # TODO: Expand this badness check as needed.
+        if (last_line.endswith(".")):
+            vba_code = vba_code.strip()
+            vba_code = vba_code[:vba_code.rindex("\n")]
+            vba_code += "\n"
     
     # Fix dumb typo in some maldocs VBA.
     if debug_strip:
@@ -1808,15 +1782,6 @@ def fix_vba_code(vba_code):
         bad_call_pat = "(\r?\n\s*[\w_]{2,50})\""
         if (re2.search(unicode(bad_call_pat), uni_vba_code)):
             vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
-
-    # Fix rewritten &HFF... assignments.
-    # Should not be needed now.
-    ## ' & H20A'
-    #vba_code = re.sub(r" & (H[\dA-Fa-f])", r" &\1", vba_code)
-    ## ' &H20A &'
-    #vba_code = re.sub(r"(&H[\dA-Fa-f]+) & ", r"\1&", vba_code)
-    ## 'LastRow & ,'
-    #vba_code = re.sub(r"([\w_]+) & ,", r"\1&,", vba_code)
     
     # Skip the next part if unnneeded.
     if debug_strip:
