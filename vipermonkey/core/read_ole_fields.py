@@ -1363,7 +1363,6 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
     
     # Are we refering to Page or Tab or InlineShape objects by index?
-    #page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.{1,5}((?:Pages|Tabs|InlineShapes|Item)\(.+\))"
     page_pat = r"((?:Pages|Tabs|InlineShapes|Item).?\(.+\))"
     if (re.search(page_pat, vba_code) is not None):
 
@@ -1371,6 +1370,13 @@ def get_ole_text_method_1(vba_code, data, debug=False):
         for i in range(1, 10):
             object_names.add("Page" + str(i))
 
+    # How about StoryRanges items?
+    if ("StoryRanges.Item(" in vba_code):
+
+        # Add some StoryRanges objects to look for.
+        for i in range(1, 10):
+            object_names.add("StoryRanges.Items(" + str(i) + ")")
+            
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
     

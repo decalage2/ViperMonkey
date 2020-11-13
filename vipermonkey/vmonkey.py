@@ -1334,7 +1334,9 @@ def _process_file (filename,
                                                   "InlineShapes.Item('" + page_index + "').TextFrame.TextRange.Text",
                                                   "InlineShapes.Item('" + page_index + "').TextFrame.ContainingRange",
                                                   "InlineShapes.Item('" + page_index + "').AlternativeText",
-                                                  "InlineShapes.Item('" + page_index + "').AlternativeText$"])
+                                                  "InlineShapes.Item('" + page_index + "').AlternativeText$",
+                                                  "StoryRanges.Item('" + page_index + "')",
+                                                  "me.StoryRanges.Item('" + page_index + "')"])
                     for tmp_var_name in var_name_variants:
                         vm.doc_vars[tmp_var_name.lower()] = var_val
                         if (log.getEffectiveLevel() == logging.DEBUG):
