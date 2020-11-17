@@ -779,7 +779,7 @@ class Concatenation(VBA_Object):
             if (not first):
                 r += " + "
             first = False
-            r += "coerce_to_str(" + to_python(arg, context, params=params) + ")"
+            r += "coerce_to_str(" + to_python(arg, context, params=params) + ", zero_is_null=True)"
         return "(" + r + ")"
 
 # --- MOD OPERATOR -----------------------------------------------------------

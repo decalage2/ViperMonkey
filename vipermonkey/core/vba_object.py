@@ -1519,7 +1519,7 @@ def coerce_to_int_list(obj):
         r.append(ord(c))
     return r
 
-def coerce_to_str(obj):
+def coerce_to_str(obj, zero_is_null=False):
     """
     Coerce a constant VBA object (integer, Null, etc) to a string.
     :param obj: VBA object
@@ -1530,6 +1530,10 @@ def coerce_to_str(obj):
     if ((obj is None) or (obj == "NULL")):
         return ''
 
+    # 0 can be a NULL also.
+    if (zero_is_null and (obj == 0)):
+        return ''
+    
     # Not NULL. We have data.
 
     # Easy case. Is this already a string?
