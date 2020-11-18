@@ -1832,6 +1832,10 @@ def strip_nonvb_chars(s):
     Strip invalid VB characters from a string.
     """
 
+    # Handle unicode strings.
+    if (isinstance(s, unicode)):
+        s = s.encode('ascii','replace')
+    
     # Sanity check.
     if (not isinstance(s, str)):
         return s
@@ -1841,10 +1845,6 @@ def strip_nonvb_chars(s):
         return s
     
     # Strip non-ascii printable characters.
-    #r = ""
-    #for c in s:
-    #    if ((ord(c) > 8) and (ord(c) < 127)):
-    #        r += c
     r = re.sub(r"[^\x09-\x7e]", "", s)
     
     # Strip multiple 'NULL' substrings from the string.
