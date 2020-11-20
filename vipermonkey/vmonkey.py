@@ -1633,6 +1633,15 @@ def _process_file (filename,
                         safe_print(ioc)
                     safe_print("+---------------------------------------------------------+")
                     safe_print('')
+
+            # Display injected shellcode.
+            shellcode_bytes = vba_context.get_shellcode_data()
+            if (len(shellcode_bytes) > 0):
+                safe_print("+---------------------------------------------------------+")
+                safe_print("Shell Code Bytes: " + str(shellcode_bytes))
+                safe_print("+---------------------------------------------------------+")
+                safe_print('')
+
             safe_print('VBA Builtins Called: ' + str(vm.external_funcs))
             safe_print('')
             safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
@@ -1650,6 +1659,7 @@ def _process_file (filename,
                 out_data = {
                     "file_name": orig_filename,
                     "potential_iocs": list(tmp_iocs),
+                    "shellcode" : shellcode_bytes,
                     "vba_builtins": vm.external_funcs,
                     "actions": actions_data
                 }

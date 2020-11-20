@@ -79,6 +79,62 @@ def is_procedure(vba_object):
     else:
         return False
 
+def add_shellcode_data(index, value, num_bytes):
+    """
+    Save injected shellcode data.
+    """
+
+    # Sanity check.
+    if ((not isinstance(index, int)) or
+        (not isinstance(value, int)) or
+        (not isinstance(num_bytes, int))):
+        log.warning("Improperly typed argument passed to add_shellcode_data(). Skipping.")
+        return
+
+    # Currently only handling single byte values.
+    if (num_bytes > 1):
+        log.warning("Only handling single byte values in add_shellcode_data(). Skipping.")
+        return
+    
+    # Track the written byte.
+    shellcode[index] = value
+
+def get_shellcode_data():
+    """
+    Get written shellcode bytes as a list.
+    """
+
+    # Punt if there is no shellcode data.
+    if (len(shellcode) == 0):
+        return []
+
+    # Get the shellcode bytes in order. Assume any missing
+    # bytes are x86 NOOP instructions.
+    indices = shellcode.keys()
+    indices.sort()
+    last_i = None
+    r = []
+    for i in indices:
+
+        # Need to fill in missing bytes?
+        if ((last_i is not None) and (last_i + 1 != i)):
+            last_i += 1
+            while (last_i != i):
+                r.append(0x90)
+                last_i += 1
+
+        # Only want unsigned integers for byte values.
+        curr_val = shellcode[i]
+        if (curr_val < 0):
+            curr_val += 2**8
+                    
+        # Add in the current shellcode byte.
+        r.append(curr_val)
+        last_i = i
+
+    # Return shellcode bytes, in order.
+    return r
+    
 # === VBA CLASSES =====================================================================================================
 
 # global dictionary of constants, functions and subs for the VBA library
@@ -92,6 +148,10 @@ intermediate_iocs = set()
 
 # Track the # of base64 IOCs.
 num_b64_iocs = 0
+
+# Track any injected shellcode bytes written by the VBA.
+# Dict mapping index to a byte.
+shellcode = {}
 
 class Context(object):
     """
@@ -123,7 +183,7 @@ class Context(object):
         
         # Track the name of the last saved file.
         self.last_saved_file = None
-
+        
         # Track whether we are handling a non-boolean (bitwise) expression.
         self.in_bitwise_expression = False
         
@@ -5639,7 +5699,7 @@ class Context(object):
             glbl = (namespace+key).lower()
             self.globals[ glbl ] = value
             self.vb_constants.add(glbl)
-
+        
     def read_metadata_item(self, var):
 
         # Make sure we read in the metadata.

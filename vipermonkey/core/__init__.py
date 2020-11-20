@@ -491,6 +491,7 @@ class ViperMonkey(StubbedEngine):
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
         vba_context.num_b64_iocs = 0
+        vba_context.shellcode = {}
         
         # TODO: use the provided entrypoint
         # Create the global context for the engine
