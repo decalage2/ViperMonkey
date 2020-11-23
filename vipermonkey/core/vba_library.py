@@ -2252,7 +2252,12 @@ class Join(VbaLibraryFunc):
         r = ""
         if (isinstance(strings, list)):
             for s in strings:
-                r += str(s) + sep
+                tmp_s = None
+                try:
+                    tmp_s = str(s)
+                except UnicodeEncodeError:
+                    tmp_s = filter(isprint, s)
+                r += tmp_s + sep
         else:
             r = str(strings)
         if (log.getEffectiveLevel() == logging.DEBUG):

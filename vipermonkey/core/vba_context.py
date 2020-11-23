@@ -671,6 +671,65 @@ class Context(object):
         self.globals["Null".lower()] = None
         self.vb_constants.add("Null".lower())
 
+        # WdRecoveryType enumeration (Word)
+        #
+        # Specifies the formatting to use when pasting the selected table cells.
+        
+        # Pastes a Microsoft Office Excel chart as an embedded OLE object.
+        self.globals["wdChart".lower()] = 14
+        self.vb_constants.add("wdChart".lower())
+        # Pastes an Excel chart and links it to the original Excel spreadsheet.
+        self.globals["wdChartLinked".lower()] = 15
+        self.vb_constants.add("wdChartLinked".lower())
+        # Pastes an Excel chart as a picture.
+        self.globals["wdChartPicture".lower()] = 13
+        self.vb_constants.add("wdChartPicture".lower())
+        # Preserves original formatting of the pasted material.
+        self.globals["wdFormatOriginalFormatting".lower()] = 16
+        self.vb_constants.add("wdFormatOriginalFormatting".lower())
+        # Pastes as plain, unformatted text.
+        self.globals["wdFormatPlainText".lower()] = 22
+        self.vb_constants.add("wdFormatPlainText".lower())
+        # Matches the formatting of the pasted text to the formatting of surrounding text.
+        self.globals["wdFormatSurroundingFormattingWithEmphasis".lower()] = 20
+        self.vb_constants.add("wdFormatSurroundingFormattingWithEmphasis".lower())
+        # Merges a pasted list with neighboring lists.
+        self.globals["wdListCombineWithExistingList".lower()] = 24
+        self.vb_constants.add("wdListCombineWithExistingList".lower())
+        # Continues numbering of a pasted list from the list in the document.
+        self.globals["wdListContinueNumbering".lower()] = 7
+        self.vb_constants.add("wdListContinueNumbering".lower())
+        # Not supported.
+        self.globals["wdListDontMerge".lower()] = 25
+        self.vb_constants.add("wdListDontMerge".lower())
+        # Restarts numbering of a pasted list.
+        self.globals["wdListRestartNumbering".lower()] = 8
+        self.vb_constants.add("wdListRestartNumbering".lower())
+        # Not supported.
+        self.globals["wdPasteDefault".lower()] = 0
+        self.vb_constants.add("wdPasteDefault".lower())
+        # Pastes a single cell table as a separate table.
+        self.globals["wdSingleCellTable".lower()] = 6
+        self.vb_constants.add("wdSingleCellTable".lower())
+        # Pastes a single cell as text.
+        self.globals["wdSingleCellText".lower()] = 5
+        self.vb_constants.add("wdSingleCellText".lower())
+        # Merges pasted cells into an existing table by inserting the pasted rows between the selected rows.
+        self.globals["wdTableAppendTable".lower()] = 10
+        self.vb_constants.add("wdTableAppendTable".lower())
+        # Inserts a pasted table as rows between two rows in the target table.
+        self.globals["wdTableInsertAsRows".lower()] = 11
+        self.vb_constants.add("wdTableInsertAsRows".lower())
+        # Pastes an appended table without merging table styles.
+        self.globals["wdTableOriginalFormatting".lower()] = 12
+        self.vb_constants.add("wdTableOriginalFormatting".lower())
+        # Pastes table cells and overwrites existing table cells.
+        self.globals["wdTableOverwriteCells".lower()] = 23
+        self.vb_constants.add("wdTableOverwriteCells".lower())
+        # Uses the styles that are in use in the destination document.
+        self.globals["wdUseDestinationStylesRecovery".lower()] = 19
+        self.vb_constants.add("wdUseDestinationStylesRecovery".lower())
+        
         # Excel error codes.
         self.globals["xlErrDiv0".lower()] = 2007  #DIV/0!
         self.vb_constants.add("xlErrDiv0".lower())
@@ -697,6 +756,413 @@ class Context(object):
         self.globals["wscript.network.UserName".lower()] = "humungulous"
         self.vb_constants.add("wscript.network.UserName".lower())
 
+        # WdBuiltinStyle Enum
+        #
+        # Specifies a built-in Microsoft Word style.
+        
+        # Bibliography.
+        self.globals["wdStyleBibliography".lower()] = -266
+        self.vb_constants.add("wdStyleBibliography".lower())
+        # Block Quotation.
+        self.globals["wdStyleBlockQuotation".lower()] = -85
+        self.vb_constants.add("wdStyleBlockQuotation".lower())
+        # Body Text.
+        self.globals["wdStyleBodyText".lower()] = -67
+        self.vb_constants.add("wdStyleBodyText".lower())
+        # Body Text 2.
+        self.globals["wdStyleBodyText2".lower()] = -81
+        self.vb_constants.add("wdStyleBodyText2".lower())
+        # Body Text 3.
+        self.globals["wdStyleBodyText3".lower()] = -82
+        self.vb_constants.add("wdStyleBodyText3".lower())
+        # Body Text First Indent.
+        self.globals["wdStyleBodyTextFirstIndent".lower()] = -78
+        self.vb_constants.add("wdStyleBodyTextFirstIndent".lower())
+        # Body Text First Indent 2.
+        self.globals["wdStyleBodyTextFirstIndent2".lower()] = -79
+        self.vb_constants.add("wdStyleBodyTextFirstIndent2".lower())
+        # Body Text Indent.
+        self.globals["wdStyleBodyTextIndent".lower()] = -68
+        self.vb_constants.add("wdStyleBodyTextIndent".lower())
+        # Body Text Indent 2.
+        self.globals["wdStyleBodyTextIndent2".lower()] = -83
+        self.vb_constants.add("wdStyleBodyTextIndent2".lower())
+        # Body Text Indent 3.
+        self.globals["wdStyleBodyTextIndent3".lower()] = -84
+        self.vb_constants.add("wdStyleBodyTextIndent3".lower())
+        # Book title.
+        self.globals["wdStyleBookTitle".lower()] = -265
+        self.vb_constants.add("wdStyleBookTitle".lower())
+        # Caption.
+        self.globals["wdStyleCaption".lower()] = -35
+        self.vb_constants.add("wdStyleCaption".lower())
+        # Closing.
+        self.globals["wdStyleClosing".lower()] = -64
+        self.vb_constants.add("wdStyleClosing".lower())
+        # Comment Reference.
+        self.globals["wdStyleCommentReference".lower()] = -40
+        self.vb_constants.add("wdStyleCommentReference".lower())
+        # Comment Text.
+        self.globals["wdStyleCommentText".lower()] = -31
+        self.vb_constants.add("wdStyleCommentText".lower())
+        # Date.
+        self.globals["wdStyleDate".lower()] = -77
+        self.vb_constants.add("wdStyleDate".lower())
+        # Default Paragraph Font.
+        self.globals["wdStyleDefaultParagraphFont".lower()] = -66
+        self.vb_constants.add("wdStyleDefaultParagraphFont".lower())
+        # Emphasis.
+        self.globals["wdStyleEmphasis".lower()] = -89
+        self.vb_constants.add("wdStyleEmphasis".lower())
+        # Endnote Reference.
+        self.globals["wdStyleEndnoteReference".lower()] = -43
+        self.vb_constants.add("wdStyleEndnoteReference".lower())
+        # Endnote Text.
+        self.globals["wdStyleEndnoteText".lower()] = -44
+        self.vb_constants.add("wdStyleEndnoteText".lower())
+        # Envelope Address.
+        self.globals["wdStyleEnvelopeAddress".lower()] = -37
+        self.vb_constants.add("wdStyleEnvelopeAddress".lower())
+        # Envelope Return.
+        self.globals["wdStyleEnvelopeReturn".lower()] = -38
+        self.vb_constants.add("wdStyleEnvelopeReturn".lower())
+        # Footer.
+        self.globals["wdStyleFooter".lower()] = -33
+        self.vb_constants.add("wdStyleFooter".lower())
+        # Footnote Reference.
+        self.globals["wdStyleFootnoteReference".lower()] = -39
+        self.vb_constants.add("wdStyleFootnoteReference".lower())
+        # Footnote Text.
+        self.globals["wdStyleFootnoteText".lower()] = -30
+        self.vb_constants.add("wdStyleFootnoteText".lower())
+        # Header.
+        self.globals["wdStyleHeader".lower()] = -32
+        self.vb_constants.add("wdStyleHeader".lower())
+        # Heading 1.
+        self.globals["wdStyleHeading1".lower()] = -2
+        self.vb_constants.add("wdStyleHeading1".lower())
+        # Heading 2.
+        self.globals["wdStyleHeading2".lower()] = -3
+        self.vb_constants.add("wdStyleHeading2".lower())
+        # Heading 3.
+        self.globals["wdStyleHeading3".lower()] = -4
+        self.vb_constants.add("wdStyleHeading3".lower())
+        # Heading 4.
+        self.globals["wdStyleHeading4".lower()] = -5
+        self.vb_constants.add("wdStyleHeading4".lower())
+        # Heading 5.
+        self.globals["wdStyleHeading5".lower()] = -6
+        self.vb_constants.add("wdStyleHeading5".lower())
+        # Heading 6.
+        self.globals["wdStyleHeading6".lower()] = -7
+        self.vb_constants.add("wdStyleHeading6".lower())
+        # Heading 7.
+        self.globals["wdStyleHeading7".lower()] = -8
+        self.vb_constants.add("wdStyleHeading7".lower())
+        # Heading 8.
+        self.globals["wdStyleHeading8".lower()] = -9
+        self.vb_constants.add("wdStyleHeading8".lower())
+        # Heading 9.
+        self.globals["wdStyleHeading9".lower()] = -10
+        self.vb_constants.add("wdStyleHeading9".lower())
+        # HTML Acronym.
+        self.globals["wdStyleHtmlAcronym".lower()] = -96
+        self.vb_constants.add("wdStyleHtmlAcronym".lower())
+        # HTML Address.
+        self.globals["wdStyleHtmlAddress".lower()] = -97
+        self.vb_constants.add("wdStyleHtmlAddress".lower())
+        # HTML City.
+        self.globals["wdStyleHtmlCite".lower()] = -98
+        self.vb_constants.add("wdStyleHtmlCite".lower())
+        # HTML Code.
+        self.globals["wdStyleHtmlCode".lower()] = -99
+        self.vb_constants.add("wdStyleHtmlCode".lower())
+        # HTML Definition.
+        self.globals["wdStyleHtmlDfn".lower()] = -100
+        self.vb_constants.add("wdStyleHtmlDfn".lower())
+        # HTML Keyboard.
+        self.globals["wdStyleHtmlKbd".lower()] = -101
+        self.vb_constants.add("wdStyleHtmlKbd".lower())
+        # Normal (Web).
+        self.globals["wdStyleHtmlNormal".lower()] = -95
+        self.vb_constants.add("wdStyleHtmlNormal".lower())
+        # HTML Preformatted.
+        self.globals["wdStyleHtmlPre".lower()] = -102
+        self.vb_constants.add("wdStyleHtmlPre".lower())
+        # HTML Sample.
+        self.globals["wdStyleHtmlSamp".lower()] = -103
+        self.vb_constants.add("wdStyleHtmlSamp".lower())
+        # HTML Typewriter.
+        self.globals["wdStyleHtmlTt".lower()] = -104
+        self.vb_constants.add("wdStyleHtmlTt".lower())
+        # HTML Variable.
+        self.globals["wdStyleHtmlVar".lower()] = -105
+        self.vb_constants.add("wdStyleHtmlVar".lower())
+        # Hyperlink.
+        self.globals["wdStyleHyperlink".lower()] = -86
+        self.vb_constants.add("wdStyleHyperlink".lower())
+        # Followed Hyperlink.
+        self.globals["wdStyleHyperlinkFollowed".lower()] = -87
+        self.vb_constants.add("wdStyleHyperlinkFollowed".lower())
+        # Index 1.
+        self.globals["wdStyleIndex1".lower()] = -11
+        self.vb_constants.add("wdStyleIndex1".lower())
+        # Index 2.
+        self.globals["wdStyleIndex2".lower()] = -12
+        self.vb_constants.add("wdStyleIndex2".lower())
+        # Index 3.
+        self.globals["wdStyleIndex3".lower()] = -13
+        self.vb_constants.add("wdStyleIndex3".lower())
+        # Index 4.
+        self.globals["wdStyleIndex4".lower()] = -14
+        self.vb_constants.add("wdStyleIndex4".lower())
+        # Index 5.
+        self.globals["wdStyleIndex5".lower()] = -15
+        self.vb_constants.add("wdStyleIndex5".lower())
+        # Index 6.
+        self.globals["wdStyleIndex6".lower()] = -16
+        self.vb_constants.add("wdStyleIndex6".lower())
+        # Index 7.
+        self.globals["wdStyleIndex7".lower()] = -17
+        self.vb_constants.add("wdStyleIndex7".lower())
+        # Index8.
+        self.globals["wdStyleIndex8".lower()] = -18
+        self.vb_constants.add("wdStyleIndex8".lower())
+        # Index 9.
+        self.globals["wdStyleIndex9".lower()] = -19
+        self.vb_constants.add("wdStyleIndex9".lower())
+        # Index Heading
+        self.globals["wdStyleIndexHeading".lower()] = -34
+        self.vb_constants.add("wdStyleIndexHeading".lower())
+        # Intense Emphasis.
+        self.globals["wdStyleIntenseEmphasis".lower()] = -262
+        self.vb_constants.add("wdStyleIntenseEmphasis".lower())
+        # Intense Quote.
+        self.globals["wdStyleIntenseQuote".lower()] = -182
+        self.vb_constants.add("wdStyleIntenseQuote".lower())
+        # Intense Reference.
+        self.globals["wdStyleIntenseReference".lower()] = -264
+        self.vb_constants.add("wdStyleIntenseReference".lower())
+        # Line Number.
+        self.globals["wdStyleLineNumber".lower()] = -41
+        self.vb_constants.add("wdStyleLineNumber".lower())
+        # List.
+        self.globals["wdStyleList".lower()] = -48
+        self.vb_constants.add("wdStyleList".lower())
+        # List 2.
+        self.globals["wdStyleList2".lower()] = -51
+        self.vb_constants.add("wdStyleList2".lower())
+        # List 3.
+        self.globals["wdStyleList3".lower()] = -52
+        self.vb_constants.add("wdStyleList3".lower())
+        # List 4.
+        self.globals["wdStyleList4".lower()] = -53
+        self.vb_constants.add("wdStyleList4".lower())
+        # List 5.
+        self.globals["wdStyleList5".lower()] = -54
+        self.vb_constants.add("wdStyleList5".lower())
+        # List Bullet.
+        self.globals["wdStyleListBullet".lower()] = -49
+        self.vb_constants.add("wdStyleListBullet".lower())
+        # List Bullet 2.
+        self.globals["wdStyleListBullet2".lower()] = -55
+        self.vb_constants.add("wdStyleListBullet2".lower())
+        # List Bullet 3.
+        self.globals["wdStyleListBullet3".lower()] = -56
+        self.vb_constants.add("wdStyleListBullet3".lower())
+        # List Bullet 4.
+        self.globals["wdStyleListBullet4".lower()] = -57
+        self.vb_constants.add("wdStyleListBullet4".lower())
+        # List Bullet 5.
+        self.globals["wdStyleListBullet5".lower()] = -58
+        self.vb_constants.add("wdStyleListBullet5".lower())
+        # List Continue.
+        self.globals["wdStyleListContinue".lower()] = -69
+        self.vb_constants.add("wdStyleListContinue".lower())
+        # List Continue 2.
+        self.globals["wdStyleListContinue2".lower()] = -70
+        self.vb_constants.add("wdStyleListContinue2".lower())
+        # List Continue 3.
+        self.globals["wdStyleListContinue3".lower()] = -71
+        self.vb_constants.add("wdStyleListContinue3".lower())
+        # List Continue 4.
+        self.globals["wdStyleListContinue4".lower()] = -72
+        self.vb_constants.add("wdStyleListContinue4".lower())
+        # List Continue 5.
+        self.globals["wdStyleListContinue5".lower()] = -73
+        self.vb_constants.add("wdStyleListContinue5".lower())
+        # List Number.
+        self.globals["wdStyleListNumber".lower()] = -50
+        self.vb_constants.add("wdStyleListNumber".lower())
+        # List Number 2.
+        self.globals["wdStyleListNumber2".lower()] = -59
+        self.vb_constants.add("wdStyleListNumber2".lower())
+        # List Number 3.
+        self.globals["wdStyleListNumber3".lower()] = -60
+        self.vb_constants.add("wdStyleListNumber3".lower())
+        # List Number 4.
+        self.globals["wdStyleListNumber4".lower()] = -61
+        self.vb_constants.add("wdStyleListNumber4".lower())
+        # List Number 5.
+        self.globals["wdStyleListNumber5".lower()] = -62
+        self.vb_constants.add("wdStyleListNumber5".lower())
+        # List Paragraph.
+        self.globals["wdStyleListParagraph".lower()] = -180
+        self.vb_constants.add("wdStyleListParagraph".lower())
+        # Macro Text.
+        self.globals["wdStyleMacroText".lower()] = -46
+        self.vb_constants.add("wdStyleMacroText".lower())
+        # Message Header.
+        self.globals["wdStyleMessageHeader".lower()] = -74
+        self.vb_constants.add("wdStyleMessageHeader".lower())
+        # Document Map.
+        self.globals["wdStyleNavPane".lower()] = -90
+        self.vb_constants.add("wdStyleNavPane".lower())
+        # Normal.
+        self.globals["wdStyleNormal".lower()] = -1
+        self.vb_constants.add("wdStyleNormal".lower())
+        # Normal Indent.
+        self.globals["wdStyleNormalIndent".lower()] = -29
+        self.vb_constants.add("wdStyleNormalIndent".lower())
+        # Normal (applied to an object).
+        self.globals["wdStyleNormalObject".lower()] = -158
+        self.vb_constants.add("wdStyleNormalObject".lower())
+        # Normal (applied within a table).
+        self.globals["wdStyleNormalTable".lower()] = -106
+        self.vb_constants.add("wdStyleNormalTable".lower())
+        # Note Heading.
+        self.globals["wdStyleNoteHeading".lower()] = -80
+        self.vb_constants.add("wdStyleNoteHeading".lower())
+        # Page Number.
+        self.globals["wdStylePageNumber".lower()] = -42
+        self.vb_constants.add("wdStylePageNumber".lower())
+        # Plain Text.
+        self.globals["wdStylePlainText".lower()] = -91
+        self.vb_constants.add("wdStylePlainText".lower())
+        # Quote.
+        self.globals["wdStyleQuote".lower()] = -181
+        self.vb_constants.add("wdStyleQuote".lower())
+        # Salutation.
+        self.globals["wdStyleSalutation".lower()] = -76
+        self.vb_constants.add("wdStyleSalutation".lower())
+        # Signature.
+        self.globals["wdStyleSignature".lower()] = -65
+        self.vb_constants.add("wdStyleSignature".lower())
+        # Strong.
+        self.globals["wdStyleStrong".lower()] = -88
+        self.vb_constants.add("wdStyleStrong".lower())
+        # Subtitle.
+        self.globals["wdStyleSubtitle".lower()] = -75
+        self.vb_constants.add("wdStyleSubtitle".lower())
+        # Subtle Emphasis.
+        self.globals["wdStyleSubtleEmphasis".lower()] = -261
+        self.vb_constants.add("wdStyleSubtleEmphasis".lower())
+        # Subtle Reference.
+        self.globals["wdStyleSubtleReference".lower()] = -263
+        self.vb_constants.add("wdStyleSubtleReference".lower())
+        # Colorful Grid.
+        self.globals["wdStyleTableColorfulGrid".lower()] = -172
+        self.vb_constants.add("wdStyleTableColorfulGrid".lower())
+        # Colorful List.
+        self.globals["wdStyleTableColorfulList".lower()] = -171
+        self.vb_constants.add("wdStyleTableColorfulList".lower())
+        # Colorful Shading.
+        self.globals["wdStyleTableColorfulShading".lower()] = -170
+        self.vb_constants.add("wdStyleTableColorfulShading".lower())
+        # Dark List.
+        self.globals["wdStyleTableDarkList".lower()] = -169
+        self.vb_constants.add("wdStyleTableDarkList".lower())
+        # Light Grid.
+        self.globals["wdStyleTableLightGrid".lower()] = -161
+        self.vb_constants.add("wdStyleTableLightGrid".lower())
+        # Light Grid Accent 1.
+        self.globals["wdStyleTableLightGridAccent1".lower()] = -175
+        self.vb_constants.add("wdStyleTableLightGridAccent1".lower())
+        # Light List.
+        self.globals["wdStyleTableLightList".lower()] = -160
+        self.vb_constants.add("wdStyleTableLightList".lower())
+        # Light List Accent 1.
+        self.globals["wdStyleTableLightListAccent1".lower()] = -174
+        self.vb_constants.add("wdStyleTableLightListAccent1".lower())
+        # Light Shading.
+        self.globals["wdStyleTableLightShading".lower()] = -159
+        self.vb_constants.add("wdStyleTableLightShading".lower())
+        # Light Shading Accent 1.
+        self.globals["wdStyleTableLightShadingAccent1".lower()] = -173
+        self.vb_constants.add("wdStyleTableLightShadingAccent1".lower())
+        # Medium Grid 1.
+        self.globals["wdStyleTableMediumGrid1".lower()] = -166
+        self.vb_constants.add("wdStyleTableMediumGrid1".lower())
+        # Medium Grid 2.
+        self.globals["wdStyleTableMediumGrid2".lower()] = -167
+        self.vb_constants.add("wdStyleTableMediumGrid2".lower())
+        # Medium Grid 3.
+        self.globals["wdStyleTableMediumGrid3".lower()] = -168
+        self.vb_constants.add("wdStyleTableMediumGrid3".lower())
+        # Medium List 1.
+        self.globals["wdStyleTableMediumList1".lower()] = -164
+        self.vb_constants.add("wdStyleTableMediumList1".lower())
+        # Medium List 1 Accent 1.
+        self.globals["wdStyleTableMediumList1Accent1".lower()] = -178
+        self.vb_constants.add("wdStyleTableMediumList1Accent1".lower())
+        # Medium List 2.
+        self.globals["wdStyleTableMediumList2".lower()] = -165
+        self.vb_constants.add("wdStyleTableMediumList2".lower())
+        # Medium Shading 1.
+        self.globals["wdStyleTableMediumShading1".lower()] = -162
+        self.vb_constants.add("wdStyleTableMediumShading1".lower())
+        # Medium List 1 Accent 1.
+        self.globals["wdStyleTableMediumShading1Accent1".lower()] = -176
+        self.vb_constants.add("wdStyleTableMediumShading1Accent1".lower())
+        # Medium Shading 2.
+        self.globals["wdStyleTableMediumShading2".lower()] = -163
+        self.vb_constants.add("wdStyleTableMediumShading2".lower())
+        # Medium Shading 2 Accent 1.
+        self.globals["wdStyleTableMediumShading2Accent1".lower()] = -177
+        self.vb_constants.add("wdStyleTableMediumShading2Accent1".lower())
+        # Table of Authorities.
+        self.globals["wdStyleTableOfAuthorities".lower()] = -45
+        self.vb_constants.add("wdStyleTableOfAuthorities".lower())
+        # Table of Figures.
+        self.globals["wdStyleTableOfFigures".lower()] = -36
+        self.vb_constants.add("wdStyleTableOfFigures".lower())
+        # Title.
+        self.globals["wdStyleTitle".lower()] = -63
+        self.vb_constants.add("wdStyleTitle".lower())
+        # TOA Heading.
+        self.globals["wdStyleTOAHeading".lower()] = -47
+        self.vb_constants.add("wdStyleTOAHeading".lower())
+        # TOC 1.
+        self.globals["wdStyleTOC1".lower()] = -20
+        self.vb_constants.add("wdStyleTOC1".lower())
+        # TOC 2.
+        self.globals["wdStyleTOC2".lower()] = -21
+        self.vb_constants.add("wdStyleTOC2".lower())
+        # TOC 3.
+        self.globals["wdStyleTOC3".lower()] = -22
+        self.vb_constants.add("wdStyleTOC3".lower())
+        # TOC 4.
+        self.globals["wdStyleTOC4".lower()] = -23
+        self.vb_constants.add("wdStyleTOC4".lower())
+        # TOC 5.
+        self.globals["wdStyleTOC5".lower()] = -24
+        self.vb_constants.add("wdStyleTOC5".lower())
+        # TOC 6.
+        self.globals["wdStyleTOC6".lower()] = -25
+        self.vb_constants.add("wdStyleTOC6".lower())
+        # TOC 7.
+        self.globals["wdStyleTOC7".lower()] = -26
+        self.vb_constants.add("wdStyleTOC7".lower())
+        # TOC 8.
+        self.globals["wdStyleTOC8".lower()] = -27
+        self.vb_constants.add("wdStyleTOC8".lower())
+        # TOC 9.
+        self.globals["wdStyleTOC9".lower()] = -28
+        self.vb_constants.add("wdStyleTOC9".lower())
+        # TOC Heading.
+        self.globals["wdStyleTocHeading".lower()] = -267
+        self.vb_constants.add("wdStyleTocHeading".lower())        
+        
         # Call type constants.
         self.globals["vbGet".lower()] = 2
         self.vb_constants.add("vbGet".lower())
@@ -835,6 +1301,105 @@ class Context(object):
         self.globals["xlYearCode".lower()] = 19
         self.vb_constants.add("xlYearCode".lower())
 
+        # WdMailMergeActiveRecord enumeration (Word)
+        #
+        # Specifies the active record in a mail merge result set.
+        
+        # The first record in the data source.
+        self.globals["wdFirstDataSourceRecord".lower()] = -6
+        self.vb_constants.add("wdFirstDataSourceRecord".lower())
+        # The first record in the result set.
+        self.globals["wdFirstRecord".lower()] = -4
+        self.vb_constants.add("wdFirstRecord".lower())
+        # The last record in the data source.
+        self.globals["wdLastDataSourceRecord".lower()] = -7
+        self.vb_constants.add("wdLastDataSourceRecord".lower())
+        # The last record in the result set.
+        self.globals["wdLastRecord".lower()] = -5
+        self.vb_constants.add("wdLastRecord".lower())
+        # The next record in the data source.
+        self.globals["wdNextDataSourceRecord".lower()] = -8
+        self.vb_constants.add("wdNextDataSourceRecord".lower())
+        # The next record in the result set.
+        self.globals["wdNextRecord".lower()] = -2
+        self.vb_constants.add("wdNextRecord".lower())
+        # No active record.
+        self.globals["wdNoActiveRecord".lower()] = -1
+        self.vb_constants.add("wdNoActiveRecord".lower())
+        # The previous record in the data source.
+        self.globals["wdPreviousDataSourceRecord".lower()] = -9
+        self.vb_constants.add("wdPreviousDataSourceRecord".lower())
+        # The previous record in the result set.
+        self.globals["wdPreviousRecord".lower()] = -3
+        self.vb_constants.add("wdPreviousRecord".lower())
+
+        # WdAlignmentTabAlignment enumeration (Word)
+        #   
+        # Specifies tab alignment.
+        
+        # Centered tab.
+        self.globals["wdCenter".lower()] = 1
+        self.vb_constants.add("wdCenter".lower())
+        # Left-aligned tab.
+        self.globals["wdLeft".lower()] = 0
+        self.vb_constants.add("wdLeft".lower())
+        # Right-aligned tab.
+        self.globals["wdRight".lower()] = 2
+        self.vb_constants.add("wdRight".lower())
+
+        # WdUnits enumeration (Word)
+        #   
+        # Specifies a unit of measure to use.
+        
+        # A cell.
+        self.globals["wdCell".lower()] = 12
+        self.vb_constants.add("wdCell".lower())
+        # A character.
+        self.globals["wdCharacter".lower()] = 1
+        self.vb_constants.add("wdCharacter".lower())
+        # Character formatting.
+        self.globals["wdCharacterFormatting".lower()] = 13
+        self.vb_constants.add("wdCharacterFormatting".lower())
+        # A column.
+        self.globals["wdColumn".lower()] = 9
+        self.vb_constants.add("wdColumn".lower())
+        # The selected item.
+        self.globals["wdItem".lower()] = 16
+        self.vb_constants.add("wdItem".lower())
+        # A line.
+        self.globals["wdLine".lower()] = 5
+        self.vb_constants.add("wdLine".lower())
+        # A paragraph.
+        self.globals["wdParagraph".lower()] = 4
+        self.vb_constants.add("wdParagraph".lower())
+        # Paragraph formatting.
+        self.globals["wdParagraphFormatting".lower()] = 14
+        self.vb_constants.add("wdParagraphFormatting".lower())
+        # A row.
+        self.globals["wdRow".lower()] = 10
+        self.vb_constants.add("wdRow".lower())
+        # The screen dimensions.
+        self.globals["wdScreen".lower()] = 7
+        self.vb_constants.add("wdScreen".lower())
+        # A section.
+        self.globals["wdSection".lower()] = 8
+        self.vb_constants.add("wdSection".lower())
+        # A sentence.
+        self.globals["wdSentence".lower()] = 3
+        self.vb_constants.add("wdSentence".lower())
+        # A story.
+        self.globals["wdStory".lower()] = 6
+        self.vb_constants.add("wdStory".lower())
+        # A table.
+        self.globals["wdTable".lower()] = 15
+        self.vb_constants.add("wdTable".lower())
+        # A window.
+        self.globals["wdWindow".lower()] = 11
+        self.vb_constants.add("wdWindow".lower())
+        # A word.
+        self.globals["wdWord".lower()] = 2
+        self.vb_constants.add("wdWord".lower())
+        
         # XlBinsType enumeration (Word)
         self.globals["xlBinsTypeAutomatic".lower()] = 0
         self.vb_constants.add("xlBinsTypeAutomatic".lower())
