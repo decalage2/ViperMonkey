@@ -270,6 +270,26 @@ def hide_weird_calls(vba_code):
     if (re2.search(pat, uni_vba_code) is None):
         return vba_code
     return vba_code
+
+def fix_bad_puts(vba_code):
+    """
+    Change file Put statements like 'Put #foo(1,2,3) ...' to 'Put foo(1,2,3)'.
+    """
+
+    # Do we need to do this?
+    if ("Put #" not in vba_code):
+        return vba_code
+
+    # Fix them.
+    vba_code = re.sub(r"Put +#([A-Za-z_])", r"Put \1", vba_code)
+
+    # Do we need to do this?
+    if ("Close #" not in vba_code):
+        return vba_code
+
+    # Fix them.
+    vba_code = re.sub(r"Close +#([A-Za-z_])", r"Close \1", vba_code)
+    return vba_code
     
 def fix_unbalanced_quotes(vba_code):
     """
@@ -1750,6 +1770,12 @@ def fix_vba_code(vba_code):
         print vba_code
     vba_code = fix_unbalanced_quotes(vba_code)
 
+    # Fix some hard to parse Put calls.
+    if debug_strip:
+        print "FIX_VBA_CODE: 16.1"
+        print vba_code
+    vba_code = fix_bad_puts(vba_code)
+    
     # Hide some weird hard to parse calls.
     #if debug_strip:
     #    print "FIX_VBA_CODE: 16.1"

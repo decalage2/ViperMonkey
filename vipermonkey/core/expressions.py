@@ -2643,7 +2643,7 @@ function_call <<= (
     | (
         ~(strict_reserved_keywords + Literal("(")) +
         (
-            (member_access_expression('name') ^ lex_identifier('name')) |
+            (Suppress(Optional("#")) + (member_access_expression('name') ^ lex_identifier('name'))) |
             (Suppress('[') + lex_identifier('name') + Suppress(']'))
         ) +
         Suppress(
