@@ -40,6 +40,7 @@ https://github.com/decalage2/ViperMonkey
 __version__ = '0.08'
 
 import string
+import sys
 try:
     # sudo pypy -m pip install rure
     import rure as re
@@ -324,13 +325,24 @@ class VbStr(object):
                     pos = 0
                     for bval in bts:
                         chars += chr(bval)
+                    code_str = None
+                    try:
+                        code_str = str(code)
+                    except UnicodeEncodeError:
+                        code_str = filter(isprint, code)
+                    try:
+                        tmp_str = str(tmp_str)
+                    except UnicodeEncodeError:
+                        tmp_str = filter(isprint, tmp_str)
                     #print tmp_str
                     #print type(tmp_str)
                     #print code
                     #print type(code)
                     #print pos
                     #print type(pos)
-                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + str(code) + "_" + str(pos) + "MARK!@#$%%$#@!")
+                    #print code_str
+                    #print type(code_str)
+                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + str(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.
             for val in tmp_str.split("MARK!@#$%"):

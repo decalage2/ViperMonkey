@@ -2526,8 +2526,12 @@ class Function_Call(VBA_Object):
 
         # Get a list of the Python expressions for each parameter.
         py_params = []
+        # Expressions with boolean operators are probably bitwise operators.
+        old_bitwise = context.in_bitwise_expression
+        context.in_bitwise_expression = True
         for p in self.params:
             py_params.append(to_python(p, context, params))
+        context.in_bitwise_expression = old_bitwise
 
         # Is this a VBA internal function?
         import vba_library

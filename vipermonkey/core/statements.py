@@ -1429,6 +1429,7 @@ class For_Statement(VBA_Object):
             self.step_value = self.step_value[0]
         self.statements = tokens.statements
         self.body = self.statements
+        self.only_atomic = None
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
@@ -1783,16 +1784,36 @@ class For_Statement(VBA_Object):
             return False
         
         # First check to see if the loop body only contains atomic statements.
-        for s in self.statements:
-            if (not isinstance(s, VBA_Object)):
-                continue
-            if ((not is_simple_statement(s)) and (not s.is_useless)):
-                return False
+        if (self.only_atomic is None):
+            self.only_atomic = True
+            for s in self.statements:
+                if (not isinstance(s, VBA_Object)):
+                    continue
+                if ((not is_simple_statement(s)) and (not s.is_useless)):
+                    self.only_atomic = False
+        if (not self.only_atomic):
+            return False
 
         # Remove the loop counter variable from the previous loop iteration
         # program state and the current program state.
-        prev_context = Context(context=prev_context, _locals=prev_context.locals, copy_globals=True).delete(self.name).delete("now").delete("application.username")
-        context = Context(context=context, _locals=context.locals, copy_globals=True).delete(self.name).delete("now").delete("application.username")
+        prev_context = Context(context=prev_context, _locals=prev_context.locals, copy_globals=True)\
+                                        .delete(self.name)\
+                                        .delete(self.name.lower())\
+                                        .delete("now")\
+                                        .delete("application.username")\
+                                        .delete("recentfiles.count")\
+                                        .delete("activedocument.revisions.count")\
+                                        .delete("thisdocument.revisions.count")\
+                                        .delete("revisions.count")
+        context = Context(context=context, _locals=context.locals, copy_globals=True)\
+                                   .delete(self.name)\
+                                   .delete(self.name.lower())\
+                                   .delete("now")\
+                                   .delete("application.username")\
+                                   .delete("recentfiles.count")\
+                                   .delete("activedocument.revisions.count")\
+                                   .delete("thisdocument.revisions.count")\
+                                   .delete("revisions.count")
 
         # There is no state change if the previous state is equal to the
         # current state.
@@ -3652,6 +3673,7 @@ class Call_Statement(VBA_Object):
             self.params = params
             return
 
+        # Save the call info.
         self.name = tokens.name
         if (str(self.name).endswith("@")):
             self.name = str(self.name).replace("@", "")
@@ -3662,6 +3684,13 @@ class Call_Statement(VBA_Object):
         if (str(self.name).endswith("%")):
             self.name = str(self.name).replace("%", "")
         self.params = tokens.params
+
+        # Some calls will be counted as useless when figuring
+        # out if we can skip emulating a loop.
+        if (str(self.name).lower() == "debug.print"):
+            self.is_useless = True
+
+        # Done.
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r' % self)
 
@@ -3704,8 +3733,12 @@ class Call_Statement(VBA_Object):
         
         # Get a list of the Python expressions for each parameter.
         py_params = []
+        # Expressions with boolean operators are probably bitwise operators.
+        old_bitwise = context.in_bitwise_expression
+        context.in_bitwise_expression = True
         for p in self.params:
             py_params.append(to_python(p, context, params))
+        context.in_bitwise_expression = old_bitwise
 
         # Is the whole call stuffed into the name?
         indent_str = " " * indent
@@ -4766,10 +4799,6 @@ class External_Function(VBA_Object):
 
         # If we emulate an external function we are treating it like a VBA builtin function.
         # So we won't create a new context.
-        #
-        # create a new context for this execution:
-        #caller_context = context
-        #context = Context(context=caller_context)
 
         # Resolve aliased function names.
         if self.alias_name:

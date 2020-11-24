@@ -856,7 +856,12 @@ def to_python(arg, context, params=None, indent=0, statements=False):
 
     # Some other literal?
     else:
-        r = " " * indent + str(arg)
+        arg_str = None
+        try:
+            arg_str = str(arg)
+        except UnicodeEncodeError:
+            arg_str = filter(isprint, arg)
+        r = " " * indent + arg_str
 
     # Done.
     return r

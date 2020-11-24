@@ -878,15 +878,20 @@ class Left(VbaLibraryFunc):
         if (len(params) > 2):
             params = params[-2:]
         s = params[0]
+        if s == None: return None
 
+        # Arg should be a string.
+        s = None
+        try:
+            s = str(s)
+        except UnicodeDecodeError:
+            s = filter(isprint, s)
+            
         # Don't modify the "**MATCH ANY**" special value.
-        if (str(s).strip() == "**MATCH ANY**"):
+        if (s.strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."
-        if s == None: return None
-        if not isinstance(s, basestring):
-            s = str(s)
         start = 0
         try:
             start = int_convert(params[1])
