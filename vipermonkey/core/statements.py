@@ -3726,6 +3726,14 @@ class Call_Statement(VBA_Object):
         Convert this call to Python code.
         """
 
+        # Reset the called function name if this is an alias for an imported external
+        # DLL function.
+        dll_func_name = context.get_true_name(self.name)
+        is_external = False
+        if (dll_func_name is not None):
+            is_external = True
+            self.name = dll_func_name
+        
         # With block call statement?
         with_call_str = self._to_python_handle_with_calls(context, indent)
         if (with_call_str is not None):
@@ -3749,12 +3757,12 @@ class Call_Statement(VBA_Object):
             r = indent_str + r
             return r
             
-        # Is this a VBA internal function?
+        # Is this a VBA internal function? Or a call to an external function?
         func_name = str(self.name)
         if ("." in func_name):
             func_name = func_name[func_name.index(".") + 1:]
         import vba_library
-        if (func_name.lower() in vba_library.VBA_LIBRARY):
+        if ((func_name.lower() in vba_library.VBA_LIBRARY) or is_external):
 
             # Make the Python parameter list.
             first = True
@@ -3773,7 +3781,13 @@ class Call_Statement(VBA_Object):
                 (str(func_name) == "AddFromString")):
                 args += ", locals(), \"__JIT_EXEC__\""
             args += "]"
-            r = indent_str + "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
+
+            # External function?
+            r = None
+            if is_external:
+                r = indent_str + "core.vba_library.run_external_function(\"" + str(func_name) + "\", vm_context, " + args + ",\"\")"
+            else:
+                r = indent_str + "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
             return r
                 
         # Generate the Python function call to a local function.
@@ -4791,6 +4805,34 @@ class External_Function(VBA_Object):
     def __repr__(self):
         return 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
 
+    def to_python(self, context, params=None, indent=0):
+
+        # Resolve aliased function names.
+        if self.alias_name:
+            function_name = str(self.alias_name)
+        else:
+            function_name = str(self.name)
+
+        # Get information about the DLL.
+        lib_info = str(self.lib_name) + " / " + str(self.alias_name)
+
+        # Get each parameter in Python.
+        if (params is None):
+            params = []
+        param_str = "["
+        first = True
+        for p in params:
+            if (not first):
+                param_str += ", "
+            first = False
+            param_str += to_python(p, context=context)
+        param_str += "]"
+
+        # Make the Python call of the external function.
+        indent_str = " " * indent
+        r = indent_str + 'core.vba_library.run_external_function("' + function_name + '", vm_context, ' + param_str + ', "' + lib_info + '")'
+        return r
+        
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.

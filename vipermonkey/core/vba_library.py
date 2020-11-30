@@ -83,6 +83,14 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+def run_external_function(func_name, context, params, lib_info):
+    """
+    Fake running an external DLL function with the given parameters.
+    """
+    call_str = str(func_name) + "(" + str(params) + ")"
+    context.report_action('External Call', call_str, lib_info)
+    return 1
+    
 def run_function(func_name, context, params):
     """
     Run a VBA library function with the given parameters.
