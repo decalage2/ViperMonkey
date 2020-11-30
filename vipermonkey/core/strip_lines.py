@@ -1011,6 +1011,56 @@ def fix_varptr_calls(vba_code):
     vba_code = re.sub(r"(VarPtr\(\w+)\(0\)\)", r'\1)', vba_code)
     return vba_code
 
+def fix_while_loops(vba_code):
+    """
+    Change lines like 'while (a > 1) c=1\n' to 'while (a > 1)\nc=1\n'.
+    """
+
+    # Do we need to do this?
+    if ("while" not in vba_code.lower()):
+        return vba_code
+
+    # Look at each line and see if there are while statements that need fixed.
+    r = ""
+    for line in vba_code.split("\n"):
+
+        # While line?
+        if ("while" not in line.lower()):
+            r += line + "\n"
+            continue
+
+        # We have a while statement. For now we are just modifying while predicates
+        # of the form 'while (...)'.
+        if ("(" not in line):
+            r += line + "\n"
+            continue
+
+        # Find the final paren in the while predicate.
+        paren_count = 0
+        end_pred = -1
+        for c in line:
+            end_pred += 1
+            if (c == "("):
+                paren_count += 1
+                continue
+            if (c == ")"):
+                paren_count -= 1
+                if (paren_count == 0):
+                    # Move past the final paren.
+                    end_pred += 1
+                    break
+
+        # Add in the while pred.
+        r += line[:end_pred] + "\n"
+
+        # Break any extra statements after the while pred out into their
+        # own line.
+        if (end_pred < len(line)):
+            r += line[end_pred:] + "\n"
+
+    # Done.
+    return r
+
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -1276,11 +1326,18 @@ def fix_difficult_code(vba_code):
     elif_pat = "(\r?\n[^\"]*ElseIf.{5,50}Then)"
     if (re2.search(unicode(elif_pat), uni_vba_code) is not None):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)
-    
+
+    # Some while loops may have the 1st statement in the loop body directly
+    # after the loop predicate. Fix that.
+    if debug_strip:
+        print "HERE: 17.1"
+        print vba_code
+    vba_code = fix_while_loops(vba_code)
+        
     # Characters that change how we modify the code.
     interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
                          r"PAT:[\x7f-\xff]", r"\^", ";",
-                         r"\[", r"\]"]
+                         r"\[", r"\]", "&"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -1457,6 +1514,11 @@ def fix_difficult_code(vba_code):
         # Add spaces areound "^" operators.
         if (c == "^"):
             r += " ^ "
+            continue
+
+        # Add spaces areound "&" operators.
+        if (c == "&"):
+            r += " & "
             continue
 
         # Need to eliminate bogus =+ assignments.

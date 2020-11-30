@@ -1211,26 +1211,39 @@ class Eval(VbaLibraryFunc):
             return 0
         expr = strip_nonvb_chars(str(params[0]))
 
-        # We are executing a string, so any "" in the string are really '"' when
-        # we execute the string.
-        expr = expr.replace('""', '"')
+        # Save original expression.
+        orig_expr = expr
         
-        try:
+        # We are executing a string, so any "" in the string are really '"' when
+        # we execute the string. Maybe?
+        expr = expr.replace('""', '"')
 
-            # Parse it. Assume this is an expression.
+        # Parse it. Assume this is an expression.
+        r = None
+        try:    
             obj = expressions.expression.parseString(expr, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             # TODO: Does this actually get evalled in the current context?
             r = obj
-            if (isinstance(obj, VBA_Object)):
-                r = obj.eval(context)
-            return r
 
         except ParseException:
-            log.error("Parse error. Cannot evaluate '" + expr + "'")
-            return "NULL"
 
+            # Maybe replacing the '""' with '"' was a bad idea. Try the original
+            # command.
+            try:
+                log.warning("Parsing failed on modified expression. Trying original expression ...")
+                obj = expressions.expression.parseString(orig_expr, parseAll=True)[0]
+                r = obj
+            except ParseException:
+                log.error("Parse error. Cannot evaluate '" + orig_expr + "'")
+                return "NULL"
+
+        # Do any final evaulation needed.
+        if (isinstance(r, VBA_Object)):
+            r = r.eval(context)
+        return r
+            
 class Exists(VbaLibraryFunc):
     """
     Document or Scripting.Dictionary Exists() method.
@@ -1289,9 +1302,11 @@ class Execute(VbaLibraryFunc):
         # Fix invalid string assignments.
         command = strip_lines.fix_vba_code(command)
 
+        # Save original command string.
+        orig_command = command
+        
         # We are executing a string, so any "" in the string are really '"' when
         # we execute the string.
-        orig_command = command
         command = command.replace('""', '"')
 
         # Have we already parsed this?
@@ -1347,7 +1362,7 @@ class Execute(VbaLibraryFunc):
                     obj = modules.module.parseString(short_command, parseAll=True)[0]
                 except ParseException:
                     pass
-                
+
             # Cannot ever parse this. Punt.
             if (obj == None):
                 if (len(orig_command) > 50):

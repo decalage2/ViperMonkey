@@ -61,6 +61,33 @@ from logger import log
 
 class Module(VBA_Object):
 
+    def _handle_func_decls(self, tokens):
+        """
+        Look for functions/subs declared anywhere, including inside the body 
+        of other functions/subs.
+        """
+
+        # Look through each parsed item in the module for function/sub
+        # definitions.
+        for token in tokens:
+            if (not hasattr(token, "accept")):
+                continue
+            func_visitor = function_defn_visitor()
+            token.accept(func_visitor)
+            for i in func_visitor.func_objects:
+
+                # Sub to add?
+                if isinstance(i, Sub):
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("saving sub decl: %r" % i.name)
+                    self.subs[i.name] = i
+
+                # Func to add?
+                elif isinstance(i, Function):
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("saving func decl: %r" % i.name)
+                    self.functions[i.name] = i
+        
     def __init__(self, original_str, location, tokens):
 
         super(Module, self).__init__(original_str, location, tokens)
@@ -75,28 +102,28 @@ class Module(VBA_Object):
         self.global_vars = {}
         self.loose_lines = []
 
+        # Save all function/sub definitions.
+        self._handle_func_decls(tokens)
+
+        # Handle other statements.
         for token in tokens:
+
             if isinstance(token, If_Statement_Macro):
                 for n in token.external_functions.keys():
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("saving external func decl: %r" % n)
                     self.external_functions[n] = token.external_functions[n]
-            if isinstance(token, Sub):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("saving sub decl: %r" % token.name)
-                self.subs[token.name] = token
-            if isinstance(token, Function):
-               if (log.getEffectiveLevel() == logging.DEBUG):
-                   log.debug("saving func decl: %r" % token.name)
-               self.functions[token.name] = token
-            if isinstance(token, External_Function):
+
+            elif isinstance(token, External_Function):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("saving external func decl: %r" % token.name)
                 self.external_functions[token.name] = token
+
             elif isinstance(token, Attribute_Statement):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("saving attrib decl: %r" % token.name)
                 self.attributes[token.name] = token.value
+
             elif isinstance(token, Global_Var_Statement):
 
                 # Global variable initialization is now handled by emulating the
@@ -117,14 +144,6 @@ class Module(VBA_Object):
                 # Function and Sub definitions could be in the loose lines block.
                 # Save those also.
                 for curr_statement in token.block:
-                    if isinstance(curr_statement, Sub):
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("saving sub decl: %r" % curr_statement.name)
-                        self.subs[curr_statement.name] = curr_statement
-                    if isinstance(curr_statement, Function):
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("saving func decl: %r" % curr_statement.name)
-                        self.functions[curr_statement.name] = curr_statement
                     if isinstance(curr_statement, External_Function):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("saving external func decl: %r" % curr_statement.name)
