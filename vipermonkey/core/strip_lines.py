@@ -1517,8 +1517,9 @@ def fix_difficult_code(vba_code):
             continue
 
         # Add spaces areound "&" operators.
+        # TODO: This needs more work.
         if (c == "&"):
-            r += " & "
+            r += "&"
             continue
 
         # Need to eliminate bogus =+ assignments.
