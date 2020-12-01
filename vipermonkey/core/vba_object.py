@@ -474,6 +474,7 @@ def _boilerplate_to_python(indent):
     """
     indent_str = " " * indent
     boilerplate = indent_str + "import core.vba_library\n"
+    boilerplate = indent_str + "import core.vba_context\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
     boilerplate += indent_str + "from core.utils import plus\n"
     boilerplate += indent_str + "import core.utils\n"
@@ -916,6 +917,7 @@ def _updated_vars_to_python(loop, context, indent):
     save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
     save_vals += indent_str + "except (NameError, UnboundLocalError):\n"
     save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
+    save_vals += indent_str + 'var_updates["__shell_code__"] = core.vba_library.get_raw_shellcode_data()\n'
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
     if (log.getEffectiveLevel() == logging.DEBUG):
         save_vals += indent_str + "print \"UPDATED VALS!!\"\n"
@@ -1092,9 +1094,15 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         # Update the context with the variable values from the JIT code execution.
         try:
             for updated_var in var_updates.keys():
+                if (updated_var == "__shell_code__"):
+                    continue
                 context.set(updated_var, var_updates[updated_var])
         except (NameError, UnboundLocalError):
             log.warning("No variables set by Python JIT code.")
+
+        # Update shellcode bytes from the JIT emulation.
+        import vba_context
+        vba_context.shellcode = var_updates["__shell_code__"]
 
     except NotImplementedError as e:
         log.error("JIT emulation failed. " + str(e))

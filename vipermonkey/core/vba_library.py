@@ -83,6 +83,13 @@ from logger import log
 # TODO: Excel
 # TODO: other MS Office apps?
 
+# This function is here to ensure that we return the same global
+# shellcode variable as what is updated by emulated VBA functions
+# defined in this file.
+def get_raw_shellcode_data():
+    import vba_context
+    return vba_context.shellcode
+    
 def run_external_function(func_name, context, params, lib_info):
     """
     Fake running an external DLL function with the given parameters.

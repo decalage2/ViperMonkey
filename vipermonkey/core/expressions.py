@@ -2524,6 +2524,15 @@ class Function_Call(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
 
+        # Reset the called function name if this is an alias for an imported external
+        # DLL function.
+        dll_func_name = context.get_true_name(self.name)
+        func_name = self.name
+        is_external = False
+        if (dll_func_name is not None):
+            is_external = True
+            func_name = dll_func_name
+        
         # Get a list of the Python expressions for each parameter.
         py_params = []
         # Expressions with boolean operators are probably bitwise operators.
@@ -2533,9 +2542,12 @@ class Function_Call(VBA_Object):
             py_params.append(to_python(p, context, params))
         context.in_bitwise_expression = old_bitwise
 
-        # Is this a VBA internal function?
+        # Is this a VBA internal function? Or a call to an external function?
         import vba_library
-        if (self.name.lower() in vba_library.VBA_LIBRARY):
+        is_internal = (func_name.lower() in vba_library.VBA_LIBRARY)
+        if (is_internal or is_external):
+
+            # Convert the argument list to Python.
             first = True
             args = "["
             for p in py_params:
@@ -2544,17 +2556,23 @@ class Function_Call(VBA_Object):
                 first = False
                 args += p
             args += "]"
-            r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
+
+            # Internal VBA function emulated by ViperMonkey?
+            r = None
+            if is_internal:
+                r = "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
+            else:
+                r = "core.vba_library.run_external_function(\"" + str(func_name) + "\", vm_context, " + args + ",\"\")"
             return r
 
         # Is this an array access? We tell if this is an array access based on the
         # value of the variable or if this variable is a function argument (functions
         # not 1st class objects in VB).
-        if (context.contains(self.name)):
-            ref = context.get(self.name)
+        if (context.contains(func_name)):
+            ref = context.get(func_name)
             ref1 = None
             try:
-                ref1 = context.get("__ORIG__" + self.name)
+                ref1 = context.get("__ORIG__" + func_name)
             except KeyError:
                 pass
             if ((isinstance(ref, list)) or
@@ -2565,11 +2583,11 @@ class Function_Call(VBA_Object):
                 acc_str = ""
                 for p in py_params:
                     acc_str += "[" + p + "]"
-                r = str(self.name) + acc_str
+                r = str(func_name) + acc_str
                 return r
         
         # Generate the Python function call to a local function.
-        r = str(self.name) + "("
+        r = str(func_name) + "("
         first = True
         for p in py_params:
             if (not first):
