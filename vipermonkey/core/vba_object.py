@@ -784,10 +784,6 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     """
     Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
     """
-
-    #print "--- to_python() ---"
-    #print arg
-    #print type(arg)
         
     # VBA Object?
     r = None
@@ -863,6 +859,11 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             arg_str = filter(isprint, arg)
         r = " " * indent + arg_str
 
+    #print "--- to_python() ---"
+    #print arg
+    #print type(arg)
+    #print r
+        
     # Done.
     return r
 

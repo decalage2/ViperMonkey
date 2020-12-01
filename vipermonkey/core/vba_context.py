@@ -671,6 +671,608 @@ class Context(object):
         self.globals["Null".lower()] = None
         self.vb_constants.add("Null".lower())
 
+        # WdDisableFeaturesIntroducedAfter enumeration (Word)
+        #   
+        # Specifies the version of Microsoft Word for which to disable all features introduced after that version.
+        
+        # Specifies Word for Windows 95, versions 7.0 and 7.0a.
+        self.globals["wd70".lower()] = 0
+        self.vb_constants.add("wd70".lower())
+        # Specifies Word for Windows 95, versions 7.0 and 7.0a, Asian edition.
+        self.globals["wd70FE".lower()] = 1
+        self.vb_constants.add("wd70FE".lower())
+        # Specifies Word 97 for Windows. Default.
+        self.globals["wd80".lower()] = 2
+        self.vb_constants.add("wd80".lower())
+        
+        # WdEmphasisMark enumeration (Word)
+        #   
+        # Specifies the type of emphasis mark to use for a character or designated character string.
+        
+        # No emphasis mark.
+        self.globals["wdEmphasisMarkNone".lower()] = 0
+        self.vb_constants.add("wdEmphasisMarkNone".lower())
+        # A comma.
+        self.globals["wdEmphasisMarkOverComma".lower()] = 2
+        self.vb_constants.add("wdEmphasisMarkOverComma".lower())
+        # A solid black circle.
+        self.globals["wdEmphasisMarkOverSolidCircle".lower()] = 1
+        self.vb_constants.add("wdEmphasisMarkOverSolidCircle".lower())
+        # An empty white circle.
+        self.globals["wdEmphasisMarkOverWhiteCircle".lower()] = 3
+        self.vb_constants.add("wdEmphasisMarkOverWhiteCircle".lower())
+        # A solid black circle.
+        self.globals["wdEmphasisMarkUnderSolidCircle".lower()] = 4
+        self.vb_constants.add("wdEmphasisMarkUnderSolidCircle".lower())
+        
+        # WdUseFormattingFrom enumeration (Word)
+        #   
+        # Specifies a source to copy formatting from.
+        
+        # Copy source formatting from the current item.
+        self.globals["wdFormattingFromCurrent".lower()] = 0
+        self.vb_constants.add("wdFormattingFromCurrent".lower())
+        # Prompt the user for formatting to use.
+        self.globals["wdFormattingFromPrompt".lower()] = 2
+        self.vb_constants.add("wdFormattingFromPrompt".lower())
+        # Copy source formatting from the current selection.
+        self.globals["wdFormattingFromSelected".lower()] = 1
+        self.vb_constants.add("wdFormattingFromSelected".lower())
+        
+        # WdLigatures enumeration (Word)
+        #   
+        # Specifies the type of ligatures applied to a font.
+        
+        # Applies all types of ligatures to the font.
+        self.globals["wdLigaturesAll".lower()] = 15
+        self.vb_constants.add("wdLigaturesAll".lower())
+        # Applies contextual ligatures to the font. Contextual ligatures are often designed to enhance readability, but may also be solely ornamental. Contextual ligatures may also be contextual alternates.
+        self.globals["wdLigaturesContextual".lower()] = 2
+        self.vb_constants.add("wdLigaturesContextual".lower())
+        # Applies contextual and discretional ligatures to the font.
+        self.globals["wdLigaturesContextualDiscretional".lower()] = 10
+        self.vb_constants.add("wdLigaturesContextualDiscretional".lower())
+        # Applies contextual and historical ligatures to the font.
+        self.globals["wdLigaturesContextualHistorical".lower()] = 6
+        self.vb_constants.add("wdLigaturesContextualHistorical".lower())
+        # Applies contextual, historical, and discretional ligatures to a font.
+        self.globals["wdLigaturesContextualHistoricalDiscretional".lower()] = 14
+        self.vb_constants.add("wdLigaturesContextualHistoricalDiscretional".lower())
+        # Applies discretional ligatures to the font. Discretional ligatures are most often designed to be ornamental at the discretion of the type developer.
+        self.globals["wdLigaturesDiscretional".lower()] = 8
+        self.vb_constants.add("wdLigaturesDiscretional".lower())
+        # Applies historical ligatures to the font. Historical ligatures are similar to standard ligatures in that they were originally intended to improve the readability of the font, but may look archaic to the modern reader.
+        self.globals["wdLigaturesHistorical".lower()] = 4
+        self.vb_constants.add("wdLigaturesHistorical".lower())
+        # Applies historical and discretional ligatures to the font.
+        self.globals["wdLigaturesHistoricalDiscretional".lower()] = 12
+        self.vb_constants.add("wdLigaturesHistoricalDiscretional".lower())
+        # Does not apply any ligatures to the font.
+        self.globals["wdLigaturesNone".lower()] = 0
+        self.vb_constants.add("wdLigaturesNone".lower())
+        # Applies standard ligatures to the font. Standard ligatures are designed to enhance readability. Standard ligatures in Latin languages include "fi", "fl", and "ff", for example.
+        self.globals["wdLigaturesStandard".lower()] = 1
+        self.vb_constants.add("wdLigaturesStandard".lower())
+        # Applies standard and contextual ligatures to the font.
+        self.globals["wdLigaturesStandardContextual".lower()] = 3
+        self.vb_constants.add("wdLigaturesStandardContextual".lower())
+        # Applies standard, contextual and discretional ligatures to the font.
+        self.globals["wdLigaturesStandardContextualDiscretional".lower()] = 11
+        self.vb_constants.add("wdLigaturesStandardContextualDiscretional".lower())
+        # Applies standard, contextual, and historical ligatures to the font.
+        self.globals["wdLigaturesStandardContextualHistorical".lower()] = 7
+        self.vb_constants.add("wdLigaturesStandardContextualHistorical".lower())
+        # Applies standard and discretional ligatures to the font.
+        self.globals["wdLigaturesStandardDiscretional".lower()] = 9
+        self.vb_constants.add("wdLigaturesStandardDiscretional".lower())
+        # Applies standard and historical ligatures to the font.
+        self.globals["wdLigaturesStandardHistorical".lower()] = 5
+        self.vb_constants.add("wdLigaturesStandardHistorical".lower())
+        # Applies standard historical and discretional ligatures to the font.
+        self.globals["wdLigaturesStandardHistoricalDiscretional".lower()] = 13
+        self.vb_constants.add("wdLigaturesStandardHistoricalDiscretional".lower())
+        
+        # WdListType enumeration (Word)
+        #   
+        # Specifies a type of list.
+        
+        # Bulleted list.
+        self.globals["wdListBullet".lower()] = 2
+        self.vb_constants.add("wdListBullet".lower())
+        # ListNum fields that can be used in the body of a paragraph.
+        self.globals["wdListListNumOnly".lower()] = 1
+        self.vb_constants.add("wdListListNumOnly".lower())
+        # Mixed numeric list.
+        self.globals["wdListMixedNumbering".lower()] = 5
+        self.vb_constants.add("wdListMixedNumbering".lower())
+        # List with no bullets, numbering, or outlining.
+        self.globals["wdListNoNumbering".lower()] = 0
+        self.vb_constants.add("wdListNoNumbering".lower())
+        # Outlined list.
+        self.globals["wdListOutlineNumbering".lower()] = 4
+        self.vb_constants.add("wdListOutlineNumbering".lower())
+        # Picture bulleted list.
+        self.globals["wdListPictureBullet".lower()] = 6
+        self.vb_constants.add("wdListPictureBullet".lower())
+        # Simple numeric list.
+        self.globals["wdListSimpleNumbering".lower()] = 3
+        self.vb_constants.add("wdListSimpleNumbering".lower())
+        
+        # WdTemplateType enumeration (Word)
+        #   
+        # Specifies the type of template.
+        
+        # An attached template.
+        self.globals["wdAttachedTemplate".lower()] = 2
+        self.vb_constants.add("wdAttachedTemplate".lower())
+        # A global template.
+        self.globals["wdGlobalTemplate".lower()] = 1
+        self.vb_constants.add("wdGlobalTemplate".lower())
+        # The normal default template.
+        self.globals["wdNormalTemplate".lower()] = 0
+        self.vb_constants.add("wdNormalTemplate".lower())
+        
+        # WdViewType enumeration (Word)
+        #   
+        # Specifies the view type.
+        
+        # A master view.
+        self.globals["wdMasterView".lower()] = 5
+        self.vb_constants.add("wdMasterView".lower())
+        # A normal view.
+        self.globals["wdNormalView".lower()] = 1
+        self.vb_constants.add("wdNormalView".lower())
+        # An outline view.
+        self.globals["wdOutlineView".lower()] = 2
+        self.vb_constants.add("wdOutlineView".lower())
+        # A print preview view.
+        self.globals["wdPrintPreview".lower()] = 4
+        self.vb_constants.add("wdPrintPreview".lower())
+        # A print view.
+        self.globals["wdPrintView".lower()] = 3
+        self.vb_constants.add("wdPrintView".lower())
+        # A reading view.
+        self.globals["wdReadingView".lower()] = 7
+        self.vb_constants.add("wdReadingView".lower())
+        # A Web view.
+        self.globals["wdWebView".lower()] = 6
+        self.vb_constants.add("wdWebView".lower())
+        
+        # WdNumberForm enumeration (Word)
+        #
+        # Specifies the number form setting for an OpenType font.
+        
+        # Applies the default number form for the font.
+        self.globals["wdNumberFormDefault".lower()] = 0
+        self.vb_constants.add("wdNumberFormDefault".lower())
+        # Applies the lining number form to the font.
+        self.globals["wdNumberFormLining".lower()] = 1
+        self.vb_constants.add("wdNumberFormLining".lower())
+        # Applies the "old-style" number form to the font.
+        self.globals["wdNumberFormOldstyle".lower()] = 2
+        self.vb_constants.add("wdNumberFormOldstyle".lower())
+        
+        # WdOMathFunctionType enumeration (Word)
+        #   
+        # Specifies the type of equation function.
+        
+        # Equation accent mark.
+        self.globals["wdOMathFunctionAcc".lower()] = 1
+        self.vb_constants.add("wdOMathFunctionAcc".lower())
+        # Equation fraction bar.
+        self.globals["wdOMathFunctionBar".lower()] = 2
+        self.vb_constants.add("wdOMathFunctionBar".lower())
+        # Border box.
+        self.globals["wdOMathFunctionBorderBox".lower()] = 4
+        self.vb_constants.add("wdOMathFunctionBorderBox".lower())
+        # Box.
+        self.globals["wdOMathFunctionBox".lower()] = 3
+        self.vb_constants.add("wdOMathFunctionBox".lower())
+        # Equation delimiters.
+        self.globals["wdOMathFunctionDelim".lower()] = 5
+        self.vb_constants.add("wdOMathFunctionDelim".lower())
+        # Equation array.
+        self.globals["wdOMathFunctionEqArray".lower()] = 6
+        self.vb_constants.add("wdOMathFunctionEqArray".lower())
+        # Equation fraction.
+        self.globals["wdOMathFunctionFrac".lower()] = 7
+        self.vb_constants.add("wdOMathFunctionFrac".lower())
+        # Equation function.
+        self.globals["wdOMathFunctionFunc".lower()] = 8
+        self.vb_constants.add("wdOMathFunctionFunc".lower())
+        # Group character.
+        self.globals["wdOMathFunctionGroupChar".lower()] = 9
+        self.vb_constants.add("wdOMathFunctionGroupChar".lower())
+        # Equation lower limit.
+        self.globals["wdOMathFunctionLimLow".lower()] = 10
+        self.vb_constants.add("wdOMathFunctionLimLow".lower())
+        # Equation upper limit.
+        self.globals["wdOMathFunctionLimUpp".lower()] = 11
+        self.vb_constants.add("wdOMathFunctionLimUpp".lower())
+        # Equation matrix.
+        self.globals["wdOMathFunctionMat".lower()] = 12
+        self.vb_constants.add("wdOMathFunctionMat".lower())
+        # Equation N-ary operator.
+        self.globals["wdOMathFunctionNary".lower()] = 13
+        self.vb_constants.add("wdOMathFunctionNary".lower())
+        # Equation normal text.
+        self.globals["wdOMathFunctionNormalText".lower()] = 21
+        self.vb_constants.add("wdOMathFunctionNormalText".lower())
+        # Equation phantom.
+        self.globals["wdOMathFunctionPhantom".lower()] = 14
+        self.vb_constants.add("wdOMathFunctionPhantom".lower())
+        # Equation base expression.
+        self.globals["wdOMathFunctionRad".lower()] = 16
+        self.vb_constants.add("wdOMathFunctionRad".lower())
+        # Scr pre.
+        self.globals["wdOMathFunctionScrPre".lower()] = 15
+        self.vb_constants.add("wdOMathFunctionScrPre".lower())
+        # Scr. sub.
+        self.globals["wdOMathFunctionScrSub".lower()] = 17
+        self.vb_constants.add("wdOMathFunctionScrSub".lower())
+        # Scr. sub sup.
+        self.globals["wdOMathFunctionScrSubSup".lower()] = 18
+        self.vb_constants.add("wdOMathFunctionScrSubSup".lower())
+        # Scr sup.
+        self.globals["wdOMathFunctionScrSup".lower()] = 19
+        self.vb_constants.add("wdOMathFunctionScrSup".lower())
+        # Equation text.
+        self.globals["wdOMathFunctionText".lower()] = 20
+        self.vb_constants.add("wdOMathFunctionText".lower())
+        
+        # WdOMathHorizAlignType enumeration (Word)
+        #   
+        # Specifies the horizontal alignment for an equation.
+        
+        # Centered.
+        self.globals["wdOMathHorizAlignCenter".lower()] = 0
+        self.vb_constants.add("wdOMathHorizAlignCenter".lower())
+        # Left alignment.
+        self.globals["wdOMathHorizAlignLeft".lower()] = 1
+        self.vb_constants.add("wdOMathHorizAlignLeft".lower())
+        # Right alignment.
+        self.globals["wdOMathHorizAlignRight".lower()] = 2
+        self.vb_constants.add("wdOMathHorizAlignRight".lower())
+        
+        # WdOpenFormat enumeration (Word)
+        #   
+        # Specifies the format to use when opening a document.
+        
+        # A Microsoft Word format that is backward compatible with earlier versions of Word.
+        self.globals["wdOpenFormatAllWord".lower()] = 6
+        self.vb_constants.add("wdOpenFormatAllWord".lower())
+        # The existing format.
+        self.globals["wdOpenFormatAuto".lower()] = 0
+        self.vb_constants.add("wdOpenFormatAuto".lower())
+        # Word format.
+        self.globals["wdOpenFormatDocument".lower()] = 1
+        self.vb_constants.add("wdOpenFormatDocument".lower())
+        # Encoded text format.
+        self.globals["wdOpenFormatEncodedText".lower()] = 5
+        self.vb_constants.add("wdOpenFormatEncodedText".lower())
+        # Rich text format (RTF).
+        self.globals["wdOpenFormatRTF".lower()] = 3
+        self.vb_constants.add("wdOpenFormatRTF".lower())
+        # As a Word template.
+        self.globals["wdOpenFormatTemplate".lower()] = 2
+        self.vb_constants.add("wdOpenFormatTemplate".lower())
+        # Unencoded text format.
+        self.globals["wdOpenFormatText".lower()] = 4
+        self.vb_constants.add("wdOpenFormatText".lower())
+        # (&H12)	OpenDocument Text format.
+        self.globals["wdOpenFormatOpenDocumentText".lower()] = 18
+        self.vb_constants.add("wdOpenFormatOpenDocumentText".lower())
+        # Unicode text format.
+        self.globals["wdOpenFormatUnicodeText".lower()] = 5
+        self.vb_constants.add("wdOpenFormatUnicodeText".lower())
+        # HTML format.
+        self.globals["wdOpenFormatWebPages".lower()] = 7
+        self.vb_constants.add("wdOpenFormatWebPages".lower())
+        # XML format.
+        self.globals["wdOpenFormatXML".lower()] = 8
+        self.vb_constants.add("wdOpenFormatXML".lower())
+        # Word template format.
+        self.globals["wdOpenFormatAllWordTemplates".lower()] = 13
+        self.vb_constants.add("wdOpenFormatAllWordTemplates".lower())
+        # Microsoft Word 97 document format.
+        self.globals["wdOpenFormatDocument97".lower()] = 1
+        self.vb_constants.add("wdOpenFormatDocument97".lower())
+        # Word 97 template format.
+        self.globals["wdOpenFormatTemplate97".lower()] = 2
+        self.vb_constants.add("wdOpenFormatTemplate97".lower())
+        # XML document format.
+        self.globals["wdOpenFormatXMLDocument".lower()] = 9
+        self.vb_constants.add("wdOpenFormatXMLDocument".lower())
+        # Open XML file format saved as a single XML file.
+        self.globals["wdOpenFormatXMLDocumentSerialized".lower()] = 14
+        self.vb_constants.add("wdOpenFormatXMLDocumentSerialized".lower())
+        # XML document format with macros enabled.
+        self.globals["wdOpenFormatXMLDocumentMacroEnabled".lower()] = 10
+        self.vb_constants.add("wdOpenFormatXMLDocumentMacroEnabled".lower())
+        # Open XML file format with macros enabled saved as a single XML file.
+        self.globals["wdOpenFormatXMLDocumentMacroEnabledSerialized".lower()] = 15
+        self.vb_constants.add("wdOpenFormatXMLDocumentMacroEnabledSerialized".lower())
+        # XML template format.
+        self.globals["wdOpenFormatXMLTemplate".lower()] = 11
+        self.vb_constants.add("wdOpenFormatXMLTemplate".lower())
+        # (&H10)	Open XML template format saved as a XML single file.
+        self.globals["wdOpenFormatXMLTemplateSerialized".lower()] = 16
+        self.vb_constants.add("wdOpenFormatXMLTemplateSerialized".lower())
+        # XML template format with macros enabled.
+        self.globals["wdOpenFormatXMLTemplateMacroEnabled".lower()] = 12
+        self.vb_constants.add("wdOpenFormatXMLTemplateMacroEnabled".lower())
+        # (&H11)	Open XML template format with macros enabled saved as a single XML file.
+        self.globals["wdOpenFormatXMLTemplateMacroEnabledSerialized".lower()] = 17
+        self.vb_constants.add("wdOpenFormatXMLTemplateMacroEnabledSerialized".lower())
+        
+        # WdPaperSize enumeration (Word)
+        #   
+        # Specifies a paper size.
+        
+        # 10 inches wide, 14 inches long.
+        self.globals["wdPaper10x14".lower()] = 0
+        self.vb_constants.add("wdPaper10x14".lower())
+        # Legal 11 inches wide, 17 inches long.
+        self.globals["wdPaper11x17".lower()] = 1
+        self.vb_constants.add("wdPaper11x17".lower())
+        # A3 dimensions.
+        self.globals["wdPaperA3".lower()] = 6
+        self.vb_constants.add("wdPaperA3".lower())
+        # A4 dimensions.
+        self.globals["wdPaperA4".lower()] = 7
+        self.vb_constants.add("wdPaperA4".lower())
+        # Small A4 dimensions.
+        self.globals["wdPaperA4Small".lower()] = 8
+        self.vb_constants.add("wdPaperA4Small".lower())
+        # A5 dimensions.
+        self.globals["wdPaperA5".lower()] = 9
+        self.vb_constants.add("wdPaperA5".lower())
+        # B4 dimensions.
+        self.globals["wdPaperB4".lower()] = 10
+        self.vb_constants.add("wdPaperB4".lower())
+        # B5 dimensions.
+        self.globals["wdPaperB5".lower()] = 11
+        self.vb_constants.add("wdPaperB5".lower())
+        # C sheet dimensions.
+        self.globals["wdPaperCSheet".lower()] = 12
+        self.vb_constants.add("wdPaperCSheet".lower())
+        # Custom paper size.
+        self.globals["wdPaperCustom".lower()] = 41
+        self.vb_constants.add("wdPaperCustom".lower())
+        # D sheet dimensions.
+        self.globals["wdPaperDSheet".lower()] = 13
+        self.vb_constants.add("wdPaperDSheet".lower())
+        # Legal envelope, size 10.
+        self.globals["wdPaperEnvelope10".lower()] = 25
+        self.vb_constants.add("wdPaperEnvelope10".lower())
+        # Envelope, size 11.
+        self.globals["wdPaperEnvelope11".lower()] = 26
+        self.vb_constants.add("wdPaperEnvelope11".lower())
+        # Envelope, size 12.
+        self.globals["wdPaperEnvelope12".lower()] = 27
+        self.vb_constants.add("wdPaperEnvelope12".lower())
+        # Envelope, size 14.
+        self.globals["wdPaperEnvelope14".lower()] = 28
+        self.vb_constants.add("wdPaperEnvelope14".lower())
+        # Envelope, size 9.
+        self.globals["wdPaperEnvelope9".lower()] = 24
+        self.vb_constants.add("wdPaperEnvelope9".lower())
+        # B4 envelope.
+        self.globals["wdPaperEnvelopeB4".lower()] = 29
+        self.vb_constants.add("wdPaperEnvelopeB4".lower())
+        # B5 envelope.
+        self.globals["wdPaperEnvelopeB5".lower()] = 30
+        self.vb_constants.add("wdPaperEnvelopeB5".lower())
+        # B6 envelope.
+        self.globals["wdPaperEnvelopeB6".lower()] = 31
+        self.vb_constants.add("wdPaperEnvelopeB6".lower())
+        # C3 envelope.
+        self.globals["wdPaperEnvelopeC3".lower()] = 32
+        self.vb_constants.add("wdPaperEnvelopeC3".lower())
+        # C4 envelope.
+        self.globals["wdPaperEnvelopeC4".lower()] = 33
+        self.vb_constants.add("wdPaperEnvelopeC4".lower())
+        # C5 envelope.
+        self.globals["wdPaperEnvelopeC5".lower()] = 34
+        self.vb_constants.add("wdPaperEnvelopeC5".lower())
+        # C6 envelope.
+        self.globals["wdPaperEnvelopeC6".lower()] = 35
+        self.vb_constants.add("wdPaperEnvelopeC6".lower())
+        # C65 envelope.
+        self.globals["wdPaperEnvelopeC65".lower()] = 36
+        self.vb_constants.add("wdPaperEnvelopeC65".lower())
+        # DL envelope.
+        self.globals["wdPaperEnvelopeDL".lower()] = 37
+        self.vb_constants.add("wdPaperEnvelopeDL".lower())
+        # Italian envelope.
+        self.globals["wdPaperEnvelopeItaly".lower()] = 38
+        self.vb_constants.add("wdPaperEnvelopeItaly".lower())
+        # Monarch envelope.
+        self.globals["wdPaperEnvelopeMonarch".lower()] = 39
+        self.vb_constants.add("wdPaperEnvelopeMonarch".lower())
+        # Personal envelope.
+        self.globals["wdPaperEnvelopePersonal".lower()] = 40
+        self.vb_constants.add("wdPaperEnvelopePersonal".lower())
+        # E sheet dimensions.
+        self.globals["wdPaperESheet".lower()] = 14
+        self.vb_constants.add("wdPaperESheet".lower())
+        # Executive dimensions.
+        self.globals["wdPaperExecutive".lower()] = 5
+        self.vb_constants.add("wdPaperExecutive".lower())
+        # German legal fanfold dimensions.
+        self.globals["wdPaperFanfoldLegalGerman".lower()] = 15
+        self.vb_constants.add("wdPaperFanfoldLegalGerman".lower())
+        # German standard fanfold dimensions.
+        self.globals["wdPaperFanfoldStdGerman".lower()] = 16
+        self.vb_constants.add("wdPaperFanfoldStdGerman".lower())
+        # United States fanfold dimensions.
+        self.globals["wdPaperFanfoldUS".lower()] = 17
+        self.vb_constants.add("wdPaperFanfoldUS".lower())
+        # Folio dimensions.
+        self.globals["wdPaperFolio".lower()] = 18
+        self.vb_constants.add("wdPaperFolio".lower())
+        # Ledger dimensions.
+        self.globals["wdPaperLedger".lower()] = 19
+        self.vb_constants.add("wdPaperLedger".lower())
+        # Legal dimensions.
+        self.globals["wdPaperLegal".lower()] = 4
+        self.vb_constants.add("wdPaperLegal".lower())
+        # Letter dimensions.
+        self.globals["wdPaperLetter".lower()] = 2
+        self.vb_constants.add("wdPaperLetter".lower())
+        # Small letter dimensions.
+        self.globals["wdPaperLetterSmall".lower()] = 3
+        self.vb_constants.add("wdPaperLetterSmall".lower())
+        # Note dimensions.
+        self.globals["wdPaperNote".lower()] = 20
+        self.vb_constants.add("wdPaperNote".lower())
+        # Quarto dimensions.
+        self.globals["wdPaperQuarto".lower()] = 21
+        self.vb_constants.add("wdPaperQuarto".lower())
+        # Statement dimensions.
+        self.globals["wdPaperStatement".lower()] = 22
+        self.vb_constants.add("wdPaperStatement".lower())
+        # Tabloid dimensions.
+        self.globals["wdPaperTabloid".lower()] = 23
+        self.vb_constants.add("wdPaperTabloid".lower())
+        
+        # WdRevisionType enumeration (Word)
+        #   
+        # Specifies the type of a change that is marked with a revision mark.
+        
+        # No revision.
+        self.globals["wdNoRevision".lower()] = 0
+        self.vb_constants.add("wdNoRevision".lower())
+        # Table cell deleted.
+        self.globals["wdRevisionCellDeletion".lower()] = 17
+        self.vb_constants.add("wdRevisionCellDeletion".lower())
+        # Table cell inserted.
+        self.globals["wdRevisionCellInsertion".lower()] = 16
+        self.vb_constants.add("wdRevisionCellInsertion".lower())
+        # Table cells merged.
+        self.globals["wdRevisionCellMerge".lower()] = 18
+        self.vb_constants.add("wdRevisionCellMerge".lower())
+        # This object, member, or enumeration is deprecated and is not intended to be used in your code.
+        self.globals["wdRevisionCellSplit".lower()] = 19
+        self.vb_constants.add("wdRevisionCellSplit".lower())
+        # Revision marked as a conflict.
+        self.globals["wdRevisionConflict".lower()] = 7
+        self.vb_constants.add("wdRevisionConflict".lower())
+        # Deletion revision conflict in a coauthored document.
+        self.globals["wdRevisionConflictDelete".lower()] = 21
+        self.vb_constants.add("wdRevisionConflictDelete".lower())
+        # Insertion revision conflict in a coauthored document
+        self.globals["wdRevisionConflictInsert".lower()] = 20
+        self.vb_constants.add("wdRevisionConflictInsert".lower())
+        # Deletion.
+        self.globals["wdRevisionDelete".lower()] = 2
+        self.vb_constants.add("wdRevisionDelete".lower())
+        # Field display changed.
+        self.globals["wdRevisionDisplayField".lower()] = 5
+        self.vb_constants.add("wdRevisionDisplayField".lower())
+        # Insertion.
+        self.globals["wdRevisionInsert".lower()] = 1
+        self.vb_constants.add("wdRevisionInsert".lower())
+        # Content moved from.
+        self.globals["wdRevisionMovedFrom".lower()] = 14
+        self.vb_constants.add("wdRevisionMovedFrom".lower())
+        # Content moved to.
+        self.globals["wdRevisionMovedTo".lower()] = 15
+        self.vb_constants.add("wdRevisionMovedTo".lower())
+        # Paragraph number changed.
+        self.globals["wdRevisionParagraphNumber".lower()] = 4
+        self.vb_constants.add("wdRevisionParagraphNumber".lower())
+        # Paragraph property changed.
+        self.globals["wdRevisionParagraphProperty".lower()] = 10
+        self.vb_constants.add("wdRevisionParagraphProperty".lower())
+        # Property changed.
+        self.globals["wdRevisionProperty".lower()] = 3
+        self.vb_constants.add("wdRevisionProperty".lower())
+        # Revision marked as reconciled conflict.
+        self.globals["wdRevisionReconcile".lower()] = 6
+        self.vb_constants.add("wdRevisionReconcile".lower())
+        # Replaced.
+        self.globals["wdRevisionReplace".lower()] = 9
+        self.vb_constants.add("wdRevisionReplace".lower())
+        # Section property changed.
+        self.globals["wdRevisionSectionProperty".lower()] = 12
+        self.vb_constants.add("wdRevisionSectionProperty".lower())
+        # Style changed.
+        self.globals["wdRevisionStyle".lower()] = 8
+        self.vb_constants.add("wdRevisionStyle".lower())
+        # Style definition changed.
+        self.globals["wdRevisionStyleDefinition".lower()] = 13
+        self.vb_constants.add("wdRevisionStyleDefinition".lower())
+        # Table property changed.
+        self.globals["wdRevisionTableProperty".lower()] = 11
+        self.vb_constants.add("wdRevisionTableProperty".lower())
+        
+        # WdBreakType enumeration (Word)
+        #   
+        # Specifies type of break.
+        
+        # Column break at the insertion point.
+        self.globals["wdColumnBreak".lower()] = 8
+        self.vb_constants.add("wdColumnBreak".lower())
+        # Line break.
+        self.globals["wdLineBreak".lower()] = 6
+        self.vb_constants.add("wdLineBreak".lower())
+        # Line break.
+        self.globals["wdLineBreakClearLeft".lower()] = 9
+        self.vb_constants.add("wdLineBreakClearLeft".lower())
+        # Line break.
+        self.globals["wdLineBreakClearRight".lower()] = 10
+        self.vb_constants.add("wdLineBreakClearRight".lower())
+        # Page break at the insertion point.
+        self.globals["wdPageBreak".lower()] = 7
+        self.vb_constants.add("wdPageBreak".lower())
+        # New section without a corresponding page break.
+        self.globals["wdSectionBreakContinuous".lower()] = 3
+        self.vb_constants.add("wdSectionBreakContinuous".lower())
+        # Section break with the next section beginning on the next even-numbered page. If the section break falls on an even-numbered page, Word leaves the next odd-numbered page blank.
+        self.globals["wdSectionBreakEvenPage".lower()] = 4
+        self.vb_constants.add("wdSectionBreakEvenPage".lower())
+        # Section break on next page.
+        self.globals["wdSectionBreakNextPage".lower()] = 2
+        self.vb_constants.add("wdSectionBreakNextPage".lower())
+        # Section break with the next section beginning on the next odd-numbered page. If the section break falls on an odd-numbered page, Word leaves the next even-numbered page blank.
+        self.globals["wdSectionBreakOddPage".lower()] = 5
+        self.vb_constants.add("wdSectionBreakOddPage".lower())
+        # Ends the current line and forces the text to continue below a picture, table, or other item. The text continues on the next blank line that does not contain a table aligned with the left or right margin.
+        self.globals["wdTextWrappingBreak".lower()] = 11
+        self.vb_constants.add("wdTextWrappingBreak".lower())
+        
+        # WdDocumentType enumeration
+        #   
+        # Specifies a document type.
+        
+        # Document.
+        self.globals["wdTypeDocument".lower()] = 0
+        self.vb_constants.add("wdTypeDocument".lower())
+        # Frameset.
+        self.globals["wdTypeFrameset".lower()] = 2
+        self.vb_constants.add("wdTypeFrameset".lower())
+        # Template.
+        self.globals["wdTypeTemplate".lower()] = 1
+        self.vb_constants.add("wdTypeTemplate".lower())
+        
+        # WdWrapSideType enumeration (Word)
+        #
+        # Specifies whether the document text should wrap on both sides of the specified shape, on either the left or right side only, or on the side of the shape that is farthest from the page margin.
+        
+        # Both sides of the specified shape.
+        self.globals["wdWrapBoth".lower()] = 0
+        self.vb_constants.add("wdWrapBoth".lower())
+        # Side of the shape that is farthest from the page margin.
+        self.globals["wdWrapLargest".lower()] = 3
+        self.vb_constants.add("wdWrapLargest".lower())
+        # Left side of shape only.
+        self.globals["wdWrapLeft".lower()] = 1
+        self.vb_constants.add("wdWrapLeft".lower())
+        # Right side of shape only.
+        self.globals["wdWrapRight".lower()] = 2
+        self.vb_constants.add("wdWrapRight".lower())
+        
         # WdRecoveryType enumeration (Word)
         #
         # Specifies the formatting to use when pasting the selected table cells.

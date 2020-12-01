@@ -2614,7 +2614,7 @@ class CLng(VbaLibraryFunc):
                     tmp = int(tmp, 16)
                 elif (len(tmp) == 1):
                     tmp = ord(tmp)
-            r = int(tmp)
+            r = round(tmp)
             if ((r > 2147483647) or (r < -2147483647)):
                 # Overflow. Assume On Error Resume Next.
                 r = "NULL"

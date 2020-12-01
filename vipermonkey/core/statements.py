@@ -1524,6 +1524,11 @@ class For_Statement(VBA_Object):
         # Get the start index, end index, and step of the loop.
         start, end, step = self._get_loop_indices_python(context)
 
+        # If we have an empty loop body we can punt and skip the loop.
+        if (len(self.statements) == 0):
+            r = indent_str + loop_var + " = " + str(end) + "\n"
+            return r
+        
         # Set up doing this for loop in Python.
         rev_code = ""
         if (step < 0):

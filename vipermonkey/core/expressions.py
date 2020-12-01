@@ -3114,12 +3114,24 @@ class BoolExpr(VBA_Object):
         return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
+
+        # Bitwise operators need to work on ints.
+        start_cast = ""
+        end_cast = ""
+        if context.in_bitwise_expression:
+            start_cast = "coerce_to_int("
+            end_cast = ")"
+
+        # Generate the Python expression.
         r = " " * indent + "("
         if (self.op is not None):
             if (self.lhs is not None):
-                r += to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
+                r += start_cast + to_python(self.lhs, context, params) + end_cast + \
+                     " " + self._vba_to_python_op(self.op, context) + " " + \
+                     start_cast + to_python(self.rhs, context, params) + end_cast
             else:
-                r += self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
+                r += self._vba_to_python_op(self.op, context) + " " + \
+                     start_cast + to_python(self.rhs, context, params) + end_cast
         elif (self.lhs is not None):
             r += to_python(self.lhs, context, params)
         else:
