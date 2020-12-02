@@ -3248,7 +3248,13 @@ class Environ(VbaLibraryFunc):
         env_vars["VSSDK140Install".lower()] = 'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VSSDK\\'
         env_vars["windir".lower()] = 'C:\\WINDOWS'
 
-        var_name = str(params[0]).strip('%')
+        # Get the environment variable name.
+        var_name = None
+        try:
+            var_name = str(params[0]).strip('%')
+        except UnicodeEncodeError:
+            var_name = filter(isprint, params[0]).strip('%')
+
         # Is this an environment variable we know?
         if context.expand_env_vars and var_name.lower() in env_vars:
             r = env_vars[var_name.lower()]
