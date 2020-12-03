@@ -364,7 +364,7 @@ class Context(object):
         
         # Track whether we have exited from the current function.
         self.exit_func = False
-
+        
         # Add in a global for the current time.
         self.globals["Now".lower()] = datetime.now()
         self.vb_constants.add("Now".lower())
@@ -374,6 +374,10 @@ class Context(object):
         self.globals["Application.UserName".lower()] = rand_name
         self.vb_constants.add("Application.UserName".lower())
 
+        # Fake a location for the template folder.
+        self.globals["ActiveDocument.AttachedTemplate.Path".lower()] = "C:\\Users\\" + rand_name + "\\AppData\\Roaming\\Microsoft\\Templates"
+        self.globals["ThisDocument.AttachedTemplate.Path".lower()] = "C:\\Users\\" + rand_name + "\\AppData\\Roaming\\Microsoft\\Templates"
+        
         # region Add some attributes we are handling as global variables.
 
         # Keyboard keys and things in the key namespaces

@@ -1085,6 +1085,39 @@ def _get_vba_parser(data):
     # Return the vba parser.
     return vba
 
+def pull_embedded_pe_files(data, out_dir):
+    """
+    Directly pull out any PE files embedded in the given data.
+    """
+
+    # Is a PE file in the data at all?
+    pe_pat = r"MZ.{70,80}This program cannot be run in DOS mode\."
+    if (re.search(pe_pat, data) is None):
+        return
+
+    # There is an embedded PE. Break them out.
+
+    # Get where each PE file starts.
+    pe_starts = []
+    for match in re.finditer(pe_pat, data):
+        pe_starts.append(match.span()[0])
+    pe_starts.append(len(data))
+
+    # Make the 2nd stage output directory if needed.
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+    
+    # Break out each PE file. Note that we probably will get extra data,
+    # but due to the PE file format the file will be a valid PE (with an overlay).
+    pos = 0
+    while (pos < len(pe_starts) - 1):
+        curr_data = data[pe_starts[pos]:pe_starts[pos+1]]
+        curr_name = out_dir + "/embedded_pe" + str(pos) + ".bin"
+        f = open(curr_name, "wb")
+        f.write(curr_data)
+        f.close()
+        pos += 1
+    
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename,
@@ -1649,6 +1682,9 @@ def _process_file (filename,
                 safe_print("+---------------------------------------------------------+")
                 safe_print('')
 
+            # See if we can directly pull any embedded PE files from the file.
+            pull_embedded_pe_files(data, vba_context.out_dir)
+                
             safe_print('VBA Builtins Called: ' + str(vm.external_funcs))
             safe_print('')
             safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
