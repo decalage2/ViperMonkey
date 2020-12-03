@@ -649,6 +649,11 @@ def parse_stream(subfilename,
     # Do not analyze the file if the VBA looks like garbage characters.
     if (read_ole_fields.is_garbage_vba(vba_code)):
         raise ValueError("VBA looks corrupted. Not analyzing.")
+
+    # Skip some XML that olevba gives for some 2007+ streams.
+    if (vba_code.strip().startswith("<?xml")):
+        log.warning("Skipping XML stream.")
+        return "empty"
     
     # Strip out code that does not affect the end result of the program.
     if (strip_useless):
