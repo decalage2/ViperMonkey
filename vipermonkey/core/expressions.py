@@ -415,17 +415,24 @@ class MemberAccessExpression(VBA_Object):
                 return r
             
             # No special operations.
-            last_func = to_python(self.rhs[-1], context, params)
+            last_rhs = to_python(self.rhs[-1], context, params)
             
             # Handle accessing name of a process from a process list.
-            if (last_func.lower() == '"name"'):
+            if (last_rhs.lower() == '"name"'):
                 lhs_str = to_python(self.lhs, context, params)
                 if (lhs_str.startswith('"')):
                     lhs_str = lhs_str[1:]
                 if (lhs_str.endswith('"')):
                     lhs_str = lhs_str[:-1]
-                last_func = lhs_str + "['name']"
-            return last_func
+                last_rhs = lhs_str + "['name']"
+
+            # Could we be reading a field from an object?
+            if (("(" not in last_rhs) and ("[" not in last_rhs)):
+                lhs_str = to_python(self.lhs, context, params)
+                last_rhs = "core.vba_library.member_access(" + lhs_str + ", \"" + last_rhs + "\")"
+
+            # Done.
+            return last_rhs
         
         return ""
     
@@ -1422,8 +1429,31 @@ class MemberAccessExpression(VBA_Object):
         r = re.findall(pat, mod_str)
         return r
         
-    def _read_member_expression_as_var(self, context):
+    def _read_member_expression_as_var(self, context, tmp_lhs):
 
+        # Reading a field from a dict?
+        #print "CHECK DICT"
+        #print tmp_lhs
+        #print type(tmp_lhs)
+        if (isinstance(tmp_lhs, dict)):
+
+            # Do we have the needed field?
+            #print "DICT!!"
+            key = str(self.rhs).replace("[", "").replace("]", "").replace("'", "")
+            #print key
+            if (key in tmp_lhs.keys()):
+
+                # Return the field value.
+                #print "OUT: 15"
+                #print tmp_lhs[key]
+                return tmp_lhs[key]
+            if (key.lower() in tmp_lhs.keys()):
+
+                # Return the field value.
+                #print "OUT: 15"
+                #print tmp_lhs[key.lower()]
+                return tmp_lhs[key.lower()]
+        
         # Easiest case. Do we have this saved as a variable?
         try:
             r = context.get(str(self), search_wildcard=False)
@@ -1572,6 +1602,17 @@ class MemberAccessExpression(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("MemberAccess eval of " + str(self))
 
+        # Pull out the left hand side of the member access.
+        #print "MEMBER!!"
+        #print self
+        tmp_lhs = None
+        if (self.lhs is not None):
+            tmp_lhs = eval_arg(self.lhs, context)
+        else:
+            # This is something like ".foo.bar" in a With statement. The LHS
+            # is the With context item.
+            tmp_lhs = eval_arg(context.with_prefix, context)
+            
         # 0 argument call to local function?
         r = self._handle_0_arg_call(context)
         if (r is not None):
@@ -1579,7 +1620,7 @@ class MemberAccessExpression(VBA_Object):
             return r
             
         # Easy case. Do we have this saved as a variable?
-        r = self._read_member_expression_as_var(context)
+        r = self._read_member_expression_as_var(context, tmp_lhs)
         if (r is not None):
             #print "OUT: 2"
             return r
@@ -1679,33 +1720,13 @@ class MemberAccessExpression(VBA_Object):
         if (call_retval is not None):
             #print "OUT: 13"
             return call_retval
-        
-        # Pull out the left hand side of the member access.
-        tmp_lhs = None
-        if (self.lhs is not None):
-            tmp_lhs = eval_arg(self.lhs, context)
-        else:
-            # This is something like ".foo.bar" in a With statement. The LHS
-            # is the With context item.
-            tmp_lhs = eval_arg(context.with_prefix, context)
-            
+                    
         # See if this is reading a table cell value.
         call_retval = self._handle_table_cell(context)
         if (call_retval is not None):
             #print "OUT: 14"
             return call_retval
-            
-        # Is the LHS a python dict and are we looking for a field?
-        if (isinstance(tmp_lhs, dict)):
-
-            # Do we have the needed field?
-            key = str(self.rhs).replace("[", "").replace("]", "").replace("'", "")
-            if (key in tmp_lhs.keys()):
-
-                # Return the field value.
-                #print "OUT: 15"
-                return tmp_lhs[key]
-            
+                        
         # Handle getting the .Count of a data collection..
         call_retval = self._handle_count(context, tmp_lhs)
         if (call_retval is not None):

@@ -1489,7 +1489,7 @@ def update_array(old_array, indices, val):
     if (len(indices) == 1):
         
         # Do we need to extend the length of the list to include the indices?
-        index = indices[0]
+        index = int(indices[0])
         if (index >= len(old_array)):
             old_array.extend([0] * (index - len(old_array) + 1))
         old_array[index] = val
@@ -1498,8 +1498,8 @@ def update_array(old_array, indices, val):
     elif (len(indices) == 2):
 
         # Do we need to extend the length of the list to include the indices?
-        index = indices[0]
-        index1 = indices[1]
+        index = int(indices[0])
+        index1 = int(indices[1])
         if (index >= len(old_array)):
             # NOTE: Don't do 'old_array.extend([[]] * (index - len(old_array) + 1))' here.
             # The [] added with extend refers to the same list so any modification
