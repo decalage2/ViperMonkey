@@ -407,13 +407,6 @@ class MemberAccessExpression(VBA_Object):
                 r = to_python(new_special_cells, context, params)
                 return r
 
-            # Getting the Text of an object?
-            if (str(self.rhs[-1]) == "Text"):
-
-                # Just use the value of the object variable itself in python.
-                r = to_python(self.lhs, context, params)
-                return r
-            
             # No special operations.
             last_rhs = to_python(self.rhs[-1], context, params)
             
@@ -1438,21 +1431,19 @@ class MemberAccessExpression(VBA_Object):
         if (isinstance(tmp_lhs, dict)):
 
             # Do we have the needed field?
-            #print "DICT!!"
             key = str(self.rhs).replace("[", "").replace("]", "").replace("'", "")
-            #print key
-            if (key in tmp_lhs.keys()):
-
-                # Return the field value.
-                #print "OUT: 15"
-                #print tmp_lhs[key]
-                return tmp_lhs[key]
             if (key.lower() in tmp_lhs.keys()):
 
                 # Return the field value.
-                #print "OUT: 15"
-                #print tmp_lhs[key.lower()]
                 return tmp_lhs[key.lower()]
+
+            # Text value of an Excel cell object?
+            if (key.lower() == "text"):
+                key = "value"
+                if (key.lower() in tmp_lhs.keys()):
+
+                    # Return the field value.
+                    return tmp_lhs[key.lower()]
         
         # Easiest case. Do we have this saved as a variable?
         try:

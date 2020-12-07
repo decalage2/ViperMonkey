@@ -91,10 +91,10 @@ def member_access(var, field):
     # Reading a field from a dict?
     field = str(field)
     if (isinstance(var, dict)):
-        if (field in var):
-            return var[field]
-        elif (field.lower() in var):
+        if (field.lower() in var):
             return var[field.lower()]
+        elif ((field.lower() == "text") and ("value" in var)):
+            return var["value"]
         else:
             return "NULL"
 
@@ -105,7 +105,7 @@ def member_access(var, field):
     elif (field in globals()):
         return globals[field]
     else:
-        return "NULL"
+        return val
 
 # This function is here to ensure that we return the same global
 # shellcode variable as what is updated by emulated VBA functions
