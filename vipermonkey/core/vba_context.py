@@ -12707,7 +12707,7 @@ class Context(object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Found doc var " + var + " = " + str(r))
         return r
-            
+
     def save_intermediate_iocs(self, value):
         """
         Save variable values that appear to contain base64 encoded or URL IOCs.
