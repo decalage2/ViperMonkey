@@ -27,11 +27,20 @@ miracles. Any help from you will be very appreciated!
 Download and Install:
 ---------------------
 
+**Easy Install**
+
+1. Install docker.
+2. Run 'docker/dockermonkey.sh MYFILE' to analyze file MYFILE.
+
+dockermonkey.sh wil automatically pull down a preconfigured docker container, update ViperMonkey to
+the latest version in the container, and then analyze MYFILE by running ViperMonkey in the
+container. No other packages or configuration will need to be performed.
+
+**Installation using PyPy**
+
 For performance reasons, it is highly recommended to use PyPy, but it is
 also possible to run Vipermonkey with the normal Python interpreter
 (CPython).
-
-**Installation using PyPy**
 
 1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
 2. Check if pip is installed for pypy: run `pypy -m pip`
