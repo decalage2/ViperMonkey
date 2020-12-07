@@ -2625,7 +2625,8 @@ def _get_shapes_text_values(fname, stream):
     except Exception as e:
 
         # Report the error.
-        log.error("Cannot read associated Shapes text. " + str(e))
+        if ("not an OLE2 structured storage file" not in str(e)):
+            log.error("Cannot read associated Shapes text. " + str(e))
 
         # See if we can read Shapes() info from an XML file.
         if ("not an OLE2 structured storage file" in str(e)):

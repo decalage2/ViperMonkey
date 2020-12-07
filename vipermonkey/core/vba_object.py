@@ -1075,7 +1075,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             var_updates = jit_cache[code_python]
             log.info("Using cached JIT loop results.")
             if (var_updates == "ERROR"):
-                log.error("Previous run of loop failed.")
+                log.error("Previous run of Python JIT loop emulation failed. Using fallback emulation for loop.")
                 return False
 
         # No cached results. Run the loop.
@@ -1105,7 +1105,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         vba_context.shellcode = var_updates["__shell_code__"]
 
     except NotImplementedError as e:
-        log.error("JIT emulation failed. " + str(e))
+        log.error("Python JIT emulation of loop failed. " + str(e) + ". Using fallback emulation method for loop...")
         #safe_print("REMOVE THIS!!")
         #raise e
         return False
@@ -1122,9 +1122,10 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             return True
 
         # We had some other error. Emulating the loop in Python failed.
-        log.error("JIT emulation failed. " + str(e))
-        traceback.print_exc(file=sys.stdout)
-        safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
+        log.error("Python JIT emulation of loop failed. " + str(e) + ". Using fallback emulation method for loop...")
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            traceback.print_exc(file=sys.stdout)
+            safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
         return False
 
     # Done.

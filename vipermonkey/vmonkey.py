@@ -349,7 +349,8 @@ def _get_embedded_object_values(fname):
                 r.append(i)
         
     except Exception as e:
-        log.error("Cannot read tag/caption from embedded objects. " + str(e))
+        if ("not an OLE2 structured storage file" not in str(e)):
+            log.error("Cannot read tag/caption from embedded objects. " + str(e))
 
     return r
 
@@ -562,7 +563,8 @@ def _read_custom_doc_props(fname):
         return r
             
     except Exception as e:
-        log.error("Cannot read custom doc properties. " + str(e))
+        if ("not an OLE2 structured storage file" not in str(e)):
+            log.error("Cannot read custom doc properties. " + str(e))
         return []
     
 def get_vb_contents(vba_code):

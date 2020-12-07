@@ -3514,7 +3514,7 @@ class Close(VbaLibraryFunc):
             # being tracked. We will only handle the Close() if there is only 1
             # current open file.
             if not context.open_files:
-                log.error("Cannot process Close(). No open files.")
+                log.warning("Cannot process Close(). No open files.")
                 return
 
             if len(context.open_files) > 1:
@@ -3854,7 +3854,7 @@ class Run(VbaLibraryFunc):
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
-            log.error("Application.Run() failed. Cannot find function " + str(func_name) + ".")
+            log.warning("Application.Run() failed. Cannot find function " + str(func_name) + ".")
             return 0
 
 class Exec(VbaLibraryFunc):
