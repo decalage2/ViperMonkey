@@ -105,7 +105,7 @@ def member_access(var, field):
     elif (field in globals()):
         return globals[field]
     else:
-        return val
+        return var
 
 # This function is here to ensure that we return the same global
 # shellcode variable as what is updated by emulated VBA functions
