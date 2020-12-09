@@ -293,8 +293,16 @@ class IsEmpty(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return True
         item = params[0]
+
+        # Handle flat out empty values.
         if ((item is None) or (item == "NULL")):
             return True
+
+        # Handle Excel cells.
+        if (isinstance(item, dict) and ("value" in item)):
+            return self.eval(context, [item["value"]])
+
+        # Handle list type data structures.
         if ((hasattr(item, '__len__')) and (len(item) == 0)):
             return True
         return False
@@ -4150,8 +4158,12 @@ class Cells(VbaLibraryFunc):
                     r = r[1:-1]
                 if (r.startswith('"') and r.endswith('"') and (len(r) >= 2)):
                     r = r[1:-1]
-                #print "CELL!!"
+                #print sheet
+                #print "GOT Cell(" + str(col) + ", " + str(row) + ")"
                 #print r
+                r = { "value" : r,
+                      "row" : row + 1,
+                      "col" : col + 1 }
                 return r
 
             except Exception as e:

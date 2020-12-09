@@ -2717,7 +2717,10 @@ function_call_limited <<= (
             #
             # And the "step" expression is to keep step from being parsed as an arg to
             # a.b(step) in 'for i = 0 to a.b step 2'.
-            | (Suppress(Optional('$')) + NotAny(".") + NotAny(CaselessKeyword("step")) + expr_list('params')))
+            #
+            # And the "-" expression is to keep 'a.b - 1' from being parsed as 'a.b(-1)'.
+            | (Suppress(Optional('$')) + NotAny(".") + NotAny("-") + NotAny(CaselessKeyword("step")) + expr_list('params'))
+        )
     )
 )
 function_call_limited.setParseAction(Function_Call)
