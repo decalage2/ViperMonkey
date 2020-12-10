@@ -715,6 +715,10 @@ class Len(VbaLibraryFunc):
             # Is this a string?            
             if (isinstance(val, str)):
 
+                # If this is VBScript strings are sensible and we can just return the length.
+                if (context.is_vbscript):
+                    return len(val)
+
                 # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
                 vb_val = vb_str.VbStr(val, context.is_vbscript)
                 return vb_val.len()
