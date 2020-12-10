@@ -1587,7 +1587,7 @@ class MemberAccessExpression(VBA_Object):
         
         # Done
         return r
-            
+    
     def eval(self, context, params=None):
 
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1625,7 +1625,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs[len(self.rhs) - 1]
             if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
-                
+
         # Figure out if we are calling a function.
         calling_func = isinstance(rhs, Function_Call)
         if (not calling_func):

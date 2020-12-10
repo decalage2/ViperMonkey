@@ -12766,6 +12766,64 @@ class Context(object):
         # Delete old IOCs if needed.
         for old_ioc in iocs_to_delete:
             intermediate_iocs.remove(old_ioc)
+
+    def _set_excel_formula(self, name, value):
+        """
+        Handle setting an Excel cell to a formula.
+
+        Sheets('dd').Cells('d, dd').FormulaLocal = ...
+        """
+
+        # Sanity check.
+        if ((name is None) or
+            (value is None) or
+            (value == "__ALREADY_SET__")):
+            return False
+        
+        # Are we setting a cell formula?
+        import expressions
+        import vba_object
+        if (not isinstance(name, expressions.MemberAccessExpression)):
+            return False
+        tmp_rhs = str(name.rhs)
+        if (isinstance(name.rhs, list)):
+            tmp_rhs = str(name.rhs[-1])
+        if ((tmp_rhs.lower() != "formulalocal") and
+            (tmp_rhs.lower() != "value") and
+            (tmp_rhs.lower() != "name")):
+            return False
+        typ = tmp_rhs
+        if (typ.lower() == "formulalocal"):
+            typ = "Formula"
+        
+        # Looks like we are setting a formula, name, or value. See if we can resolve the
+        # row and column of the cell.
+        row = "??"
+        col = "??"
+
+        # Do we have a Cells() operation?
+        if (isinstance(name.rhs, list) and
+            (isinstance(name.rhs[0], expressions.Function_Call)) and
+            (str(name.rhs[0]).startswith("Cells("))):
+
+            # Resolve the row and column.
+            cell_call = name.rhs[0]
+            row = str(vba_object.eval_arg(cell_call.params[0], self))
+            col = str(vba_object.eval_arg(cell_call.params[1], self))
+
+        # Try resolving the sheet.
+        sheet = "??"
+        if (isinstance(name.lhs, expressions.Function_Call) and
+            (str(name.lhs).startswith("Sheets("))):
+
+            # Resolve the sheet.
+            sheet_call = name.lhs
+            sheet = str(vba_object.eval_arg(sheet_call.params[0], self))
+        
+        # Report setting the formula, name, or value as an action.
+        r = "Sheet(" + sheet + ").Cell(" + row + ", " + col + ") = '" + str(value) + "'"
+        self.report_action('Set Cell ' + typ, r, tmp_rhs, strip_null_bytes=True)
+        return True
             
     def set(self,
             name,
@@ -12778,6 +12836,10 @@ class Context(object):
             case_insensitive=True,
             no_overwrite=False):
 
+        # Special case. Are we setting a formula in an Excel cell?
+        if (self._set_excel_formula(name, value)):
+            return
+        
         # Does the name make sense?
         orig_name = name
         if (not isinstance(name, basestring)):

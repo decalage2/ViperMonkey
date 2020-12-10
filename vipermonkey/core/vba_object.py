@@ -1586,6 +1586,12 @@ def coerce_to_str(obj, zero_is_null=False):
         if (not bad):
             return r
 
+    # Is this an Excel cell dict?
+    if (isinstance(obj, dict) and ("value" in obj)):
+
+        # Return the value as a string.
+        return (coerce_to_str(obj["value"]))
+        
     # Not a character byte array. Punt.
     try:
         return str(obj)
@@ -1607,6 +1613,7 @@ def coerce_to_int(obj):
     :param obj: VBA object
     :return: int
     """
+
     # in VBA, Null/None is equivalent to 0
     if ((obj is None) or (obj == "NULL")):
         return 0
@@ -1638,6 +1645,12 @@ def coerce_to_int(obj):
         if (re.match(hex_pat, obj.lower()) is not None):
             return int(obj.lower().replace("&h", "0x"), 16)
 
+    # Is this an Excel cell dict?
+    if (isinstance(obj, dict) and ("value" in obj)):
+
+        # Return the value as an int.
+        return (coerce_to_int(obj["value"]))
+        
     # Try regular int.
     return int(obj)
 
@@ -1681,6 +1694,12 @@ def coerce_to_num(obj):
         if (re.match(hex_pat, obj.lower()) is not None):
             return int(obj.lower().replace("&h", "0x"), 16)
 
+    # Is this an Excel cell dict?
+    if (isinstance(obj, dict) and ("value" in obj)):
+
+        # Return the value as a number.
+        return (coerce_to_num(obj["value"]))
+        
     # Try regular int.
     return int(obj)
 
