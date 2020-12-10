@@ -1033,6 +1033,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         
         # Get the Python code for the loop.
+        log.info("Generating Python JIT code...")
         code_python = to_python(loop, tmp_context)
         if add_boilerplate:
             var_inits, _ = _loop_vars_to_python(loop, tmp_context, 0)
@@ -1046,6 +1047,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         if (log.getEffectiveLevel() == logging.DEBUG):
             safe_print("JIT CODE!!")
             safe_print(code_python)
+        log.info("Done generating Python JIT code.")
 
         # Extended ASCII strings are handled differently in VBScript and VBA.
         # Punt if we are emulating VBA and we have what appears to be extended ASCII
@@ -1082,6 +1084,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         elif (namespace is None):
             # Magic. For some reason exec'ing in locals() makes the dynamically generated
             # code recognize functions defined in the dynamic code. I don't know why.
+            log.info("Evaluating Python JIT code...")
             exec code_python in locals()
         else:
             exec(code_python, namespace)
