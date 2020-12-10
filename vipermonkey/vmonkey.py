@@ -1216,9 +1216,14 @@ def _process_file (filename,
             comp_modules = parse_streams(vba, strip_useless)
             if (comp_modules is None):
                 return None
+            got_code = False
             for m in comp_modules:
                 if (m != "empty"):
                     vm.add_compiled_module(m)
+                    got_code = True
+            if not got_code:
+                log.info("No VBA or VBScript found. Exiting.")
+                return ([], [], [], [])
 
             # Pull out document variables.
             log.info("Reading document variables...")
