@@ -34,6 +34,8 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
+from curses_ascii import isascii
+import base64
 
 import logging
 
@@ -144,6 +146,38 @@ def fix_python_overlap(var_name):
         (not var_name.endswith(".Global"))):
         var_name = var_name.replace(".", "")
     return var_name
+
+def b64_decode(value):
+    """
+    Base64 decode a string.
+    """
+
+    try:
+        # Make sure this is a potentially valid base64 string
+        tmp_str = ""
+        try:
+            tmp_str = filter(isascii, str(value).strip())
+        except UnicodeDecodeError:
+            return None
+        tmp_str = tmp_str.replace(" ", "").replace("\x00", "")
+        b64_pat = r"^[A-Za-z0-9+/=]+$"
+        if (re.match(b64_pat, tmp_str) is not None):
+            
+            # Pad out the b64 string if needed.
+            missing_padding = len(tmp_str) % 4
+            if missing_padding:
+                tmp_str += b'='* (4 - missing_padding)
+        
+            # Return the decoded value.
+            conv_val = base64.b64decode(tmp_str)
+            return conv_val
+    
+    # Base64 conversion error.
+    except Exception as e:
+        pass
+
+    # No valid base64 decode.
+    return None
 
 class vb_RegExp(object):
     """

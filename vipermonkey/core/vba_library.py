@@ -74,6 +74,7 @@ import expressions
 import modules
 import strip_lines
 from vba_object import _eval_python
+import utils
 
 from logger import log
 
@@ -1916,17 +1917,13 @@ class TransformFinalBlock(VbaLibraryFunc):
             base64_str += chr(b)
 
         # Decode the base64 encoded string.
-        r = "NULL"
-        try:
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("TransformFinalBlock(): Try base64 decode of '" + base64_str + "'...")
+        r = utils.b64_decode(base64_str)
+        if (r is None):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Try base64 decode of '" + base64_str + "'...")
-            base64_str = filter(isprint, str(base64_str).strip())
-            r = base64.b64decode(base64_str).replace(chr(0), "")
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Base64 decode success.")
-        except Exception as e:
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Base64 decode fail. " + str(e))
+                log.debug("TransformFinalBlock(): Base64 decode fail.")
+            r = "NULL"
 
         # Return the decoded string.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -2273,15 +2270,14 @@ class LoadXML(VbaLibraryFunc):
             xml = xml[start:end].strip()
 
             # It looks like maybe this magically does base64 decode? Try that.
-            try:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("LoadXML(): Try base64 decode of '" + xml + "'...")
+            decoded = utils.b64_decode(xml)
+            if (decoded is not None):
+                xml = decoded.replace(chr(0), "")
+            else:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("eval_arg: Try base64 decode of '" + xml + "'...")
-                xml = base64.b64decode(xml).replace(chr(0), "")
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("eval_arg: Base64 decode success.")
-            except Exception as e:
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("eval_arg: Base64 decode fail. " + str(e))
+                    log.debug("LoadXML(): Base64 decode fail.")
 
         # Return the XML or base64 string.
         return xml
@@ -2994,7 +2990,9 @@ class Base64Decode(VbaLibraryFunc):
         txt = params[0]
         if (txt is None):
             txt = ''
-        r = base64.b64decode(txt)
+        r = utils.b64_decode(txt)
+        if (r is None):
+            r = "NULL"
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Base64Decode: %r returns %r" % (self, r))
         return r
@@ -3991,7 +3989,14 @@ class ReadText(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        
+
+        # Doing base64 conversion with a VBA object?
+        with_str = str(context.with_prefix).strip()
+        if (with_str.endswith("GetDecodedContentStream")):
+            var_name = with_str.replace("GetDecodedContentStream", "GetEncodedContentStream") + ".ReadText"
+            if (context.contains(var_name)):
+                return context.get(var_name)
+            
         # TODO: Currently the stream object on which ReadText() is
         # being called is not being tracked. We will only handle the
         # ReadText() if there is only 1 current open file.

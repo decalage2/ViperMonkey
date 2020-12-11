@@ -48,7 +48,7 @@ import os
 import array
 from hashlib import sha256
 import string
-
+import base64
 import unidecode
 
 from identifiers import *
@@ -1113,11 +1113,13 @@ class MemberAccessExpression(VBA_Object):
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
-        if (str(lhs).lower() != "ADODB.Stream".lower()):
+        lhs_str = str(lhs)
+        if ((lhs_str.lower() != "ADODB.Stream".lower()) and
+            (not lhs_str.lower().startswith("cdo.message."))):
 
             # Maybe we need a sub field? Do we have a subfield?
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug(str(lhs) + " is not an ADODB.Stream")
+                log.debug(lhs_str + " is not an ADODB.Stream")
             if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Done (1).")
@@ -1140,6 +1142,21 @@ class MemberAccessExpression(VBA_Object):
             txt = str(rhs_val)
         except UnicodeEncodeError:
             txt = ''.join(filter(lambda x:x in string.printable, rhs_val))
+
+        # This may be doing a base64 conversion. Handle that.
+        if (".GetEncodedContentStream.WriteText(" in str(self)):
+
+            # See if the content type is base64.
+            type_name = lhs_str[:lhs_str.index("GetEncodedContentStream")] + "ContentTransferEncoding"
+            typ = None
+            try:
+                typ = context.get(type_name)
+            except KeyError:
+                pass
+            if (typ.lower() == "base64"):                
+                decoded = utils.b64_decode(txt)
+                if (decoded is not None):
+                    txt = decoded
             
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.

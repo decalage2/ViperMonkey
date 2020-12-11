@@ -52,7 +52,6 @@ __version__ = '0.08'
 # --- IMPORTS ------------------------------------------------------------------
 
 import logging
-import base64
 from logger import log
 import re
 from curses_ascii import isprint
@@ -1240,20 +1239,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     val = context.get(tmp)
     
                     # It looks like maybe this magically does base64 decode? Try that.
-                    try:
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Try base64 decode of '" + val + "'...")
-                        base64_str = filter(isprint, str(base64_str).strip())
-                        val_decode = base64.b64decode(str(val)).replace(chr(0), "")
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Base64 decode success: '" + val_decode + "'...")
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("eval_arg: Try base64 decode of '" + str(val) + "'...")
+                    val_decode = utils.b64_decode(val)
+                    if (val_decode is not None):
                         if got_constant_math: set_cached_value(arg, val_decode)
                         return val_decode
-                    except Exception as e:
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Base64 decode fail. " + str(e))
-                        if got_constant_math: set_cached_value(arg, val)
-                        return val
                 except KeyError:
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("eval_arg: Not found as .text.")

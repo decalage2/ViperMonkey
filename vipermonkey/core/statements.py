@@ -3830,7 +3830,7 @@ class Call_Statement(VBA_Object):
         call_obj = Function_Call(None, None, None, old_call=self)
         call_obj.name = func_name[1:] # Get rid of initial '.'
         full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
-        
+
         # Evaluate the fully qualified object method call.
         r = eval_arg(full_expr, context)
         return r

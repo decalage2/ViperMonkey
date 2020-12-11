@@ -45,7 +45,6 @@ import os
 from hashlib import sha256
 from datetime import datetime
 from logger import log
-import base64
 import re
 import random
 import string
@@ -55,6 +54,7 @@ import struct
 from curses_ascii import isascii
 
 import vba_constants
+import utils
 
 def to_hex(s):
     """
@@ -1444,29 +1444,12 @@ class Context(object):
             if (do_b64):
 
                 # Try converting the text from base64.
-                try:
-
-                    # Make sure this is a potentially valid base64 string
-                    tmp_str = filter(isascii, str(value).strip())
-                    tmp_str = tmp_str.replace(" ", "")
-                    b64_pat = r"^[A-Za-z0-9+/=]+$"
-                    if (re.match(b64_pat, tmp_str) is not None):
-
-                        # Pad out the b64 string if needed.
-                        missing_padding = len(tmp_str) % 4
-                        if missing_padding:
-                            tmp_str += b'='* (4 - missing_padding)
-                    
-                        # Set the typed value of the node to the decoded value.
-                        conv_val = base64.b64decode(tmp_str)
-                        val_name = name
-                        self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                        val_name = name.replace(".text", ".nodetypedvalue")
-                        self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                        
-                # Base64 conversion error.
-                except Exception as e:
-                    log.error("base64 conversion of '" + str(value) + "' failed. " + str(e))
+                conv_val = utils.b64_decode(value)
+                if (conv_val is not None):
+                    val_name = name
+                    self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
+                    val_name = name.replace(".text", ".nodetypedvalue")
+                    self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
 
         # Handle hex conversion with VBA objects.
         if (name.lower().endswith(".nodetypedvalue")):
@@ -1519,19 +1502,11 @@ class Context(object):
                 # Do we have data to convert from type "bin.base64"?
                 if (value.lower() == "bin.base64"):
 
-                    # Try converting the text from base64.
-                    try:
                     
-                        # Set the typed value of the node to the decoded value.
-                        tmp_str = filter(isascii, str(node_value).strip())
-                        tmp_str = tmp_str.replace(" ", "")
-                        missing_padding = len(tmp_str) % 4
-                        if missing_padding:
-                            tmp_str += b'='* (4 - missing_padding)
-                        conv_val = base64.b64decode(tmp_str)
+                    # Try converting the text from base64.
+                    conv_val = utils.b64_decode(node_value)
+                    if (conv_val is not None):
                         self.set(node_value_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                    except Exception as e:
-                        log.error("base64 conversion of '" + str(node_value) + "' failed. " + str(e))
                         
             except KeyError:
                 pass
