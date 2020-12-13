@@ -4403,44 +4403,45 @@ class Range(VbaLibraryFunc):
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
             
-        # Guess that we want the 1st sheet.
-        sheet = None
-        try:
-            sheet = context.loaded_excel.sheet_by_index(0)
-        except:
-            context.increase_general_errors()
-            log.warning("Cannot process Range() call. No sheets in file.")
-            return "NULL"
-
-        # Multiple cells?
-        range_index = str(params[0])
-        if (":" in range_index):
+        # Try each sheet until we read a cell.
+        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
+            sheet = None
             try:
-                return self._read_cell_list(sheet, range_index)
-            except Exception as e:
+                sheet = context.loaded_excel.sheet_by_index(sheet_index)
+            except:
                 context.increase_general_errors()
+                log.warning("Cannot process Range() call. No sheets in file.")
                 return "NULL"
-        
-        # Get the cell contents.
-        try:
 
-            # Pull out the cell value.
-            row, col = self._get_row_and_column(params[0])
-            val = str(sheet.cell_value(row, col))
+            # Multiple cells?
+            range_index = str(params[0])
+            if (":" in range_index):
+                try:
+                    return self._read_cell_list(sheet, range_index)
+                except Exception as e:
+                    # Try the next sheet.
+                    continue
+        
+            # Get the cell contents.
+            try:
+
+                # Pull out the cell value.
+                row, col = self._get_row_and_column(params[0])
+                val = str(sheet.cell_value(row, col))
             
-            # Return the cell value.
-            log.info("Read cell (" + range_index + ") from sheet 1 = " + str(val))
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Cell value = '" + val + "'")
-            return val            
+                # Return the cell value.
+                print "Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = " + str(val)
+                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = " + str(val))
+                return val            
 
-        except Exception as e:
+            except Exception as e:
+                # Try the next sheet.
+                continue
+
+        # We did not get the cell.
+        context.increase_general_errors()
+        return "NULL"
         
-            # Failed to read cell.
-            context.increase_general_errors()
-            log.warning("Failed to read Range(" + str(params[0]) + "). " + str(e))
-            return "NULL"
-
 class CountA(VbaLibraryFunc):
     """
     Excel CountA() function.
