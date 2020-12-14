@@ -933,7 +933,6 @@ class Left(VbaLibraryFunc):
         if s == None: return None
 
         # Arg should be a string.
-        s = None
         try:
             s = str(s)
         except UnicodeDecodeError:

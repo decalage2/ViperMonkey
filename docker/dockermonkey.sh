@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if [[ $1 == "-h" || $# -eq 0 ]]; then
+   echo "Usage: dockermonkey.sh FILE [JSON_FILE] [-i ENTRY]"
+   echo "FILE is the VBA/VBScript file to analyze."
+   echo "If JSON_FILE is given JSON analysis results will be saved in JSON_FILE."
+   echo "If '-i ENTRY' is given emulation will start with VBA/VBScript function ENTRY."
+   exit
+fi
+   
 if [ "$(uname)" == "Darwin" ]; then
         echo "[*] User running on a Mac"
         if [ "$(docker-machine status)" == "Stopped" ]; then
@@ -43,16 +51,28 @@ docker network disconnect bridge $docker_id
 
 docker cp "$1" "$docker_id:/root/$file_basename"
 
-if [ $# -eq 1 ]
-  then
-docker exec $docker_id sh -c "/opt/ViperMonkey/vipermonkey/vmonkey.py -s --ioc --jit '/root/$file_basename'"
-elif [ $# -eq 2 ]
-  then
-docker exec $docker_id sh -c "/opt/ViperMonkey/vipermonkey/vmonkey.py -s --ioc --jit '/root/$file_basename' -o /root/report.json"
-docker cp "$docker_id:/root/report.json" "$2"
-echo "[*] json report saved to '$2'"
-else
-echo "[!] Please supply at least 1 argument to analyze a file. Supply a 2nd argument for json file output. No more than 2 arguments are supported."
+# Figure out arguments.
+entry=""
+json=""
+json_file=""
+# Entry point with no JSON file?
+if [[ $# -ge 3 && $2 == "-i" ]]; then
+    entry="-i $3"
+elif [ $# -eq 2 ]; then
+    # Just JSON file.
+    json="-o /root/report.json"
+    json_file=$2
+fi
+# JSON file with entry point?
+if [[ $# -ge 4 && $3 == "-i" ]]; then
+    entry="-i $4"
+    json="-o /root/report.json"
+    json_file=$2
+fi
+
+docker exec $docker_id sh -c "/opt/ViperMonkey/vipermonkey/vmonkey.py -s --ioc --jit '/root/$file_basename' $json $entry"
+if [ "$json_file" != "" ]; then
+    docker cp "$docker_id:/root/report.json" "$json_file"
 fi
 
 echo "[*] Done - Killing docker container $docker_id"

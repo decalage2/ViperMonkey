@@ -1701,9 +1701,9 @@ def _process_file (filename,
                 actions_data = []
                 for action in vm.actions:
                     actions_data.append({
-                        "action": action[0],
-                        "parameters": action[1],
-                        "description": action[2]
+                        "action": str(action[0]),
+                        "parameters": str(action[1]),
+                        "description": str(action[2])
                     })
 
                 out_data = {
@@ -1935,7 +1935,10 @@ def main():
             # add json results to list
             if (options.out_file):
                 with open(options.out_file, 'r') as json_file:
-                    json_results.append(json.loads(json_file.read()))
+                    try:
+                        json_results.append(json.loads(json_file.read()))
+                    except ValueError:
+                        pass
 
     if (options.out_file):
         with open(options.out_file, 'w') as json_file:
