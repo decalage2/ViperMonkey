@@ -3811,9 +3811,54 @@ class Call_Statement(VBA_Object):
         
         # Done.
         return r
-    
+
+    def _handle_as_member_access(self, context):
+        """
+        Certain object method calls need to be handled as member access
+        expressions. Given parsing limitations some of these are parsed
+        as regular calls, so convert those to member access expressions
+        here
+        """
+
+        # Is this a method call?
+        func_name = str(self.name).strip()
+        if (("." not in func_name) or (func_name.startswith("."))):
+            return None
+        short_func_name = func_name[func_name.rindex(".") + 1:]
+        
+        # It's a method call. Is it one we are handling as a member
+        # access expression?
+        memb_funcs = set(["AddItem"])
+        if (short_func_name not in memb_funcs):
+            return None
+
+        # It should be handled as a member access expression.
+        # Convert it.
+        func_call_str = func_name + "("
+        first = True
+        for p in self.params:
+            if (not first):
+                func_call_str += ", "
+            first = False
+            func_call_str += str(p)
+        func_call_str += ")"
+        try:
+            memb_exp = member_access_expression.parseString(func_call_str, parseAll=True)[0]
+
+            # Evaluate the call as a member access expression.
+            return memb_exp.eval(context)
+        except ParseException as e:
+
+            # Can't eval as a member access expression.
+            return None
+        
     def _handle_with_calls(self, context):
 
+        # Can we handle this call as a member access expression?
+        as_member_access = self._handle_as_member_access(context)
+        if (as_member_access is not None):
+            return as_member_access
+        
         # Is this a call like '.WriteText "foo"'?
         func_name = str(self.name).strip()
         if (not func_name.startswith(".")):

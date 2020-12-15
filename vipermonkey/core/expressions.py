@@ -320,6 +320,49 @@ class MemberAccessExpression(VBA_Object):
             r += "." + str(self.rhs1)
         return r
 
+    def _to_python_handle_listbox_list(self, context, indent):
+        """
+        Handle List() object method calls like foo.List(bar).
+        foo is (currently) a ListBox object.
+        """
+
+        # Is this a .List() call?
+        func = self.rhs
+        if (isinstance(func, list)):
+            func = func[-1]
+        if ((not isinstance(func, Function_Call)) or
+            (func.name != "List")):
+            return None
+
+        # We have a list call. Get the list.
+        the_list = self._get_with_prefix_value(context)
+        if (the_list is None):
+            the_list = context.get(str(self.lhs))
+            if (the_list == "__ALREADY_SET__"):
+                the_list = context.get("__ORIG__" + str(self.lhs))
+        if ((the_list is None) or (not isinstance(the_list, list))):
+            return None
+
+        # Return Python for reading from the list.
+        r = str(the_list) + "[" + to_python(func.params[0], context) + "]"
+        return r
+        
+    def _get_with_prefix_value(self, context):
+        """
+        Get the value of the With prefix. None is returned if there is no
+        With prefix.
+        """
+        with_value = None
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            with_value = context.get(str(context.with_prefix_raw))
+            if (with_value == "__ALREADY_SET__"):
+
+                # Try getting the original value.
+                with_value = context.get("__ORIG__" + str(context.with_prefix_raw))
+
+        return with_value
+    
     def _to_python_handle_add(self, context, indent):
         """
         Handle Add() object method calls like foo.Add(bar, baz). 
@@ -328,21 +371,8 @@ class MemberAccessExpression(VBA_Object):
 
         # Currently we are only supporting JIT emulation of With blocks
         # based on Scripting.Dictionary. Is that what we have?
-        with_dict = None
-        if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            with_dict = context.get(str(context.with_prefix_raw))
-            if (with_dict == "__ALREADY_SET__"):
-
-                # Try getting the original value.
-                with_dict = context.get("__ORIG__" + str(context.with_prefix_raw))
-
-            # Got Scripting.Dictionary?
-            if (not isinstance(with_dict, dict)):                
-                with_dict = None
-
-        # Can we do JIT code for this?
-        if (with_dict is None):
+        with_dict = self._get_with_prefix_value(context)
+        if ((with_dict is None) or (not isinstance(with_dict, dict))):
             return None
 
         # Is this a Scripting.Dictionary method call?
@@ -365,6 +395,11 @@ class MemberAccessExpression(VBA_Object):
 
         # Handle Scripting.Dictionary.Add() calls.
         add_code = self._to_python_handle_add(context, indent)
+        if (add_code is not None):
+            return add_code
+
+        # Handle ListBox.List() calls.
+        add_code = self._to_python_handle_listbox_list(context, indent)
         if (add_code is not None):
             return add_code
         
@@ -1052,6 +1087,105 @@ class MemberAccessExpression(VBA_Object):
 
         # Done with the Add().
         return new_dict
+
+    def _handle_listbox_list(self, context, lhs, rhs):
+        """
+        Handle List() object method calls like foo.List(bar).
+        foo is (currently) a ListBox object.
+        """
+
+        # Get the LHS as a list if possible.
+        if (isinstance(lhs, str) and
+            lhs.startswith("[") and
+            lhs.endswith("]")):
+            try:
+                lhs = eval(lhs)
+            except SyntaxError:
+                pass
+
+        # Get the list if it is a With variable.
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            lhs = context.get(str(context.with_prefix_raw))
+            
+        # Sanity check.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_listbox_list(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (not isinstance(rhs, Function_Call)):
+            return None
+        if (rhs.name != "List"):
+            return None
+        if (not isinstance(lhs, list)):
+            return None
+
+        # Get the list index.
+        index = eval_arg(rhs.params[0], context)
+
+        # Return the list item if the index is valid.
+        if ((not isinstance(index, int)) or
+            (index < 0) or
+            (index > (len(lhs) - 1))):
+            return None
+        return lhs[index]
+    
+    def _handle_listbox_additem(self, context, lhs, rhs):
+        """
+        Handle AddItem() object method calls like foo.AddItem(bar).
+        foo is (currently) a ListBox object.
+        """
+
+        # Get the LHS as a list if possible.
+        if (isinstance(lhs, str) and
+            lhs.startswith("[") and
+            lhs.endswith("]")):
+            try:
+                lhs = eval(lhs)
+            except SyntaxError:
+                pass
+
+        # Get the list if it is a With variable.
+        if ((context.with_prefix_raw is not None) and
+            (context.contains(str(context.with_prefix_raw)))):
+            lhs = context.get(str(context.with_prefix_raw))
+            
+        # Sanity check.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("_handle_listbox_additem(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+        if ((isinstance(rhs, list)) and (len(rhs) > 0)):
+            rhs = rhs[0]
+        if (not isinstance(rhs, Function_Call)):
+            return None
+        if (rhs.name != "AddItem"):
+            return None
+
+        # The listbox variable may not be defined. Define it if needed.
+        if ((lhs is None) or (lhs == "NULL")):
+            lhs = []
+        if (not isinstance(lhs, list)):
+            return None
+
+        # Run the list add.
+        # list, value
+        new_add = Function_Call(None, None, None, old_call=rhs)
+        tmp = [lhs]
+        for p in new_add.params:
+            tmp.append(p)
+        new_add.params = tmp
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("AddItem() func = " + str(new_add))
+        
+        # Evaluate the list add.
+        new_list = new_add.eval(context)
+
+        # Update the list variable.
+        if (context.with_prefix_raw is not None):
+            context.set(str(context.with_prefix_raw), new_list, do_with_prefix=False)
+        context.set(str(self.lhs), new_list, do_with_prefix=False, force_global=True)
+
+        # Done with the AddItem().
+        return new_list
 
     def _handle_exists(self, context, lhs, rhs):
         """
@@ -1803,6 +1937,18 @@ class MemberAccessExpression(VBA_Object):
             call_retval = self._handle_add(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
                 #print "OUT: 25"
+                return call_retval
+
+            # Handle things like foo.AddItem(bar).
+            call_retval = self._handle_listbox_additem(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                #print "OUT: 25.1"
+                return call_retval
+
+            # Handle things like foo.List(bar).
+            call_retval = self._handle_listbox_list(context, tmp_lhs, self.rhs)
+            if (call_retval is not None):
+                #print "OUT: 25.2"
                 return call_retval
 
             # Handle things like foo.Exists(bar).

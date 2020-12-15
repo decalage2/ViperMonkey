@@ -115,7 +115,7 @@ class String(VBA_Object):
             log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
-        return str(self.value)
+        return '"' + str(self.value) + '"'
 
     def eval(self, context, params=None):
         r = self.value

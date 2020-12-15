@@ -1476,6 +1476,24 @@ class IsObject(VbaLibraryFunc):
         # Say everything is an object.
         return True
 
+class AddItem(VbaLibraryFunc):
+    """
+    ListBox AddItem() VB object method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return None
+        the_list = params[0]
+        value = params[1]
+        if (not isinstance(the_list, list)):
+            return None
+        r = list(the_list)
+        r.append(value)
+        return r
+    
 class Add(VbaLibraryFunc):
     """
     Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
@@ -4429,7 +4447,6 @@ class Range(VbaLibraryFunc):
                 val = str(sheet.cell_value(row, col))
             
                 # Return the cell value.
-                print "Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = " + str(val)
                 log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = " + str(val))
                 return val            
 
@@ -5037,7 +5054,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime):
+               RtlMoveMemory, OnTime, AddItem):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
