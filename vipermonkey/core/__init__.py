@@ -149,23 +149,22 @@ def pull_urls_excel_sheets(workbook):
     if (workbook is None):
         return []
 
-    # Look through each sheet.
+    # Look through each cell.
+    all_cells = excel.pull_cells_workbook(workbook)
     r = set()
-    try:
-        for sheet in workbook.sheets:
+    for cell in all_cells:
 
-            # Look through each cell.
-            for cell_index in sheet.cells.keys():
-                cell = sheet.cells[cell_index]
-                for url in re.findall(read_ole_fields.URL_REGEX, str(cell)):
-                    r.add(url.strip())
+        # Add http:// for cells that look like they might be URLs
+        # missing the http part.        
+        value = str(cell["value"])
+        pat = r"[A-Za-z0-9_]{3,50}\.[A-Za-z]{2,10}/(?:[A-Za-z0-9_]{3,50}/)*[A-Za-z0-9_\.]{3,50}"
+        if (re.search(pat, value) is not None):
+            value = "http://" + value
 
-    except TypeError:
+        # Look for URLs in the cell value.
+        for url in re.findall(read_ole_fields.URL_REGEX, value):
+            r.add(url.strip())
 
-        # Not using our internal ExcelBook class, so .sheets is not
-        # iterable.
-        pass
-                
     # Return any URLs found in cells.
     return r
 

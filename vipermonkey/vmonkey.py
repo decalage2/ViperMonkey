@@ -114,8 +114,11 @@ import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba, FileOpenError
 import olefile
-import xlrd
-
+try:
+    import xlrd2 as xlrd
+except:
+    import xlrd
+    
 from core.meta import get_metadata_exif
 
 # add the vipermonkey folder to sys.path (absolute+normalized path):
@@ -1021,20 +1024,20 @@ def load_excel(data):
 
     return - An xlrd (like) object with the Excel file contents.
     """
-
-    # First try loading the sheets with LibreOffice.
-    wb = load_excel_libreoffice(data)
-    if (wb is not None):
-        return wb
     
-    # That failed. Fall back to loading the sheet with xlrd.
+    # Load the sheet with xlrd2.
     wb = load_excel_xlrd(data)
     if (wb is not None):
 
-        # Did we load sheets with xlrd?
+        # Did we load sheets with xlrd2?
         if (len(wb.sheet_names()) > 0):
             return wb
 
+    # Next try loading the sheets with LibreOffice.
+    wb = load_excel_libreoffice(data)
+    if (wb is not None):
+        return wb
+        
     # Nothing worked.
     return None
         

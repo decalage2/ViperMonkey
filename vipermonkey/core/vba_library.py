@@ -75,14 +75,13 @@ import modules
 import strip_lines
 from vba_object import _eval_python
 import utils
+from excel import *
 
 from logger import log
 
 # === VBA LIBRARY ============================================================
 
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
-# TODO: Excel
-# TODO: other MS Office apps?
 
 def member_access(var, field):
     """
@@ -4206,74 +4205,6 @@ class UsedRange(VbaLibraryFunc):
     """
     Excel UsedRange() function.
     """
-
-    def _pull_cells_sheet_xlrd(self, sheet):
-        """
-        Pull all the cells from a xlrd Sheet object.
-        """
-
-        # Find the max row and column for the cells.
-        if (not hasattr(sheet, "nrows") or
-            not hasattr(sheet, "ncols")):
-            log.warning("Cannot read all cells from xlrd sheet. Sheet object has no 'nrows' or 'ncols' attribute.")
-            return None
-        max_row = sheet.nrows
-        max_col = sheet.ncols
-
-        # Cycle through all the cells in order.
-        curr_cells = []
-        for curr_row in range(0, max_row + 1):
-            for curr_col in range(0, max_col + 1):
-                try:
-                    curr_cell_xlrd = sheet.cell(curr_row, curr_col)
-                    curr_cell = { "value" : curr_cell_xlrd.value,
-                                  "row" : curr_row + 1,
-                                  "col" : curr_col + 1 }
-                    curr_cells.append(curr_cell)
-                except:
-                    pass
-
-        # Return the cells.
-        return curr_cells
-            
-    def _pull_cells_sheet_internal(self, sheet):
-        """
-        Pull all the cells from a Sheet object defined internally in excel.py.
-        """
-
-        # We are going to use the internal cells field to build the list of all
-        # cells, so this will only work with the ExcelSheet class defined in excel.py.
-        if (not hasattr(sheet, "cells")):
-            log.warning("Cannot read all cells from internal sheet. Sheet object has no 'cells' attribute.")
-            return None
-        
-        # Cycle row by row through the sheet, tracking all the cells.
-
-        # Find the max row and column for the cells.
-        max_row = -1
-        max_col = -1
-        for cell_index in sheet.cells.keys():
-            curr_row = cell_index[0]
-            curr_col = cell_index[1]
-            if (curr_row > max_row):
-                max_row = curr_row
-            if (curr_col > max_col):
-                max_col = curr_col
-
-        # Cycle through all the cells in order.
-        curr_cells = []
-        for curr_row in range(0, max_row + 1):
-            for curr_col in range(0, max_col + 1):
-                try:
-                    curr_cell = { "value" : sheet.cell(curr_row, curr_col),
-                                  "row" : curr_row + 1,
-                                  "col" : curr_col + 1 }
-                    curr_cells.append(curr_cell)
-                except KeyError:
-                    pass
-
-        # Return the cells.
-        return curr_cells
         
     def eval(self, context, params=None):
 
@@ -4292,9 +4223,9 @@ class UsedRange(VbaLibraryFunc):
                 return "NULL"
 
             # Read all the cells.
-            curr_cells = self._pull_cells_sheet_internal(sheet)
+            curr_cells = pull_cells_sheet_internal(sheet)
             if (curr_cells is None):
-                curr_cells = self._pull_cells_sheet_xlrd(sheet)
+                curr_cells = pull_cells_sheet_xlrd(sheet)
                 if (curr_cells is None):
                     curr_cells = []
                     
@@ -4421,6 +4352,8 @@ class Range(VbaLibraryFunc):
             return "NULL"
             
         # Try each sheet until we read a cell.
+        r = None
+        col = None
         for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
             sheet = None
             try:
@@ -4455,6 +4388,7 @@ class Range(VbaLibraryFunc):
                 continue
 
         # We did not get the cell.
+        log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "]")
         context.increase_general_errors()
         return "NULL"
         
