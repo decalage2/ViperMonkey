@@ -1005,6 +1005,13 @@ def load_excel_libreoffice(data):
     return result_book
         
 def load_excel_xlrd(data):
+
+    # Only use this on Office 97 Excel files.
+    if (not filetype.is_office97_file(data, True)):
+        log.warning("File is not an Excel 97 file. Not reading with xlrd2.")
+        return None
+
+    # It is Office 97. See if we can read it with xlrd2.
     try:
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Trying to load with xlrd...")
