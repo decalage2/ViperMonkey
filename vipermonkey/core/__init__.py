@@ -154,10 +154,15 @@ def pull_urls_excel_sheets(workbook):
     r = set()
     for cell in all_cells:
 
+        # Skip empty cells.
+        value = str(cell["value"]).strip()
+        if (len(value) == 0):
+            continue
+        
         # Add http:// for cells that look like they might be URLs
         # missing the http part.        
-        value = str(cell["value"])
-        pat = r"[A-Za-z0-9_]{3,50}\.[A-Za-z]{2,10}/(?:[A-Za-z0-9_]{3,50}/)*[A-Za-z0-9_\.]{3,50}"
+        pat = r"[A-Za-z0-9_]{3,50}\.[A-Za-z]{2,10}/(?:[A-Za-z0-9_]{1,50}/)*[A-Za-z0-9_\.]{3,50}"
+        # news24mrl.com/ds/1312.gif
         if (re.search(pat, value) is not None):
             value = "http://" + value
 
