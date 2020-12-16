@@ -518,6 +518,7 @@ def _infer_type_of_expression(expr, context):
     import operators
     import vba_library
 
+    #print "LOOK FOR TYPE"
     #print expr
     #print type(expr)
 
@@ -730,8 +731,10 @@ def _get_var_vals(item, context, global_only=False):
             var_type = _infer_type(var, item, context)
             if (var_type == "INTEGER"):
                 val = 0
+                context.set_type(var, "Integer")
             elif (var_type == "STRING"):
                 val = ""
+                context.set_type(var, "String")
             else:
                 log.warning("Type '" + str(var_type) + "' of var '" + str(var) + "' not handled." + \
                             " Defaulting initial value to 0.")

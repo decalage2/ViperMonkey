@@ -1080,6 +1080,10 @@ class Context(object):
 
     def contains_user_defined(self, name):
         return ((name in self.locals) or (name in self.globals))
+
+    def set_type(self, var, typ):
+        var = var.lower()
+        self.types[var] = typ
         
     def get_type(self, var):
         if (not isinstance(var, basestring)):
