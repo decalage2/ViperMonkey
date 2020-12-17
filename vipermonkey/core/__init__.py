@@ -286,6 +286,13 @@ class ViperMonkey(StubbedEngine):
             return
         self.modules.append(m)
         for name, _sub in m.subs.items():
+            # Skip duplicate subs that look less interesting than the old one.
+            if (name in self.globals):
+                old_sub = self.globals[name]
+                if (hasattr(old_sub, "statements")):
+                    if (len(_sub.statements) < len(old_sub.statements)):
+                        log.warning("Sub " + str(name) + " is already defined. Skipping new definition.")
+                        continue
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
