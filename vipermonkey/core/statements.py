@@ -268,7 +268,12 @@ class Parameter(VBA_Object):
         return r
 
     def to_python(self, context, params=None, indent=0):
-        return str(self.name)
+        name_str = str(self.name)
+        init_str = ""
+        if ((self.init_val is not None) and (len(str(self.init_val)) > 0)):
+            init_str = "=" + to_python(self.init_val, context=context)
+        r = name_str + init_str
+        return r
     
 # 5.3.1.5 Parameter Lists
 #
