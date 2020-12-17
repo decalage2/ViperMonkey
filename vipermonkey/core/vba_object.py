@@ -593,6 +593,9 @@ def _infer_type(var, code_chunk, context):
     Try to infer the type of an undefined variable based on how it is used ("STRING" or "INTEGER").
 
     This is currently purely a heuristic.
+
+    returns a tuple, 1st element is the inferred type ("STRING" or "INTEGER") and the 2nd element 
+    is a flag indicating if we are sure of the type (True) or just guessing (False).
     """
 
     # Get all the assignments in the code chunk.
@@ -607,17 +610,17 @@ def _infer_type(var, code_chunk, context):
 
         # Try to infer the type somewhat logically.
         poss_type = _infer_type_of_expression(assign.expression, context)
-        if (poss_type is not None):
-            return poss_type
+        if ((poss_type is not None) and (poss_type != "UNKNOWN")):
+            return (poss_type, True)
         
         # Does a VBA function that returns a string appear on the RHS?
         rhs = str(assign.expression).lower()
         for str_func in str_funcs:
             if (str_func in rhs):
-                return "STRING"
+                return ("STRING", True)
 
     # Does not look like a string, assume int.
-    return "INTEGER"
+    return ("INTEGER", False)
 
 def _get_var_vals(item, context, global_only=False):
     """
@@ -728,13 +731,18 @@ def _get_var_vals(item, context, global_only=False):
         if (val is None):
 
             # Variable is not defined. Try to infer the type based on how it is used.
-            var_type = _infer_type(var, item, context)
+            #print "TOP LOOK TYPE: " + str(var)
+            var_type, certain_of_type = _infer_type(var, item, context)
             if (var_type == "INTEGER"):
                 val = 0
-                context.set_type(var, "Integer")
+                if certain_of_type:
+                    #print "SET TYPE INT"
+                    #print var
+                    context.set_type(var, "Integer")
             elif (var_type == "STRING"):
                 val = ""
-                context.set_type(var, "String")
+                if certain_of_type:
+                    context.set_type(var, "String")
             else:
                 log.warning("Type '" + str(var_type) + "' of var '" + str(var) + "' not handled." + \
                             " Defaulting initial value to 0.")
