@@ -55,6 +55,7 @@ docker cp "$1" "$docker_id:/root/$file_basename"
 entry=""
 json=""
 json_file=""
+
 # Entry point with no JSON file?
 if [[ $# -ge 3 && $2 == "-i" ]]; then
     entry="-i $3"
@@ -63,6 +64,7 @@ elif [ $# -eq 2 ]; then
     json="-o /root/report.json"
     json_file=$2
 fi
+
 # JSON file with entry point?
 if [[ $# -ge 4 && $3 == "-i" ]]; then
     entry="-i $4"
@@ -70,10 +72,18 @@ if [[ $# -ge 4 && $3 == "-i" ]]; then
     json_file=$2
 fi
 
+# Run ViperMonkey in the docker container.
 docker exec $docker_id sh -c "/opt/ViperMonkey/vipermonkey/vmonkey.py -s --ioc --jit '/root/$file_basename' $json $entry"
+
+# Copy out the JSON analysis report if needed.
 if [ "$json_file" != "" ]; then
     docker cp "$docker_id:/root/report.json" "$json_file"
 fi
+
+# Zip up dropped files if there are any.
+docker exec $docker_id sh -c "touch /root/test.zip ; [ -d \"/root/${file_basename}_artifacts/\" ] && zip -r --password=infected - /root/${file_basename}_artifacts/ > /root/test.zip"
+docker cp "$docker_id:/root/test.zip" test.zip
+if [ ! -s test.zip ]; then rm test.zip; else mv test.zip ${file_basename}_artifacts.zip; echo "[*] Dropped files are in ${file_basename}_artifacts.zip"; fi
 
 echo "[*] Done - Killing docker container $docker_id"
 docker stop $docker_id > /dev/null
