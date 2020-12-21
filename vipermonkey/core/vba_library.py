@@ -779,6 +779,8 @@ class TypeName(VbaLibraryFunc):
         if (isinstance(val, bool)):
             return "Boolean"
         if (isinstance(val, str)):
+            if (val.lower() == "adodb.stream"):
+                return "ADODB.Stream"
             return "String"
         if (isinstance(val, int)):
             return "Integer"
@@ -4112,6 +4114,64 @@ class GetTickCount(VbaLibraryFunc):
         ticks += random.randint(100, 10000)
         return ticks
 
+class Rows(VbaLibraryFunc):
+    """
+    This emulates geting the Rows field of an Excel sheet.
+    Currently stubbed out to just return a list of dicts with row numbers.
+    """
+
+    def eval(self, context, params=None):
+
+        # Do we have a loaded Excel file?
+        if (context.loaded_excel is None):
+            context.increase_general_errors()
+            log.warning("Cannot emulate Rows field access. No Excel file loaded.")
+            return []
+
+        # Get the sheet name if given.
+        sheet_name = "__NO SHEET NAME__"
+        if ((params is not None) and (len(params) > 0)):
+            sheet_name = str(params[0]).strip()
+
+        # Get the sheet from which to pull rows.
+        sheet = None
+        if (sheet_name in context.loaded_excel.sheet_names()):
+            sheet = context.loaded_excel.sheet_by_name(sheet_name)
+
+        # No sheet name. Just find the sheet with the most rows.
+        else:
+
+            # Look through all sheets.
+            max_rows = -1
+            for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
+            
+                # Load the current sheet.
+                curr_sheet = None
+                try:
+                    curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
+                except:
+                    context.increase_general_errors()
+                    log.warning("Cannot process Cells() call. No sheets in file.")
+                    return "NULL"
+
+                # Does this have the most rows?
+                curr_rows = get_num_rows(curr_sheet)
+                if (curr_rows > max_rows):
+                    max_rows = curr_rows
+                    sheet = curr_sheet
+
+        # Return a list of dicts with row info.
+        r = []
+        num_rows = get_num_rows(sheet)
+        for i in range(0, num_rows + 1):
+            r.append({ "Row" : i })
+
+        # Return the row info.
+        return r
+
+    def num_args(self):
+        return 0
+    
 class Cells(VbaLibraryFunc):
     """
     Excel Cells() function.
@@ -4183,12 +4243,12 @@ class Cells(VbaLibraryFunc):
                     r = r[1:-1]
                 if (r.startswith('"') and r.endswith('"') and (len(r) >= 2)):
                     r = r[1:-1]
-                #print sheet
-                #print "GOT Cell(" + str(col) + ", " + str(row) + ")"
-                #print r
                 r = { "value" : r,
                       "row" : row + 1,
                       "col" : col + 1 }
+                print sheet
+                print "GOT Cell(" + str(col) + ", " + str(row) + ")"
+                print r
                 return r
 
             except Exception as e:
@@ -4988,7 +5048,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem):
+               RtlMoveMemory, OnTime, AddItem, Rows):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

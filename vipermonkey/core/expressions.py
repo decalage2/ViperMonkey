@@ -1296,7 +1296,16 @@ class MemberAccessExpression(VBA_Object):
         # global as a hacky solution to handle fields in user defined objects.
         #
         # We are appending the written data to whatever is already there.
+
+        # Save based on the variable name.
         var_name = str(lhs_orig) + ".ReadText"
+        if (not context.contains(var_name)):
+            context.set(var_name, "", force_global=True)
+        final_txt = context.get(var_name) + txt
+        context.set(var_name, final_txt, force_global=True)
+
+        # Save based on generic ADODB.Stream object.
+        var_name = "ADODB.Stream.ReadText"
         if (not context.contains(var_name)):
             context.set(var_name, "", force_global=True)
         final_txt = context.get(var_name) + txt

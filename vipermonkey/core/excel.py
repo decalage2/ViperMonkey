@@ -41,6 +41,38 @@ __version__ = '0.03'
 import logging
 from logger import log
 
+def get_num_rows(sheet):
+    """
+    Get the number of rows in an Excel sheet.
+    """
+
+    # Internal representation?
+    if (hasattr(sheet, "num_rows")):
+        return sheet.num_rows()
+
+    # xlrd sheet?
+    if (hasattr(sheet, "nrows")):
+        return sheet.nrows
+
+    # Unhandled sheet object.
+    return 0
+
+def get_num_cols(sheet):
+    """
+    Get the number of columns in an Excel sheet.
+    """
+
+    # Internal representation?
+    if (hasattr(sheet, "num_cols")):
+        return sheet.num_cols()
+
+    # xlrd sheet?
+    if (hasattr(sheet, "ncols")):
+        return sheet.ncols
+
+    # Unhandled sheet object.
+    return 0
+
 def pull_cells_sheet_xlrd(sheet):
     """
     Pull all the cells from a xlrd Sheet object.
@@ -143,6 +175,8 @@ class ExcelSheet(object):
     def __init__(self, cells, name="Sheet1"):
         self.cells = cells
         self.name = name
+        self.__num_rows = None
+        self.__num_cols = None
 
     def __repr__(self):
         r = ""
@@ -150,6 +184,28 @@ class ExcelSheet(object):
         for cell in self.cells.keys():
             r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
         return r
+
+    def num_rows(self):
+        if (self.__num_rows is not None):
+            return self.__num_rows
+        max_row = -1
+        for cell in self.cells.keys():
+            curr_row = cell[0]
+            if (curr_row > max_row):
+                max_row = curr_row
+        self.__num_rows = max_row
+        return self.__num_rows
+
+    def num_cols(self):
+        if (self.__num_cols is not None):
+            return self.__num_cols
+        max_col = -1
+        for cell in self.cells.keys():
+            curr_col = cell[1]
+            if (curr_col > max_col):
+                max_col = curr_col
+        self.__num_cols = max_col
+        return self.__num_cols
     
     def cell(self, row, col):
         if ((row, col) in self.cells):
