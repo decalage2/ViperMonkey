@@ -1634,6 +1634,10 @@ def process_file_scanexpr (container, filename, data):
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         import oletools
+
+        # Start the vm support. Used when call with argument -e 
+        vm = ViperMonkey(filename, data)
+
         oletools.olevba.enable_logging()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('opening {}'.format(filename))
