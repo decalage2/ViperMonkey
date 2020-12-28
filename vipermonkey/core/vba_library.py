@@ -4246,9 +4246,6 @@ class Cells(VbaLibraryFunc):
                 r = { "value" : r,
                       "row" : row + 1,
                       "col" : col + 1 }
-                print sheet
-                print "GOT Cell(" + str(col) + ", " + str(row) + ")"
-                print r
                 return r
 
             except Exception as e:
