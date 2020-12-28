@@ -301,10 +301,13 @@ class IsEmpty(VbaLibraryFunc):
         # Handle Excel cells.
         if (isinstance(item, dict) and ("value" in item)):
             return self.eval(context, [item["value"]])
-
+        if (item == "empty:u''"):
+            return True
+        
         # Handle list type data structures.
         if ((hasattr(item, '__len__')) and (len(item) == 0)):
             return True
+        print item
         return False
 
     def num_args(self):
@@ -4171,6 +4174,36 @@ class Rows(VbaLibraryFunc):
 
     def num_args(self):
         return 0
+
+def _read_cell(sheet, row, col):
+
+    # Read and process the cell.
+    try:
+        raw_cell = sheet.cell(row, col)
+        r = str(raw_cell).replace("text:", "")
+        if (r.startswith("'") and r.endswith("'")):
+            r = r[1:-1]
+        if (r.startswith('u')):
+            r = r[1:]
+        if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
+            r = r[1:-1]
+        if (r.startswith('"') and r.endswith('"') and (len(r) >= 2)):
+            r = r[1:-1]
+        if (r == "empty:u''"):
+            r = ""
+        if (r.startswith("number:")):
+            r = r[len("number:"):]
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
+        r = { "value" : r,
+              "row" : row + 1,
+              "col" : col + 1 }
+        return r
+
+    except Exception as e:
+        
+        # Failed to read cell.
+        return None
     
 class Cells(VbaLibraryFunc):
     """
@@ -4215,9 +4248,18 @@ class Cells(VbaLibraryFunc):
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
-        
-        # Try each sheet until we read a cell.
+
+        # First try the sheet with the most cells.
         # TODO: Figure out the actual sheet to load.
+        sheet = get_largest_sheet(context.loaded_excel)
+        if (sheet is None):
+            return "NULL"
+        # Return the cell contents.
+        cell_val = _read_cell(sheet, row, col)
+        if (cell_val is not None):
+            return cell_val
+        
+        # The largest sheet did not work. Try each sheet until we read a cell.
         for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
             
             # Load the current sheet.
@@ -4230,28 +4272,10 @@ class Cells(VbaLibraryFunc):
                 return "NULL"
 
             # Return the cell contents.
-            try:
-                raw_cell = sheet.cell(row, col)
-                r = str(raw_cell).replace("text:", "")
-                if (r.startswith("'") and r.endswith("'")):
-                    r = r[1:-1]
-                if (r.startswith('u')):
-                    r = r[1:]
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
-                if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
-                    r = r[1:-1]
-                if (r.startswith('"') and r.endswith('"') and (len(r) >= 2)):
-                    r = r[1:-1]
-                r = { "value" : r,
-                      "row" : row + 1,
-                      "col" : col + 1 }
-                return r
-
-            except Exception as e:
-        
-                # Failed to read cell.
-                continue
+            cell_val = _read_cell(sheet, row, col)
+            if (cell_val is not None):
+                return cell_val
+            continue
 
         # Can't read the cell.
         context.increase_general_errors()
@@ -4267,32 +4291,13 @@ class UsedRange(VbaLibraryFunc):
 
         # Try each sheet and return the cells from the sheet with the most cells.
         # TODO: Figure out the actual sheet to load.
-        cells = []
-        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
-        
-            # Try the current sheet.
-            sheet = None
-            try:
-                sheet = context.loaded_excel.sheet_by_index(sheet_index)
-            except:
-                context.increase_general_errors()
-                log.warning("Cannot process UsedRange() call. No sheets in file.")
-                return "NULL"
+        sheet = get_largest_sheet(context.loaded_excel)
+        if (sheet is None):
+            return []
 
-            # Read all the cells.
-            curr_cells = pull_cells_sheet_internal(sheet)
-            if (curr_cells is None):
-                curr_cells = pull_cells_sheet_xlrd(sheet)
-                if (curr_cells is None):
-                    curr_cells = []
-                    
-            # Does this sheet have the most cells?
-            if (len(curr_cells) > len(cells)):
-                cells = curr_cells
-                    
         # Return all of the defined cells. Each cell is represented as a dict
         # with keys 'value', 'row', and 'col'.
-        return cells
+        return pull_cells_sheet(sheet)
 
     def num_args(self):
         return 0

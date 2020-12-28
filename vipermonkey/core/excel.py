@@ -41,6 +41,41 @@ __version__ = '0.03'
 import logging
 from logger import log
 
+def get_largest_sheet(workbook):
+    """
+    Get the sheet in a workbook with the most cells.
+    """
+
+    # Have we already computed this?
+    if (hasattr(workbook, "__largest_sheet__")):
+        return workbook.__largest_sheet__
+    
+    # Look at all the sheets.
+    cells = []
+    big_sheet = None
+    for sheet_index in range(0, len(workbook.sheet_names())):
+        
+        # Try the current sheet.
+        sheet = None
+        try:
+            sheet = workbook.sheet_by_index(sheet_index)
+        except:
+            return None
+
+        # Read all the cells.
+        curr_cells = pull_cells_sheet(sheet)
+        if (curr_cells is None):
+            curr_cells = []
+                    
+        # Does this sheet have the most cells?
+        if (len(curr_cells) > len(cells)):
+            cells = curr_cells
+            big_sheet = sheet
+
+    # Done.
+    workbook.__largest_sheet__ = big_sheet
+    return big_sheet
+
 def get_num_rows(sheet):
     """
     Get the number of rows in an Excel sheet.
@@ -73,7 +108,7 @@ def get_num_cols(sheet):
     # Unhandled sheet object.
     return 0
 
-def pull_cells_sheet_xlrd(sheet):
+def _pull_cells_sheet_xlrd(sheet):
     """
     Pull all the cells from a xlrd Sheet object.
     """
@@ -102,7 +137,7 @@ def pull_cells_sheet_xlrd(sheet):
     # Return the cells.
     return curr_cells
             
-def pull_cells_sheet_internal(sheet):
+def _pull_cells_sheet_internal(sheet):
     """
     Pull all the cells from a Sheet object defined internally in excel.py.
     """
@@ -141,6 +176,15 @@ def pull_cells_sheet_internal(sheet):
     # Return the cells.
     return curr_cells
 
+def pull_cells_sheet(sheet):
+    """
+    Pull all the cells from an xlrd or internal Sheet object.
+    """
+    curr_cells = _pull_cells_sheet_xlrd(sheet)
+    if (curr_cells is None):
+        curr_cells = _pull_cells_sheet_internal(sheet)
+    return curr_cells
+    
 def pull_cells_workbook(workbook):
     """
     Pull all the cells from all sheets in the given workbook.
@@ -158,11 +202,9 @@ def pull_cells_workbook(workbook):
             continue
 
         # Load the cells from this sheet.
-        curr_cells = pull_cells_sheet_xlrd(sheet)
+        curr_cells = pull_cells_sheet(sheet)
         if (curr_cells is None):
-            curr_cells = pull_cells_sheet_internal(sheet)
-            if (curr_cells is None):
-                continue
+            continue
         all_cells.extend(curr_cells)
 
     # Done.
