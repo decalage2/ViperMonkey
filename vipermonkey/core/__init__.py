@@ -85,6 +85,7 @@ __version__ = '0.04'
 
 import sys
 import logging
+import string
 
 # TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
@@ -155,7 +156,12 @@ def pull_urls_excel_sheets(workbook):
     for cell in all_cells:
 
         # Skip empty cells.
-        value = str(cell["value"]).strip()
+        value = None
+        try:
+            value = str(cell["value"]).strip()
+        except UnicodeEncodeError:
+            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+
         if (len(value) == 0):
             continue
         
