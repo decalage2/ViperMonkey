@@ -4450,6 +4450,12 @@ class Range(VbaLibraryFunc):
                 continue
 
         # We did not get the cell.
+        row = "??"
+        col = "??"
+        try:
+            row, col = self._get_row_and_column(params[0])
+        except:
+            pass
         log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "]")
         context.increase_general_errors()
         return "NULL"
