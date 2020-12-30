@@ -1740,9 +1740,21 @@ def _process_file (filename,
             safe_print('')
             return ([], [], [], [])
     except Exception as e:
+
+        # Print error info.
         if (("SystemExit" not in str(e)) and (". Aborting analysis." not in str(e))):
             traceback.print_exc()
         log.error(str(e))
+
+        # If this is an out of memory error terminate the process with an
+        # error code indicating that there are memory problems. This is so
+        # that higer level systems using ViperMonkey can see that there is a
+        # memory issue and handle it accordingly.
+        if isinstance(e, MemoryError):
+            log.error("Exiting ViperMonkey with error code 137 (out of memory)")
+            sys.exit(137)
+
+        # Done. Analysis failed.
         return None
 
 def process_file_scanexpr (container, filename, data):
