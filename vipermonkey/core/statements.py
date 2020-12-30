@@ -1172,8 +1172,6 @@ class Let_Statement(VBA_Object):
             elif (((context.get_type(self.name) == "Integer") or
                    (context.get_type(self.name) == "Long")) and
                   (isinstance(value, str))):
-                print "SET INT"
-                print self.name
                 try:
                     if (value == "NULL"):
                         value = 0

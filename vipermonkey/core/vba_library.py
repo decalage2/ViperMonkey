@@ -1298,7 +1298,10 @@ class Eval(VbaLibraryFunc):
         if (isinstance(r, VBA_Object)):
             r = r.eval(context)
         return r
-            
+
+    def return_type(self):
+        return "UNKNOWN"
+    
 class Exists(VbaLibraryFunc):
     """
     Document or Scripting.Dictionary Exists() method.
