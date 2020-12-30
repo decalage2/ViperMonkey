@@ -4759,6 +4759,7 @@ class VbaConstants(object):
         self.globals["msoTextBox".lower()] = "**MATCH ANY**"
         self.globals["Application.MouseAvailable".lower()] = True
         self.globals["Application.PathSeparator".lower()] = "\\"
+        self.globals["Application.Name".lower()] = "Microsoft Word"
         self.globals["RecentFiles.Count".lower()] = 4 + random.randint(1, 10)
         self.globals["ActiveDocument.Revisions.Count".lower()] = 1 + random.randint(1, 3)
         self.globals["ThisDocument.Revisions.Count".lower()] = 1 + random.randint(1, 3)
