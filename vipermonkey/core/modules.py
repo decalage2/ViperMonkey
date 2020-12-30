@@ -268,6 +268,8 @@ module_declaration = ZeroOrMore(declaration_statements_line)
 # TODO: add rem statememt and others?
 empty_line = EOL.suppress()
 
+pointless_empty_tuple = Suppress('(') + Suppress(')')
+
 class LooseLines(VBA_Object):
     """
     A list of Visual Basic statements that don't appear in a Sub or Function.
@@ -324,7 +326,7 @@ class LooseLines(VBA_Object):
         # loop with an error.
         context.handle_error(params)
             
-loose_lines <<= OneOrMore(simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()) ^ orphaned_marker)('block')
+loose_lines <<= OneOrMore(pointless_empty_tuple ^ simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()) ^ orphaned_marker)('block')
 loose_lines.setParseAction(LooseLines)
 
 # TODO: add optional empty lines after each sub/function?

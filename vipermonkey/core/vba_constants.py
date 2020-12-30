@@ -850,6 +850,7 @@ class VbaConstants(object):
 
         # System info.
         self.globals["System.OperatingSystem".lower()] = "Windows NT"
+        self.globals["Application.OperatingSystem".lower()] = "Windows NT"
         self.globals[".DNSHostName".lower()] = "acomputer.acompany.com"
         self.globals[".Domain".lower()] = "acompany.com"
         self.globals["wscript.network.UserName".lower()] = "humungulous"

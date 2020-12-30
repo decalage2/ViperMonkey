@@ -4532,6 +4532,14 @@ class RandBetween(VbaLibraryFunc):
 
     def num_args(self):
         return 2
+
+class DatePart(VbaLibraryFunc):
+    """
+    DatePart() function. Currently (very) stubbed to just return 3.
+    """
+
+    def eval(self, context, params=None):
+        return 3
     
 class Date(VbaLibraryFunc):
     """
@@ -5056,7 +5064,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem, Rows):
+               RtlMoveMemory, OnTime, AddItem, Rows, DatePart):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

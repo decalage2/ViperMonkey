@@ -376,12 +376,12 @@ def fix_unbalanced_quotes(vba_code):
             continue
 
         # Unmatched quotes?
-        tmp_pos = -1
         if ("'" in line):
-            tmp_pos += 1
             quote_index = None
             in_str = False
+            tmp_pos = -1
             for c in line:
+                tmp_pos += 1
                 if (c == '"'):
                     in_str = not in_str
                     continue
