@@ -50,6 +50,7 @@ from vba_object import *
 
 from logger import log
 from vba_object import int_convert
+from vba_object import coerce_to_num
 from vba_object import to_python
 
 def debug_repr(op, args):
@@ -632,10 +633,10 @@ class MultiOp(VBA_Object):
                 context.in_bitwise_expression = False
             return ret
         except (TypeError, ValueError):
-            # Try converting strings to ints.
+            # Try converting strings to numbers.
             # TODO: Need to handle floats in strings.
             try:
-                args = map(int_convert, evaluated_args)
+                args = map(coerce_to_num, evaluated_args)
                 ret = args[0]
                 for operator, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[operator](ret, arg)
