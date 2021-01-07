@@ -125,7 +125,12 @@ def safe_equals(x,y):
     # Easy case first.
     if (type(x) == type(y)):
         return x == y
-    
+
+    # Booleans and ints can be directly compared.
+    if ((isinstance(x, bool) and (isinstance(y, int))) or
+        (isinstance(y, bool) and (isinstance(x, int)))):
+        return x == y
+        
     # Punt. Just convert things to strings and hope for the best.
     return str(x) == str(y)
 
