@@ -474,8 +474,12 @@ class _Chr(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
 
-        # Proper float conversion for Chr().
+        # Chr() called basically on a Cell object?
         param = params[0]
+        if (isinstance(param, dict) and ("value" in param)):
+            param = param["value"]
+        
+        # Proper float conversion for Chr().
         if (isinstance(param, float)):
             param = int(round(param))
         

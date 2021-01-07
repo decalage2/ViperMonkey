@@ -41,6 +41,9 @@ __version__ = '0.03'
 import logging
 from logger import log
 
+def is_cell_dict(x):
+    return (isinstance(x, dict) and ("value" in x))
+
 def _get_alphanum_cell_index(row, col):
     """
     Convert a (row, col) cell index to a AB123 style index.

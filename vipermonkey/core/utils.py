@@ -50,6 +50,7 @@ except ImportError:
     from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
+import excel
 
 class Infix:
     """
@@ -73,6 +74,12 @@ def safe_plus(x,y):
     Handle "x + y" where x and y could be some combination of ints and strs.
     """
 
+    # Handle Excel Cell objects. Grrr.
+    if excel.is_cell_dict(x):
+        x = x["value"]
+    if excel.is_cell_dict(y):
+        y = y["value"]
+    
     # Handle NULLs.
     if (x == "NULL"):
         x = 0
