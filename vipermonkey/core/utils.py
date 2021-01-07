@@ -111,6 +111,28 @@ def safe_plus(x,y):
 # Safe plus infix operator. Ugh.
 plus=Infix(lambda x,y: safe_plus(x, y))
 
+def safe_equals(x,y):
+    """
+    Handle "x = y" where x and y could be some combination of ints and strs.
+    """
+
+    # Handle NULLs.
+    if (x == "NULL"):
+        x = 0
+    if (y == "NULL"):
+        y = 0
+    
+    # Easy case first.
+    if (type(x) == type(y)):
+        return x == y
+    
+    # Punt. Just convert things to strings and hope for the best.
+    return str(x) == str(y)
+
+# Safe equals and not equals infix operators. Ugh. Loosely typed languages are terrible.
+eq=Infix(lambda x,y: safe_equals(x, y))
+neq=Infix(lambda x,y: (not safe_equals(x, y)))
+
 def safe_print(text):
     """
     Sometimes printing large strings when running in a Docker container triggers exceptions.

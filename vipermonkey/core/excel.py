@@ -41,6 +41,24 @@ __version__ = '0.03'
 import logging
 from logger import log
 
+def _get_alphanum_cell_index(row, col):
+    """
+    Convert a (row, col) cell index to a AB123 style index.
+    """
+
+    # Convert the column number to the corresponding alphabetic index.
+    # Taken from https://stackoverflow.com/questions/181596/how-to-convert-a-column-number-e-g-127-into-an-excel-column-e-g-aa
+    dividend = col
+    column_name = ""
+    modulo = 0
+    while (dividend > 0):
+        modulo = (dividend - 1) % 26
+        column_name = chr(65 + modulo) + column_name
+        dividend = int((dividend - modulo) / 26)
+
+    # Return the alphanumeric cell index.
+    return column_name + str(row)
+        
 def get_largest_sheet(workbook):
     """
     Get the sheet in a workbook with the most cells.
@@ -129,7 +147,8 @@ def _pull_cells_sheet_xlrd(sheet):
                 curr_cell_xlrd = sheet.cell(curr_row, curr_col)
                 curr_cell = { "value" : curr_cell_xlrd.value,
                               "row" : curr_row + 1,
-                              "col" : curr_col + 1 }
+                              "col" : curr_col + 1,
+                              "index" : _get_alphanum_cell_index(curr_row, curr_col) }
                 curr_cells.append(curr_cell)
             except:
                 pass
@@ -168,7 +187,8 @@ def _pull_cells_sheet_internal(sheet):
             try:
                 curr_cell = { "value" : sheet.cell(curr_row, curr_col),
                               "row" : curr_row + 1,
-                              "col" : curr_col + 1 }
+                              "col" : curr_col + 1,
+                              "index" : _get_alphanum_cell_index(curr_row, curr_col) }
                 curr_cells.append(curr_cell)
             except KeyError:
                 pass

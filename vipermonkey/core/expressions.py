@@ -79,16 +79,16 @@ def _vba_to_python_op(op, is_boolean):
         "AndAlso" : "and",
         "Or" : "or",
         "OrElse" : "or",
-        "Eqv" : "==",
-        "=" : "==",
+        "Eqv" : "|eq|",
+        "=" : "|eq|",
         ">" : ">",
         "<" : "<",
         ">=" : ">=",
         "=>" : ">=",
         "<=" : "<=",
         "=<" : "<=",
-        "<>" : "!=",
-        "is" : "=="
+        "<>" : "|neq|",
+        "is" : "|eq|"
     }
     if (not is_boolean):
         op_map["Not"] = "~"

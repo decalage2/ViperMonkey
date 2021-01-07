@@ -476,6 +476,8 @@ def _boilerplate_to_python(indent):
     boilerplate = indent_str + "import core.vba_context\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
     boilerplate += indent_str + "from core.utils import plus\n"
+    boilerplate += indent_str + "from core.utils import eq\n"
+    boilerplate += indent_str + "from core.utils import neq\n"
     boilerplate += indent_str + "import core.utils\n"
     boilerplate += indent_str + "from core.vba_object import update_array\n"
     boilerplate += indent_str + "from core.vba_object import coerce_to_num\n"

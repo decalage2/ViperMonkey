@@ -90,11 +90,18 @@ def member_access(var, field):
 
     # Reading a field from a dict?
     field = str(field)
+    field_l = field.lower()
     if (isinstance(var, dict)):
-        if (field.lower() in var):
-            return var[field.lower()]
-        elif ((field.lower() == "text") and ("value" in var)):
+        if (field_l in var):
+
+            # Regular member access.
+            return var[field_l]
+
+        # Accessing text field?
+        elif ((field_l == "text") and ("value" in var)):
             return var["value"]
+
+        # Can't find field.
         else:
             return "NULL"
 
@@ -4415,7 +4422,21 @@ class Range(VbaLibraryFunc):
             context.increase_general_errors()
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
-            
+
+        # Was Range() called on a single, already read cell?
+        if (isinstance(params[0], dict)):
+
+            # This is an indirect cell read. The cell address should be in the
+            # value of the current cell.
+            the_cell = params[0]
+            if ("value" in the_cell):
+                next_index = the_cell["value"]
+                return self.eval(context, [next_index])
+
+            # Unexpected. This is not a proper read cell dict.
+            log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
+            return "NULL"
+
         # Try each sheet until we read a cell.
         r = None
         col = None
