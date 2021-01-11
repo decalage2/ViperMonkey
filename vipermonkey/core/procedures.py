@@ -567,7 +567,7 @@ class Function(VBA_Object):
 
             # Coerce parameters to String if needed.
             if (defined_param.my_type == "String"):
-                param_value = str(param_value)
+                param_value = utils.safe_str_convert(param_value)
                     
             # Add the parameter value to the local function context.
             if (log.getEffectiveLevel() == logging.DEBUG):

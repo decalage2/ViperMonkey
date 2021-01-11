@@ -948,10 +948,7 @@ class Left(VbaLibraryFunc):
         if s == None: return None
 
         # Arg should be a string.
-        try:
-            s = str(s)
-        except UnicodeDecodeError:
-            s = filter(isprint, s)
+        s = utils.safe_str_convert(s)
             
         # Don't modify the "**MATCH ANY**" special value.
         if (s.strip() == "**MATCH ANY**"):
@@ -1977,11 +1974,7 @@ class Split(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
         # TODO: Actually implement this properly.
-        string = None
-        try:
-            string = str(params[0])
-        except UnicodeEncodeError:
-            string = filter(isprint, params[0])
+        string = utils.safe_str_convert(params[0])
         sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
@@ -2354,11 +2347,7 @@ class Join(VbaLibraryFunc):
         r = ""
         if (isinstance(strings, list)):
             for s in strings:
-                tmp_s = None
-                try:
-                    tmp_s = str(s)
-                except UnicodeEncodeError:
-                    tmp_s = filter(isprint, s)
+                tmp_s = utils.safe_str_convert(s)
                 r += tmp_s + sep
         else:
             r = str(strings)
@@ -3351,11 +3340,7 @@ class Environ(VbaLibraryFunc):
         env_vars["windir".lower()] = 'C:\\WINDOWS'
 
         # Get the environment variable name.
-        var_name = None
-        try:
-            var_name = str(params[0]).strip('%')
-        except UnicodeEncodeError:
-            var_name = filter(isprint, params[0]).strip('%')
+        var_name = utils.safe_str_convert(params[0]).strip('%')
 
         # Is this an environment variable we know?
         if context.expand_env_vars and var_name.lower() in env_vars:
@@ -3623,11 +3608,7 @@ class WriteLine(VbaLibraryFunc):
             data = params[2]
         
         # Save writes that look like they are writing URLs.
-        data_str = None
-        try:
-            data_str = str(data)
-        except UnicodeEncodeError:
-            data_str = filter(isprint, data)
+        data_str = utils.safe_str_convert(data)
         if (("http:" in data_str) or ("https:" in data_str)):
             context.report_action('Write URL', data_str, 'File Write')
         
@@ -3977,11 +3958,7 @@ class CreateObject(VbaLibraryFunc):
             return ""
         
         # Track contents of data written to 'ADODB.Stream'.
-        obj_type = None
-        try:
-            obj_type = str(params[0]).lower()
-        except UnicodeEncodeError:
-            obj_type = filter(isprint, params[0])
+        obj_type = utils.safe_str_convert(params[0]).lower()
         if (obj_type == 'ADODB.Stream'.lower()):
             context.open_file('ADODB.Stream')
 
@@ -4710,12 +4687,8 @@ class Print(VbaLibraryFunc):
             return
 
         # Save writes that look like they are writing URLs.
-        data_str = None
-        try:
-            data_str = str(params[0])
-        except UnicodeEncodeError:
-            data_str = filter(isprint, params[0])
-        if (("http:" in data_str) or ("https:" in data_str)):
+        data_str = utils.safe_str_convert(params[0])
+        if (("http:" in data_str.lower()) or ("https:" in data_str.lower())):
             context.report_action('Write URL', data_str, 'Debug Print')
 
         if (params[0] is not None):

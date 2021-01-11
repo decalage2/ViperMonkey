@@ -35,6 +35,7 @@ https://github.com/decalage2/ViperMonkey
 
 import re
 from curses_ascii import isascii
+from curses_ascii import isprint
 import base64
 
 import logging
@@ -51,6 +52,17 @@ except ImportError:
 from logging import LogRecord
 from logging import FileHandler
 import excel
+
+def safe_str_convert(s):
+    """
+    Convert a string to ASCII without throwing a unicode decode error.
+    """
+    try:
+        return str(s)
+    except UnicodeDecodeError:
+        return filter(isprint, s)
+    except UnicodeEncodeError:
+        return filter(isprint, s)
 
 class Infix:
     """
