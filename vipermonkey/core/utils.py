@@ -262,7 +262,7 @@ class vb_RegExp(object):
     def Replace(self, string, rep):
         pat = self._get_python_pattern()
         if (pat is None):
-            return s
+            return string
         rep = re.sub(r"\$(\d)", r"\\\1", rep)
         r = string
         try:
