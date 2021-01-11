@@ -1355,7 +1355,8 @@ class Execute(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if ((len(params) == 0) or
+        if ((params is None) or
+            (len(params) == 0) or
             (isinstance(params[0], VBA_Object)) or
             (isinstance(params[0], VbaLibraryFunc))):
             return "NULL"
