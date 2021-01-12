@@ -1286,6 +1286,10 @@ def _process_file (filename,
                 vm.doc_vars[tmp_name] = var_val
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+                tmp_name = "me.storyranges('" + str(pos) + "')"
+                vm.doc_vars[tmp_name] = var_val
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Added potential VBA StoryRange text %r = %r to doc_vars." % (tmp_name, var_val))
                 # activedocument.shapes('1').alternativetext
                 tmp_name = "ActiveDocument.shapes('" + str(pos) + "').AlternativeText"
                 vm.doc_vars[tmp_name] = var_val
@@ -1350,6 +1354,9 @@ def _process_file (filename,
                     if ((tmp_var_name == 'ActiveDocument.Sections') or
                         (tmp_var_name == 'Sections')):
                         tmp_var_val = [var_val, var_val]
+                    if ((tmp_var_name.lower() in vm.doc_vars) and
+                        (len(str(vm.doc_vars[tmp_var_name.lower()])) > len(str(tmp_var_val)))):
+                        continue
                     vm.doc_vars[tmp_var_name.lower()] = tmp_var_val
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Added potential VBA OLE form textbox text (1) %r = %r to doc_vars." % (tmp_var_name, tmp_var_val))

@@ -4635,6 +4635,43 @@ class VbaConstants(object):
         self.globals["wdTOFSimple".lower()] = 5
         #  Template formatting.
         self.globals["wdTOFTemplate".lower()] = 0
+
+        # WdStoryType enumeration (Word)
+
+        # Comments story.
+        self.globals["wdCommentsStory".lower()] = 4	
+        # Endnote continuation notice story.
+        self.globals["wdEndnoteContinuationNoticeStory".lower()] = 17	
+        # Endnote continuation separator story.
+        self.globals["wdEndnoteContinuationSeparatorStory".lower()] = 16	
+        # Endnote separator story.
+        self.globals["wdEndnoteSeparatorStory".lower()] = 15	
+        # Endnotes story.
+        self.globals["wdEndnotesStory".lower()] = 3	
+        # Even pages footer story.
+        self.globals["wdEvenPagesFooterStory".lower()] = 8	
+        # Even pages header story.
+        self.globals["wdEvenPagesHeaderStory".lower()] = 6	
+        # First page footer story.
+        self.globals["wdFirstPageFooterStory".lower()] = 11	
+        # First page header story.
+        self.globals["wdFirstPageHeaderStory".lower()] = 10	
+        # Footnote continuation notice story.
+        self.globals["wdFootnoteContinuationNoticeStory".lower()] = 14	
+        # Footnote continuation separator story.
+        self.globals["wdFootnoteContinuationSeparatorStory".lower()] = 13	
+        # Footnote separator story.
+        self.globals["wdFootnoteSeparatorStory".lower()] = 12	
+        # Footnotes story.
+        self.globals["wdFootnotesStory".lower()] = 2	
+        # Main text story.
+        self.globals["wdMainTextStory".lower()] = 1	
+        # Primary footer story.
+        self.globals["wdPrimaryFooterStory".lower()] = 9	
+        # Primary header story.
+        self.globals["wdPrimaryHeaderStory".lower()] = 7	
+        # Text frame story.
+        self.globals["wdTextFrameStory".lower()] = 5	
         
         # WdTwoLinesInOneType enumeration (Word)
         #   

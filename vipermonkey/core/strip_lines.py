@@ -913,6 +913,127 @@ def hide_string_content(s):
 
     return r
 
+def is_in_string(line, s):
+    """
+    Check to see if s appears in a quoted string in line.
+    """
+
+    # Simple case, there is not a quoted string in line.
+    if ('"' not in line):
+        return False
+
+    # There is a quoted string. Pull out all the quoted strings from the line.
+    strs = []
+    in_str = False
+    curr_str = None
+    for c in line:
+
+        # Entering string?
+        if ((c == '"') and (not in_str)):
+            curr_str = ""
+            in_str = True
+            continue
+
+        # Leaving string?
+        if ((c == '"') and in_str):
+            strs.append(curr_str)
+            in_str = False
+            continue
+
+        # Update current string if in string.
+        if in_str:
+            curr_str += c
+
+    # We have all the quoted string values. See if s appears in any
+    # of them.
+    for curr_str in strs:
+        if (s in curr_str):
+            return True
+
+    # s is not in any quoted string.
+    return False
+
+def fix_if_statements(vba_code):
+    """
+    After converting colons to line feeds statements like 
+    'a = 2: If a Then c = 1: b = 2 Else d = 3' can be messed up.
+    Fix them here.
+    """
+
+    # Example:
+    """
+    a = 2
+    If a Then c = 1
+    b = 2 Else d = 3
+    """
+
+    # Do we have a chance of needing to do this?
+    if ((" Then " not in vba_code) and (" Else " not in vba_code)):
+        return vba_code
+
+    # Look at each line for bad lines.
+    r = ""
+    pos = -1
+    for line in vba_code.split("\n"):
+
+        # Is this a line that does not need fixing?
+        pos += 1
+        if ((" Then " not in line) and (" Else " not in line)):
+            r += line + "\n"
+            continue
+
+        # Bad Then line?
+        if (line.strip().startswith("If ") and
+            ("Then " in line) and
+            (not line.strip().endswith("Then"))):
+
+            # Don't modify the line if Then is in a quoted string.
+            if (not is_in_string(line, "Then")):
+                line = line.replace("Then", "Then\n")
+
+            r += line + "\n"
+            continue
+
+        # Bad Else line?
+        if (("Else " in line) and (not line.strip().endswith("Else"))):
+
+            # Don't modify the line if Else is in a quoted string.
+            if (not is_in_string(line, "Else")):
+                line = line.replace("Else", "\nElse\n")
+
+            # Might be missing an End If.
+            if (not line.strip().endswith("End If")):
+                line += "\nEnd If"
+            else:
+                line = line.replace("End If", "\nEnd If")
+                
+            r += line + "\n"
+            continue
+
+    # Done.
+    return r
+
+def hide_colons_in_ifs(vba_code):
+
+    # Find single line If statements and hide their colons.
+    if ("If " not in vba_code):
+        return vba_code
+    r = ""
+    pos = 0
+    vba_code += "\n"
+    while ("If " in vba_code[pos:]):
+
+        # Add in unchanged code.
+        if_index = vba_code[pos:].index("If ") + pos
+        r += vba_code[pos:if_index]
+
+        # Hide colons in If line.
+        end_pos = vba_code[if_index:].index("\n") + if_index
+        r += vba_code[if_index:end_pos+1].replace(":", "__COLON__")
+        pos = end_pos
+    r += vba_code[pos:]
+    return r
+
 def convert_colons_to_linefeeds(vba_code):
     """
     Convert things like 'a=1:b=2' to 'a=1\n:b=2'
@@ -922,6 +1043,10 @@ def convert_colons_to_linefeeds(vba_code):
     # Skip if not needed.
     if ((":" not in vba_code) and ("&" not in vba_code)):
         return vba_code
+
+    # Ugh, PEG parsers are annoying. Hide colons used as statement seperators in If statements
+    # since we can actually parse those.
+    vba_code = hide_colons_in_ifs(vba_code)
     
     # Track the characters that start and end blocks of text we won't change.
     marker_chars = [('"', '"', None), ('[', ']', None), ("'", '\n', None), ('#', '#', None), ("If ", "Then", "End If")]
@@ -1005,6 +1130,13 @@ def convert_colons_to_linefeeds(vba_code):
     # whole string.
     if (r == ""):
         r = vba_code
+
+    # Fix If statements if we modified the code.
+    #if (r != vba_code):
+    #    r = fix_if_statements(r)
+
+    # Unhide If statement colons.
+    r = r.replace("__COLON__", ":")
         
     # Done
     #print "******************"

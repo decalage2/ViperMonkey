@@ -1371,11 +1371,14 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             object_names.add("Page" + str(i))
 
     # How about StoryRanges items?
-    if ("StoryRanges.Item(" in vba_code):
+    if (".StoryRanges" in vba_code):
 
         # Add some StoryRanges objects to look for.
         for i in range(1, 10):
+            object_names.add("StoryRanges.Items('" + str(i) + "')")
+            object_names.add("StoryRanges('" + str(i) + "')")
             object_names.add("StoryRanges.Items(" + str(i) + ")")
+            object_names.add("StoryRanges(" + str(i) + ")")
             
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
