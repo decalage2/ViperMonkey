@@ -109,6 +109,7 @@ from datetime import timedelta
 import subprocess
 import zipfile
 import io
+import tempfile
 
 import prettytable
 from oletools.thirdparty.xglob import xglob
@@ -1102,6 +1103,23 @@ def pull_embedded_pe_files(data, out_dir):
     Directly pull out any PE files embedded in the given data.
     """
 
+    # Is this a Office 2007 (zip) file?
+    if filetype.is_office2007_file(data, is_data=True):
+
+        # Write the zip data to a temp file.
+        f, fname = tempfile.mkstemp()
+        os.write(f, data)
+
+        # Pull embedded PE files from each file in the zip.
+        with zipfile.ZipFile(fname, "r") as f:
+            for name in f.namelist():
+                curr_data = f.read(name)
+                pull_embedded_pe_files(curr_data, out_dir)
+
+        # Clean up and leave.
+        os.remove(fname)
+        return
+    
     # Is a PE file in the data at all?
     pe_pat = r"MZ.{70,80}This program cannot be run in DOS mode\."
     if (re.search(pe_pat, data) is None):
@@ -1122,13 +1140,19 @@ def pull_embedded_pe_files(data, out_dir):
     # Break out each PE file. Note that we probably will get extra data,
     # but due to the PE file format the file will be a valid PE (with an overlay).
     pos = 0
+    out_index = 0
     while (pos < len(pe_starts) - 1):
         curr_data = data[pe_starts[pos]:pe_starts[pos+1]]
-        curr_name = out_dir + "/embedded_pe" + str(pos) + ".bin"
+        curr_name = out_dir + "/embedded_pe" + str(out_index) + ".bin"
+        # Make sure name is unique.
+        while os.path.isfile(curr_name):
+            out_index += 1
+            curr_name = out_dir + "/embedded_pe" + str(out_index) + ".bin"
         f = open(curr_name, "wb")
         f.write(curr_data)
         f.close()
         pos += 1
+        out_index += 1
     
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
