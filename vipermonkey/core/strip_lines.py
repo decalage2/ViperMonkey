@@ -1679,6 +1679,7 @@ def strip_comments(vba_code):
     """
 
     # Sanity check.
+    vba_code = vba_code.replace("\n;", "\n'")
     if ("'" not in vba_code):
         return vba_code
 
