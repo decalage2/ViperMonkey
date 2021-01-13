@@ -388,6 +388,8 @@ class TaggedBlock(VBA_Object):
         do_const_assignments(self.block, context)
 
         for s in self.block:
+            if (not hasattr(s, "eval")):
+                continue
             s.eval(context, params=params)
 
             # Was there an error that will make us jump to an error handler?
