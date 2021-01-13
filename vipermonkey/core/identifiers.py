@@ -70,7 +70,8 @@ reserved_keywords = CaselessKeyword("ChrB") | \
 #                    CaselessKeyword("End") | \
 
 strict_reserved_keywords = reserved_keywords | \
-                           Regex(re.compile('Open', re.IGNORECASE))
+                           Regex(re.compile('Open', re.IGNORECASE)) | \
+                           Regex(re.compile('While', re.IGNORECASE))
 
 # --- IDENTIFIER -------------------------------------------------------------
 

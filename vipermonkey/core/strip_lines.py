@@ -953,69 +953,10 @@ def is_in_string(line, s):
     # s is not in any quoted string.
     return False
 
-def fix_if_statements(vba_code):
-    """
-    After converting colons to line feeds statements like 
-    'a = 2: If a Then c = 1: b = 2 Else d = 3' can be messed up.
-    Fix them here.
-    """
-
-    # Example:
-    """
-    a = 2
-    If a Then c = 1
-    b = 2 Else d = 3
-    """
-
-    # Do we have a chance of needing to do this?
-    if ((" Then " not in vba_code) and (" Else " not in vba_code)):
-        return vba_code
-
-    # Look at each line for bad lines.
-    r = ""
-    pos = -1
-    for line in vba_code.split("\n"):
-
-        # Is this a line that does not need fixing?
-        pos += 1
-        if ((" Then " not in line) and (" Else " not in line)):
-            r += line + "\n"
-            continue
-
-        # Bad Then line?
-        if (line.strip().startswith("If ") and
-            ("Then " in line) and
-            (not line.strip().endswith("Then"))):
-
-            # Don't modify the line if Then is in a quoted string.
-            if (not is_in_string(line, "Then")):
-                line = line.replace("Then", "Then\n")
-
-            r += line + "\n"
-            continue
-
-        # Bad Else line?
-        if (("Else " in line) and (not line.strip().endswith("Else"))):
-
-            # Don't modify the line if Else is in a quoted string.
-            if (not is_in_string(line, "Else")):
-                line = line.replace("Else", "\nElse\n")
-
-            # Might be missing an End If.
-            if (not line.strip().endswith("End If")):
-                line += "\nEnd If"
-            else:
-                line = line.replace("End If", "\nEnd If")
-                
-            r += line + "\n"
-            continue
-
-    # Done.
-    return r
-
 def hide_colons_in_ifs(vba_code):
 
-    # Find single line If statements and hide their colons.
+    # Find single line If statements and hide their colons. We can parse
+    # these so leave them alone.
     if ("If " not in vba_code):
         return vba_code
     r = ""
@@ -1092,7 +1033,9 @@ def convert_colons_to_linefeeds(vba_code):
             change_chunk = re.sub(r"([\w_])&\"", r"\1 & " + "\"", change_chunk)
             # '"gg"&"ff"'
             change_chunk = re.sub(r"\"&\"", r"\" & " + "\"", change_chunk)
-
+            # 'a&(...'
+            change_chunk = re.sub(r"([\w_])&\(", r"\1 & " + "(", change_chunk)
+            
             # Find the chunk of text to leave alone.
             marker_pos2a = len(vba_code)
             marker_pos2b = len(vba_code)
@@ -1110,11 +1053,6 @@ def convert_colons_to_linefeeds(vba_code):
             else:
                 marker_pos2 = marker_pos2a
                 
-            # Special handling for blocks where the start marker is the same as
-            # the end marker.
-            #if (use_start_marker == use_end_marker):
-            #    marker_pos2 -= 1
-
             # Save the modified chunk and the unmodified chunk.
             leave_chunk = vba_code[marker_pos1+1:marker_pos2]
             r += change_chunk + leave_chunk
@@ -1123,17 +1061,22 @@ def convert_colons_to_linefeeds(vba_code):
         # If the whole remaining text string is modifiable just do the ':' -> '\n' on the
         # whole remaining string.
         if (not found_marker):
-            r += vba_code[pos:].replace(":", "\n")
+            change_chunk = vba_code[pos:]
+            change_chunk = change_chunk.replace(":", "\n")
+            # 'a&"ff"'
+            change_chunk = re.sub(r"([\w_])&\"", r"\1 & " + "\"", change_chunk)
+            # '"gg"&"ff"'
+            change_chunk = re.sub(r"\"&\"", r"\" & " + "\"", change_chunk)
+            # 'a&(...'
+            change_chunk = re.sub(r"([\w_])&\(", r"\1 & " + "(", change_chunk)
+
+            r += change_chunk
             pos = len(vba_code)
 
     # If the whole text string is modifiable just do the ':' -> '\n' on the
     # whole string.
     if (r == ""):
         r = vba_code
-
-    # Fix If statements if we modified the code.
-    #if (r != vba_code):
-    #    r = fix_if_statements(r)
 
     # Unhide If statement colons.
     r = r.replace("__COLON__", ":")
@@ -1157,6 +1100,65 @@ def fix_varptr_calls(vba_code):
     vba_code = re.sub(r"(VarPtr\(\w+)\(0\)\)", r'\1)', vba_code)
     return vba_code
 
+def break_up_whiles(vba_code):
+    """
+    Break up while statements like 'While(a>b)c = c+1'.
+    """
+
+    # Can we skip this?
+    vba_code_l = vba_code.lower()
+    if ("while" not in vba_code_l):
+        return vba_code
+
+    # Look for single line while statements.
+    pos = 0
+    changes = {}
+    vba_code += "\n"
+    while ("while" in vba_code_l[pos:]):
+
+        # Pull out the current while line.
+        start = vba_code_l[pos:].index("while")
+        end = vba_code_l[start + pos:].index("\n")
+        curr_while = vba_code[start + pos:end + start + pos]
+
+        # We are only doing this for whiles where the predicate is in parens.
+        if (not (curr_while.replace(" ", "").strip().lower()).startswith("while(")):
+            pos = end + start + pos
+            continue
+
+        # Figure out if there is a stament after the while predicate on the same
+        # line.
+
+        # First find the position of the closing paren.
+        parens = 0
+        pos = -1
+        for c in curr_while:
+            pos += 1
+            if (c == "("):
+                parens += 1
+            if (c == ")"):
+                parens -= 1
+                if (parens == 0):
+                    break
+
+        # Is there text after the closing paren?        
+        if (len(curr_while[pos+1:].strip()) > 0):
+
+            # Add a newline after the closing paren.
+            new_while = curr_while[:pos+1] + "\n" + curr_while[pos+1:]
+            changes[curr_while] = new_while
+
+        # Move to next while.
+        pos = end + start + pos
+
+    # Replace the bad whiles.
+    r = vba_code
+    for curr_while in changes:
+        r = r.replace(curr_while, changes[curr_while])
+
+    # Done.
+    return r
+    
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -1410,6 +1412,12 @@ def fix_difficult_code(vba_code):
         print "HERE: 17"
         print vba_code
     vba_code = convert_colons_to_linefeeds(vba_code)
+
+    # Break up while statements like 'While(a>b)c = c+1'.
+    if debug_strip:
+        print "HERE: 17.1"
+        print vba_code
+    vba_code = break_up_whiles(vba_code)
 
     # We have just broken up single line statements seperated by ":" into
     # multiple lines. Now fix some elseif lines if needed.
