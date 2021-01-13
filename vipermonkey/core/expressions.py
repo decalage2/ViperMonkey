@@ -344,7 +344,7 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Return Python for reading from the list.
-        r = str(the_list) + "[" + to_python(func.params[0], context) + "]"
+        r = str(the_list) + "[coerce_to_int(" + to_python(func.params[0], context) + ")]"
         return r
         
     def _get_with_prefix_value(self, context):
@@ -2766,7 +2766,7 @@ class Function_Call(VBA_Object):
                 # Do the array access.
                 acc_str = ""
                 for p in py_params:
-                    acc_str += "[" + p + "]"
+                    acc_str += "[coerce_to_int(" + p + ")]"
                 r = str(func_name) + acc_str
                 return r
         
