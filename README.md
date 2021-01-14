@@ -134,7 +134,7 @@ vmonkey --iocs <file>
 Note that one of the intermediate IOCs reported by ViperMonkey is
 injected shell code bytes. If the sample under analysis performs
 process injection directly in VB, ViperMonkey will report the injected
-byte values as an intermediate IOC with the `--ioc` flag. These byte
+byte values as an intermediate IOC with the `--iocs` flag. These byte
 values can then be written into a raw shell code file which can be
 further analyzed with a shell code emulator.
 
