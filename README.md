@@ -38,9 +38,9 @@ container. No other packages or configuration will need to be performed.
 
 For information on using dockermonkey.sh run `docker/dockermonkey.sh -h`.
 
-**Installation using PyPy**
+**Installation using PyPy (recommended)**
 
-For performance reasons, it is highly recommended to use PyPy, but it is
+For performance reasons, it is highly recommended to use PyPy (5x faster), but it is
 also possible to run Vipermonkey with the normal Python interpreter
 (CPython).
 
