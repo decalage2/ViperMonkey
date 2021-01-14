@@ -5,8 +5,19 @@ ViperMonkey is a VBA Emulation engine written in Python, designed to analyze
 and deobfuscate malicious VBA Macros contained in Microsoft Office files
 (Word, Excel, PowerPoint, Publisher, etc).
 
-See my article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
+See the article "[Using VBA Emulation to Analyze Obfuscated Macros](http://decalage.info/vba_emulation)",
 for real-life examples of malware deobfucation with ViperMonkey.
+
+ViperMonkey was also demonstrated at the Black Hat Europe 2019 conference: 
+see the [slides](https://decalage.info/en/bheu2019) 
+and [video](https://youtu.be/l5sMPGjtKn0?list=PLH15HpR5qRsXiPOP3gxN6ultoj0rAR6Yn&t=1118) (at 18:38).
+
+ViperMonkey was created by [Philippe Lagadec](https://github.com/decalage2) in 2015-2016, and the project
+is maintained in the repository https://github.com/decalage2/ViperMonkey. 
+Since November 2017, most of the development is done by [Kirk Sayre](https://github.com/kirk-sayre-work) 
+and other contributors in the repository https://github.com/kirk-sayre-work/ViperMonkey. 
+The main repository is synchronised regularly, but cutting edge improvements are usually
+available first in Kirk's version.
 
 **Quick links:**
 [Report Issues/Suggestions/Questions](https://github.com/decalage2/ViperMonkey/issues) -
@@ -42,20 +53,24 @@ For information on using dockermonkey.sh run `docker/dockermonkey.sh -h`.
 
 For performance reasons, it is highly recommended to use PyPy (5x faster), but it is
 also possible to run Vipermonkey with the normal Python interpreter
-(CPython).
+(CPython) if you cannot use PyPy.
 
 1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
 2. Check if pip is installed for pypy: run `pypy -m pip`
 3. If pip is not installed yet, run `pypy -m ensurepip` on Windows, or `sudo -H pypy -m ensurepip` on Linux/Mac
-4. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
-5. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
-6. Under Ubuntu install pypy-dev (sudo apt-get install pypy-dev).
-7. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
-8. Check that Vipermonkey runs without error: `pypy vmonkey.py`
+4. Make sure pip is up-to-date, by running `pypy -m pip install -U pip`
+5. Download the archive from the repository: https://github.com/decalage2/ViperMonkey/archive/master.zip
+6. Extract it in the folder of your choice, and open a shell/cmd window in that folder.
+7. Under Ubuntu install pypy-dev (sudo apt-get install pypy-dev).
+8. Install dependencies by running `pypy -m pip install -U -r requirements.txt` on Windows, or `sudo -H pypy -m pip install -U -r requirements.txt` on Linux/Mac
+9. Check that Vipermonkey runs without error: `pypy vmonkey.py`
 
 **Installation using CPython**
 
 1. Make sure you have the latest Python 2.7 installed: https://www.python.org/downloads/
+2. If you have both Python 2 and 3 versions installed, use `pip2` instead of `pip` in the 
+   following commands, to install in Python 2 and not 3.
+4. Make sure pip is up-to-date, by running `pip install -U pip`
 2. Use pip to download and install vipermonkey with all its dependencies,
    by running the following command on Windows:
 ```
@@ -282,7 +297,7 @@ License
 This license applies to the ViperMonkey package, apart from the thirdparty folder which contains third-party files
 published with their own license.
 
-The ViperMonkey package is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
+The ViperMonkey package is copyright (c) 2015-2020 Philippe Lagadec (http://www.decalage.info)
 
 All rights reserved.
 
