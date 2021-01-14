@@ -30,7 +30,7 @@ Download and Install:
 **Easy Install**
 
 1. Install docker.
-2. Run 'docker/dockermonkey.sh MYFILE' to analyze file MYFILE.
+2. Run `docker/dockermonkey.sh MYFILE` to analyze file MYFILE.
 
 dockermonkey.sh wil automatically pull down a preconfigured docker container, update ViperMonkey to
 the latest version in the container, and then analyze MYFILE by running ViperMonkey in the
@@ -125,10 +125,10 @@ vmonkey.py --jit <file>
 Sometimes a malicious VBScript or Office file will generate IOCs
 during execution that are not used or that ViperMonkey does not see
 used. These intermediate IOCs are tracked by ViperMonkey during the
-emulation process and can be reported with the `--ioc` option.
+emulation process and can be reported with the `--iocs` option.
 
 ```text
-vmonkey --ioc <file>
+vmonkey --iocs <file>
 ```
 
 Note that one of the intermediate IOCs reported by ViperMonkey is
@@ -181,6 +181,10 @@ ViperMonkey emulates some file writing behavior. The SHA256 hash of
 dropped files is reported in the ViperMonkey analysis results and the
 actual dropped files are saved in the directory MALDOC_artifacts/,
 where MALDOC is the name of the analyzed maldoc file.
+
+ViperMonkey also searches Office 97 and Office 2007+ files for
+embedded PE files. These are automatically extracted and reported as
+dropped files in the MALDOC_artifacts/ directory.
 
 **Emulating Specific VBA Functions**
 
