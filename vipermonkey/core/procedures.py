@@ -404,6 +404,12 @@ sub_start_line.setParseAction(Sub)
 
 # TODO: Function should inherit from Sub, or use only one class for both
 
+def is_loop_statement(s):
+    return (isinstance(s, For_Statement) or
+            isinstance(s, For_Each_Statement) or
+            isinstance(s, While_Statement) or
+            isinstance(s, Do_Statement))
+
 class Function(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
@@ -627,11 +633,16 @@ class Function(VBA_Object):
                 break
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.have_error()):
             if (context.must_handle_error()):
                 break
             context.clear_error()
 
+            # If the just run statement was a loop, the GOTO was run in
+            # the loop and we have finished the loop, so run the statements
+            # after the loop.
+            if (is_loop_statement(s)):
+                context.goto_executed = False
+            
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed):

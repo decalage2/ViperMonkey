@@ -1325,7 +1325,7 @@ def fix_difficult_code(vba_code):
         vba_code = re.sub(label_pat, r'\1\n\2', vba_code)
 
         # Replace colons in labels so they don't get broken up.
-        label_pat = r"(\n\s*\w+):\s*\n"
+        label_pat = r"(\n *\w+): *(?=\n)"
         vba_code = re.sub(label_pat, r'\1__LABEL_COLON__\n', vba_code)
 
         # Fix some errors.
