@@ -3915,9 +3915,7 @@ class Call_Statement(VBA_Object):
 
         # Are we calling a member access expression?
         if isinstance(self.name, MemberAccessExpression):
-            # If we have parameters, then we must have an error
-            # because the MemberAccessExpression is going to ignore them.
-            assert not self.params, 'Unexpected parameters. Parsing has failed.'
+
             # Just evaluate the expression as the call.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Call of member access expression " + str(self.name))

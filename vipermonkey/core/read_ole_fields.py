@@ -57,16 +57,28 @@ def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     # PE files are not analyzable.
     if filetype.is_pe_file(vba, True):
         return True
-    
-    # See if the 1st % of the string is mostly bad or mostly good.
+
+    # Pull out the 1st % of the string.
     total_len = len(vba)
     if ((total_len > 50000) and (not test_all)):
         total_len = int(len(vba) * .25)
     if (total_len == 0):
         return False
+    substr = vba[:total_len]
+
+    # Remove comment lines since garbage characters in those
+    # lines will be ignored.
+    if ("\n'" in substr):
+        tmp = ""
+        for line in substr.split("\n"):
+            if (not line.strip().startswith("'")):
+                tmp += line + "\n"
+        substr = tmp
+    
+    # See if the 1st % of the string is mostly bad or mostly good.
     num_bad = 0.0
     in_string = False
-    for c in vba[:total_len]:
+    for c in substr:
         if (c == '"'):
             in_string = not in_string
         # Don't count garbage in strings.
