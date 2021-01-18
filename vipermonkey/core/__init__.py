@@ -178,6 +178,38 @@ def pull_urls_excel_sheets(workbook):
     # Return any URLs found in cells.
     return r
 
+def pull_b64_excel_sheets(workbook):
+    """
+    Pull bas64 blobs from cells in a given ExcelBook object.
+    """
+
+    # Got an Excel workbook?
+    if (workbook is None):
+        return []
+
+    # Look through each cell.
+    all_cells = excel.pull_cells_workbook(workbook)
+    r = set()
+    for cell in all_cells:
+
+        # Skip empty cells.
+        value = None
+        try:
+            value = str(cell["value"]).strip()
+        except UnicodeEncodeError:
+            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+
+        if (len(value) == 0):
+            continue
+
+        # Look for base64 in the cell value.
+        base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
+        for b64 in re.findall(base64_pat_strict, value):
+            r.add(b64.strip())
+
+    # Return any base64 found in cells.
+    return r
+
 # === ViperMonkey class ======================================================
 
 class ViperMonkey(StubbedEngine):
@@ -532,7 +564,12 @@ class ViperMonkey(StubbedEngine):
         direct_urls = pull_urls_excel_sheets(self.loaded_excel)
         for url in direct_urls:
             context.save_intermediate_iocs(url)
-        
+
+        # Pull base64 saved in Excel cells.
+        cell_b64_blobs = pull_b64_excel_sheets(self.loaded_excel)
+        for cell_b64_blob in cell_b64_blobs:
+            context.save_intermediate_iocs(cell_b64_blob)
+            
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():
             func = self.externals[func_name]

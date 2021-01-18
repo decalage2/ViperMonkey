@@ -1255,7 +1255,7 @@ def _process_file (filename,
                 if (m != "empty"):
                     vm.add_compiled_module(m)
                     got_code = True
-            if not got_code:
+            if ((not got_code) and (not display_int_iocs)):
                 log.info("No VBA or VBScript found. Exiting.")
                 return ([], [], [], [])
 
