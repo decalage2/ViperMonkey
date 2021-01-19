@@ -1069,7 +1069,7 @@ def convert_colons_to_linefeeds(vba_code):
             change_chunk = re.sub(r"\"&\"", r"\" & " + "\"", change_chunk)
             # 'a&(...'
             change_chunk = re.sub(r"([\w_])&\(", r"\1 & " + "(", change_chunk)
-
+            
             r += change_chunk
             pos = len(vba_code)
 
@@ -1080,7 +1080,18 @@ def convert_colons_to_linefeeds(vba_code):
 
     # Unhide If statement colons.
     r = r.replace("__COLON__", ":")
-        
+
+    # Ugh. '&' in Dim statements can now be messed up. Fix them.
+    tmp_r = ""
+    for line in r.split("\n"):
+        if ((not line.strip().startswith("Dim")) and
+            (not line.strip().startswith("ReDim"))):
+            tmp_r += line + "\n"
+            continue
+        line = line.replace(" & ", "&")
+        tmp_r += line + "\n"
+    r = tmp_r
+    
     # Done
     #print "******************"
     #print r
