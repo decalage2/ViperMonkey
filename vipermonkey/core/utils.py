@@ -57,6 +57,12 @@ def safe_str_convert(s):
     """
     Convert a string to ASCII without throwing a unicode decode error.
     """
+
+    # Handle Excel strings.
+    if (isinstance(s, dict) and ("value" in s)):
+        s = s["value"]
+
+    # Do the actualk string conversion.
     try:
         return str(s)
     except UnicodeDecodeError:

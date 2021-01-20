@@ -1975,6 +1975,7 @@ class Split(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
+
         # TODO: Actually implement this properly.
         string = utils.safe_str_convert(params[0])
         sep = " "
@@ -1982,6 +1983,15 @@ class Split(VbaLibraryFunc):
             (isinstance(params[1], str)) and
             (len(params[1]) > 0)):
             sep = str(params[1])
+
+        # Let's assume that splitting on char 0x00 means break
+        # up into individual characters.
+        if (ord(sep) == 0):
+            r = []
+            for c in string:
+                r.append(c)
+            return r
+            
         r = string.split(sep)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Split: return %r" % r)

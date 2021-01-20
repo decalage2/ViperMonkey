@@ -4784,10 +4784,25 @@ class VbaConstants(object):
         self.globals["ThisDocument.PageSetup.Orientation".lower()] = 1
         self.globals["ActiveDocument.Scripts.Count".lower()] = 0
         self.globals["ThisDocument.Scripts.Count".lower()] = 0
+
         self.globals["ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
         self.globals["ThisDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
         self.globals["ActiveDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
         self.globals["ThisDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
+        self.globals["Application.ActiveDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
+        self.globals["Application.ThisDocument.FullName".lower()] = "C:\\CURRENT_FILE_NAME.docm"
+        self.globals["Application.ActiveDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
+        self.globals["Application.ThisDocument.Name".lower()] = "CURRENT_FILE_NAME.docm"
+
+        self.globals["ActiveWorkbook.FullName".lower()] = "C:\\CURRENT_FILE_NAME.xls"
+        self.globals["ThisWorkbook.FullName".lower()] = "C:\\CURRENT_FILE_NAME.xls"
+        self.globals["ActiveWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
+        self.globals["ThisWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
+        self.globals["Application.ActiveWorkbook.FullName".lower()] = "C:\\CURRENT_FILE_NAME.xls"
+        self.globals["Application.ThisWorkbook.FullName".lower()] = "C:\\CURRENT_FILE_NAME.xls"
+        self.globals["Application.ActiveWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
+        self.globals["Application.ThisWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
+        
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
