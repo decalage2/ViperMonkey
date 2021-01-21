@@ -330,8 +330,16 @@ class MemberAccessExpression(VBA_Object):
         func = self.rhs
         if (isinstance(func, list)):
             func = func[-1]
+            
+        # Accessing a List element?
         if ((not isinstance(func, Function_Call)) or
             (func.name != "List")):
+
+            # Getting entire list?
+            if (str(func) == "List"):
+                return str(self.lhs)
+
+            # Nothing to do with a listbox.
             return None
 
         # We have a list call. Get the list.
@@ -456,6 +464,15 @@ class MemberAccessExpression(VBA_Object):
 
             # Could we be reading a field from an object?
             if (("(" not in last_rhs) and ("[" not in last_rhs)):
+
+                # Do we already know the value of the field?
+                if (context.contains(str(self))):
+
+                    # Just reference the synthetic Python variable for this
+                    # field.
+                    return str(self).replace(".", "")
+
+                # Don't have a variable with the field value.
                 lhs_str = to_python(self.lhs, context, params)
                 last_rhs = "core.vba_library.member_access(" + lhs_str + ", \"" + last_rhs + "\")"
 

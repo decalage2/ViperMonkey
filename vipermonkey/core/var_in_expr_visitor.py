@@ -52,6 +52,7 @@ class var_in_expr_visitor(visitor):
     def visit(self, item):
         from expressions import SimpleNameExpression
         from expressions import Function_Call
+        from expressions import MemberAccessExpression
         from vba_object import VbaLibraryFunc
         from vba_object import VBA_Object
 
@@ -72,5 +73,13 @@ class var_in_expr_visitor(visitor):
                 ref = self.context.get(item.name)
                 if (isinstance(ref, list) or isinstance(ref, str)):
                     self.variables.add(str(item.name))
+
+        # Member access expression used as a variable?
+        if (isinstance(item, MemberAccessExpression)):
+            rhs = item.rhs
+            if (isinstance(rhs, list)):
+                rhs = rhs[-1]
+            if (isinstance(rhs, SimpleNameExpression)):
+                self.variables.add(str(item))
                     
         return True
