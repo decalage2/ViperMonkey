@@ -1365,14 +1365,11 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             print pct
     if (len(aggregate_str) == 0):
         aggregate_str = max_substs
-    if debug1:
-        print "\nFINAL:"
-        print aggregate_str
-        sys.exit(0)
         
     # Get the names of ActiveX/OLE items accessed in the VBA.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
     object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
+    object_names.update(re.findall(r"(\w+) *_? *(?:\r?\n)? *\. *_? *(?:\r?\n)? *Content", vba_code))
     
     # Are we refering to Page or Tab or InlineShape objects by index?
     page_pat = r"((?:Pages|Tabs|InlineShapes|Item).?\(.+\))"
@@ -1394,6 +1391,12 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
+    if debug1:
+        print "\nFINAL:"
+        print aggregate_str
+        print object_names
+        sys.exit(0)
+
     
     # Just assign every item accessed in the VBA to this value and hope for the best.
     r = []
