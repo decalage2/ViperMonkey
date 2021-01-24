@@ -1986,7 +1986,7 @@ class Split(VbaLibraryFunc):
 
         # Let's assume that splitting on char 0x00 means break
         # up into individual characters.
-        if (ord(sep) == 0):
+        if (sep == chr(0)):
             r = []
             for c in string:
                 r.append(c)
