@@ -466,7 +466,11 @@ class MemberAccessExpression(VBA_Object):
             if (("(" not in last_rhs) and ("[" not in last_rhs)):
 
                 # Do we already know the value of the field?
-                if (context.contains(str(self))):
+                # Don't do this for Excel cells.
+                if ((last_rhs.lower() != "value") and
+                    (last_rhs.lower() != "row") and
+                    (last_rhs.lower() != "col") and
+                    context.contains(str(self))):
 
                     # Just reference the synthetic Python variable for this
                     # field.
