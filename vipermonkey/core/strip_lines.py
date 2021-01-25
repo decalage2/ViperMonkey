@@ -1187,6 +1187,7 @@ def fix_difficult_code(vba_code):
         print "HERE: 1"
         print vba_code
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
+    vba_code = vba_code.replace("msgbox\"", "msgbox \"")
     vba_code = fix_unhandled_array_assigns(vba_code)
     if debug_strip:
         print "HERE: 2.1"
