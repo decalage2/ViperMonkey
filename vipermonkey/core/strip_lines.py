@@ -412,7 +412,7 @@ def fix_unbalanced_quotes(vba_code):
         print r
     return r
 
-MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){2,})(.+)"
+MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){3,})(.+)"
 def fix_multiple_assignments(line):
 
     # Skip comments.

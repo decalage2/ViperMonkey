@@ -1666,7 +1666,13 @@ def coerce_to_int(obj):
         return (coerce_to_int(obj["value"]))
         
     # Try regular int.
-    return int(obj)
+    try:
+        return int(obj)
+    except ValueError as e:
+
+        # Punt and just return NULL.
+        log.error("int conversion failed. Returning NULL. " + str(e))
+        return 0
 
 def coerce_to_num(obj):
     """
