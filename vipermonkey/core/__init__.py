@@ -340,6 +340,11 @@ class ViperMonkey(StubbedEngine):
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
+        for name, _prop in m.functions.items():
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('(1) storing property let "%s" in globals' % name)
+            self.globals[name.lower()] = _prop
+            self.globals[name] = _prop
         for name, _function in m.external_functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)

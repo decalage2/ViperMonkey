@@ -622,7 +622,7 @@ class Context(object):
         if (file_id != ""):
             self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
-
+        
     def write_file(self, fname, data):
 
         # Make sure the "file" exists.
@@ -660,16 +660,21 @@ class Context(object):
         elif isinstance(data, int):
 
             # Convert the int to a series of bytes to write out.
-            byte_list = struct.pack('<i', data)
+            byte_list = struct.pack('<q', data)
             
             # Skip 0 bytes at the end of the sequence.
-            pos = len(byte_list) + 1
-            for b in byte_list[::-1]:
-                pos -= 1
-                if (b != '\x00'):
-                    break
-            byte_list = byte_list[:pos]
-
+            #
+            # TODO: To do this correctly we need to know the VBA
+            # type of this integer (Byte, Integer, or Long) and drop bytes accordingly.
+            byte_size = utils.get_num_bytes(data)
+            #byte_size = 4
+            #print "---"
+            #print data
+            #print byte_size
+            #print byte_list.__repr__()
+            byte_list = byte_list[:byte_size]
+            #print byte_list.__repr__()
+            
             # Write out each byte.
             for b in byte_list:
                 self.open_files[fname] += b
@@ -1280,7 +1285,29 @@ class Context(object):
         r = "Sheet(" + sheet + ").Cell(" + row + ", " + col + ") = '" + str(value) + "'"
         self.report_action('Set Cell ' + typ, r, tmp_rhs, strip_null_bytes=True)
         return True
-            
+
+    def _handle_property_assignment(self, name, value):
+        """
+        If this is a property asignment, call the property handler.
+        """
+
+        import procedures
+        
+        # Do we know the value of the variable?
+        if (not self.contains(name)):
+            return False
+
+        # Is the current value a property let handler?
+        handler = self.get(name)
+        if (not isinstance(handler, procedures.PropertyLet)):
+            return False
+
+        # We are assigning to a property. Evaluate the handler.
+        handler.eval(self, params=[value])
+
+        # Handled property assignment.
+        return True
+    
     def set(self,
             name,
             value,
@@ -1294,6 +1321,10 @@ class Context(object):
 
         # Special case. Are we setting a formula in an Excel cell?
         if (self._set_excel_formula(name, value)):
+            return
+
+        # Are we assigning a Property? If so we will call the property handler?
+        if (self._handle_property_assignment(name, value)):
             return
         
         # Does the name make sense?

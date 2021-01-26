@@ -87,6 +87,12 @@ class Module(VBA_Object):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("saving func decl: %r" % i.name)
                     self.functions[i.name] = i
+
+                # Property Let function to add?
+                elif isinstance(i, PropertyLet):
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("saving property let decl: %r" % i.name)
+                    self.props[i.name] = i
         
     def __init__(self, original_str, location, tokens):
 
@@ -97,6 +103,7 @@ class Module(VBA_Object):
         self.attributes = {}
         self.options = []
         self.functions = {}
+        self.props = {}
         self.external_functions = {}
         self.subs = {}
         self.global_vars = {}
@@ -159,6 +166,8 @@ class Module(VBA_Object):
             r += '  %r\n' % func
         for extfunc in self.external_functions.values():
             r += '  %r\n' % extfunc
+        for prop in self.props.values():
+            r += '  %r\n' % func
         return r
 
     def eval(self, context, params=None):
@@ -213,6 +222,11 @@ class Module(VBA_Object):
                 log.debug('(1) storing function "%s" in globals' % name)
             context.set(name, _function)
             context.set(name, _function, force_global=True)
+        for name, _prop in self.props.items():
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('(1) storing property let "%s" in globals' % name)
+            context.set(name, _prop)
+            context.set(name, _prop, force_global=True)
         for name, _function in self.external_functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
@@ -334,6 +348,7 @@ module_code = ZeroOrMore(
     option_statement
     | sub
     | function
+    | property_let
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
@@ -347,6 +362,7 @@ module = ZeroOrMore(
     option_statement
     | sub
     | function
+    | property_let
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines

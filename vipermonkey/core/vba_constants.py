@@ -4802,6 +4802,8 @@ class VbaConstants(object):
         self.globals["Application.ThisWorkbook.FullName".lower()] = "C:\\CURRENT_FILE_NAME.xls"
         self.globals["Application.ActiveWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
         self.globals["Application.ThisWorkbook.Name".lower()] = "CURRENT_FILE_NAME.xls"
+
+        self.globals["ActiveDocument.Application.StartupPath".lower()] = "C:\\AppData\\Local\\Temp\\"
         
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"

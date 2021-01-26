@@ -277,3 +277,20 @@ class vb_RegExp(object):
             pass
         return r
 
+def get_num_bytes(i):
+    """
+    Get the minimum number of bytes needed to represent a given
+    int value.
+    """
+    
+    # 1 byte?
+    if ((i & 0x00000000FF) == i):
+        return 1
+    # 2 bytes?
+    if ((i & 0x000000FFFF) == i):
+        return 2
+    # 4 bytes?
+    if ((i & 0x00FFFFFFFF) == i):
+        return 4
+    # Lets go with 8 bytes.
+    return 8

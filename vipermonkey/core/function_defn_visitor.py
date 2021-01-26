@@ -72,10 +72,9 @@ class function_defn_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)
-        if (isinstance(item, procedures.Sub)):
-            self.funcs.add(str(item.name))
-            self.func_objects.add(item)
-        if (isinstance(item, procedures.Function)):
+        if ((isinstance(item, procedures.Sub)) or
+            (isinstance(item, procedures.Function)) or
+            (isinstance(item, procedures.PropertyLet))):
             self.funcs.add(str(item.name))
             self.func_objects.add(item)
         return True

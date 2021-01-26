@@ -132,7 +132,7 @@ known_keywords_statement_start = (Optional(CaselessKeyword('Public') | CaselessK
                                   CaselessKeyword('#If') | CaselessKeyword('#Else') | CaselessKeyword('#ElseIf') | CaselessKeyword('#End If') | \
                                   CaselessKeyword('Exit') | CaselessKeyword('Type') | CaselessKeyword('As') | CaselessKeyword("ByVal") | \
                                   CaselessKeyword('While') | CaselessKeyword('Do') | CaselessKeyword('Until') | CaselessKeyword('Select') | \
-                                  CaselessKeyword('Case') | CaselessKeyword('On') 
+                                  CaselessKeyword('Case') | CaselessKeyword('On') | CaselessKeyword('End') 
 
 # catch-all for unknown statements
 unknown_statement = NotAny(known_keywords_statement_start) + \
@@ -5241,7 +5241,9 @@ def extend_statement_grammar():
     statement <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \
                   line_input_statement | simple_if_statement_macro | simple_while_statement | simple_do_statement | simple_select_statement | \
                   with_statement| simple_statement | rem_statement | \
-                  (procedures.simple_function ^ orphaned_marker) | (procedures.simple_sub ^ orphaned_marker) | \
+                  (procedures.simple_function ^ orphaned_marker) | \
+                  (procedures.simple_sub ^ orphaned_marker) | \
+                  (procedures.property_let ^ orphaned_marker) | \
                   name_statement | stop_statement | enum_statement
 
     statement_no_orphan <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \

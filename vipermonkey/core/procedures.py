@@ -767,4 +767,49 @@ function_start_line = public_private + CaselessKeyword('Function').suppress() + 
                  + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 function_start_line.setParseAction(Function)
 
+# --- PROPERTY LET --------------------------------------------------------------------
+
+# Evaluating a property let handler looks like calling a Sub, so inherit from Sub to get the
+# eval() method.
+class PropertyLet(Sub):
+
+    def __init__(self, original_str, location, tokens):
+        super(PropertyLet, self).__init__(original_str, location, tokens)
+        self.name = tokens.property_name
+        self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
+        self.statements = tokens.statements
+        try:
+            len(self.statements)
+        except:
+            self.statements = [self.statements]
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
+        log.info('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+
+# [ Public | Private | Friend ] [ Static ] Property Letname ( [ arglist ], value )
+# [ statements ]
+# [ Exit Property ]
+# [ statements ]
+# End Property
+
+property_let = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + \
+               CaselessKeyword('Property').suppress() + CaselessKeyword('Let').suppress() + \
+               lex_identifier('property_name') + params_list_paren + \
+               Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+               (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
+property_let.setParseAction(PropertyLet)
+
+# Ugh. Handle cyclic import problem.
 extend_statement_grammar()
+
+

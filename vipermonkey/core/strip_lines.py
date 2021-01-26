@@ -1818,14 +1818,14 @@ def fix_vba_code(vba_code):
     
     # We don't handle Property constructs for now. Delete them.
     # TODO: Actually handle Property consructs.
-    if debug_strip:
-        print "FIX_VBA_CODE: 6"
-        print vba_code
-    props = re.findall(r"(?:Public\s+|Private\s+|Friend\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
-    if (len(props) > 0):
-        log.warning("VB Property constructs are not currently handled. Stripping them from code...")
-    for prop in props:
-        vba_code = vba_code.replace(prop, "")
+    #if debug_strip:
+    #    print "FIX_VBA_CODE: 6"
+    #    print vba_code
+    #props = re.findall(r"(?:Public\s+|Private\s+|Friend\s+)?Property\s+.+?End\s+Property", vba_code, re.DOTALL)
+    #if (len(props) > 0):
+    #    log.warning("VB Property constructs are not currently handled. Stripping them from code...")
+    #for prop in props:
+    #    vba_code = vba_code.replace(prop, "")
 
     # We don't handle Implements constructs for now. Delete them.
     # TODO: Figure out if we need to worry about Implements.

@@ -638,6 +638,20 @@ class GetFile(VbaLibraryFunc):
     def num_args(self):
         return 1
 
+class FileLen(VbaLibraryFunc):
+    """
+    FileLen() VB function (stubbed). Always returns -1.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return -1
+        context.report_action('Check File Length', "FileLen(" + str(params) + ")", '---', strip_null_bytes=True)
+        return -1
+
+    def num_args(self):
+        return 1
+    
 class FileCopy(VbaLibraryFunc):
     """
     FileCopy() VB function (stubbed).
@@ -5077,7 +5091,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem, Rows, DatePart):
+               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
