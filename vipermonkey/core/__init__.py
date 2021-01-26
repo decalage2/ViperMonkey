@@ -585,18 +585,21 @@ class ViperMonkey(StubbedEngine):
             
         # Save the document text in the proper variable in the context.
         context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Range".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Start".lower()] = 0
         context.globals["Me.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["Me.Paragraphs".lower()] = self.doc_text
+        context.globals["ActiveDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["ThisDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range".lower()] = "\n".join(self.doc_text)
