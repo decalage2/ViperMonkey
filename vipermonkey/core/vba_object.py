@@ -665,6 +665,12 @@ def _get_var_vals(item, context, global_only=False):
     zero_arg_funcs = set()
     for var in var_names:
 
+        # Don't try to convert member access expressions that involve
+        # method calls to Python variables. These should be handled
+        # later as actual calls.
+        if ("(" in var):
+            continue
+
         # Do we already know the variable value?        
         val = None
         orig_val = None
@@ -1066,6 +1072,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         if (log.getEffectiveLevel() == logging.DEBUG):
             safe_print("JIT CODE!!")
             safe_print(code_python)
+            #print "REMOVE THIS!!!"
+            #sys.exit(0)
         log.info("Done generating Python JIT code.")
 
         # Extended ASCII strings are handled differently in VBScript and VBA.

@@ -463,12 +463,14 @@ class MemberAccessExpression(VBA_Object):
                 last_rhs = lhs_str + "['name']"
 
             # Could we be reading a field from an object?
-            if (("(" not in last_rhs) and ("[" not in last_rhs)):
+            if ((("(" not in last_rhs) and ("[" not in last_rhs)) or
+                (last_rhs.lower().startswith("address("))):
 
                 # Do we already know the value of the field?
                 # Don't do this for Excel cells.
                 if ((last_rhs.lower() != "value") and
                     (last_rhs.lower() != "row") and
+                    (not last_rhs.lower().startswith("address(")) and
                     (last_rhs.lower() != "col") and
                     context.contains(str(self))):
 
@@ -476,10 +478,21 @@ class MemberAccessExpression(VBA_Object):
                     # field.
                     return str(self).replace(".", "")
 
+                # We are tracking the address in the index field.
+                if (last_rhs.lower().startswith("address(")):
+                    last_rhs = "index"
+                
                 # Don't have a variable with the field value.
                 lhs_str = to_python(self.lhs, context, params)
                 last_rhs = "core.vba_library.member_access(" + lhs_str + ", \"" + last_rhs + "\")"
 
+                # Special handling for things like Range(...).Column. The Range() operator
+                # needs to return a cell dict (with column information) rather than the cell
+                # value.
+                # core.vba_library.member_access(core.vba_library.run_function("Range", vm_context, [core.vba_library.member_access(p, "index")]), "Column")
+                pat = r"(core\.vba_library\.member_access\(core\.vba_library\.run_function\(\"Range\", vm_context, \[)(.+)(\]\), \"(?:Column|Row)\"\))"
+                last_rhs = re.sub(pat, r"\1\2, True\3", last_rhs)
+                
             # Done.
             return last_rhs
         

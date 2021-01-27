@@ -279,6 +279,13 @@ class ExcelSheet(object):
 
     def cell_value(self, row, col):
         return self.cell(row, col)
+
+    def cell_dict(self, row, col):
+        curr_cell = { "value" : self.cell(row, col),
+                      "row" : row + 1,
+                      "col" : col + 1,
+                      "index" : _get_alphanum_cell_index(row, col) }
+        return curr_cell
     
 class ExcelBook(object):
 

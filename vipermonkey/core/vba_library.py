@@ -102,6 +102,14 @@ def member_access(var, field):
         elif ((field_l == "text") and ("value" in var)):
             return var["value"]
 
+        # Accessing cell column?
+        elif ((field_l == "column") and ("col" in var)):
+            return var["col"] + 1
+
+        # Accessing cell row?
+        elif ((field_l == "row") and ("row" in var)):
+            return var["row"] + 1
+        
         # Can't find field.
         else:
             return "NULL"
@@ -315,7 +323,6 @@ class IsEmpty(VbaLibraryFunc):
         # Handle list type data structures.
         if ((hasattr(item, '__len__')) and (len(item) == 0)):
             return True
-        print item
         return False
 
     def num_args(self):
@@ -4296,7 +4303,7 @@ class Cells(VbaLibraryFunc):
 
         # Can't read the cell.
         context.increase_general_errors()
-        log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + ").")
+        log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + "). (1)")
         return "NULL"
 
 class UsedRange(VbaLibraryFunc):
@@ -4348,7 +4355,7 @@ class Range(VbaLibraryFunc):
         # Done.
         return (row, col)
         
-    def _read_cell_list(self, sheet, cell_str):
+    def _read_cell_list(self, sheet, cell_str, return_dict):
         """
         Read multiple cells specified by a "i93:i424" cell string.
         """
@@ -4380,7 +4387,11 @@ class Range(VbaLibraryFunc):
             while True:
                 val = None
                 try:
-                    val = str(sheet.cell_value(curr_row, curr_col))
+                    if return_dict:
+                        # Return actual dict, not str.
+                        val = sheet.cell_dict(curr_row, curr_col)
+                    else:       
+                        val = str(sheet.cell_value(curr_row, curr_col))
                 except:
                     pass
                 if (val is not None):
@@ -4423,13 +4434,18 @@ class Range(VbaLibraryFunc):
                 context.increase_general_errors()
                 log.warning("Cannot process Range() call. No Excel file loaded.")
                 return "NULL"
-        
+
+        # Return a cell dict rather than the cell value?
+        return_dict = False
+        if ((len(params) >= 2) and (params[1] == True)):
+            return_dict = True
+            
         # Currently only handles Range(x) calls.
-        if (len(params) != 1):
+        if ((len(params) != 1) and (not return_dict)):
             context.increase_general_errors()
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
-
+            
         # Was Range() called on a single, already read cell?
         if (isinstance(params[0], dict)):
 
@@ -4438,7 +4454,7 @@ class Range(VbaLibraryFunc):
             the_cell = params[0]
             if ("value" in the_cell):
                 next_index = the_cell["value"]
-                return self.eval(context, [next_index])
+                return self.eval(context, [next_index, return_dict])
 
             # Unexpected. This is not a proper read cell dict.
             log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
@@ -4460,7 +4476,7 @@ class Range(VbaLibraryFunc):
             range_index = str(params[0])
             if (":" in range_index):
                 try:
-                    return self._read_cell_list(sheet, range_index)
+                    return self._read_cell_list(sheet, range_index, return_dict)
                 except Exception as e:
                     # Try the next sheet.
                     continue
@@ -4470,10 +4486,14 @@ class Range(VbaLibraryFunc):
 
                 # Pull out the cell value.
                 row, col = self._get_row_and_column(params[0])
-                val = str(sheet.cell_value(row, col))
+                if return_dict:
+                    # Return actual dict, not str.
+                    val = sheet.cell_dict(row, col)
+                else:
+                    val = str(sheet.cell_value(row, col))
             
                 # Return the cell value.
-                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = " + str(val))
+                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = '" + str(val) +"'")
                 return val            
 
             except Exception as e:
@@ -4487,7 +4507,7 @@ class Range(VbaLibraryFunc):
             row, col = self._get_row_and_column(params[0])
         except:
             pass
-        log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "]")
+        log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "] (2)")
         context.increase_general_errors()
         return "NULL"
         
