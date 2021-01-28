@@ -682,8 +682,14 @@ class ViperMonkey(StubbedEngine):
             if ((entry_point in self.globals) and
                 (hasattr(self.globals[entry_point], "eval"))):
                 context.report_action('Found Entry Point', str(entry_point), '')
-                self.globals[entry_point].eval(context=context)
-                context.dump_all_files(autoclose=True)
+                # We will be trying multiple entry points, so make a copy
+                # of the context so we don't accumulate stage changes across
+                # entry points.
+                tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                self.globals[entry_point].eval(context=tmp_context)
+                tmp_context.dump_all_files(autoclose=True)
+                # Save whether we got actions from this entry point.
+                context.got_actions = tmp_context.got_actions
                 done_emulation = True
 
         # Look for callback functions that can act as entry points.
@@ -701,8 +707,14 @@ class ViperMonkey(StubbedEngine):
 
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
-                        item.eval(context=context)
-                        context.dump_all_files(autoclose=True)
+                        # We will be trying multiple entry points, so make a copy
+                        # of the context so we don't accumulate stage changes across
+                        # entry points.
+                        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                        item.eval(context=tmp_context)
+                        tmp_context.dump_all_files(autoclose=True)
+                        # Save whether we got actions from this entry point.
+                        context.got_actions = tmp_context.got_actions
                         done_emulation = True
 
         # Did we find an entry point?

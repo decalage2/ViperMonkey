@@ -1147,9 +1147,16 @@ class MemberAccessExpression(VBA_Object):
             log.debug("_handle_listbox_list(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
-        if (not isinstance(rhs, Function_Call)):
-            return None
-        if (rhs.name != "List"):
+        # Accessing a List element?
+        if ((not isinstance(rhs, Function_Call)) or
+            (rhs.name != "List")):
+
+            # Getting entire list?
+            lhs_str = str(self.lhs)
+            if ((str(rhs) == "List") and (context.contains(lhs_str))):                
+                return context.get(lhs_str)
+
+            # Nothing to do with a listbox.
             return None
         if (not isinstance(lhs, list)):
             return None
@@ -1952,6 +1959,12 @@ class MemberAccessExpression(VBA_Object):
         if (call_retval is not None):
             #print "OUT: 22"
             return call_retval
+
+        # Handle things like foo.List(bar).
+        call_retval = self._handle_listbox_list(context, tmp_lhs, self.rhs)
+        if (call_retval is not None):
+            #print "OUT: 22.2"
+            return call_retval
         
         # If the final element in the member expression is a function call,
         # the result should be the result of the function call. Otherwise treat
@@ -1986,12 +1999,6 @@ class MemberAccessExpression(VBA_Object):
             call_retval = self._handle_listbox_additem(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
                 #print "OUT: 25.1"
-                return call_retval
-
-            # Handle things like foo.List(bar).
-            call_retval = self._handle_listbox_list(context, tmp_lhs, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 25.2"
                 return call_retval
 
             # Handle things like foo.Exists(bar).

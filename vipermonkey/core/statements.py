@@ -3854,7 +3854,10 @@ class Call_Statement(VBA_Object):
             if (not first):
                 func_call_str += ", "
             first = False
-            func_call_str += str(p)
+            p_eval = eval_arg(p, context=context)
+            if isinstance(p_eval, str):
+                p_eval = '"' + p_eval + '"'
+            func_call_str += str(p_eval)
         func_call_str += ")"
         try:
             memb_exp = member_access_expression.parseString(func_call_str, parseAll=True)[0]
