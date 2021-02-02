@@ -73,6 +73,7 @@ from utils import safe_print
 import utils
 from let_statement_visitor import *
 from vba_context import *
+import excel
 
 max_emulation_time = None
 
@@ -245,9 +246,10 @@ def _read_from_excel(arg, context):
 
     # Try handling reading value from an Excel spreadsheet cell.
     # ThisWorkbook.Sheets('YHRPN').Range('J106').Value
+    if ("MemberAccessExpression" not in str(type(arg))):
+        return None
     arg_str = str(arg)
-    if (("MemberAccessExpression" in str(type(arg))) and
-        ("sheets(" in arg_str.lower()) and
+    if (("sheets(" in arg_str.lower()) and
         (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -397,6 +399,24 @@ def _read_from_object_text(arg, context):
             log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
+
+def contains_excel(arg):
+    """
+    See if a given expression contains Excel book or sheet objects.
+    """
+
+    # Got actual Excel objects?
+    if (isinstance(arg, excel.ExcelSheet) or
+        isinstance(arg, excel.ExcelBook)):
+        return True
+    
+    # Got a function call?
+    if (not isinstance(arg, expressions.Function_Call)):
+        return False
+
+    # Is this an Excel function call?
+    excel_funcs = set(["usedrange", "sheets", "specialcells"])
+    return (str(arg.name).lower() in excel_funcs)
     
 constant_expr_cache = {}
 
@@ -406,8 +426,13 @@ def get_cached_value(arg):
     """
 
     # Don't do any more work if this is already a resolved value.
-    if (isinstance(arg, int)):
+    if (isinstance(arg, int) or
+        isinstance(arg, dict)):
         return arg
+
+    # If it is something that may be hard to convert to a string, no cached value.
+    if contains_excel(arg):
+        return None
 
     # This is not already resolved to an int. See if we computed this before.
     arg_str = str(arg)
@@ -428,6 +453,10 @@ def set_cached_value(arg, val):
             log.warning("Expression '" + str(val) + "' is a " + str(type(val)) + ", not an int. Not caching.")
         return
 
+    # Don't cache things that contain Excel sheets or workbooks.
+    if contains_excel(arg):
+        return
+        
     # We have a number. Cache it.
     arg_str = str(arg)
     try:
@@ -448,13 +477,19 @@ def is_constant_math(arg):
         arg.accept(var_visitor)
         if (len(var_visitor.variables) > 0):
             return False
-    
+
+    # Some things are not math expressions.
+    if (isinstance(arg, dict) or
+        contains_excel(arg)):
+        return False
+        
     # Speed this up with the rure regex library if it is installed.
     try:
         import rure as local_re
     except ImportError:
         import re as local_re
 
+    # Use a regex to see if this is an all constant expression.
     base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
     arg_str = str(arg).strip()
@@ -1211,13 +1246,14 @@ def eval_arg(arg, context, treat_as_var_name=False):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("eval_arg: eval as VBA_Object %s" % arg)
         r = arg.eval(context=context)
-
+        
         # Is this a Shapes() access that still needs to be handled?
         poss_shape_txt = ""
-        try:
-            poss_shape_txt = str(r)
-        except:
-            pass
+        if (isinstance(r, VBA_Object) or isinstance(r, str)):
+            try:
+                poss_shape_txt = str(r)
+            except:
+                pass
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))

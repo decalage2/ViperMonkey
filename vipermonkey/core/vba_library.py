@@ -4306,6 +4306,40 @@ class Cells(VbaLibraryFunc):
         log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + "). (1)")
         return "NULL"
 
+class Sheets(VbaLibraryFunc):
+    """
+    Excel Sheets() function.
+    """
+        
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return None
+
+        # Get the sheet with the given identifier.
+        sheet_id = str(params[0])
+
+        # First try treating this as a sheet name.
+        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
+            try:
+                curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
+                if (curr_sheet.name == sheet_id):
+                    return curr_sheet
+            except:
+                continue
+
+        # Next see if the sheet ID is an index.
+        try:
+            sheet_id = int(sheet_id) - 1
+        except:
+            return None
+        try:
+            curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
+            return curr_sheet
+        except:
+            return None
+        
 class UsedRange(VbaLibraryFunc):
     """
     Excel UsedRange() function.
@@ -4313,15 +4347,22 @@ class UsedRange(VbaLibraryFunc):
         
     def eval(self, context, params=None):
 
-        # Try each sheet and return the cells from the sheet with the most cells.
-        # TODO: Figure out the actual sheet to load.
-        sheet = get_largest_sheet(context.loaded_excel)
+        # Try each sheet and return the cells from the sheet with the most cells
+        # if no sheet is given.
+        sheet = None
+        if ((params is not None) and
+            (len(params) >= 1) and
+            ("ExcelSheet" in str(type(params[0])))):
+            sheet = params[0]
+        else:
+            sheet = get_largest_sheet(context.loaded_excel)
         if (sheet is None):
             return []
 
         # Return all of the defined cells. Each cell is represented as a dict
         # with keys 'value', 'row', and 'col'.
-        return pull_cells_sheet(sheet)
+        r = pull_cells_sheet(sheet)
+        return r
 
     def num_args(self):
         return 0
@@ -4539,15 +4580,20 @@ class SpecialCells(VbaLibraryFunc):
 
         # 1st arg should be a list of cell values, 2nd arg the type of cell to include.
         if ((params is None) or (len(params) < 2)):
-            log.warning("Not enough arguments passed to CountA(). Returning NULL")
+            log.warning("Not enough arguments passed to SpecialCells(). Returning NULL")
             return "NULL"
-        cells = params[0]
-        if (not isinstance(cells, list)):
-            log.warning("1st arguments to CountA() not a list. Returning NULL")
-            return "NULL"
-        cell_type = params[1]
-        if (not isinstance(cell_type, int)):
-            log.warning("2nd arguments to CountA() not an int. Returning NULL")
+
+        # Sometimes the args are swapped. Handle that.
+        cells = None
+        cell_type = None
+        if (isinstance(params[0], list) and isinstance(params[1], int)):
+            cells = params[0]
+            cell_type = params[1]
+        if (isinstance(params[1], list) and isinstance(params[0], int)):
+            cells = params[1]
+            cell_type = params[0]
+        if (cells is None):
+            log.warning("Incorrect argument types passed to SpecialCells(). Returning NULL")
             return "NULL"
         #if (cell_type != 2):
         #    log.warning("Only handling SpecialCells(xlCellTypeConstants). Returning NULL")
@@ -5111,7 +5157,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen):
+               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

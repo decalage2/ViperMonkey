@@ -38,8 +38,13 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.03'
 
+import traceback
 import logging
 from logger import log
+import sys
+
+#debug = True
+debug = False
 
 def is_cell_dict(x):
     return (isinstance(x, dict) and ("value" in x))
@@ -238,17 +243,28 @@ def pull_cells_workbook(workbook):
 class ExcelSheet(object):
 
     def __init__(self, cells, name="Sheet1"):
+        self.gloss = None
         self.cells = cells
         self.name = name
         self.__num_rows = None
         self.__num_cols = None
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
+        #for line in traceback.format_stack():
+        #    print(line.strip())
+        log.info("Converting Excel sheet to str ...")
+        #sys.exit(0)
         r = ""
-        r += "Sheet: " + self.name + "\n\n"
-        for cell in self.cells.keys():
-            r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
-        return r
+        if debug:
+            r += "Sheet: " + self.name + "\n\n"
+            for cell in self.cells.keys():
+                r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
+        else:
+            r = str(self.cells)
+        self.gloss = r
+        return self.gloss
 
     def num_rows(self):
         if (self.__num_rows is not None):
@@ -300,6 +316,7 @@ class ExcelBook(object):
         self.sheets.append(ExcelSheet(cells, name))
 
     def __repr__(self):
+        log.info("Converting Excel workbook to str ...")
         r = ""
         for sheet in self.sheets:
             r += str(sheet) + "\n"
