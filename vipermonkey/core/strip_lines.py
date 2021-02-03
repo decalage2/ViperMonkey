@@ -281,14 +281,14 @@ def fix_bad_puts(vba_code):
         return vba_code
 
     # Fix them.
-    vba_code = re.sub(r"[^A-Za-z]Put +#([A-Za-z_])", r"Put \1", vba_code)
+    vba_code = re.sub(r"([^A-Za-z])Put +#([A-Za-z_])", r"\1Put \2", vba_code)
 
     # Do we need to do this?
     if ("Close #" not in vba_code):
         return vba_code
 
     # Fix them.
-    vba_code = re.sub(r"[^A-Za-z]Close +#([A-Za-z_])", r"Close \1", vba_code)
+    vba_code = re.sub(r"([^A-Za-z])Close +#([A-Za-z_])", r"\1Close \2", vba_code)
     return vba_code
     
 def fix_unbalanced_quotes(vba_code):

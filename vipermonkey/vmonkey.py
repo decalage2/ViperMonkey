@@ -1376,6 +1376,19 @@ def _process_file (filename,
                                      "me." + var_name + ".Content",
                                      "me." + var_name + ".ControlTipText"]
                 for tmp_var_name in var_name_variants:
+
+                    # Skip big values that are basically just repeats of the
+                    # same character.
+                    if ((isinstance(var_val, str)) and
+                        (len(var_val) > 1000)):
+                        num_1st = float(var_val.count(var_val[0]))
+                        pct = num_1st/len(var_val) * 100
+                        if (pct > 95):
+                            log.warning("Not assigning " + tmp_var_name + " value '" + var_val[:15] + "...'. " +\
+                                        "Too many repeated characters.")
+                            continue
+
+                    # Save the value as a global variable.
                     tmp_var_val = var_val
                     if ((tmp_var_name == 'ActiveDocument.Sections') or
                         (tmp_var_name == 'Sections')):
