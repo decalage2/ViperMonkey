@@ -2911,7 +2911,35 @@ class Dir(VbaLibraryFunc):
 
     def return_type(self):
         return "STRING"
-    
+
+class Choose(VbaLibraryFunc):
+    """
+    Choose() choice function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
+
+        # The index of the value to pick should be the 1st
+        # argument.
+        index = None
+        try:
+            index = int(params[0])
+        except Exception as e:
+            log.warning("Invalid index passed to Choice(). Returning NULL. " + str(e))
+            return "NULL"
+
+        # Is the desired value in the choice list?
+        if (index > (len(params) + 1)):
+            log.warning("Invalid index passed to Choice(). Too large.")
+            return "NULL"
+
+        # Return the choice value.
+        return params[index]
+            
 class RGB(VbaLibraryFunc):
     """
     RGB() color function.
@@ -5158,7 +5186,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets):
+               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
