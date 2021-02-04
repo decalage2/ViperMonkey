@@ -2240,7 +2240,7 @@ class MemberAccessExpression(VBA_Object):
             r = MemberAccessExpression(None, None, None, raw_fields=(tmp_lhs, self.rhs, self.rhs1))
             
             # See if we can now resolve this to a doc var read.
-            print "HERE: 45"
+            #print "HERE: 45"
             call_retval = r._handle_docvars_read(context)
             if (call_retval is not None):
                 if (log.getEffectiveLevel() == logging.DEBUG):
