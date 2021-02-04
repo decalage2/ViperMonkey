@@ -1121,7 +1121,7 @@ def pull_embedded_pe_files(data, out_dir):
         return
     
     # Is a PE file in the data at all?
-    pe_pat = r"MZ.{70,80}This program cannot be run in DOS mode\."
+    pe_pat = r"MZ.{70,80}This program (?:(?:cannot be run in DOS mode\.)|(?:must be run under Win32))"
     if (re.search(pe_pat, data) is None):
         return
 

@@ -2897,7 +2897,8 @@ class Dir(VbaLibraryFunc):
         # Handle a special case for a maldoc that looks for things
         # not existing in a certain directory.
         if (("\\Microsoft\\Corporation\\" in pat) or
-            ("\\AppData\\Roaming\\Microsoft" in pat)):
+            ("\\AppData\\Roaming\\Microsoft" in pat) or
+            ("\\AppData\\Local\\Temp" in pat)):
             return ""
             
         # Just act like we found something always.
