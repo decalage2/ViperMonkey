@@ -3856,7 +3856,7 @@ class Call_Statement(VBA_Object):
             first = False
             p_eval = eval_arg(p, context=context)
             if isinstance(p_eval, str):
-                p_eval = p_eval.replace('"', '""')
+                p_eval = p_eval.replace('"', '""').replace("\n", "\\n").replace("\r", "\\r")
                 p_eval = '"' + p_eval + '"'
             func_call_str += str(p_eval)
         func_call_str += ")"

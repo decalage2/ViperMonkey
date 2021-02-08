@@ -1261,14 +1261,17 @@ class MemberAccessExpression(VBA_Object):
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         if (not isinstance(rhs, Function_Call)):
+            #print "OUT: ADD 1"
             return None
         if (rhs.name != "AddItem"):
+            #print "OUT: ADD 2"
             return None
 
         # The listbox variable may not be defined. Define it if needed.
         if ((lhs is None) or (lhs == "NULL")):
             lhs = []
         if (not isinstance(lhs, list)):
+            #print "OUT: ADD 3"
             return None
 
         # Run the list add.
@@ -1290,6 +1293,7 @@ class MemberAccessExpression(VBA_Object):
         context.set(str(self.lhs), new_list, do_with_prefix=False, force_global=True)
 
         # Done with the AddItem().
+        #print "OUT: ADD 4"
         return new_list
 
     def _handle_exists(self, context, lhs, rhs):
@@ -2169,7 +2173,7 @@ class MemberAccessExpression(VBA_Object):
                 return "NULL"
 
             # It was a regular call.
-            ##print "OUT: 29"
+            #print "OUT: 29"
             #print "HERE: 36"
             return tmp_rhs
 
@@ -2213,7 +2217,7 @@ class MemberAccessExpression(VBA_Object):
             #print "HERE: 41"
             call_retval = self._handle_file_close(context, tmp_lhs, self.rhs)
             if (call_retval is not None):
-                ##print "OUT: 33"
+                #print "OUT: 33"
                 return call_retval
 
             # Is the LHS a 0 argument function?
@@ -2233,7 +2237,7 @@ class MemberAccessExpression(VBA_Object):
             if (((str(self.rhs) == "['Text']") or (str(self.rhs).lower() == "['value']")) and (isinstance(tmp_lhs, str))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Returning .Text value.")
-                ##print "OUT: 35"
+                #print "OUT: 35"
                 return tmp_lhs
             
             # Construct a new partially resolved member access object.
@@ -2245,7 +2249,7 @@ class MemberAccessExpression(VBA_Object):
             if (call_retval is not None):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
-                ##print "OUT: 36"
+                #print "OUT: 36"
                 return call_retval
 
             # Do we know what the RHS variable evaluates to?
@@ -2259,25 +2263,25 @@ class MemberAccessExpression(VBA_Object):
                 ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Resolved member access variable.")
-                ##print "OUT: 37"
+                #print "OUT: 37"
                 return tmp_rhs        
             
             # Cannot resolve directly. Return the member access object.
             #print "HERE: 47"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("MemberAccess: Return new access object " + str(r))
-            ##print "OUT: 38"
+            #print "OUT: 38"
             return r
 
         # Try reading as variable.
         elif (context.contains(rhs)):
-            ##print "OUT: 39"
+            #print "OUT: 39"
             #print "HERE: 48"
             return context.get(rhs)
         
         # Punt and just try to eval this as a string.
         else:
-            ##print "OUT: 40"
+            #print "OUT: 40"
             #print "HERE: 49"
             return eval_arg(self.__repr__(), context)
         
