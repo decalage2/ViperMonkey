@@ -400,7 +400,7 @@ class MemberAccessExpression(VBA_Object):
         r = indent_str + to_python(new_add, context)        
         return r
 
-    def _to_python_nested_methods(self, context, indent):
+    def _convert_nested_methods_to_func_call(self, context):
         """
         Given a member access expression like foo(1).bar(2).baz(3)
         return (conceptually) baz(3, bar(2, foo(1))).
@@ -423,6 +423,8 @@ class MemberAccessExpression(VBA_Object):
 
         # See if every component of the member access expression has
         # a corresponding emulation function in ViperMonkey.
+        #print "STACK!!"
+        #print obj_stack
         prev_func = None
         curr_func = None
         res_func = None
@@ -444,16 +446,34 @@ class MemberAccessExpression(VBA_Object):
                 
             # Do we have an emulation function for this member item?
             if (obj_name.lower() not in vba_library.VBA_LIBRARY):
+                #print "MISSING!!"
+                #print obj_name
                 return None
 
             # Add the current call as an argument to the previous call.
+            #print "CURR FUNC!!"
+            #print curr_func
             if (prev_func is not None):
+                #print "APPEND FUNC!!"
+                #print curr_func
                 prev_func.params.append(curr_func)
             else:
                 res_func = curr_func
             prev_func = curr_func
             
+        # Done.
+        return res_func
+        
+    def _to_python_nested_methods(self, context, indent):
+        """
+        Given a member access expression like foo(1).bar(2).baz(3)
+        return (conceptually) baz(3, bar(2, foo(1))), but in Python.
+        """
+            
         # Return the nested function calls as Python.
+        res_func = self._convert_nested_methods_to_func_call(context)
+        if (res_func is None):
+            return None
         r = to_python(res_func, context)
         return r
             
@@ -1890,6 +1910,28 @@ class MemberAccessExpression(VBA_Object):
         
         # Done
         return r
+
+    def _eval_nested_methods(self, context):
+        """
+        Given a member access expression like foo(1).bar(2).baz(3)
+        evaluate this as nested function calls (conceptually) like baz(3, bar(2, foo(1))).
+        """
+
+        # Convert this to nested function calls
+        #print "TRY EVAL NESTED!!"
+        #print self
+        res_func = self._convert_nested_methods_to_func_call(context)
+        if (res_func is None):
+            #print "NO!!"
+            return None
+
+        # Is this successfully evaluated?
+        #print "EVAL STUFF!!"
+        #print res_func
+        r = eval_arg(res_func, context)
+        #print "RESULT!!"
+        #print r
+        return r
     
     def eval(self, context, params=None):
 
@@ -2101,6 +2143,13 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_listbox_list(context, tmp_lhs, self.rhs)
         if (call_retval is not None):
             #print "OUT: 22.2"
+            return call_retval
+
+        # See if we can convert nested method calls to a nested function call.
+        #print "HERE: 26.1"
+        call_retval = self._eval_nested_methods(context)
+        if (call_retval is not None):
+            #print "OUT: 22.3"
             return call_retval
         
         # If the final element in the member expression is a function call,
@@ -2596,7 +2645,10 @@ class Function_Call(VBA_Object):
         # Copy constructor?
         if (old_call is not None):
             self.name = old_call.name
-            self.params = old_call.params.copy()
+            if (hasattr(old_call.params, "copy")):
+                self.params = old_call.params.copy()
+            else:
+                self.params = old_call.params
             return
 
         # Making a new one.

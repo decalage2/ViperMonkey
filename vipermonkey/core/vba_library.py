@@ -4334,7 +4334,7 @@ class Cells(VbaLibraryFunc):
         context.increase_general_errors()
         log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + "). (1)")
         return "NULL"
-
+    
 class Sheets(VbaLibraryFunc):
     """
     Excel Sheets() function.
@@ -4346,6 +4346,12 @@ class Sheets(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return None
 
+        # Do we have a loaded Excel file?
+        if (context.loaded_excel is None):
+            context.increase_general_errors()
+            log.warning("Cannot process Sheets() call. No Excel file loaded.")
+            return "NULL"
+        
         # Get the sheet with the given identifier.
         sheet_id = str(params[0])
 
@@ -4368,7 +4374,33 @@ class Sheets(VbaLibraryFunc):
             return curr_sheet
         except:
             return None
+
+class Worksheets(Sheets):
+    """
+    Excel Worksheets() function.
+    """
+    pass
+
+class Value(VbaLibraryFunc):
+    """
+    Excel cell  Value() function (actually field).
+    """
         
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Get the cell value.
+        cell = params[0]
+        r = cell
+        if (isinstance(cell, dict) and ("value" in cell)):
+            r = cell["value"]
+        #print "CELL VALUE!!"
+        #print r
+        return r
+
 class UsedRange(VbaLibraryFunc):
     """
     Excel UsedRange() function.
@@ -4492,6 +4524,11 @@ class Range(VbaLibraryFunc):
         if (params is None):
             log.warning("Range() called with no parameters.")
             return "NULL"
+
+        #print "RANGE!!"
+        #print "# params: " + str(len(params))
+        for p in params:
+            print type(p)
         
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
@@ -4505,13 +4542,22 @@ class Range(VbaLibraryFunc):
                 log.warning("Cannot process Range() call. No Excel file loaded.")
                 return "NULL"
 
+        # Were we given an Excel sheet object?
+        sheet = None
+        for p in params:
+            if isinstance(p, ExcelSheet):
+                #print "GOT RANGE SHEET!!"
+                sheet = p
+                #print sheet
+                break
+            
         # Return a cell dict rather than the cell value?
         return_dict = False
         if ((len(params) >= 2) and (params[1] == True)):
             return_dict = True
             
         # Currently only handles Range(x) calls.
-        if ((len(params) != 1) and (not return_dict)):
+        if ((len(params) != 1) and (not return_dict) and (sheet is None)):
             context.increase_general_errors()
             log.warning("Only 1 argument Range() calls supported. Returning NULL.")
             return "NULL"
@@ -4530,17 +4576,27 @@ class Range(VbaLibraryFunc):
             log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
             return "NULL"
 
-        # Try each sheet until we read a cell.
+        # If we were given a sheet, only look there for the cell. Otherwise
+        # look at all sheets.
+        sheets = None
+        if (sheet is not None):
+            sheets = [sheet]
+        else:
+            sheets = []
+            for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
+                sheet = None
+                try:
+                    sheet = context.loaded_excel.sheet_by_index(sheet_index)
+                    sheets.append(sheet)
+                except:
+                    context.increase_general_errors()
+                    log.warning("Cannot process Range() call. No sheets in file.")
+                    return "NULL"
+
+        # Try the given sheets until we read a cell.                
         r = None
         col = None
-        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
-            sheet = None
-            try:
-                sheet = context.loaded_excel.sheet_by_index(sheet_index)
-            except:
-                context.increase_general_errors()
-                log.warning("Cannot process Range() call. No sheets in file.")
-                return "NULL"
+        for sheet in sheets:
 
             # Multiple cells?
             range_index = str(params[0])
@@ -5186,7 +5242,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                WriteProcessMemory, RunShell, CopyHere, GetFolder, Hour, _Chr, SaveAs2,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
-               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose):
+               RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
+               Worksheets, Value):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
