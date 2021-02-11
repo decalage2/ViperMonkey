@@ -4719,7 +4719,8 @@ class Print_Statement(VBA_Object):
         data = eval_arg(self.value, context=context)
 
         context.write_file(file_id, data)
-        #context.write_file(file_id, '\r\n')
+        if (isinstance(data, str)):
+            context.write_file(file_id, '\r\n')
 
 
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \

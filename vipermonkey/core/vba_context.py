@@ -634,8 +634,21 @@ class Context(object):
             if (fname in self.file_id_map.keys()):
                 fname = self.file_id_map[fname]
             else:
-                log.error('File {} not open. Cannot write new data.'.format(fname))
-                return False
+
+                # Is this a variable?
+                got_it = False
+                if fname.startswith("#"):
+                    var_name = fname[1:]
+                    if self.contains(var_name):
+                        fname = "#" + str(self.get(var_name))
+                        if (fname in self.file_id_map.keys()):
+                            got_it = True
+                            fname = self.file_id_map[fname]
+                
+                # Punt if we cannot find the open file.
+                if (not got_it):
+                    log.error('File {} not open. Cannot write new data.'.format(fname))
+                    return False
             
         # Are we writing a string?
         if isinstance(data, str):
