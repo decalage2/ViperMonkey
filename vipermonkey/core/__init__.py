@@ -85,6 +85,7 @@ __version__ = '0.04'
 
 import sys
 import logging
+import string
 
 # TODO: add pyparsing to thirdparty folder, update setup.py
 from pyparsing import *
@@ -107,6 +108,7 @@ from function_import_visitor import *
 from var_defn_visitor import *
 import filetype
 import read_ole_fields
+from meta import FakeMeta
 
 # === FUNCTIONS ==============================================================
 
@@ -137,12 +139,84 @@ from modules import *
 # Make sure we populate the VBA Library:
 from vba_library import *
 
+from stubbed_engine import StubbedEngine
+
+def pull_urls_excel_sheets(workbook):
+    """
+    Pull URLs from cells in a given ExcelBook object.
+    """
+
+    # Got an Excel workbook?
+    if (workbook is None):
+        return []
+
+    # Look through each cell.
+    all_cells = excel.pull_cells_workbook(workbook)
+    r = set()
+    for cell in all_cells:
+
+        # Skip empty cells.
+        value = None
+        try:
+            value = str(cell["value"]).strip()
+        except UnicodeEncodeError:
+            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+
+        if (len(value) == 0):
+            continue
+        
+        # Add http:// for cells that look like they might be URLs
+        # missing the http part.        
+        pat = r"[A-Za-z0-9_]{3,50}\.[A-Za-z]{2,10}/(?:[A-Za-z0-9_]{1,50}/)*[A-Za-z0-9_\.]{3,50}"
+        if (re.search(pat, value) is not None):
+            value = "http://" + value
+
+        # Look for URLs in the cell value.
+        for url in re.findall(read_ole_fields.URL_REGEX, value):
+            r.add(url.strip())
+
+    # Return any URLs found in cells.
+    return r
+
+def pull_b64_excel_sheets(workbook):
+    """
+    Pull bas64 blobs from cells in a given ExcelBook object.
+    """
+
+    # Got an Excel workbook?
+    if (workbook is None):
+        return []
+
+    # Look through each cell.
+    all_cells = excel.pull_cells_workbook(workbook)
+    r = set()
+    for cell in all_cells:
+
+        # Skip empty cells.
+        value = None
+        try:
+            value = str(cell["value"]).strip()
+        except UnicodeEncodeError:
+            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+
+        if (len(value) == 0):
+            continue
+
+        # Look for base64 in the cell value.
+        base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
+        for b64 in re.findall(base64_pat_strict, value):
+            r.add(b64.strip())
+
+    # Return any base64 found in cells.
+    return r
+
 # === ViperMonkey class ======================================================
 
-class ViperMonkey(object):
+class ViperMonkey(StubbedEngine):
     # TODO: load multiple modules from a file using olevba
 
-    def __init__(self, filename, data):
+    def __init__(self, filename, data, do_jit=False):
+        self.do_jit = do_jit
         self.comments = None
         self.metadata = None
         self.filename = filename
@@ -199,6 +273,7 @@ class ViperMonkey(object):
         self.callback_suffixes = ['_Activate',
                                   '_BeforeNavigate2',
                                   '_BeforeScriptExecute',
+                                  '_Calculate',
                                   '_Change',
                                   '_DocumentComplete',
                                   '_DownloadBegin',
@@ -232,7 +307,14 @@ class ViperMonkey(object):
                                   '_BeforeDropOrPaste']
                                   
     def set_metadata(self, dat):
-        self.metadata = dat
+
+        # Handle meta information represented as a dict.
+        new_dat = dat
+        if (isinstance(dat, dict)):
+            new_dat = FakeMeta()
+            for field in dat.keys():
+                setattr(new_dat, str(field), dat[field])
+        self.metadata = new_dat
         
     def add_compiled_module(self, m):
         """
@@ -242,6 +324,13 @@ class ViperMonkey(object):
             return
         self.modules.append(m)
         for name, _sub in m.subs.items():
+            # Skip duplicate subs that look less interesting than the old one.
+            if (name in self.globals):
+                old_sub = self.globals[name]
+                if (hasattr(old_sub, "statements")):
+                    if (len(_sub.statements) < len(old_sub.statements)):
+                        log.warning("Sub " + str(name) + " is already defined. Skipping new definition.")
+                        continue
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
@@ -251,6 +340,11 @@ class ViperMonkey(object):
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
+        for name, _prop in m.functions.items():
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('(1) storing property let "%s" in globals' % name)
+            self.globals[name.lower()] = _prop
+            self.globals[name] = _prop
         for name, _function in m.external_functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
@@ -449,6 +543,8 @@ class ViperMonkey(object):
 
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
+        vba_context.num_b64_iocs = 0
+        vba_context.shellcode = {}
         
         # TODO: use the provided entrypoint
         # Create the global context for the engine
@@ -459,6 +555,7 @@ class ViperMonkey(object):
                           filename=self.filename,
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
+        context.do_jit = self.do_jit
 
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
@@ -469,7 +566,15 @@ class ViperMonkey(object):
         direct_urls = read_ole_fields.pull_urls_office97(fname, is_data, self.vba)
         for url in direct_urls:
             context.save_intermediate_iocs(url)
-        
+        direct_urls = pull_urls_excel_sheets(self.loaded_excel)
+        for url in direct_urls:
+            context.save_intermediate_iocs(url)
+
+        # Pull base64 saved in Excel cells.
+        cell_b64_blobs = pull_b64_excel_sheets(self.loaded_excel)
+        for cell_b64_blob in cell_b64_blobs:
+            context.save_intermediate_iocs(cell_b64_blob)
+            
         # Save the true names of imported external functions.
         for func_name in self.externals.keys():
             func = self.externals[func_name]
@@ -479,18 +584,22 @@ class ViperMonkey(object):
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
             
         # Save the document text in the proper variable in the context.
+        context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
+        context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Range".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Start".lower()] = 0
         context.globals["Me.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["Me.Paragraphs".lower()] = self.doc_text
+        context.globals["ActiveDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Range".lower()] = "\n".join(self.doc_text)
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["ThisDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range".lower()] = "\n".join(self.doc_text)
@@ -523,6 +632,8 @@ class ViperMonkey(object):
         context.globals["me.Pages.Count".lower()] = 1
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ThisDocument.Characters".lower()] = list("\n".join(self.doc_text))
+        context.globals["ThisDocument.Sections".lower()] = list("\n".join(self.doc_text))
+        context.globals["ActiveDocument.Sections".lower()] = list("\n".join(self.doc_text))
 
         # Break out document words.
         doc_words = []
@@ -542,6 +653,11 @@ class ViperMonkey(object):
         else:
             context.globals["ActiveDocument.Comments".lower()] = self.comments
             context.globals["ThisDocument.Comments".lower()] = self.comments
+            if (self.metadata is not None):
+                all_comments = ""
+                for comment in self.comments:
+                    all_comments += comment + "/n"
+                self.metadata.comments = all_comments
             
         # reset the actions list, in case it is called several times
         self.actions = []
@@ -563,10 +679,17 @@ class ViperMonkey(object):
             entry_point = entry_point.lower()
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Trying entry point " + entry_point)
-            if entry_point in self.globals:
+            if ((entry_point in self.globals) and
+                (hasattr(self.globals[entry_point], "eval"))):
                 context.report_action('Found Entry Point', str(entry_point), '')
-                self.globals[entry_point].eval(context=context)
-                context.dump_all_files(autoclose=True)
+                # We will be trying multiple entry points, so make a copy
+                # of the context so we don't accumulate stage changes across
+                # entry points.
+                tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                self.globals[entry_point].eval(context=tmp_context)
+                tmp_context.dump_all_files(autoclose=True)
+                # Save whether we got actions from this entry point.
+                context.got_actions = tmp_context.got_actions
                 done_emulation = True
 
         # Look for callback functions that can act as entry points.
@@ -584,8 +707,14 @@ class ViperMonkey(object):
 
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
-                        item.eval(context=context)
-                        context.dump_all_files(autoclose=True)
+                        # We will be trying multiple entry points, so make a copy
+                        # of the context so we don't accumulate stage changes across
+                        # entry points.
+                        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                        item.eval(context=tmp_context)
+                        tmp_context.dump_all_files(autoclose=True)
+                        # Save whether we got actions from this entry point.
+                        context.got_actions = tmp_context.got_actions
                         done_emulation = True
 
         # Did we find an entry point?
@@ -626,32 +755,6 @@ class ViperMonkey(object):
             log.debug('e=%r - type=%s' % (e, type(e)))
         value = e.eval(context=context)
         return value
-
-    def report_action(self, action, params=None, description=None):
-        """
-        Callback function for each evaluated statement to report macro actions
-        """
-        # store the action for later use:
-        try:
-            if (isinstance(action, str)):
-                action = unidecode.unidecode(action.decode('unicode-escape'))
-        except UnicodeDecodeError:
-            action = ''.join(filter(lambda x:x in string.printable, action))
-        if (isinstance(params, str)):
-            try:
-                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
-                params = unidecode.unidecode(decoded)
-            except Exception as e:
-                log.warn("Unicode decode of action params failed. " + str(e))
-                params = ''.join(filter(lambda x:x in string.printable, params))
-        try:
-            if (isinstance(description, str)):
-                description = unidecode.unidecode(description.decode('unicode-escape'))
-        except UnicodeDecodeError as e:
-            log.warn("Unicode decode of action description failed. " + str(e))
-            description = ''.join(filter(lambda x:x in string.printable, description))
-        self.actions.append((action, params, description))
-        log.info("ACTION: %s - params %r - %s" % (action, params, description))
 
     def dump_actions(self):
         """

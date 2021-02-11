@@ -40,6 +40,12 @@ https://github.com/decalage2/ViperMonkey
 __version__ = '0.08'
 
 import string
+import sys
+try:
+    # sudo pypy -m pip install rure
+    import rure as re
+except:
+    import re
 
 def is_wide_str(the_str):
     """
@@ -49,6 +55,10 @@ def is_wide_str(the_str):
     if (len(the_str) < 2):
         return False
     if ((len(the_str) % 2) != 0):
+        return False
+    if ('\x00' not in the_str):
+        return False
+    if (the_str.count('\x00') != len(the_str)/2):
         return False
     is_wide = True
     for i in range(1, len(the_str)/2 + 1):
@@ -63,18 +73,22 @@ def convert_wide_to_ascii(the_str):
     """
     if (not is_wide_str(the_str)):
         return the_str
-    r = ""
-    for i in range(0, len(the_str)/2):
-        r += the_str[i * 2]
-    return r
+    # Return every other character.
+    return the_str[::2]
     
 def is_mixed_wide_ascii_str(the_str):
     """
     Test a string to see if it is a mix of wide and ASCII chars.
     """
-    for c in the_str:
-        if (ord(c) > 127):
-            return True
+    uni_str = None
+    try:
+        uni_str = the_str.decode("utf-8")
+    except UnicodeDecodeError:
+        # Punt.
+        return False
+    extended_asc_pat = b"[\x80-\xff]"
+    if (re.search(extended_asc_pat, uni_str) is not None):
+        return True
     return False
 
 str_to_ascii_map = None
@@ -272,9 +286,13 @@ class VbStr(object):
 
         """
 
+        # Track if this is a VBScript string.
+        self.is_vbscript = is_vbscript
+        
         # Copy contructor? (sort of).
         if (isinstance(orig_str, list)):
             self.vb_str = orig_str
+            self.orig_str = "".join(self.vb_str)
             return
 
         # Make sure we have a string.
@@ -285,13 +303,13 @@ class VbStr(object):
                 orig_str = ''.join(filter(lambda x:x in string.printable, orig_str))
             else:
                 raise ValueError("Given value cannot be converted to a string.")
-                
+        self.orig_str = orig_str
+            
         # If this is VBScript each character will be a single byte (like the Python
         # string).
         self.vb_str = []
         if (is_vbscript):
-            for c in orig_str:
-                self.vb_str.append(c)
+            self.vb_str = list(orig_str)
 
         # This is a VBA string.
         else:
@@ -307,13 +325,24 @@ class VbStr(object):
                     pos = 0
                     for bval in bts:
                         chars += chr(bval)
+                    code_str = None
+                    try:
+                        code_str = str(code)
+                    except UnicodeEncodeError:
+                        code_str = filter(isprint, code)
+                    try:
+                        tmp_str = str(tmp_str)
+                    except UnicodeEncodeError:
+                        tmp_str = filter(isprint, tmp_str)
                     #print tmp_str
                     #print type(tmp_str)
                     #print code
                     #print type(code)
                     #print pos
                     #print type(pos)
-                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + str(code) + "_" + str(pos) + "MARK!@#$%%$#@!")
+                    #print code_str
+                    #print type(code_str)
+                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + str(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.
             for val in tmp_str.split("MARK!@#$%"):
@@ -369,10 +398,7 @@ class VbStr(object):
         """
         Return the VB string as a raw Python str.
         """
-        r = ""
-        for c in self.vb_str:
-            r += c
-        return r
+        return "".join(self.vb_str)
 
     def get_chunk(self, start, end):
         """
@@ -402,13 +428,13 @@ class VbStr(object):
         if ((start < 0) or (start >= len(self.vb_str))):
             raise ValueError("start index " + str(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(start) + " out of bounds.")
+            raise ValueError("end index " + str(end) + " out of bounds.")
         if (start > end):
             raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
 
         # Pull out the unchanged prefix and suffix.
         prefix = self.get_chunk(0, start).to_python_str()
-        suffix = self.get_chunk(end + 1, self.len()).to_python_str()
+        suffix = self.get_chunk(end, self.len()).to_python_str()
 
         # Put string together as a Python string.
         if (isinstance(new_str, VbStr)):

@@ -67,7 +67,7 @@ def caselessKeywordsList(keywords):
 statement_keyword = caselessKeywordsList(
     ("Call", "Const", "Declare", "DefBool", "DefByte",
      "DefCur", "DefDate", "DefDbl", "DefInt", "DefLng", "DefLngLng", "DefLngPtr", "DefObj",
-     "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "EndIf",
+     "DefSng", "DefStr", "DefVar", "Dim", "Do", "Else", "ElseIf", "End If",
      "Enum", "Event", "Exit", "Friend", "Function",
      "GoSub", "GoTo", "If", "Implements", "Let", "Loop", "LSet", "Next",
      "On", "Open", "Option", "Private", "Public", "RaiseEvent", "ReDim",
@@ -92,7 +92,7 @@ operator_identifier = caselessKeywordsList(
 # A <reserved-name> is a <reserved-identifier> that is used within expressions
 # as if it was a normal program defined entity (section 2.2).
 reserved_name = caselessKeywordsList((  # TODO: fix this one!
-    "Abs", "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
+    "CBool", "CByte", "CCur", "CDate",  # "CDbl", "CDec", "CInt",
     "CLng", "CLngLng", "CLngPtr", "CSng", "CStr", "CVar", "CVErr",
     "DoEvents", "Fix", "Int", "Len", "LenB", "PSet", "Sgn", "String"))
 
@@ -137,7 +137,7 @@ literal_identifier = boolean_literal_identifier | object_literal_identifier
 # A <reserved-for-implementation-use> is a <reserved-identifier> that currently has no defined
 # meaning to the VBA language but is reserved for use by language implementers.
 reserved_for_implementation_use = caselessKeywordsList((
-    "Attribute", "LINEINPUT", "VB_Base", "VB_Control",
+    "LINEINPUT", "VB_Base", "VB_Control",
     "VB_Creatable", "VB_Customizable", "VB_Description", "VB_Exposed", "VB_Ext_KEY ",
     "VB_GlobalNameSpace", "VB_HelpID", "VB_Invoke_Func", "VB_Invoke_Property ",
     "VB_Invoke_PropertyPut", "VB_Invoke_PropertyPutRefVB_MemberFlags", "VB_Name",

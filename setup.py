@@ -57,7 +57,7 @@ setup(
         "prettytable",
         "colorlog",
         "colorama",
-        "pyparsing==2.3.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58)
+        "pyparsing==2.2.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58). pyparsing 2.3.0 parses some constructs differently and breaks things.
         "unidecode",
         "xlrd",
         "regex",

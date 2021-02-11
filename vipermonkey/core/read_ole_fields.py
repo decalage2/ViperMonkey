@@ -49,24 +49,46 @@ import olefile
 from logger import log
 import filetype
 
-def is_garbage_vba(vba):
+def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     """
     Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
     """
 
-    # See if the 1st % of the string is mostly bad or mostly good.
+    # PE files are not analyzable.
+    if filetype.is_pe_file(vba, True):
+        return True
+
+    # Pull out the 1st % of the string.
     total_len = len(vba)
-    if (total_len > 50000):
+    if ((total_len > 50000) and (not test_all)):
         total_len = int(len(vba) * .25)
     if (total_len == 0):
         return False
+    substr = vba[:total_len]
+
+    # Remove comment lines since garbage characters in those
+    # lines will be ignored.
+    if ("\n'" in substr):
+        tmp = ""
+        for line in substr.split("\n"):
+            if (not line.strip().startswith("'")):
+                tmp += line + "\n"
+        substr = tmp
+    
+    # See if the 1st % of the string is mostly bad or mostly good.
     num_bad = 0.0
-    for c in vba[:total_len]:
+    in_string = False
+    for c in substr:
+        if (c == '"'):
+            in_string = not in_string
+        # Don't count garbage in strings.
+        if in_string:
+            continue
         if (c not in string.printable):
             num_bad += 1
 
-    # It's bad if > 60% of the 1st % of the string is garbage.    
-    return ((num_bad/total_len) > .6)
+    # It's bad if > NN% of the 1st % of the string is garbage.
+    return ((num_bad/total_len) > bad_pct)
 
 def pull_base64(data):
     """
@@ -118,6 +140,69 @@ def unzip_data(data):
     # Return the unzipped data and temp file name.
     return (unzipped_data, fname)
 
+def _clean_2007_text(s):
+    """
+    Replace special 2007 formatting strings with actual text,
+    """    
+    s = s.replace("&amp;", "&")\
+         .replace("&gt;", ">")\
+         .replace("&lt;", "<")\
+         .replace("&apos;", "'")\
+         .replace("&quot;", '"')\
+         .replace("_x000d_", "\r")
+    
+    return s
+
+def get_drawing_titles(data):
+    """
+    Read custom Drawing element title values from an Office 2007+ file.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return []
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return []
+
+    # Pull out word/document.xml, if it is there.
+    zip_subfile = 'word/document.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        if (delete_file):
+            os.remove(fname)
+        return []
+
+    # Read word/document.xml.
+    f1 = unzipped_data.open(zip_subfile)
+    contents = f1.read()
+    f1.close()
+
+    # Delete the temporary Office file.
+    if (delete_file):
+        os.remove(fname)
+    
+    # <wp:docPr id="1" name="the name" title="the title text"/>
+    # Find all the drawing titles.
+    pat = r"<wp\:docPr id=\"(\d+)\" name=\"([^\"]*)\" title=\"([^\"]*)\""
+    if (re.search(pat, contents) is None):
+        return []
+    drawings = re.findall(pat, contents)
+
+    # Return the text as Shapes(NN) variables.
+    r = []
+    for drawing_info in drawings:
+        drawing_id = drawing_info[0]
+        drawing_name = drawing_info[1]
+        drawing_text = _clean_2007_text(drawing_info[2])
+        var_name = "Shapes('" + drawing_id + "')"
+        r.append((var_name, drawing_text))
+
+    # Done.
+    return r
+
 def get_defaulttargetframe_text(data):
     """
     Read custom DefaultTargetFrame value from an Office 2007+ file.
@@ -155,7 +240,59 @@ def get_defaulttargetframe_text(data):
     pat = r"<vt:lpwstr>([^<]+)</vt:lpwstr>"
     if (re.search(pat, contents) is None):
         return None
-    return re.findall(pat, contents)[0]
+    r = _clean_2007_text(re.findall(pat, contents)[0])
+    return r
+
+def get_customxml_text(data):
+    """
+    Read custom CustomXMLParts text values from an Office 2007+ file.
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return []
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return []
+
+    # ActiveDocument.CustomXMLParts(ActiveDocument.CustomXMLParts.Count).SelectNodes("//Items")(1).ChildNodes(2).Text
+    
+    # Process each customXml/itemNN.xml file.
+    r = []
+    for nn in range(1, 6):
+
+        # Does customXml/itemNN.xml exist?
+        zip_subfile = 'customXml/item' + str(nn) + ".xml"
+        if (zip_subfile not in unzipped_data.namelist()):
+            continue
+
+        # Read customXml/itemNN.xml.
+        f1 = unzipped_data.open(zip_subfile)
+        contents = f1.read()
+        f1.close()
+    
+        # <Item1>VALUE HERE</Item1>
+        # Pull out the string value.
+        pat = r"<Item\d+>([^<]+)</Item\d+>"
+        if (re.search(pat, contents) is None):
+            continue
+        txt_val = _clean_2007_text(re.findall(pat, contents)[0])
+
+        # Save it.
+        # This var name may need to be generalized.
+        # customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(1).childnodes('2').text
+        var_name = "customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(" + str(nn) + ").childnodes('2').text"
+        r.append((var_name, txt_val))
+
+    # Delete the temporary Office file.
+    if (delete_file):
+        os.remove(fname)
+
+    # Return the results.
+    return r
     
 def get_msftedit_variables_97(data):
     """
@@ -308,7 +445,7 @@ def _read_chunk(anchor, pat, data):
         return re.findall(pat, data, re.DOTALL)
     return None
 
-def get_ole_textbox_values2(data, debug, vba_code):
+def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a really NASTY hack.
@@ -351,11 +488,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
             other_var_names.add(short_name)
 
     # Read in the large chunk of data with the object names and string values.
-    #print "HERE!!"
-    #print len(data)
-    #chunk_pats = [r'\xd7\x8c\xfe\xfb(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))',
-    #              r'\x00V\x00B\x00F\x00r\x00a\x00m\x00e\x00(.*)(?:(?:Microsoft Forms 2.0 (?:Form|Frame))|(?:ID="\{))',
-    #              r'ID="\{.{20,10000}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,20}(.+)Microsoft Forms ']
+    # chunk_pats are (anchor string, full chunk regex).
     chunk_pats = [('ID="{',
                    r'ID="\{.{20,}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,10}(.+?)Microsoft Forms '),
                   ('\x05\x00\x00\x00\x17\x00',
@@ -367,12 +500,15 @@ def get_ole_textbox_values2(data, debug, vba_code):
     for anchor, chunk_pat in chunk_pats:
         chunk = _read_chunk(anchor, chunk_pat, data)
         if (chunk is not None):
+            if debug:
+                print "\nCHUNK ANCHOR: '" + anchor + "'"
+                print "CHUNK PATTERN: '" + chunk_pat + "'"
             break
 
     # Did we find the value chunk?
     if (chunk is None):                
         if debug:
-            print "NO VALUES"
+            print "\nNO VALUES"
         return []
 
     # Get the actual chunk.
@@ -392,7 +528,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print chunk
     
     # Pull out the strings from the value chunk.
-    ascii_pat = r"(?:(?:[\x09\x20-\x7f]|\x0d\x0a){4,})|(?:(?:[\x09\x20-\x7f]\x00){4,})"
+    ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
     vals = re.findall(ascii_pat, chunk)
     vals = vals[:-1]
     tmp_vals = []
@@ -415,13 +551,17 @@ def get_ole_textbox_values2(data, debug, vba_code):
             (val.startswith("_DELETED_NAME_"))):
             continue
 
+        # No stream names.
+        if (val in stream_names):
+            continue
+        
         # Save modified string.
         tmp_vals.append(val)
 
     # Work with the modified list of strings.
     vals = tmp_vals
     if debug:
-        print "ORIG RAW VALS:"
+        print "\nORIG RAW VALS:"
         print vals
 
     # Looks like control tip text goes right after var names in the string
@@ -430,13 +570,17 @@ def get_ole_textbox_values2(data, debug, vba_code):
     updated_vals = []
     skip = set()
     if debug:
-        print "CONTROL TIP PROCESSING:"
+        print "\nCONTROL TIP PROCESSING:"
     for name in control_tip_var_names:
         pos = -1
         for str_val in vals:
             pos += 1
             if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
 
+                # Skip values that are not valid.
+                if (vals[pos + 1].startswith("ControlTipText")):
+                    continue
+                
                 # Save the current name/value pair.
                 if debug:
                     print (name, vals[pos + 1])
@@ -475,17 +619,17 @@ def get_ole_textbox_values2(data, debug, vba_code):
     name_pat += ")"
     names = re.findall(name_pat, chunk)
     if debug:
-        print "ORIG NAMES:"
+        print "\nORIG NAMES:"
         print names
 
     # Get values.
     val_pat = r"(?:[\x02\x10]\x00\x00([\x09\x20-\x7f]{2,}))|" + \
-              r"((?:(?:\x00)[\x09\x20-\x7f]){2,})|" + \
+              r"((?:\x00[\x09\x20-\x7f]|\x00\x0d\x00\x0a){2,})|" + \
               r"(?:\x05\x80([\x09\x20-\x7f]{2,}))|" + \
               r"(?:[\x15\x0c\x0b]\x00\x80([\x09\x20-\x7f]{2,}(?:\x01\x00C\x00o\x00m\x00p\x00O\x00b\x00j.+[\x09\x20-\x7f]{5,})?))"
-    vals = re.findall(val_pat, chunk)
+    vals = re.findall(val_pat, chunk.replace("\x19 ", "`\x00"))
     if debug:
-        print "ORIG SPECIFIC VALS:"
+        print "\nORIG SPECIFIC VALS:"
         print vals
     
     tmp_vals = []
@@ -524,13 +668,18 @@ def get_ole_textbox_values2(data, debug, vba_code):
         # Skip fonts and other things.
         if ((val.startswith("Taho")) or
             (val.startswith("PROJECT")) or
-            (val.startswith("_DELETED_NAME_"))):
+            (val.startswith("_DELETED_NAME_")) or
+            ("Normal.ThisDocument" in val)):
             continue
 
         # Skip duplicates.
         if (val in seen):
             continue
         seen.add(val)
+
+        # No stream names.
+        if (val in stream_names):
+            continue
         
         # Save modified string.
         tmp_vals.append(val)
@@ -541,7 +690,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
     var_vals = tmp_vals
 
     if debug:
-        print "ORIG VAR_VALS:"
+        print "\nORIG VAR_VALS:"
         print var_vals
     
     # There may be an extra piece of randomly generated data at the start of the
@@ -638,7 +787,7 @@ def get_ole_textbox_values2(data, debug, vba_code):
         print r
     return r
 
-def get_ole_textbox_values1(data, debug):
+def get_ole_textbox_values1(data, debug, stream_names):
     """
     Read in the text associated with embedded OLE form textbox objects.
     NOTE: This currently is a really NASTY hack.
@@ -659,7 +808,7 @@ def get_ole_textbox_values1(data, debug):
     # Did we find the value chunk?
     if (len(chunk) == 0):
         if debug:
-            print "NO VALUES"
+            print "\nNO VALUES"
         return []
     chunk = chunk[0]
 
@@ -684,10 +833,13 @@ def get_ole_textbox_values1(data, debug):
         # Skip fonts.
         if (val.startswith("Taho")):
             continue
+        # Skip stream names.
+        if (val in stream_names):
+            continue
         tmp_vals.append(val)
     vals = tmp_vals
     if debug:
-        print "---------------"
+        print "\n---------------"
         print "Values:"
         print chunk
         print vals
@@ -702,21 +854,21 @@ def get_ole_textbox_values1(data, debug):
     # Did we find the name chunk?
     if (len(chunk) == 0):
         if debug:
-            print "NO NAMES"
+            print "\nNO NAMES"
         return []
     chunk_orig = chunk[0]
 
     # Can we narrow it down?
     if ("C\x00o\x00m\x00p\x00O\x00b\x00j" not in chunk_orig):
         if debug:
-            print "NO NARROWED DOWN CHUNK"
+            print "\nNO NARROWED DOWN CHUNK"
         return []
     
     # Narrow the name chunk down.
     start = chunk_orig.index("C\x00o\x00m\x00p\x00O\x00b\x00j")
     chunk = chunk_orig[start + len("C\x00o\x00m\x00p\x00O\x00b\x00j"):]
     if debug:
-        print "---------------"
+        print "\n---------------"
         print "Names:"
         print chunk
 
@@ -725,6 +877,10 @@ def get_ole_textbox_values1(data, debug):
     if (len(names) > 0):
         names = names[:-1]
     if (len(names) == 0):
+        if ("Document" not in chunk_orig):
+            if debug:
+                print "\nNO NAMES, NO Document IN CHUNK"
+            return []
         start = chunk_orig.index("Document")
         chunk = chunk_orig[start + len("Document"):]
         names = re.findall(ascii_pat, chunk)
@@ -736,7 +892,7 @@ def get_ole_textbox_values1(data, debug):
     # If we have more names than values skip the first few names.
     if (len(names) > len(vals)):
         if debug:
-            print "NOT SAME # NAMES/VALS"
+            print "\nNOT SAME # NAMES/VALS"
         names = names[len(names) - len(vals):]
 
     # Collect up and return the name -> value mappings.
@@ -832,6 +988,422 @@ def clean_names(names):
             r.add(poss_name)
     return r
 
+def _get_stream_names(vba_code):
+    """
+    Pull the names of OLE streams from olevba output.
+    """
+    stream_pat = r'Attribute VB_Name = "([\w_]+)"'
+    return re.findall(stream_pat, vba_code)    
+
+def _find_name_in_data(object_names, found_names, strs, debug):
+    """
+    Look for a VBA name in the string vals of a chunk of data.
+    """
+
+    # Look through the strings in reverse to get the last referenced name.
+    curr_pos = 0
+    name_pos = 0
+    name = None
+    page_pat = r"(Page\d+)(?:[A-Za-z]+[A-Za-z0-9]*)?"
+    for field in strs[::-1]:
+        poss_name = field.replace("\x00", "").replace("\xff", "").strip()
+        # Fix strings like "Page2M3A"
+        if (re.search(page_pat, poss_name) is not None):
+            poss_name = re.findall(page_pat, poss_name)[0]
+        # Found unhandled name?
+        if ((poss_name in object_names) and (poss_name not in found_names)):
+
+            # Looks like this is one of the objects we are looking for.
+            name = poss_name
+            name_pos = curr_pos
+            if debug:
+                print "\nFound referenced name: " + name
+            break
+        curr_pos += 1
+
+    # If we found a name, see if it shows up multiple times and pick the one
+    # with the largest value.
+    curr_pos = len(strs) - curr_pos - 1 # handle reversed list.
+    name_pos = len(strs) - name_pos - 1 # handle reversed list.
+    if (name is not None):
+        curr_pos = -1
+        max_val = ""
+        for field in strs:
+            curr_pos += 1
+            if ((field == name) and
+                ((curr_pos + 1) < len(strs)) and
+                (len(strs[curr_pos + 1]) > len(max_val))):
+                max_val = strs[curr_pos + 1]
+                name_pos = curr_pos
+        
+    return (curr_pos, name_pos, name)
+
+def _find_repeated_substrings(s, chunk_size, min_str_size):
+    """
+    Find all of the repeated substrings in a given string that are longer
+    than a certain length. This assumes that repeated substrings of interest
+    show up in a prefix of a given size.
+    """
+    
+    # If there is a repeated string it will show up in the 1st NN characters
+    # of the string.
+    if (chunk_size > len(s)):
+        return set()
+    chunk = s[:chunk_size]
+
+    # Start looking for repeats of substrings of length 2 in the chunk.
+    pos = -1
+    window_size = 2
+    r = set()
+    while ((pos + window_size) < len(chunk)):
+
+        # Is this 2 character chunk repeated?
+        pos += 1
+        curr_str = chunk[pos:pos + window_size]
+        if (s.count(curr_str) > 1):
+
+            # Start adding 1 character at at time to the substring until
+            # we find no more repeats. This should give us the longest
+            # repeated substring with the current prefix.
+            tmp_window_size = 3
+            old_curr_str = None
+            while ((s.count(curr_str) > 1) and
+                   ((pos + tmp_window_size) < len(chunk))):
+                old_curr_str = curr_str
+                curr_str = chunk[pos:pos + tmp_window_size]
+                tmp_window_size += 1
+
+            # Found an acceptable repeated substring?
+            if ((old_curr_str is not None) and
+                (len(old_curr_str.strip()) >= min_str_size)):
+
+                # Save the full string.
+                r.add(old_curr_str)
+
+                # If this is a large string some substrings may be more
+                # common repeats. Add some of those.
+                if (len(old_curr_str) > min_str_size*3):
+                    for i in range(1, len(old_curr_str) - min_str_size*3):
+                        r.add(old_curr_str[:i*-1])
+
+    # Done
+    return r
+
+def _find_most_repeated_substring(strs):
+    """
+    Find the most common repeated substring in a given list of strings.
+    """
+    
+    # Find all the repeated substrings in all the given strings.
+    all_substs = set()
+    for s in strs:
+        all_substs = all_substs.union(_find_repeated_substrings(s, 300, 4))
+    #print all_substs
+        
+    # Found any repeated substrings?
+    if (len(all_substs) == 0):
+        return None
+        
+    # Find the substring that is repeated the most.
+    max_repeats = -1
+    max_subst = ""
+    #print "FIND MAX REPEATS!!"
+    for curr_subst in all_substs:
+        curr_repeats = 0
+        for s in strs:
+            curr_repeats += s.count(curr_subst)
+        if (curr_repeats < 5):
+            continue
+        #print "############"
+        #print curr_subst
+        #print curr_repeats
+        #print max_subst
+        #print max_repeats
+        if (curr_repeats * len(curr_subst) > max_repeats * len(max_subst)):
+            max_repeats = curr_repeats
+            max_subst = curr_subst
+
+    # Return the most repeated substring.
+    if (max_subst == ""):
+        max_subst = None
+    return max_subst
+
+def _find_str_with_most_repeats(strs):
+    """
+    Find the string in the given list of strings that contains the most
+    instances of some repeated substring.
+    """
+    
+    # Find the substring that is repeated most overall. This substring
+    # could show up in multiple strings.
+    max_subst = _find_most_repeated_substring(strs)
+    if (max_subst is None):
+        return (None, None)
+    
+    # Now find which given string has the most instances of the reported
+    # substring.
+    max_count = -1
+    max_str = None
+    for s in strs:
+        curr_count = s.count(max_subst)
+        if (curr_count > max_count):
+            max_count = curr_count
+            max_str = s
+
+    # Done.
+    return (max_str, max_subst)
+
+def get_ole_text_method_1(vba_code, data, debug=False):
+
+    # Debug this thing.
+    debug1 = debug
+    #debug1 = True
+    
+    # Strip some red herring strings from the data.
+    if debug1:
+        print "\n\nSTART get_ole_text_method_1 !!!!"
+    data = re.sub(r"[\x20-\x7e]\x00(?:\xe5|\xd5)", "", data)
+    data = data.replace("\x02$", "").\
+           replace("\x01@", "").\
+           replace("0\x00\xe5", "").\
+           replace("\xfc", "").\
+           replace("\x19 ", "").\
+           replace("_epx" + chr(223), "").\
+           replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "").\
+           replace("Embedded Object", "").\
+           replace("mbedded Object", "").\
+           replace("bedded Object", "").\
+           replace("edded Object", "").\
+           replace("dded Object", "").\
+           replace("ded Object", "").\
+           replace("ed Object", "").\
+           replace("d Object", "").\
+           replace("jd\x00\x00", "\x00").\
+           replace("\x00\x00", "\x00").\
+           replace("\x0c%", "")
+    if (re.search(r"\x00.%([^\x00])\x00", data) is not None):
+        data = re.sub(r"\x00.%([^\x00])\x00", "\x00\\1\x00", data)
+    data = data.replace("\r", "__CARRIAGE_RETURN__")
+    data = data.replace("\n", "__LINE_FEED__")
+    if (re.search(r"\x00([ -~])[^ -~\x00]([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00([ -~])[^ -~\x00]([ -~])\x00", "\x00\\1\x00\\2\x00", data)
+    if (re.search(r"\x00[ -~]{2}([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00[ -~]{2}([ -~])\x00", "\x00\\1\x00", data)
+    data = re.sub(r"\x00[^ -~]", "", data)
+    if (re.search(r"\x00([ -~])[^ -~\x00]([ -~])\x00", data) is not None):
+        data = re.sub(r"\x00([ -~])[^ -~\x00]([ -~])\x00", "\x00\\1\x00\\2\x00", data)
+    data = data.replace("__CARRIAGE_RETURN__", "\r")
+    data = data.replace("__LINE_FEED__", "\n")
+    if debug1:
+        print data
+        print "\n\n\n"
+
+    # Pull out the strings from the data.
+    ascii_pat = r"(?:[\r\n\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\r\n\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
+    vals = re.findall(ascii_pat, data)
+    tmp_vals = []
+    for val in vals:
+        
+        # No wide char strings.
+        val = val.replace("\x00", "")
+        
+        # Eliminate cruft.
+        for cruft_pat in cruft_pats:
+            val = re.sub(cruft_pat, "", val)
+            
+        # Skip strings that were pure cruft.
+        if (len(val) == 0):
+            continue
+            
+        # Skip fonts and other things.
+        if ((val.startswith("Taho")) or
+            (val.startswith("PROJECT")) or
+            (val.startswith("_DELETED_NAME_"))):
+            continue
+
+        # No HTML.
+        if (val.strip().startswith("<!DOCTYPE html")):
+            continue
+        
+        # Save modified string.
+        tmp_vals.append(val)
+        if debug1:
+            print "+++++++++++++++"
+            print val
+
+    # Find the string with the most repeated substrings.
+    max_substs, repeated_subst = _find_str_with_most_repeats(tmp_vals)
+    if (max_substs is None):
+        if debug1:
+            print "DONE!! NO REPEATED SUBSTRINGS!!"
+        return None
+    if debug1:
+        print "\n"
+        print "*************"
+        print "MAX SUBSTS"
+        print max_substs
+        print "\n"
+        print "*************"
+        print "REPEATED SUBST"
+        print repeated_subst
+    
+    # Is this big enough to be interesting?
+    if debug1:
+        print "LEN MAX STR: " + str(len(max_substs))
+        print "MAX REPEATS IN 1 STR: " + str(max_substs.count(repeated_subst))
+        print "REPEATED STR: '" + repeated_subst + "'"
+    if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
+        if debug1:
+            print "DONE!! TOO FEW REPEATED SUBSTRINGS!!"
+        return None
+
+    # Tack together all the substrings that have the repeated substring as a large
+    # percentage of their string.
+    aggregate_str = ""
+    obj_pat = r'VERSION \d\.\d{1,5}\r\n' + \
+              r'Begin \{\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\-\w{2,20}\} \w{2,20} \r\n' + \
+              r' {1,10}Caption {1,30}= {1,30}"\w{1,20}"\r\n' + \
+              r' {1,10}ClientHeight {1,30}= {1,30}\d{1,20}\r\n' + \
+              r' {1,10}ClientLeft {1,30}= {1,30}\d{1,20}\r\n' + \
+              r' {1,10}ClientTop {1,30}=? {0,30}(?:\d{3})?'
+    for val in tmp_vals:
+
+        # Ignore empty strings.
+        val = val.replace("\x00", "")
+        if (len(val) == 0):
+            continue
+
+        # Is a large percentage of the current string the repeated substring?
+        pct = (val.count(repeated_subst) * len(repeated_subst)) / float(len(val)) * 100
+        if (pct > 30):
+
+            # Yes it is. Add it to the payload.
+
+            # The repeated substring may be split between the new substring and
+            # the previous string. Make sure the strings are properly glued in this
+            # case with the substring.
+
+            # Find the portion of the repeated string in the 1st half of the string.
+            # 112345
+            # foo11
+            # 2345bar
+            first_half_rep = None
+            second_half_rep = None
+            got_match = False
+            matched_agg_str = ""
+            # Might have extra characters on the end of the aggregate string.
+            # Walk back from the end of the string trying to match up the
+            # repeated string chunks.
+            for end_pos in range(0, 3):
+                if debug1:
+                    print "CHECK !!!!!!!!!!!!!"
+                    print "chopping off " + str(end_pos)
+                curr_agg_str = aggregate_str[:-end_pos]
+                for i in range(1, len(repeated_subst) + 1):
+                    curr_first_half = repeated_subst[:i]
+                    if debug1:
+                        print "++++"
+                        print "curr 1st half"
+                        print curr_first_half
+                        print "curr 1st half string end"
+                        print curr_agg_str[-len(curr_first_half):]
+                    if (curr_agg_str.endswith(curr_first_half) and
+                        (len(curr_agg_str) > len(matched_agg_str))):
+                        if debug1:
+                            print "MATCH!!"
+                        matched_agg_str = curr_agg_str
+                        first_half_rep = curr_first_half
+                        second_half_rep = repeated_subst[i:]
+
+            # Repeated string not split up (1st string ends with repeated string)?
+            if (first_half_rep == repeated_subst):
+                first_half_rep = None
+                second_half_rep = None
+
+            # Handle chopping garbage characters from the end of the aggregate string.
+            if (matched_agg_str != ""):
+                aggregate_str = matched_agg_str
+                
+            # There could be extra characters in front of the 2nd half of the string.
+            if (first_half_rep is not None):
+
+                if debug1:
+                    print "FIRST HALF!!"
+                    print first_half_rep
+                    print "SECOND HALF!!"
+                    print second_half_rep
+                
+                # Figure out characters to skip in the 2nd half.
+                start_pos = 0
+                while (start_pos < len(val)):
+                    if (val[start_pos:].startswith(second_half_rep)):
+                        break
+                    start_pos += 1
+                if debug1:
+                    print "SKIP 2nd HALF!!"
+                    print val[:start_pos]
+                val = val[start_pos:]
+
+            # The repeated string was not split.
+            else:
+
+                # Clear some stupid Office 97 cruft from the 2nd half of the string.
+                if (repeated_subst in val):
+                    start_pos = val.index(repeated_subst)                    
+                    while (((start_pos - 1) >= 0) and
+                           (re.match("[A-Za-z]", val[start_pos - 1]) is not None)):
+                        start_pos -= 1
+                    val = val[start_pos:]
+                else:
+                    val = re.sub(obj_pat, "", val)
+                
+            # Add in another payload piece.
+            aggregate_str += val
+        if debug1:
+            print "-------"
+            print val.strip()
+            print pct
+    if (len(aggregate_str) == 0):
+        aggregate_str = max_substs
+        
+    # Get the names of ActiveX/OLE items accessed in the VBA.
+    object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
+    object_names.update(re.findall(r"(\w+)\.Caption", vba_code))
+    object_names.update(re.findall(r"(\w+) *_? *(?:\r?\n)? *\. *_? *(?:\r?\n)? *Content", vba_code))
+    
+    # Are we refering to Page or Tab or InlineShape objects by index?
+    page_pat = r"((?:Pages|Tabs|InlineShapes|Item).?\(.+\))"
+    if (re.search(page_pat, vba_code) is not None):
+
+        # Add some Page objects to look for.
+        for i in range(1, 10):
+            object_names.add("Page" + str(i))
+
+    # How about StoryRanges items?
+    if (".StoryRanges" in vba_code):
+
+        # Add some StoryRanges objects to look for.
+        for i in range(1, 10):
+            object_names.add("StoryRanges.Items('" + str(i) + "')")
+            object_names.add("StoryRanges('" + str(i) + "')")
+            object_names.add("StoryRanges.Items(" + str(i) + ")")
+            object_names.add("StoryRanges(" + str(i) + ")")
+            
+    # Eliminate any obviously bad names.
+    object_names = clean_names(object_names)
+    if debug1:
+        print "\nFINAL:"
+        print aggregate_str
+        print object_names
+        sys.exit(0)
+
+    
+    # Just assign every item accessed in the VBA to this value and hope for the best.
+    r = []
+    for object in object_names:
+        r.append((object, aggregate_str))
+    return r
+    
 def get_ole_textbox_values(obj, vba_code):
     """
     Read in the text associated with embedded OLE form textbox objects.
@@ -863,18 +1435,28 @@ def get_ole_textbox_values(obj, vba_code):
     #debug = True
     debug = False
     if debug:
-        print "Extracting OLE/ActiveX TextBox strings..."
-
+        print "\nExtracting OLE/ActiveX TextBox strings..."
+        
+    # Pull out the stream names so we don't treat those as data values.
+    stream_names = _get_stream_names(vba_code)
+    if debug:
+        print "\nStream Names: " + str(stream_names) + "\n"
+        
     # Clear out some troublesome byte sequences.
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
     data = data.replace("o" + "\x00" * 40, "\x00" * 40)
     data = re.sub("Tahoma\w{0,5}", "\x00", data)
+
+    # Try a method specific to a certain maldoc campaign first.
+    r = get_ole_text_method_1(vba_code, data)
+    if (r is not None):
+        return r
     
-    # First try alternate method of pulling data. These will be merged in later.
-    v1_vals = get_ole_textbox_values1(data, debug)
+    # And try alternate method of pulling data. These will be merged in later.
+    v1_vals = get_ole_textbox_values1(data, debug, stream_names)
 
     # And try another alternate method of pulling data. These will be merged in later.
-    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code)
+    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code, stream_names)
 
     if debug:
         print "\nget_ole_textbox_values()\n"
@@ -886,22 +1468,24 @@ def get_ole_textbox_values(obj, vba_code):
     
     # Are we refering to Page objects by index?
     page_pat = r"(?:ThisDocument|ActiveDocument|\w+)\.(Pages\(.+\))"
+    page_names = set()
     if (re.search(page_pat, vba_code) is not None):
 
         # Add some Page objects to look for.
         for i in range(1, 10):
             object_names.add("Page" + str(i))
+            page_names.add("Page" + str(i))
 
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
     if debug:
-        print "Names from VBA code:"
+        print "\nNames from VBA code:"
         print object_names
             
     # Sanity check.
     if (data is None):
         if debug:
-            print "NO DATA"
+            print "\nNO DATA"
             sys.exit(0)
         return []
 
@@ -910,7 +1494,8 @@ def get_ole_textbox_values(obj, vba_code):
     data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
 
     # Normalize Page object naming.
-    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
+    # Page1M3A
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
     data = re.sub(page_name_pat, r"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
@@ -919,11 +1504,11 @@ def get_ole_textbox_values(obj, vba_code):
     field_marker = "Forms."
     if (re.search(form_str_pat, data) is None):
         if debug:
-            print "NO FORMS"
+            print "\nNO FORMS"
             sys.exit(0)
         return []
 
-    pat = r"(?:[\x20-\x7e]{3,})|(?:(?:(?:\x00|\xff)[\x20-\x7e]){3,})"
+    pat = r"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
     index = 0
     r = []
     found_names = set()
@@ -966,15 +1551,17 @@ def get_ole_textbox_values(obj, vba_code):
         else:
 
             # Jump an arbitrary amount ahead.
-            end = index + 25000
+            end = index + 2500000
             if (end > len(data)):
                 end = len(data) - 1
 
         # Pull out the current form data chunk.
         chunk = data[index : end]
+
+        # Pull strings from the chunk.
         strs = re.findall(pat, chunk)
         if debug:
-            print "\n\n-----------------------------"
+            print "\n\n-------------- CHUNK ---------------"
             print chunk
             print str(strs).replace("\\x00", "").replace("\\xff", "")
 
@@ -987,24 +1574,15 @@ def get_ole_textbox_values(obj, vba_code):
                 (not field.startswith("Microsoft "))):
                 longest_str = field
         long_strs.append(longest_str)
-            
-        # Easy case first. Does this look like it might be 1 of the objects
-        # referenced in the VBA code?
-        curr_pos = 0
-        name_pos = 0
-        name = None
-        for field in strs:
-            poss_name = field.replace("\x00", "").replace("\xff", "").strip()
-            if ((poss_name in object_names) and (poss_name not in found_names)):
 
-                # Looks like this is one of the objects we are looking for.
-                name = poss_name
-                found_names.add(name)
-                name_pos = curr_pos
-                if debug:
-                    print "Found referenced name: " + name
-                break
-            curr_pos += 1
+        # We want to handle Page objects first.
+        curr_pos, name_pos, name = _find_name_in_data(page_names, found_names, strs, debug)
+
+        # No Page names?
+        if (name is None):
+
+            # Does this look like it might be 1 of the objects referenced in the VBA code?
+            curr_pos, name_pos, name = _find_name_in_data(object_names, found_names, strs, debug)
 
         # Did we find the name?
         if (name is None):
@@ -1030,7 +1608,6 @@ def get_ole_textbox_values(obj, vba_code):
     
                         # We have found the name.
                         name = poss_name
-                        found_names.add(name)
                         name_pos = curr_pos + 1
     
                     # Seems like there is only 1 'Forms.TextBox.1', so we are
@@ -1053,19 +1630,19 @@ def get_ole_textbox_values(obj, vba_code):
             # Now look for the name after the name marker.
             curr_pos = 0
             if debug:
-                print "Name Marker: " + name_marker
+                print "\nName Marker: " + name_marker
             for field in strs:
 
                 # It might come after the name marker tag.
                 if debug:
-                    print "Field: '" + field.replace("\x00", "") + "'"
+                    print "\nField: '" + field.replace("\x00", "") + "'"
                 if (field.replace("\x00", "") == name_marker):
 
                     # If the next field does not look something like '_1619423091' the
                     # next field might be the name.
                     poss_name = strs[curr_pos + 1].replace("\x00", "")
                     if debug:
-                        print "Try: '" + poss_name + "'"
+                        print "\nTry: '" + poss_name + "'"
                     if ((not poss_name.startswith("_")) or
                         (not poss_name[1:].isdigit())):
 
@@ -1075,7 +1652,7 @@ def get_ole_textbox_values(obj, vba_code):
                         if (poss_name == 'contents'):
                             poss_name = strs[curr_pos + 2].replace("\x00", "")
                             if debug:
-                                print "Try: '" + poss_name + "'"
+                                print "\nTry: '" + poss_name + "'"
                             
                             # Does the next field does not look something like '_1619423091'?
                             if ((not poss_name.startswith("_")) or
@@ -1083,7 +1660,6 @@ def get_ole_textbox_values(obj, vba_code):
 
                                 # We have found the name.
                                 name = poss_name
-                                found_names.add(name)
                                 name_pos = curr_pos + 2
                                 break
 
@@ -1092,12 +1668,11 @@ def get_ole_textbox_values(obj, vba_code):
                                 if ((curr_pos + 3) < len(strs)):                                    
                                     poss_name = strs[curr_pos + 3].replace("\x00", "")
                                     if debug:
-                                        print "Try: '" + poss_name + "'"
+                                        print "\nTry: '" + poss_name + "'"
 
                                     # CompObj is not an object name.
                                     if (poss_name != "CompObj"):
                                         name = poss_name
-                                        found_names.add(name)
                                         name_pos = curr_pos + 3
                                         break
 
@@ -1107,12 +1682,11 @@ def get_ole_textbox_values(obj, vba_code):
                                         if ((curr_pos + 4) < len(strs)):
                                             poss_name = strs[curr_pos + 4].replace("\x00", "")
                                             if debug:
-                                                print "Try: '" + poss_name + "'"
+                                                print "\nTry: '" + poss_name + "'"
 
                                             # ObjInfo is not an object name.
                                             if (poss_name != "ObjInfo"):
                                                 name = poss_name
-                                                found_names.add(name)
                                                 name_pos = curr_pos + 4
                                                 break
 
@@ -1120,12 +1694,11 @@ def get_ole_textbox_values(obj, vba_code):
                                             if ((curr_pos + 5) < len(strs)):
                                                 poss_name = strs[curr_pos + 5].replace("\x00", "")
                                                 if debug:
-                                                    print "Try: '" + poss_name + "'"
+                                                    print "\nTry: '" + poss_name + "'"
 
                                                 # ObjInfo is not an object name.
                                                 if (poss_name != "ObjInfo"):
                                                     name = poss_name
-                                                    found_names.add(name)
                                                     name_pos = curr_pos + 5
                                                     break
 
@@ -1133,7 +1706,6 @@ def get_ole_textbox_values(obj, vba_code):
 
                             # We have found the name.
                             name = poss_name
-                            found_names.add(name)
                             break
 
                 # Move to the next field.
@@ -1143,7 +1715,7 @@ def get_ole_textbox_values(obj, vba_code):
         if (not is_name(name)):
             index = end
             if debug:
-                print "No name found. Moving to next chunk."
+                print "\nNo name found. Moving to next chunk."
             r.append(("no name found", "placeholder"))
             continue
 
@@ -1153,7 +1725,7 @@ def get_ole_textbox_values(obj, vba_code):
         # Get a text value after the name if it looks like the following field
         # is not a font.
         if debug:
-            print "Possible Name: '" + name + "'"
+            print "\nPossible Name: '" + name + "'"
         text = ""
         # This is not working quite right.
         asc_str = None
@@ -1168,14 +1740,14 @@ def get_ole_textbox_values(obj, vba_code):
             (not asc_str.startswith("_DELETED_NAME_")) and
             (re.match(r"_\d{10}", asc_str) is None)):
             if debug:
-                print "Value: 1"
+                print "\nValue: 1"
                 print strs[name_pos + 1]
                 
             # Only used with large text values?
             if (len(strs[name_pos + 1]) > 3):
                 text = strs[name_pos + 1]
                 if debug:
-                    print "Value: 2"
+                    print "\nValue: 2"
                     print strs[name_pos + 1]
 
         # Break out the (possible additional) value.
@@ -1188,7 +1760,7 @@ def get_ole_textbox_values(obj, vba_code):
                 if ((poss_val != text) and (len(poss_val) > 1)):
                     text += poss_val.replace("\x00", "")
                     if debug:
-                        print "Value: 3"
+                        print "\nValue: 3"
                         print poss_val.replace("\x00", "")
 
         # Pattern 2                    
@@ -1200,7 +1772,7 @@ def get_ole_textbox_values(obj, vba_code):
                 poss_val = tmp_text[0]
                 if (poss_val != text):
                     if debug:
-                        print "Value: 4"
+                        print "\nValue: 4"
                         print poss_val
                     text += poss_val
 
@@ -1211,7 +1783,7 @@ def get_ole_textbox_values(obj, vba_code):
             for v in vals:
                 text += v
                 if debug:
-                    print "Value: 5"
+                    print "\nValue: 5"
                     print v
 
         # Pattern 4
@@ -1221,7 +1793,7 @@ def get_ole_textbox_values(obj, vba_code):
             for v in vals:
                 text += v
                 if debug:
-                    print "Value: 6"
+                    print "\nValue: 6"
                     print v
                 
         # Maybe big chunks of text after the name are part of the value?
@@ -1231,7 +1803,7 @@ def get_ole_textbox_values(obj, vba_code):
                 text += curr_str
 
         if debug:
-            print "ORIG:"
+            print "\nORIG:"
             print name
             print text
             print len(text)
@@ -1258,13 +1830,14 @@ def get_ole_textbox_values(obj, vba_code):
             if (debug):
                 print "SIZE: "
                 print size
-            if (len(text) > size):
+            if ((len(text) > size) and (not name.startswith("Page"))):
                 text = text[:size]
 
         # Eliminate text values that look like variable names.
-        if (strip_name(text) in object_names):
+        if ((strip_name(text) in object_names) or
+            (strip_name(text) in stream_names)):
             if debug:
-                print "BAD: Val is name '" + text + "'"
+                print "\nBAD: Val is name '" + text + "'"
 
             # Hack. If the bad value is a Page* name and we have a really long strings from
             # the chunk, use those as the value.
@@ -1285,15 +1858,25 @@ def get_ole_textbox_values(obj, vba_code):
                 print "BAD: Set Val to '" + text + "'"
 
         # Eliminate text values that look like binary chunks.
+        text = text.replace("\x00", "")
         if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
             if debug:
-                print "BAD: Binary in Val. Set to ''"
+                print "\nBAD: Binary in Val. Set to ''"
+            text = ""
+
+        # Eliminate form references.
+        if ((text.startswith("Forms.")) and (len(text) < 20)):
             text = ""
             
         # Save the form name and text value.
-        if debug:
-            print "SET '" + name + "' = '" + text + "'"
-        r.append((name, text))
+        if ((text != "") or (not name.startswith("Page"))):
+            if debug:
+                print "\nSET '" + name + "' = '" + text + "'"
+            r.append((name, text))
+
+        # Save that we found something for this variable.
+        if (text != ""):
+            found_names.add(name)
 
         # Move to next chunk.
         index = end
@@ -1311,13 +1894,13 @@ def get_ole_textbox_values(obj, vba_code):
             tmp.append(dat)
         else:
             if debug:
-                print "Skip 1: " + str(dat)
+                print "\nSkip 1: " + str(dat)
             pass
         last_val = dat[1].strip()
     r = tmp
 
     if debug:
-        print "First result:"
+        print "\nFirst result:"
         print r
     
     # Fix data that is showing up as a variable name.
@@ -1351,7 +1934,7 @@ def get_ole_textbox_values(obj, vba_code):
     pos = -1
     last_val = ""
     if debug:
-        print "&&&&&&&&&&&&"
+        print "\nLONG STRS!!"
         print long_strs
     for dat in r:
 
@@ -1376,7 +1959,7 @@ def get_ole_textbox_values(obj, vba_code):
                     poss_val = poss_val1
                 if (len(poss_val) > 15):
                     if debug:
-                        print "REPLACE (1)"
+                        print "\nREPLACE (1)"
                     curr_val = poss_val
                     replaced = True
                     break
@@ -1384,7 +1967,7 @@ def get_ole_textbox_values(obj, vba_code):
             # If we found nothing going forward, try the previous value?
             if ((not replaced) and (len(last_val) > 15)):
                 if debug:
-                    print "REPLACE (2)"
+                    print "\nREPLACE (2)"
                 curr_val = last_val
 
         # Update the result list.
@@ -1430,19 +2013,39 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Fix Page1 values.
     longest_val = ""
+    page_names = set()
+    page_val = ""
+
+    # Find the longest string value overall.
+    longest_str = ""
+    for s in long_strs:
+        if (len(s) > len(longest_str)):
+            longest_str = s
+    
+    # Find the longest string assigned to Page1.
     for pair in r:
         name = pair[0]
         val = pair[1]
+        if (name.startswith("Page")):
+            page_names.add(name)
+            if (len(val) > len(page_val)):
+                page_val = val
         if (name != "Page1"):
             continue
         if (len(val) > len(longest_val)):
             longest_val = val
+
+    # Just have 1 var/val assignment pair assigning Page1 to the longest val.
     if (longest_val != ""):
         tmp_r = []
         updated_page1 = False
         for pair in r:
             name = pair[0]
             val = pair[1]
+            # Super specific hack.
+            if (name == "Page2"):
+                tmp_r.append((name, longest_str))
+                continue
             if (name != "Page1"):
                 tmp_r.append(pair)
                 continue
@@ -1450,7 +2053,29 @@ def get_ole_textbox_values(obj, vba_code):
                 tmp_r.append((name, longest_val))
                 updated_page1 = True
         r = tmp_r
-                
+
+    # If we have nothing assigned to Page1, just pick the longest string seen
+    # to assign to missing PageNN variables and hope for the best.
+    if debug:
+        print "\nPAGE VAL!!"
+        print page_val
+    if (page_val == ""):
+        page_val = longest_str
+        
+    # Fill in missing PageNN variables.
+    for i in range(1, 5):
+        curr_name = "Page" + str(i)
+        if ((curr_name not in page_names) and (page_val != "")):
+            r.append((curr_name, page_val))
+
+    # Fill in other missing variables referred to in the VBA.
+    handled_names = set()
+    for mapping in r:
+        handled_names.add(mapping[0])
+    for curr_name in object_names:
+        if ((curr_name not in handled_names) and (longest_str != "")):
+            r.append((curr_name, longest_str))
+            
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
@@ -1612,7 +2237,29 @@ def _get_shapes_text_values_direct_2007(data):
     val = ""
     for v in vals:
         val += v
-    val = val.replace("&amp", "&")
+    val = _clean_2007_text(val)
+    
+    # Return the Shape name and text value.
+    r = [(name, val)]
+    return r
+
+def _get_shapes_text_values_direct_2007_1(data):
+    """
+    Read in shapes name/value mappings directly from word/document.xml from an 
+    unzipped Word 2007+ file another way.
+    """
+
+    # TODO: This only handles a single Shapes object.
+    
+    # Get the shape text from a docPr element.
+    # <wp:docPr id="1" name="Picture 1" descr="h95tb8tccpa0:02/d7/15n10ld2xdb68838ao28o10.95c9co0cmf9/3ex4cea1m93cdal39/a5i7db13abd.b8p93h64pdd?53la5=66u61n2dt831e7462.0acfea1dbc7"/>
+    pat1 = r'<wp\:docPr +id="(\d+)" +name="[^"]*" +descr="([^"]*)"'
+    shape_info = re.findall(pat1, data)
+    if (len(shape_info) == 0):
+        return []
+    shape_info = shape_info[0]
+    name = shape_info[0]
+    val = _clean_2007_text(shape_info[1])
         
     # Return the Shape name and text value.
     r = [(name, val)]
@@ -1685,11 +2332,46 @@ def _parse_activex_rich_edit(data):
     val = re.findall(pat, data)
     if (len(val) == 0):
         return None
-    return val[0]
+    return _clean_2007_text(val[0])
 
+def _get_comments_docprops_2007(unzipped_data):
+    """
+    Read in the comments in a document saved in the 2007+ format.
+    Gets comments from docProps/core.xml.
+    """
+
+    # Comments with are in docProps/core.xml. Does that file exist?
+    zip_subfile = 'docProps/core.xml'
+    if (zip_subfile not in unzipped_data.namelist()):
+        zip_subfile = 'docProps\\core.xml'
+        if (zip_subfile not in unzipped_data.namelist()):
+            return []
+
+    # Read the contents of core.xml.
+    f1 = unzipped_data.open(zip_subfile)
+    data = f1.read()
+    f1.close()
+
+    # Looks like the comments are in the <dc:description>...</dc:description> block.
+    comm_pat = r"<dc:description>(.*)</dc:description>"
+    comment_blocks = re.findall(comm_pat, data, re.DOTALL)
+    if (len(comment_blocks) == 0):
+        return []
+
+    # Pack up the comment blocks and give them arbitrary IDs.
+    pos = 1
+    r = []
+    for text in comment_blocks:
+        r.append((pos, _clean_2007_text(text)))
+        pos += 1
+
+    # Done.
+    return r
+        
 def _get_comments_2007(fname):
     """
     Read in the comments in a document saved in the 2007+ format.
+    Gets comments from word/comments.xml.
     """
         
     # This might be a 2007+ Office file. Unzip it.
@@ -1703,9 +2385,13 @@ def _get_comments_2007(fname):
     if (zip_subfile not in unzipped_data.namelist()):
         zip_subfile = 'word\\comments.xml'
         if (zip_subfile not in unzipped_data.namelist()):
+
+            # See if comments are defined in docProps/core.xml.
+            r = _get_comments_docprops_2007(unzipped_data)
+            unzipped_data.close()
             if (delete_file):
                 os.remove(fname)
-            return []
+            return r
 
     # Read the contents of comments.xml.
     r = []
@@ -1745,12 +2431,7 @@ def _get_comments_2007(fname):
         block_text = ""
 
         for text in texts:
-            text = text.replace("&amp;", "&")
-            text = text.replace("&gt;", ">")
-            text = text.replace("&lt;", "<")
-            text = text.replace("&apos;", "'")
-            text = text.replace("&quot;", '"')
-            block_text += text
+            block_text += _clean_2007_text(text)
 
         # Save the comment.
         r.append((curr_id, block_text))
@@ -1806,6 +2487,10 @@ def _get_shapes_text_values_2007(fname):
     r = _get_shapes_text_values_direct_2007(data)
     if (len(r) > 0):
         return r
+    r = _get_shapes_text_values_direct_2007_1(data)
+    if (len(r) > 0):
+        #print r
+        return r
     
     # Pull out any shape name to internal ID mappings.
     # <w:control r:id="rId10" w:name="ziPOVJ5" w:shapeid="_x0000_i1028"/>
@@ -1829,12 +2514,14 @@ def _get_shapes_text_values_2007(fname):
     r = []
     f1 = unzipped_data.open(zip_subfile)
     data = f1.read()
+    #print data
     f1.close()
 
     # Pull out any shape name to activeX object ID mappings.
     # <Relationship Id="rId10" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/control" Target="activeX/activeX3.xml"/>
     pat = r'<Relationship[^>]+Id="(\w+)"[^>]+Target="([^"]+)"'
     var_info = re.findall(pat, data)
+    #print var_info
     id_activex_map = {}
     for shape in var_info:
         if (shape[0] not in id_name_map):
@@ -1867,7 +2554,7 @@ def _get_shapes_text_values_2007(fname):
             continue
             
         # Save the text associated with the variable name.
-        r.append((id_name_map[shape], text))
+        r.append((id_name_map[shape], _clean_2007_text(text)))
     
     # Done.
     unzipped_data.close()
@@ -1956,7 +2643,8 @@ def _get_shapes_text_values(fname, stream):
     except Exception as e:
 
         # Report the error.
-        log.error("Cannot read associated Shapes text. " + str(e))
+        if ("not an OLE2 structured storage file" not in str(e)):
+            log.error("Cannot read associated Shapes text. " + str(e))
 
         # See if we can read Shapes() info from an XML file.
         if ("not an OLE2 structured storage file" in str(e)):

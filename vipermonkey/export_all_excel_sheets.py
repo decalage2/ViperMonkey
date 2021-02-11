@@ -30,7 +30,7 @@ def is_excel_file(maldoc):
     @return (bool) True if the file is an Excel file, False if not.
     """
     typ = subprocess.check_output(["file", maldoc])
-    return (b"Excel" in typ)
+    return ((b"Excel" in typ) or (b"Microsoft OOXML" in typ))
 
 ###################################################################################################
 def wait_for_uno_api():
@@ -106,6 +106,19 @@ def get_component(fname, context):
     component = Calc(context, url)
     return component
 
+def fix_file_name(fname):
+    """
+    Replace non-printable ASCII characters in the given file name.
+    """
+    r = ""
+    for c in fname:
+        if ((ord(c) < 48) or (ord(c) > 122)):
+            r += hex(ord(c))
+            continue
+        r += c
+
+    return r
+
 def convert_csv(fname):
     """
     Convert all of the sheets in a given Excel spreadsheet to CSV files.
@@ -146,12 +159,14 @@ def convert_csv(fname):
             name = sheet.getName()
             if (name.count(" ") > 10):
                 name = name.replace(" ", "")
+            name = fix_file_name(name)
             controller.setActiveSheet(sheet)
 
             # Set up the output URL.
             short_name = fname
             if (os.path.sep in short_name):
                 short_name = short_name[short_name.rindex(os.path.sep) + 1:]
+            short_name = fix_file_name(short_name)
             outfilename =  "/tmp/sheet_%s-%s--%s.csv" % (short_name, str(pos), name.replace(' ', '_SPACE_'))
             pos += 1
             r.append(outfilename)

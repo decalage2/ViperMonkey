@@ -1,5 +1,5 @@
 """
-ViperMonkey: Visitor for collecting the names of locally defined functions
+ViperMonkey: VBA Library
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -36,45 +36,47 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__version__ = '0.02'
 
-# === IMPORTS ================================================================
+# sudo pypy -m pip install unidecode
+import unidecode
+import string
 
-import os, sys
+import logging
+from logger import log
 
-# IMPORTANT: it must be possible to run vipermonkey tools directly as scripts
-# in any directory without installing with pip or setup.py, for tests during
-# development
-# In that case, relative imports are NOT usable.
-# And to enable Python 2+3 compatibility, we need to use absolute imports,
-# so we add the vipermonkey parent folder to sys.path (absolute+normalized path):
-_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-# print('_thismodule_dir = %r' % _thismodule_dir)
-# we are in vipermonkey/core
-_parent_dir = os.path.normpath(os.path.join(_thismodule_dir, '../..'))
-# print('_parent_dir = %r' % _parent_dir)
-if _parent_dir not in sys.path:
-    sys.path.insert(0, _parent_dir)
-
-from vipermonkey.core import *
-
-
-class function_defn_visitor(visitor):
+class StubbedEngine(object):
     """
-    Collect the names of all locally declared functions.
+    Stubbed out Vipermonkey analysis engine that just supports tracking
+    actions.
     """
 
     def __init__(self):
-        self.funcs = set()
-        self.func_objects = set()
-        self.visited = set()
-    
-    def visit(self, item):
-        if (item in self.visited):
-            return False
-        self.visited.add(item)
-        if ((isinstance(item, procedures.Sub)) or
-            (isinstance(item, procedures.Function)) or
-            (isinstance(item, procedures.PropertyLet))):
-            self.funcs.add(str(item.name))
-            self.func_objects.add(item)
-        return True
+        self.actions = []
+
+    def report_action(self, action, params=None, description=None):
+        """
+        Callback function for each evaluated statement to report macro actions
+        """
+
+        # store the action for later use:
+        try:
+            if (isinstance(action, str)):
+                action = unidecode.unidecode(action.decode('unicode-escape'))
+        except UnicodeDecodeError:
+            action = ''.join(filter(lambda x:x in string.printable, action))
+        if (isinstance(params, str)):
+            try:
+                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
+                params = unidecode.unidecode(decoded)
+            except Exception as e:
+                log.warn("Unicode decode of action params failed. " + str(e))
+                params = ''.join(filter(lambda x:x in string.printable, params))
+        try:
+            if (isinstance(description, str)):
+                description = unidecode.unidecode(description.decode('unicode-escape'))
+        except UnicodeDecodeError as e:
+            log.warn("Unicode decode of action description failed. " + str(e))
+            description = ''.join(filter(lambda x:x in string.printable, description))
+        self.actions.append((action, params, description))
+        log.info("ACTION: %s - params %r - %s" % (action, params, description))

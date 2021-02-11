@@ -38,11 +38,22 @@ miracles. Any help from you will be very appreciated!
 Download and Install:
 ---------------------
 
+**Easy Install**
+
+1. Install docker.
+2. Run `docker/dockermonkey.sh MYFILE` to analyze file MYFILE.
+
+dockermonkey.sh wil automatically pull down a preconfigured docker container, update ViperMonkey to
+the latest version in the container, and then analyze MYFILE by running ViperMonkey in the
+container. No other packages or configuration will need to be performed.
+
+For information on using dockermonkey.sh run `docker/dockermonkey.sh -h`.
+
+**Installation using PyPy (recommended)**
+
 For performance reasons, it is highly recommended to use PyPy (5x faster), but it is
 also possible to run Vipermonkey with the normal Python interpreter
 (CPython) if you cannot use PyPy.
-
-**Installation using PyPy (recommended)**
 
 1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
 2. Check if pip is installed for pypy: run `pypy -m pip`
@@ -76,10 +87,17 @@ sudo -H pip install -U https://github.com/decalage2/ViperMonkey/archive/master.z
 Usage:
 ------
 
+To run ViperMonkey in a Docker container with the `-s`, `--jit`, and
+`--iocs` options do:
+
+```text
+docker/dockermonkey.sh <file>
+```
+
 To parse and interpret VBA macros from a document, use the vmonkey script:
 
 ```text
-vmonkey <file>
+vmonkey.py <file>
 ```
 
 To make analysis faster (see the Speedup section), do:
@@ -88,12 +106,52 @@ To make analysis faster (see the Speedup section), do:
 pypy vmonkey.py -s <file>
 ```
 
+*Note:* It is recommended to always use the `-s` option. When given
+ the `-s` option ViperMonkey modifies some difficult to parse Visual
+ Basic language constructs so that the ViperMonkey parser can
+ correctly parse the input.
+
 If the output is too verbose and too slow, you may reduce the logging level using the
 -l option:
 
 ```text
-vmonkey -l warning <file>
+vmonkey.py -l warning <file>
 ```
+
+If the sample being analyzed has long running loops that are causing
+emulation to be unacceptably slow, use the `--jit` option to convert
+VB loops directly to Python in a JIT fashion during emulation.
+
+```text
+vmonkey.py --jit <file>
+```
+
+*Note:* ViperMonkey's Python JIT loop conversion converts VB loops to
+ Python and `evals` the generated Python code. While the Python
+ conversion process is based on the parsed AST (not directly on the VB
+ text) and VB data values are escaped/converted/modified to become
+ valid in Python, any use of `eval` in Python potentially introduces a
+ security risk. If this is a concern the `dockermonkey.sh` script can be
+ used to run ViperMonkey in a sandboxed manner. `dockermonkey.sh` runs
+ ViperMonkey in a fresh Docker container on each run (no file system
+ modifications persist between runs) and networking is turned off in
+ the Docker container.
+
+Sometimes a malicious VBScript or Office file will generate IOCs
+during execution that are not used or that ViperMonkey does not see
+used. These intermediate IOCs are tracked by ViperMonkey during the
+emulation process and can be reported with the `--iocs` option.
+
+```text
+vmonkey --iocs <file>
+```
+
+Note that one of the intermediate IOCs reported by ViperMonkey is
+injected shell code bytes. If the sample under analysis performs
+process injection directly in VB, ViperMonkey will report the injected
+byte values as an intermediate IOC with the `--iocs` flag. These byte
+values can then be written into a raw shell code file which can be
+further analyzed with a shell code emulator.
 
 **oletools Version**
 
@@ -138,6 +196,10 @@ ViperMonkey emulates some file writing behavior. The SHA256 hash of
 dropped files is reported in the ViperMonkey analysis results and the
 actual dropped files are saved in the directory MALDOC_artifacts/,
 where MALDOC is the name of the analyzed maldoc file.
+
+ViperMonkey also searches Office 97 and Office 2007+ files for
+embedded PE files. These are automatically extracted and reported as
+dropped files in the MALDOC_artifacts/ directory.
 
 **Emulating Specific VBA Functions**
 

@@ -66,11 +66,12 @@ reserved_keywords = CaselessKeyword("ChrB") | \
                     CaselessKeyword("Private") | \
                     CaselessKeyword("Declare") | \
                     CaselessKeyword("Function") | \
-                    CaselessKeyword("End") | \
                     CaselessKeyword("To")
+#                    CaselessKeyword("End") | \
 
 strict_reserved_keywords = reserved_keywords | \
-                           Regex(re.compile('Open', re.IGNORECASE))
+                           Regex(re.compile('Open', re.IGNORECASE)) | \
+                           Regex(re.compile('While', re.IGNORECASE))
 
 # --- IDENTIFIER -------------------------------------------------------------
 
@@ -162,3 +163,5 @@ base_attrib_loose = Combine(
 )
 
 TODO_identifier_or_object_attrib_loose = base_attrib_loose ^ Suppress(Literal("{")) + base_attrib_loose + Suppress(Literal("}"))
+
+enum_val_id = Regex(re.compile(r"\[[^\]]+\]"))

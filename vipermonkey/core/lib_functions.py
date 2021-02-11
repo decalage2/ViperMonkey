@@ -41,6 +41,7 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+from curses_ascii import isprint
 import logging
 from pyparsing import *
 
@@ -73,55 +74,21 @@ class Chr(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
-    def eval(self, context, params=None):
-        # NOTE: in the specification, the parameter is expected to be an integer
-        # But in reality, VBA accepts a string containing the representation
-        # of an integer in decimal, hexadecimal or octal form.
-        # It also ignores leading and trailing spaces.
-        # Examples: Chr("65"), Chr("&65 "), Chr(" &o65"), Chr("  &H65")
-        # => need to parse the string as integer
-        # It also looks like floating point numbers are allowed.
-        # First, eval the argument:
-        param = eval_arg(self.arg, context)
+    def to_python(self, context, params=None, indent=0):
+        arg_str = to_python(self.arg, context)
+        r = "core.vba_library.run_function(\"_Chr\", vm_context, [" + arg_str + "])"
+        return r
 
-        # Get the ordinal value.
-        if isinstance(param, basestring):
-            try:
-                param = integer.parseString(param.strip())[0]
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''            
-        elif isinstance(param, float):
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Chr: converting float %r to integer' % param)
-            try:
-                param = int(round(param))
-            except:
-                log.error("%r is not a valid chr() value. Returning ''." % param)
-                return ''
-        elif isinstance(param, int):
-            pass
-        else:
-            log.error('Chr: parameter must be an integer or a string, not %s' % type(param))
-            return ''
-            
-        # Figure out whether to create a unicode or ascii character.
-        converter = chr
-        if (param < 0):
-            param = param * -1
-        if (param > 255):
-            converter = unichr
-            
-        # Do the conversion.
-        try:
-            r = converter(param)
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Chr(" + str(param) + ") = " + r)
-            return r
-        except Exception as e:
-            log.error(str(e))
-            log.error("%r is not a valid chr() value. Returning ''." % param)
-            return ""
+    def return_type(self):
+        return "STRING"
+    
+    def eval(self, context, params=None):
+
+        # This is implemented in the common vba_library._Chr handler class.
+        import vba_library
+        chr_handler = vba_library._Chr()
+        param = eval_arg(self.arg, context)
+        return chr_handler.eval(context, [param])
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)
@@ -152,6 +119,12 @@ class Asc(VBA_Object):
             # Here the arg is expected to be either a character or a VBA_Object        
             self.arg = tokens[0]
 
+    def to_python(self, context, params=None, indent=0):
+        return "ord(" + to_python(self.arg, context) + ")"
+
+    def return_type(self):
+        return "INTEGER"
+    
     def eval(self, context, params=None):
 
         # Are we just looking up a variable called 'asc'?
@@ -165,8 +138,17 @@ class Asc(VBA_Object):
         c = eval_arg(self.arg, context)
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (str(c).strip() == "**MATCH ANY**"):
+        c_str = None
+        try:
+            c_str = str(c).strip()
+        except UnicodeEncodeError:
+            c_str = filter(isprint, c).strip()
+        if (c_str == "**MATCH ANY**"):
             return c
+
+        # Looks like Asc(NULL) is NULL?
+        if (c == "NULL"):
+            return 0
         
         # Calling Asc() on int?
         if (isinstance(c, int)):
@@ -176,13 +158,12 @@ class Asc(VBA_Object):
             # Got a string.
 
             # Should this match anything?
-            c = str(c)
-            if (c == "**MATCH ANY**"):
+            if (c_str == "**MATCH ANY**"):
                 r = "**MATCH ANY**"
 
             # This is an unmodified Asc() call.
             else:
-                r = vb_str.get_ms_ascii_value(c)
+                r = vb_str.get_ms_ascii_value(c_str)
 
         # Return the result.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -211,6 +192,9 @@ class StrReverse(VBA_Object):
         # Here the arg is expected to be either a string or a VBA_Object
         self.arg = tokens[0]
 
+    def return_type(self):
+        return "STRING"
+        
     def eval(self, context, params=None):
         # return the string with all characters in reverse order:
         return eval_arg(self.arg, context)[::-1]
@@ -234,6 +218,9 @@ class Environ(VBA_Object):
         # extract argument from the tokens:
         # Here the arg is expected to be either a string or a VBA_Object
         self.arg = tokens.arg
+
+    def return_type(self):
+        return "STRING"        
 
     def eval(self, context, params=None):
         # return the environment variable name surrounded by % signs:

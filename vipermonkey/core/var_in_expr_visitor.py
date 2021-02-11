@@ -44,15 +44,42 @@ class var_in_expr_visitor(visitor):
     Get the names of all variables that appear in an expression.
     """
 
-    def __init__(self):
+    def __init__(self, context=None):
         self.variables = set()
         self.visited = set()
+        self.context = context
     
     def visit(self, item):
         from expressions import SimpleNameExpression
+        from expressions import Function_Call
+        from expressions import MemberAccessExpression
+        from vba_object import VbaLibraryFunc
+        from vba_object import VBA_Object
+
+        # Already looked at this?
         if (item in self.visited):
             return False
-        self.visited.add(item)        
+        self.visited.add(item)
+
+        # Simple variable?
         if (isinstance(item, SimpleNameExpression)):
             self.variables.add(str(item.name))
+
+        # Array access?
+        if (("Function_Call" in str(type(item))) and (self.context is not None)):
+
+            # Is this an array or function?
+            if (hasattr(item, "name") and (self.context.contains(item.name))):
+                ref = self.context.get(item.name)
+                if (isinstance(ref, list) or isinstance(ref, str)):
+                    self.variables.add(str(item.name))
+
+        # Member access expression used as a variable?
+        if (isinstance(item, MemberAccessExpression)):
+            rhs = item.rhs
+            if (isinstance(rhs, list)):
+                rhs = rhs[-1]
+            if (isinstance(rhs, SimpleNameExpression)):
+                self.variables.add(str(item))
+                    
         return True

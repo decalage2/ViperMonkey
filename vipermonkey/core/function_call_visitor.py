@@ -37,8 +37,6 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from expressions import *
-from lib_functions import *
 
 class function_call_visitor(visitor):
     """
@@ -52,21 +50,23 @@ class function_call_visitor(visitor):
     def visit(self, item):
 
         import statements
+        import expressions
+        import lib_functions
 
         if (item in self.visited):
             return False
         self.visited.add(item)
         if (isinstance(item, statements.Call_Statement)):
-            if (not isinstance(item.name, MemberAccessExpression)):
+            if (not isinstance(item.name, expressions.MemberAccessExpression)):
                 self.called_funcs.add(str(item.name))
-        if (isinstance(item, Function_Call)):
+        if (isinstance(item, expressions.Function_Call)):
             self.called_funcs.add(str(item.name))
-        if (isinstance(item, Chr)):
+        if (isinstance(item, lib_functions.Chr)):
             self.called_funcs.add("Chr")
-        if (isinstance(item, Asc)):
+        if (isinstance(item, lib_functions.Asc)):
             self.called_funcs.add("Asc")
-        if (isinstance(item, StrReverse)):
+        if (isinstance(item, lib_functions.StrReverse)):
             self.called_funcs.add("StrReverse")
-        if (isinstance(item, Environ)):
+        if (isinstance(item, lib_functions.Environ)):
             self.called_funcs.add("Environ")
         return True        

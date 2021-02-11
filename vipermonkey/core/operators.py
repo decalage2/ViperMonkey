@@ -50,6 +50,8 @@ from vba_object import *
 
 from logger import log
 from vba_object import int_convert
+from vba_object import coerce_to_num
+from vba_object import to_python
 
 def debug_repr(op, args):
     r = "("
@@ -109,6 +111,17 @@ class Sum(VBA_Object):
             log.error("overflow trying eval sum: %r" % self.arg)
             raise e
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " + "
+            first = False
+            # Could be a str or an int, so hope for the best.
+            r += to_python(arg, context, params=params)
+        return "(" + r + ")"
+        
     def __repr__(self):
         return debug_repr("+", self.arg)
         return ' + '.join(map(repr, self.arg))
@@ -186,6 +199,16 @@ class Xor(VBA_Object):
     def __repr__(self):
         return ' ^ '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " ^ "
+            first = False
+            r += "coerce_to_int(" + to_python(arg, context, params=params) + ")"
+        return "(" + r + ")"
+    
 # --- AND --------------------------------------------------------
 
 class And(VBA_Object):
@@ -197,6 +220,16 @@ class And(VBA_Object):
         super(And, self).__init__(original_str, location, tokens)
         self.arg = tokens[0][::2]
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " & "
+            first = False
+            r += "coerce_to_int(" + to_python(arg, context, params=params) + ")"
+        return "(" + r + ")"
+        
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.
@@ -259,6 +292,16 @@ class Or(VBA_Object):
             log.error("overflow trying eval or: %r" % self.arg)
             raise e
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " | "
+            first = False
+            r += "coerce_to_int(" + to_python(arg, context, params=params) + ")"
+        return "(" + r + ")"
+        
     def __repr__(self):
         return ' | '.join(map(repr, self.arg))
 
@@ -294,6 +337,10 @@ class Not(VBA_Object):
             log.error("Cannot compute Not " + str(self.arg) + ". " + str(e))
             return "NULL"
 
+    def to_python(self, context, params=None, indent=0):
+        r = "~ (" + "coerce_to_int(" + to_python(self.arg, context) + "))"
+        return r
+        
     def __repr__(self):
         return "Not " + str(self.arg)
 
@@ -310,6 +357,10 @@ class Neg(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as unary negation' % self)
 
+    def to_python(self, context, params=None, indent=0):
+        r = "- (" + "coerce_to_num(" + to_python(self.arg, context) + "))"
+        return r
+            
     def eval(self, context, params=None):
 
         # The wildcard for matching propagates through operations.
@@ -462,6 +513,10 @@ class Power(VBA_Object):
     def __repr__(self):
         return debug_repr("^", self.arg)
         return ' ^ '.join(map(repr, self.arg))
+
+    def to_python(self, context, params=None, indent=0):
+        r = reduce(lambda x, y: "pow(coerce_to_num(" + to_python(x, context) + "), coerce_to_num(" + to_python(y, context) + "))", self.arg)
+        return r
     
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
@@ -520,36 +575,88 @@ class MultiOp(VBA_Object):
         self.arg = tokens[0][::2]  # Keep as helper  (kept singular to keep backwards compatibility)
         self.operators = tokens[0][1::2]
 
+    def to_python(self, context, params=None, indent=0):
+
+        # We are generating Python code for some string or numeric
+        # expression. Therefore any boolean operators we find in the
+        # expression are actually bitwise operators.
+        # Track that in the context.
+        set_flag = False
+        if (not context.in_bitwise_expression):
+            context.in_bitwise_expression = True
+            set_flag = True
+            
+        if (self.operators[0] == "+"):
+            ret = [to_python(self.arg[0], context, params=params)]
+        else:
+            ret = ["coerce_to_num(" + to_python(self.arg[0], context, params=params)  + ")"]
+        for operator, arg in zip(self.operators, self.arg[1:]):
+            if (operator == "+"):
+                ret.append(' {} {!s}'.format("|plus|", to_python(arg, context, params=params)))
+            else:
+                ret.append(' {} {!s}'.format(operator, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
+
+        # Out of the string/numeric expression. Might have actual boolean
+        # expressions now.
+        if set_flag:
+            context.in_bitwise_expression = False
+
+        return '({})'.format(''.join(ret))
+        
     def eval(self, context, params=None):
 
+        # We are emulating some string or numeric
+        # expression. Therefore any boolean operators we find in the
+        # expression are actually bitwise operators.
+        # Track that in the context.
+        set_flag = False
+        if (not context.in_bitwise_expression):
+            context.in_bitwise_expression = True
+            set_flag = True
+        
         # The wildcard for matching propagates through operations.
         evaluated_args = eval_args(self.arg, context)
         if ((isinstance(evaluated_args, Iterable)) and ("**MATCH ANY**" in evaluated_args)):
+            if set_flag:
+                context.in_bitwise_expression = False
             return "**MATCH ANY**"
 
         try:
             args = coerce_args(evaluated_args)
             ret = args[0]
             for operator, arg in zip(self.operators, args[1:]):
-                ret = self.operator_map[operator](ret, arg)
+                try:
+                    ret = self.operator_map[operator](ret, arg)
+                except OverflowError:
+                    log.error("overflow trying eval: %r" % str(self))
+            if set_flag:
+                context.in_bitwise_expression = False
             return ret
         except (TypeError, ValueError):
-            # Try converting strings to ints.
+            # Try converting strings to numbers.
             # TODO: Need to handle floats in strings.
             try:
-                args = map(int_convert, evaluated_args)
+                args = map(coerce_to_num, evaluated_args)
                 ret = args[0]
                 for operator, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[operator](ret, arg)
+                if set_flag:
+                    context.in_bitwise_expression = False
                 return ret
             except ZeroDivisionError:
                 context.set_error("Division by 0 error. Returning 'NULL'.")
+                if set_flag:
+                    context.in_bitwise_expression = False
                 return 'NULL'
             except Exception as e:
                 log.error('Impossible to operate on arguments of different types. ' + str(e))
+                if set_flag:
+                    context.in_bitwise_expression = False
                 return 0
         except ZeroDivisionError:
             context.set_error("Division by 0 error. Returning 'NULL'.")
+            if set_flag:
+                context.in_bitwise_expression = False
             return 'NULL'
 
     def __repr__(self):
@@ -615,6 +722,16 @@ class FloorDivision(VBA_Object):
         return debug_repr("//", self.arg)
         return ' \\ '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " // "
+            first = False
+            r += "coerce_to_num(" + to_python(arg, context, params=params) + ")"
+        return "(" + r + ")"
+    
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
 
 class Concatenation(VBA_Object):
@@ -656,6 +773,16 @@ class Concatenation(VBA_Object):
         return debug_repr("&", self.arg)
         return ' & '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " + "
+            first = False
+            r += "coerce_to_str(" + to_python(arg, context, params=params) + ", zero_is_null=True)"
+        return "(" + r + ")"
+
 # --- MOD OPERATOR -----------------------------------------------------------
 
 class Mod(VBA_Object):
@@ -693,3 +820,12 @@ class Mod(VBA_Object):
         return debug_repr("mod", self.arg)
         return ' mod '.join(map(repr, self.arg))
 
+    def to_python(self, context, params=None, indent=0):
+        r = ""
+        first = True
+        for arg in self.arg:
+            if (not first):
+                r += " % "
+            first = False
+            r += "coerce_to_num(" + to_python(arg, context, params=params) + ")"
+        return "(" + r + ")"
