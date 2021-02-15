@@ -185,6 +185,21 @@ class GetSaveAsFilename(VbaLibraryFunc):
 
     def return_type(self):
         return "STRING"
+
+class IsObject(VbaLibraryFunc):
+    """
+    IsObject() function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        # Say everything is an object and see what happens.
+        return True
+
+    def num_args(self):
+        return 1
+
+    def return_type(self):
+        return "BOOLEAN"
     
 class GetSpecialFolder(VbaLibraryFunc):
     """
@@ -5243,7 +5258,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
-               Worksheets, Value):
+               Worksheets, Value, IsObject):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
