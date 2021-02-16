@@ -480,30 +480,38 @@ class MemberAccessExpression(VBA_Object):
     def to_python(self, context, params=None, indent=0):
 
         # Handle Scripting.Dictionary.Add() calls.
+        #print "TO_PYTHON!!"
+        #print self
         add_code = self._to_python_handle_add(context, indent)
         if (add_code is not None):
+            #print"OUT: 1"
+            #printadd_code
             return add_code
 
         # Handle ListBox.List() calls.
         add_code = self._to_python_handle_listbox_list(context, indent)
         if (add_code is not None):
+            #print"OUT: 2"
+            #printadd_code
             return add_code
 
         # Convert nested method calls to regular function calls for supported
         # VB methods.
         add_code = self._to_python_nested_methods(context, indent)
         if (add_code is not None):
+            #print"OUT: 3"
+            #printadd_code
             return add_code
         
         # For now just pick off the last item in the expression.
         if (len(self.rhs) > 0):
 
             # RegExp operations?
-            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")")
+            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
             if ((raw_last_func.startswith("Test(")) or
                 (raw_last_func.startswith("Replace(")) or
-                (raw_last_func.startswith("Global")) or
-                (raw_last_func.startswith("Pattern"))):
+                (raw_last_func == "Global") or
+                (raw_last_func == "Pattern")):
             
                 # Use the simulated RegExp object for this.
                 exp_str = str(self)
@@ -519,6 +527,8 @@ class MemberAccessExpression(VBA_Object):
                         call_str += to_python(p, context)
                     call_str += ")"
                 r = exp_str[:exp_str.rindex(".")] + "." + call_str
+                #print"OUT: 4"
+                #printr
                 return r
 
             # Excel SpecialCells() method call?
@@ -532,6 +542,8 @@ class MemberAccessExpression(VBA_Object):
                 
                 # Convert the call with the cells as explicit parameters to python.
                 r = to_python(new_special_cells, context, params)
+                #print"OUT: 5"
+                #printr
                 return r
 
             # No special operations.
@@ -560,7 +572,10 @@ class MemberAccessExpression(VBA_Object):
 
                     # Just reference the synthetic Python variable for this
                     # field.
-                    return str(self).replace(".", "")
+                    r = str(self).replace(".", "")
+                    #print"OUT: 6"
+                    #printr
+                    return r
 
                 # We are tracking the address in the index field.
                 if (last_rhs.lower().startswith("address(")):
@@ -578,6 +593,8 @@ class MemberAccessExpression(VBA_Object):
                 last_rhs = re.sub(pat, r"\1\2, True\3", last_rhs)
                 
             # Done.
+            #print"OUT: 7"
+            #printlast_rhs
             return last_rhs
         
         return ""
@@ -1280,6 +1297,10 @@ class MemberAccessExpression(VBA_Object):
             log.debug("_handle_listbox_additem(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
+        #print "ADDITEM!!"
+        #print self
+        #print lhs
+        #print rhs
         if (not isinstance(rhs, Function_Call)):
             #print "OUT: ADD 1"
             return None
@@ -1305,6 +1326,8 @@ class MemberAccessExpression(VBA_Object):
             log.debug("AddItem() func = " + str(new_add))
         
         # Evaluate the list add.
+        #print "EVAL!!"
+        #print new_add
         new_list = new_add.eval(context)
 
         # Update the list variable.
