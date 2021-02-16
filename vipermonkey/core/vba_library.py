@@ -2153,9 +2153,13 @@ class Replace(VbaLibraryFunc):
             else:
                 return ""
         # TODO: Handle start, count, and compare parameters.
-        string = str(params[0])
+        string = params[0]
+        # Handle Excel cells.
+        if (isinstance(string, dict) and ("value" in string)):
+            string = str(string["value"])
         if (string is None):
             string = ''
+        string = str(string)
         pat = str(params[1])
         if ((pat is None) or (pat == '')):
             return string
