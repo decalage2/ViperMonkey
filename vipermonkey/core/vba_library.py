@@ -4432,7 +4432,7 @@ class UsedRange(VbaLibraryFunc):
         sheet = None
         if ((params is not None) and
             (len(params) >= 1) and
-            ("ExcelSheet" in str(type(params[0])))):
+            ("Sheet" in str(type(params[0])))):
             sheet = params[0]
         else:
             sheet = get_largest_sheet(context.loaded_excel)
@@ -4546,8 +4546,6 @@ class Range(VbaLibraryFunc):
 
         #print "RANGE!!"
         #print "# params: " + str(len(params))
-        for p in params:
-            print type(p)
         
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
