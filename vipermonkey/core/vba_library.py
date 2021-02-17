@@ -72,6 +72,7 @@ from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
 from vba_object import strip_nonvb_chars
 import expressions
+import excel
 import modules
 import strip_lines
 from vba_object import _eval_python
@@ -4286,15 +4287,21 @@ class Cells(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (params is None):
-            log.error("Parameters of Cells() call are None.")
-            return self
+        if ((params is None) or (len(params) == 0)):
+            log.error("Parameters of Cells() call are None or empty.")
+            return "NULL"
         
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. No Excel file loaded.")
             return "NULL"
+
+        # Is this actually the Cells field of a Sheet?
+        if ("Sheet" in str(type(params[0]))):
+
+            # Pull out all the cells  in the sheet and return that.
+            return excel.pull_cells_sheet(params[0])
         
         # Currently only handles Cells(x, y) calls.
         if (len(params) != 2):
