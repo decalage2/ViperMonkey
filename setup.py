@@ -41,7 +41,7 @@ entry_points = {
 
 setup(
     name="vipermonkey",
-    version="0.08",  # 0.0x not compliant with PEP440, setuptools normalizes to 0.x
+    version="1.0.2",
     description=(
         "ViperMonkey is a VBA Emulation engine written in Python, designed to "
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
