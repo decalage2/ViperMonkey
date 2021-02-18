@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 #=== LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2021 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -1107,8 +1107,14 @@ def pull_embedded_pe_files(data, out_dir):
     if filetype.is_office2007_file(data, is_data=True):
 
         # Write the zip data to a temp file.
-        f, fname = tempfile.mkstemp()
-        os.write(f, data)
+        # we use tempfile.NamedTemporaryFile to create a temporary file in a platform-independent
+        # and secure way. The file needs to be accessible with a filename until it is explicitly
+        # deleted (hence the option delete=False).
+        # TODO: [Phil] I think we could avoid this and use a bytes buffer in memory instead, zipfile supports it
+        f = tempfile.NamedTemporaryFile(delete=False)
+        fname = f.name
+        f.write(data)
+        f.close()
 
         # Pull embedded PE files from each file in the zip.
         with zipfile.ZipFile(fname, "r") as f:
