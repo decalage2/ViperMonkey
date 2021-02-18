@@ -1106,25 +1106,14 @@ def pull_embedded_pe_files(data, out_dir):
     # Is this a Office 2007 (zip) file?
     if filetype.is_office2007_file(data, is_data=True):
 
-        # Write the zip data to a temp file.
-        # we use tempfile.NamedTemporaryFile to create a temporary file in a platform-independent
-        # and secure way. The file needs to be accessible with a filename until it is explicitly
-        # deleted (hence the option delete=False).
-        # TODO: [Phil] I think we could avoid this and use a bytes buffer in memory instead, zipfile supports it
-        # This is really required on Windows because the antivirus blocks the temp file on disk
-        f = tempfile.NamedTemporaryFile(delete=False)
-        fname = f.name
-        f.write(data)
-        f.close()
-
+        # convert data to a BytesIO buffer so that we can use zipfile in memory
+        # without writing a temp file on disk:
+        data_io = io.BytesIO(data)
         # Pull embedded PE files from each file in the zip.
-        with zipfile.ZipFile(fname, "r") as f:
+        with zipfile.ZipFile(data_io, "r") as f:
             for name in f.namelist():
                 curr_data = f.read(name)
                 pull_embedded_pe_files(curr_data, out_dir)
-
-        # Clean up and leave.
-        os.remove(fname)
         return
     
     # Is a PE file in the data at all?
