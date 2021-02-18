@@ -1111,6 +1111,7 @@ def pull_embedded_pe_files(data, out_dir):
         # and secure way. The file needs to be accessible with a filename until it is explicitly
         # deleted (hence the option delete=False).
         # TODO: [Phil] I think we could avoid this and use a bytes buffer in memory instead, zipfile supports it
+        # This is really required on Windows because the antivirus blocks the temp file on disk
         f = tempfile.NamedTemporaryFile(delete=False)
         fname = f.name
         f.write(data)
