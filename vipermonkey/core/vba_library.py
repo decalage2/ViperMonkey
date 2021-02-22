@@ -2032,6 +2032,8 @@ class Split(VbaLibraryFunc):
         r = string.split(sep)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Split: return %r" % r)
+        #print "SPLIT!!"
+        #print r
         return r
     
 class Int(VbaLibraryFunc):

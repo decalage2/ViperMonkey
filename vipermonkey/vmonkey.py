@@ -132,6 +132,7 @@ from core import *
 import core.excel as excel
 import core.read_ole_fields as read_ole_fields
 from core.utils import safe_print
+from core.utils import safe_str_convert
 
 # for logging
 from core.logger import log
@@ -1778,7 +1779,13 @@ def _process_file (filename,
                 except Exception as exc:
                     log.error("Failed to output results to output file. " + str(exc))
 
-            return (vm.actions, vm.external_funcs, tmp_iocs, shellcode_bytes)
+            # Make sure all the action fields are strings before returning.
+            str_actions = []
+            for action in vm.actions:
+                str_actions.append((safe_str_convert(action[0]),
+                                    safe_str_convert(action[1]),
+                                    safe_str_convert(action[2])))
+            return (str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes)
 
         else:
             safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
