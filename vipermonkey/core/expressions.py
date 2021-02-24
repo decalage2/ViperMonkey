@@ -2395,11 +2395,12 @@ member_access_expression_loose.setParseAction(MemberAccessExpression)
 
 
 # TODO: Figure out how to have unlimited member accesses.
-member_object_limited = (
-    Suppress(Optional("["))
-    + unrestricted_name
-    + Suppress(Optional("]"))
-)
+#member_object_limited = (
+#    Suppress(Optional("["))
+#    + unrestricted_name
+#    + Suppress(Optional("]"))
+#)
+# Why is member_object_limited defined twice?
 member_access_expression_limited = Group(
     Group((
         member_object_strict("lhs")

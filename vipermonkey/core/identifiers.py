@@ -156,10 +156,12 @@ base_attrib = Combine(
 TODO_identifier_or_object_attrib = base_attrib ^ Suppress(Literal("{")) + base_attrib + Suppress(Literal("}"))
 
 base_attrib_loose = Combine(
-    Combine(Literal('.') + lex_identifier) | Combine(entity_name + Optional(Literal('.') + lex_identifier))
+    Combine(Literal('.') + lex_identifier)
+    | Combine(entity_name + Optional(Literal('.') + lex_identifier))
     + Optional(CaselessLiteral('$'))
     + Optional(CaselessLiteral('#'))
     + Optional(CaselessLiteral('%'))
+    | Combine(entity_name + Literal('.') + lex_identifier + Literal('.') + lex_identifier)
 )
 
 TODO_identifier_or_object_attrib_loose = base_attrib_loose ^ Suppress(Literal("{")) + base_attrib_loose + Suppress(Literal("}"))
