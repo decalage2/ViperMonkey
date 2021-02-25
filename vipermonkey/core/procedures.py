@@ -251,7 +251,7 @@ class Sub(VBA_Object):
             # statements after the GOTO.
             if (context.goto_executed):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("GOTO executed. Go to next loop iteration.")
+                    log.debug("GOTO executed. Control flow handled by GOTO, so skip rest of procedure statements.")
                 break
             
         # Reset variable update scoping.

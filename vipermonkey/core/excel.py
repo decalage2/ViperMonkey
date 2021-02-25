@@ -245,7 +245,7 @@ class ExcelSheet(object):
     def __init__(self, cells, name="Sheet1"):
         self.gloss = None
         self.cells = cells
-        self.name = name
+        self.name = name.replace("0x20", " ")
         self.__num_rows = None
         self.__num_cols = None
 
@@ -258,11 +258,12 @@ class ExcelSheet(object):
         #sys.exit(0)
         r = ""
         if debug:
-            r += "Sheet: " + self.name + "\n\n"
+            r += "Sheet: '" + self.name + "'\n\n"
             for cell in self.cells.keys():
                 r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
         else:
-            r = str(self.cells)
+            r += "Sheet: '" + self.name + "'\n"
+            r += str(self.cells)
         self.gloss = r
         return self.gloss
 

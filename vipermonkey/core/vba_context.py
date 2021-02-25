@@ -303,7 +303,7 @@ class Context(object):
             self.throttle_logging = context.throttle_logging
             self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
-            self.types = context.types
+            self.types = dict(context.types)
             self.open_files = context.open_files
             self.file_id_map = context.file_id_map
             self.closed_files = context.closed_files

@@ -535,6 +535,7 @@ class Dim_Statement(VBA_Object):
             init_val = to_python(self.init_val, context=context)
             
         # Track each declared variable.
+        r = ""
         for var in self.variables:
 
             # Do we know the variable type?
@@ -588,10 +589,10 @@ class Dim_Statement(VBA_Object):
                 
             # Set the initial value of the declared variable.
             var_name = utils.fix_python_overlap(str(var[0]))
-            r = " " * indent + var_name + " = " + str(curr_init_val)
+            r += " " * indent + var_name + " = " + str(curr_init_val) + "\n"
 
-            # Done.
-            return r
+        # Done.
+        return r
     
     def eval(self, context, params=None):
 
@@ -1548,8 +1549,8 @@ class For_Statement(VBA_Object):
             step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
         loop_start += indent_str + loop_var + " = " + str(start) + "\n"
-        loop_start += indent_str + "while (((" + loop_var + " <= " + str(end) + ") and (" + str(step) + " > 0)) or " + \
-                      "((" + loop_var + " >= " + str(end) + ") and (" + str(step) + " < 0))):\n"
+        loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + str(end) + ")) and (" + str(step) + " > 0)) or " + \
+                      "((" + loop_var + " >= coerce_to_int(" + str(end) + ")) and (" + str(step) + " < 0))):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -1563,9 +1564,9 @@ class For_Statement(VBA_Object):
         # Set up the loop body.
         loop_body = ""
         end_var = str(end)
-        loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100) == " + prog_var + "):\n"
+        loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/(coerce_to_int(" + end_var + ") if coerce_to_int(" + end_var + ") != 0 else 1)*100) == " + prog_var + "):\n"
         body_escaped = str(self).replace('"', '\\"').replace("\\n", " :: ")
-        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100)) + \"% done with loop " + body_escaped + "\")\n"
+        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/(coerce_to_int(" + end_var + ") if coerce_to_int(" + end_var + ") != 0 else 1)*100)) + \"% done with loop " + body_escaped + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         body_str = to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
         if (body_str.strip() == '""'):
@@ -2033,10 +2034,16 @@ class For_Statement(VBA_Object):
             context.loop_object_stack.pop()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop: end.')
-
+            
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
+
+        # We are parsing Next's as being an integral part of the for loop
+        # (it's really not). This means we are only handling GOTOs within the
+        # loop body, so once we get out of the loop we need to run the statement
+        # after the loop.
+        context.goto_executed = False
         
 # 5.6.16.6 Bound Variable Expressions
 #

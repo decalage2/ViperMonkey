@@ -30,7 +30,10 @@ def is_excel_file(maldoc):
     @return (bool) True if the file is an Excel file, False if not.
     """
     typ = subprocess.check_output(["file", maldoc])
-    return ((b"Excel" in typ) or (b"Microsoft OOXML" in typ))
+    if ((b"Excel" in typ) or (b"Microsoft OOXML" in typ)):
+        return True
+    typ = subprocess.check_output(["exiftool", maldoc])
+    return (b"vnd.ms-excel" in typ)
 
 ###################################################################################################
 def wait_for_uno_api():
