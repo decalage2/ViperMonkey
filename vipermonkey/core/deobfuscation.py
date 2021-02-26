@@ -15,7 +15,7 @@ https://github.com/decalage2/ViperMonkey
 
 # === LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2016 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2021 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -40,84 +40,94 @@ https://github.com/decalage2/ViperMonkey
 
 from functools import reduce
 
-import regex
+# attempt to import regex if it's installed, otherwise it will be ignored
+# (this is because regex does not work on PyPy2 on Windows)
+try:
+    import regex
+    REGEX = True
+except ImportError:
+    # TODO: it would be good to log a warning
+    REGEX = False
+
 from operator import xor
 
 from vipermonkey.core.vba_lines import vba_collapse_long_lines
+from vipermonkey.core.logger import log
+
+if REGEX:
+
+    # language=PythonRegExp
+    CHR = regex.compile('Chr\((?P<op>\d+)(\s+Xor\s+(?P<op>\d+))*\)', regex.IGNORECASE)
+    # language=PythonRegExp
+    STRING = regex.compile('(".*?"|\'.*?.\')')
+
+    # Long run of Chr() and "string" concatenations.
+    # e.g:  Chr(71 Xor 18) & "2" & Chr(82 Xor 4) + "0" & Chr(70 Xor 15) & Chr(84 Xor 19)
+    # NOTE: We are allowing the use of "+" because it has the same affect as "&" when dealing
+    #     with just strings and order precedence shouldn't matter in this case.
+    # language=PythonRegExp
+    CONCAT_RUN = regex.compile(
+        '(?P<entry>{chr}|{string})(\s+[&+]\s+(?P<entry>{chr}|{string}))*'.format(
+            chr=CHR.pattern, string=STRING.pattern))
+
+    # Long run of variable concatination split among lines.
+    # e.g.
+    #  a = '1'
+    #  a = a & '2'
+    #  a = a & '3'
+    # language=PythonVerboseRegExp
+    VAR_RUN = regex.compile('''
+        (?P<var>[A-Za-z][A-Za-z0-9]*)\s*?=\s*(?P<entry>.*?)[\r\n]     # variable = *
+        (\s*?(?P=var)\s*=\s*(?P=var)\s+&\s+(?P<entry>.*?)[\r\n])+     # variable = variable & *
+    ''', regex.VERBOSE)
 
 
-# language=PythonRegExp
-CHR = regex.compile('Chr\((?P<op>\d+)(\s+Xor\s+(?P<op>\d+))*\)', regex.IGNORECASE)
-# language=PythonRegExp
-STRING = regex.compile('(".*?"|\'.*?.\')')
-
-# Long run of Chr() and "string" concatenations.
-# e.g:  Chr(71 Xor 18) & "2" & Chr(82 Xor 4) + "0" & Chr(70 Xor 15) & Chr(84 Xor 19)
-# NOTE: We are allowing the use of "+" because it has the same affect as "&" when dealing
-#     with just strings and order precedence shouldn't matter in this case.
-# language=PythonRegExp
-CONCAT_RUN = regex.compile(
-    '(?P<entry>{chr}|{string})(\s+[&+]\s+(?P<entry>{chr}|{string}))*'.format(
-        chr=CHR.pattern, string=STRING.pattern))
-
-# Long run of variable concatination split among lines.
-# e.g.
-#  a = '1'
-#  a = a & '2'
-#  a = a & '3'
-# language=PythonVerboseRegExp
-VAR_RUN = regex.compile('''
-    (?P<var>[A-Za-z][A-Za-z0-9]*)\s*?=\s*(?P<entry>.*?)[\r\n]     # variable = *
-    (\s*?(?P=var)\s*=\s*(?P=var)\s+&\s+(?P<entry>.*?)[\r\n])+     # variable = variable & *
-''', regex.VERBOSE)
+    def _replace_code(code, replacements):
+        """
+        Replaces code with new code.
+        :param str code: code to replace
+        :param list replacements: list of tuples containing (start, end, replacement)
+        """
+        new_code = ''
+        index = 0
+        for start, end, code_string in sorted(replacements):
+            new_code += code[index:start] + code_string
+            index = end
+        new_code += code[index:]
+        return new_code
 
 
-def _replace_code(code, replacements):
-    """
-    Replaces code with new code.
-    :param str code: code to replace
-    :param list replacements: list of tuples containing (start, end, replacement)
-    """
-    new_code = ''
-    index = 0
-    for start, end, code_string in sorted(replacements):
-        new_code += code[index:start] + code_string
-        index = end
-    new_code += code[index:]
-    return new_code
-
-
-def _replace_var_runs(code):
-    """Replace long variable runs."""
-    code_replacements = []
-    for match in VAR_RUN.finditer(code):
-        code_string = '{var} = {value}{newline}'.format(
-            var=match.group('var'),
-            value=' & '.join(match.captures('entry')),
-            newline=match.group(0)[-1]  # match \r or \n as used in code.
-        )
-        code_replacements.append((match.start(), match.end(), code_string))
-    return _replace_code(code, code_replacements)
+    def _replace_var_runs(code):
+        """Replace long variable runs."""
+        code_replacements = []
+        for match in VAR_RUN.finditer(code):
+            code_string = '{var} = {value}{newline}'.format(
+                var=match.group('var'),
+                value=' & '.join(match.captures('entry')),
+                newline=match.group(0)[-1]  # match \r or \n as used in code.
+            )
+            code_replacements.append((match.start(), match.end(), code_string))
+        return _replace_code(code, code_replacements)
 
 
 
-def _replace_concat_runs(code):
-    """Replace long chr runs."""
-    code_replacements = []
-    for match in CONCAT_RUN.finditer(code):
-        code_string = ''
-        for entry in match.captures('entry'):
-            sub_match = CHR.match(entry)
-            if sub_match:
-                character = chr(reduce(xor, map(int, sub_match.captures('op'))))
-                # Escape if its a quote.
-                if character == '"':
-                    character = '""'
-                code_string += character
-            else:
-                code_string += entry.strip('\'"')
-        code_replacements.append((match.start(), match.end(), '"{}"'.format(code_string)))
-    return _replace_code(code, code_replacements)
+    def _replace_concat_runs(code):
+        """Replace long chr runs."""
+        code_replacements = []
+        for match in CONCAT_RUN.finditer(code):
+            code_string = ''
+            for entry in match.captures('entry'):
+                sub_match = CHR.match(entry)
+                if sub_match:
+                    character = chr(reduce(xor, map(int, sub_match.captures('op'))))
+                    # Escape if its a quote.
+                    if character == '"':
+                        character = '""'
+                    code_string += character
+                else:
+                    code_string += entry.strip('\'"')
+            code_replacements.append((match.start(), match.end(), '"{}"'.format(code_string)))
+        return _replace_code(code, code_replacements)
 
 
 def deobfuscate(code):
@@ -129,6 +139,9 @@ def deobfuscate(code):
     returns: deobfuscated code
     """
     code = vba_collapse_long_lines(code)
-    code = _replace_var_runs(code)
-    code = _replace_concat_runs(code)
+    if REGEX:
+        code = _replace_var_runs(code)
+        code = _replace_concat_runs(code)
+    else:
+        log.warning('regex package is not installed - impossible to deobfuscate')
     return code
