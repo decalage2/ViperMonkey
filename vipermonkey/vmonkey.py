@@ -917,7 +917,14 @@ def read_sheet_from_csv(filename):
                 dat = dat[1:]
             if (dat.endswith('"')):
                 dat = dat[:-1]
+
+            # LibreOffice escapes '"' as '""'. Undo that.
+            dat = dat.replace('""', '"')
+
+            # Save the cell value.
             r[(row, col)] = dat
+
+            # Next column.
             col += 1
         row += 1
 

@@ -1595,6 +1595,16 @@ class VbaConstants(object):
         self.globals["xlPrintErrorsDisplayed".lower()] = 0
         self.globals["xlPrintErrorsNA".lower()] = 3
 
+        # MsoContactCardAddressType Enum        
+        self.globals["msoContactCardAddressTypeIM".lower()] = 3
+        self.globals["msoContactCardAddressTypeOutlook".lower()] = 1
+        self.globals["msoContactCardAddressTypeSMTP".lower()] = 2
+        self.globals["msoContactCardAddressTypeUnknown".lower()] = 0
+
+        # MsoContactCardStyle Enum
+        self.globals["msoContactCardFull".lower()] = 1
+        self.globals["msoContactCardHover".lower()] = 0
+        
         # msoTextCaps Enum
         self.globals["msoAllCaps".lower()] = 2
         self.globals["msoCapsMixed".lower()] = -2

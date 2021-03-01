@@ -490,11 +490,14 @@ def fix_skipped_1st_arg1(vba_code):
     # We don't want to replace things like this in string literals. Temporarily
     # pull out the string literals from the line.
 
+    # Ugh. Temporarily replace escaped double quotes.
+    tmp_code = vba_code.replace('""', '__ESCAPED_QUOTES__')
+    
     # Find all the string literals and make up replacement names.
     strings = {}
     in_str = False
     curr_str = None
-    for c in vba_code:
+    for c in tmp_code:
 
         # Start/end of string?
         if (c == '"'):
@@ -521,7 +524,6 @@ def fix_skipped_1st_arg1(vba_code):
             curr_str += c
 
     # Temporarily replace the string literals.
-    tmp_code = vba_code
     for str_name in strings.keys():
         tmp_code = tmp_code.replace(strings[str_name], str_name)
         
@@ -531,6 +533,9 @@ def fix_skipped_1st_arg1(vba_code):
     # Put the string literals.
     for str_name in strings.keys():
         vba_code = vba_code.replace(str_name, strings[str_name])
+
+    # Put the escaped double quotes back.
+    vba_code = vba_code.replace('__ESCAPED_QUOTES__', '""')
         
     # Return the modified code.
     return vba_code
