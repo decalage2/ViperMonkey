@@ -13,7 +13,7 @@ https://github.com/decalage2/ViperMonkey
 
 #=== LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2021 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -37,6 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import zipfile
+import tempfile
 import re
 import random
 import os
@@ -114,11 +115,14 @@ def unzip_data(data):
     if data.startswith(zip_magic):
         #raise ValueError("_get_shapes_text_values_2007() currently does not support in-memory Office files.")
         # TODO: Fix this. For now just save to a tmp file.
-        tmp_name = "/tmp/" + str(random.randrange(0, 10000000000)) + ".office"
-        f = open(tmp_name, 'wb')
+        # we use tempfile.NamedTemporaryFile to create a temporary file in a platform-independent
+        # and secure way. The file needs to be accessible with a filename until it is explicitly
+        # deleted (hence the option delete=False).
+        # TODO: [Phil] I think we could avoid this and use a bytes buffer in memory instead, zipfile supports it
+        f = tempfile.NamedTemporaryFile(delete=False)
+        fname = f.name
         f.write(data)
         f.close()
-        fname = tmp_name
         delete_file = True
     else:
         return (None, None)
@@ -135,6 +139,7 @@ def unzip_data(data):
         return (None, None)
         
     # This is a ZIP file. Unzip it.
+    # TODO: [Phil] here we could just pass the bytes buffer, no need for a file on disk
     unzipped_data = zipfile.ZipFile(fname, 'r')
 
     # Return the unzipped data and temp file name.
@@ -172,6 +177,8 @@ def get_drawing_titles(data):
     zip_subfile = 'word/document.xml'
     if (zip_subfile not in unzipped_data.namelist()):
         if (delete_file):
+            # Need to close the zipfile first, otherwise os.remove fails on Windows
+            unzipped_data.close()
             os.remove(fname)
         return []
 
@@ -182,6 +189,8 @@ def get_drawing_titles(data):
 
     # Delete the temporary Office file.
     if (delete_file):
+        # Need to close the zipfile first, otherwise os.remove fails on Windows
+        unzipped_data.close()
         os.remove(fname)
     
     # <wp:docPr id="1" name="the name" title="the title text"/>
@@ -222,6 +231,8 @@ def get_defaulttargetframe_text(data):
     zip_subfile = 'docProps/custom.xml'
     if (zip_subfile not in unzipped_data.namelist()):
         if (delete_file):
+            # Need to close the zipfile first, otherwise os.remove fails on Windows
+            unzipped_data.close()
             os.remove(fname)
         return None
 
@@ -232,6 +243,8 @@ def get_defaulttargetframe_text(data):
 
     # Delete the temporary Office file.
     if (delete_file):
+        # Need to close the zipfile first, otherwise os.remove fails on Windows
+        unzipped_data.close()
         os.remove(fname)
     
     # <vt:lpwstr>custom value</vt:lpwstr>
@@ -289,6 +302,8 @@ def get_customxml_text(data):
 
     # Delete the temporary Office file.
     if (delete_file):
+        # Need to close the zipfile first, otherwise os.remove fails on Windows
+        unzipped_data.close()
         os.remove(fname)
 
     # Return the results.
@@ -926,6 +941,7 @@ def get_vbaprojectbin(data):
 
     data - Already read in 2007+ file contents.
     """
+    # TODO: [Phil] olevba already extracts vbaProject.bin in a safer way, so we should not have to do it here
 
     # We can only do this with 2007+ files.
     if (not filetype.is_office2007_file(data, True)):
@@ -956,6 +972,8 @@ def get_vbaprojectbin(data):
 
     # Done.
     if (delete_file):
+        # Need to close the zipfile first, otherwise os.remove fails on Windows
+        unzipped_data.close()
         os.remove(fname)
     return r
 
