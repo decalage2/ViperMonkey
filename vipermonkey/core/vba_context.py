@@ -789,6 +789,7 @@ class Context(object):
                 log.warning("Filename of dropped file is too long, replacing with " + fname)
 
             # Make the name truely unique.
+            fname = fname.strip()
             self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
