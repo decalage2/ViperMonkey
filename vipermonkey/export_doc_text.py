@@ -187,4 +187,5 @@ elif args.tables:
     print(json.dumps(get_tables(document)))
 
 # clean up
+document.close(True)
 os.kill(get_office_proc()["pid"], signal.SIGTERM)

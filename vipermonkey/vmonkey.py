@@ -14,7 +14,7 @@ https://github.com/decalage2/ViperMonkey
 
 #=== LICENSE ==================================================================
 
-# ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
+# ViperMonkey is copyright (c) 2015-2021 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -50,7 +50,7 @@ from __future__ import print_function
 # 2018-08-17 v0.07 KS: - lots of bug fixes and additions by Kirk Sayre (PR #34)
 #                  PL: - added ASCII art banner
 
-__version__ = '1.002'
+__version__ = '1.0.2'
 
 #------------------------------------------------------------------------------
 # TODO:
@@ -152,8 +152,19 @@ def _read_doc_text_libreoffice(data):
         log.warning("The file is not an Office file. Not extracting document text with LibreOffice.")
         return None
     
-    # Save the Word data to a temporary file.
-    out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+    # Pick an unused temporary file name.
+    out_dir = None
+    while True:
+        out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+        try:
+            f = open(out_dir, "r")
+            # Already exists.
+            f.close()
+        except:
+            # Does not exist.
+            break
+
+    # Save the Word data to the temporary file.
     f = open(out_dir, 'wb')
     f.write(data)
     f.close()
@@ -1114,18 +1125,14 @@ def pull_embedded_pe_files(data, out_dir):
     # Is this a Office 2007 (zip) file?
     if filetype.is_office2007_file(data, is_data=True):
 
-        # Write the zip data to a temp file.
-        f, fname = tempfile.mkstemp()
-        os.write(f, data)
-
+        # convert data to a BytesIO buffer so that we can use zipfile in memory
+        # without writing a temp file on disk:
+        data_io = io.BytesIO(data)
         # Pull embedded PE files from each file in the zip.
-        with zipfile.ZipFile(fname, "r") as f:
+        with zipfile.ZipFile(data_io, "r") as f:
             for name in f.namelist():
                 curr_data = f.read(name)
                 pull_embedded_pe_files(curr_data, out_dir)
-
-        # Clean up and leave.
-        os.remove(fname)
         return
     
     # Is a PE file in the data at all?
