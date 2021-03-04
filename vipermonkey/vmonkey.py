@@ -152,8 +152,19 @@ def _read_doc_text_libreoffice(data):
         log.warning("The file is not an Office file. Not extracting document text with LibreOffice.")
         return None
     
-    # Save the Word data to a temporary file.
-    out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+    # Pick an unused temporary file name.
+    out_dir = None
+    while True:
+        out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+        try:
+            f = open(out_dir, "r")
+            # Already exists.
+            f.close()
+        except:
+            # Does not exist.
+            break
+
+    # Save the Word data to the temporary file.
     f = open(out_dir, 'wb')
     f.write(data)
     f.close()

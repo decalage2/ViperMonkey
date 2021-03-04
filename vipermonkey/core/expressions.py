@@ -3486,11 +3486,15 @@ class BoolExprItem(VBA_Object):
             rhs = str(rhs)
 
         # Always evaluate to true if comparing against a wildcard.
+        # We will treat logic looking at the current file name as a wildcard also.
         rhs = strip_nonvb_chars(rhs)
         lhs = strip_nonvb_chars(lhs)
         rhs_str = str(rhs)
         lhs_str = str(lhs)
-        if (("**MATCH ANY**" in lhs_str) or ("**MATCH ANY**" in rhs_str)):
+        if (("**MATCH ANY**" in lhs_str) or
+            ("**MATCH ANY**" in rhs_str) or
+            ("CURRENT_FILE_NAME" in lhs_str) or
+            ("CURRENT_FILE_NAME" in rhs_str)):
             if (self.op == "<>"):
                 if (context.in_bitwise_expression):
                     return 0
