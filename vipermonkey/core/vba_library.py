@@ -5031,7 +5031,11 @@ class Open(CreateTextFile):
             return "NULL"
         
         # Is this a HTTP GET?
-        if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
+        if ((len(params) >= 2) and
+            ((str(params[0]).strip() == "GET") or
+             (str(params[1]).startswith("ftp://")) or
+             (str(params[1]).startswith("http://")) or
+             (str(params[1]).startswith("https://")))):
             url = str(params[1])
             if (url.startswith("tp://")):
                 url = "ht" + url
