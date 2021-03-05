@@ -399,8 +399,7 @@ class TaggedBlock(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            #if (isinstance(s, Goto_Statement)):
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -1846,6 +1845,7 @@ class For_Statement(VBA_Object):
             return
         
         # evaluate values:
+        self.exited_with_goto = False
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop: evaluating start, end, step')
 
@@ -1899,8 +1899,9 @@ class For_Statement(VBA_Object):
             log.warn("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
+        my_loop_stack_pos = len(context.loop_stack) - 1
 
         # Track the context from the previous loop iteration to see if we have
         # a loop that is just there for obfuscation.
@@ -1975,9 +1976,10 @@ class For_Statement(VBA_Object):
                 s.eval(context=context)
                 
                 # Has 'Exit For' been called?
-                if ((len(context.loop_stack) == 0) or (not context.loop_stack[-1])):
-
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
+                    
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("FOR loop: exited loop with 'Exit For'")
                     done = True
@@ -1995,7 +1997,7 @@ class For_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2179,9 +2181,11 @@ class For_Each_Statement(VBA_Object):
             return
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        self.exited_with_goto = False
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
-
+        my_loop_stack_pos = len(context.loop_stack) - 1
+        
         # Get the container of values we are iterating through.
 
         # Might be an expression.
@@ -2223,9 +2227,10 @@ class For_Each_Statement(VBA_Object):
                     s.eval(context=context)
 
                     # Has 'Exit For' been called?
-                    if (not context.loop_stack[-1]):
+                    if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                         # Yes we have. Stop this loop.
+                        self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("FOR EACH loop: exited loop with 'Exit For'")
                         done = True
@@ -2240,7 +2245,7 @@ class For_Each_Statement(VBA_Object):
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
                     #if (isinstance(s, Goto_Statement)):
-                    if (context.goto_executed):
+                    if (context.goto_executed or s.exited_with_goto):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("GOTO executed. Go to next loop iteration.")
                         break
@@ -2655,6 +2660,7 @@ class While_Statement(VBA_Object):
             log.debug('WHILE loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
+        self.exited_with_goto = False
         if (len(self.body) == 0):
 
             # Evaluate the loop guard once in case interesting functions are called in
@@ -2707,9 +2713,10 @@ class While_Statement(VBA_Object):
             return
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
-
+        my_loop_stack_pos = len(context.loop_stack) - 1
+        
         # Some loop guards check the readystate value on an object. To simulate this
         # will will just go around the loop a small fixed # of times.
         if (".readyState" in str(self.guard)):
@@ -2775,9 +2782,10 @@ class While_Statement(VBA_Object):
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
-                if (not context.loop_stack[-1]):
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("WHILE loop: exited loop with 'Exit For'")
                     done = True
@@ -2792,7 +2800,7 @@ class While_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2920,6 +2928,7 @@ class Do_Statement(VBA_Object):
             log.debug('DO loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
+        self.exited_with_goto = True
         if (len(self.body) == 0):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("DO loop: empty body. Skipping.")
@@ -2940,8 +2949,9 @@ class Do_Statement(VBA_Object):
             return
 
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
+        my_loop_stack_pos = len(context.loop_stack) - 1
         
         # Get the initial values of all the variables that appear in the loop guard.
         old_guard_vals = _get_guard_variables(self, context)
@@ -2968,9 +2978,10 @@ class Do_Statement(VBA_Object):
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
-                if (not context.loop_stack[-1]):
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Do loop: exited loop with 'Exit For'")
                     done = True
@@ -2985,7 +2996,7 @@ class Do_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -3130,7 +3141,7 @@ class Select_Statement(VBA_Object):
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
                     #if (isinstance(s, Goto_Statement)):
-                    if (context.goto_executed):
+                    if (context.goto_executed or statement.exited_with_goto):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("GOTO executed. Break out of Select.")
                         break
@@ -4142,7 +4153,7 @@ class Exit_For_Statement(VBA_Object):
         # Update the loop stack to indicate that the current loop should exit.
         if (len(context.loop_stack) > 0):
             context.loop_stack.pop()
-        context.loop_stack.append(False)
+        context.loop_stack.append("EXIT_FOR")
 
 class Exit_While_Statement(Exit_For_Statement):
     def __repr__(self):
@@ -4412,7 +4423,7 @@ class With_Statement(VBA_Object):
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             #if (isinstance(s, Goto_Statement)):
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -4494,7 +4505,7 @@ class Goto_Statement(VBA_Object):
             if (jump_loop is None):
 
                 # Mark all the loops as exited.
-                context.loop_stack = [False] * len(context.loop_stack)
+                context.loop_stack = ["GOTO"] * len(context.loop_stack)
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Jumped out of all loops.")
                     log.debug(context.loop_stack)
@@ -4505,7 +4516,7 @@ class Goto_Statement(VBA_Object):
                 # Exit from all the nested loops up to the one we jumped to.
                 tmp_stack = context.loop_stack
                 context.loop_stack = context.loop_stack[:pos+1]
-                context.loop_stack.extend([False] * (len(tmp_stack) - (pos + 1)))
+                context.loop_stack.extend(["GOTO"] * (len(tmp_stack) - (pos + 1)))
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Jumped out of some loops.")
                     log.debug(context.loop_stack)

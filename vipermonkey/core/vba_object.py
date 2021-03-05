@@ -149,6 +149,7 @@ class VBA_Object(object):
         self._children = None
         self.is_useless = False
         self.is_loop = False
+        self.exited_with_goto = False
         
     def eval(self, context, params=None):
         """
