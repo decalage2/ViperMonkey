@@ -1340,6 +1340,12 @@ class Context(object):
         # Are we assigning a Property? If so we will call the property handler?
         if (self._handle_property_assignment(name, value)):
             return
+
+        # We might have a vipermonkey simple name expression. Convert to a string
+        # so we can use it.
+        import expressions
+        if (isinstance(name, expressions.SimpleNameExpression)):
+            name = str(name)
         
         # Does the name make sense?
         orig_name = name
