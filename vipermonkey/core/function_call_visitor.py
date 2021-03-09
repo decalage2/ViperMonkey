@@ -61,6 +61,10 @@ class function_call_visitor(visitor):
                 self.called_funcs.add(str(item.name))
         if (isinstance(item, expressions.Function_Call)):
             self.called_funcs.add(str(item.name))
+        if (isinstance(item, statements.File_Open)):
+            self.called_funcs.add("Open")
+        if (isinstance(item, statements.Print_Statement)):
+            self.called_funcs.add("Print")
         if (isinstance(item, lib_functions.Chr)):
             self.called_funcs.add("Chr")
         if (isinstance(item, lib_functions.Asc)):
