@@ -546,7 +546,6 @@ class ViperMonkey(StubbedEngine):
         vba_context.num_b64_iocs = 0
         vba_context.shellcode = {}
         
-        # TODO: use the provided entrypoint
         # Create the global context for the engine
         context = Context(_globals=self.globals,
                           engine=self,
@@ -715,9 +714,8 @@ class ViperMonkey(StubbedEngine):
                         tmp_context.dump_all_files(autoclose=True)
                         # Save whether we got actions from this entry point.
                         context.got_actions = tmp_context.got_actions
-                        done_emulation = True
 
-        # Did we find an entry point?
+        # Did we find a proper entry point?
         if (not done_emulation):
 
             # Try heuristics to find possible entry points.
