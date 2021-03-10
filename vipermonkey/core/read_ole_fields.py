@@ -2102,7 +2102,7 @@ def get_ole_textbox_values(obj, vba_code):
         
     return r
 
-def _read_form_strings(vba):
+def read_form_strings(vba):
     """
     Read in the form strings in order as a lists of tuples like (stream name, form string).
     """
@@ -2134,7 +2134,7 @@ def _read_form_strings(vba):
         log.error("Cannot read form strings. " + str(e))
         return []
     
-def _get_shapes_text_values_xml(fname):
+def get_shapes_text_values_xml(fname):
     """
     Read in the text associated with Shape objects in a document saved
     as Flat OPC XML files.
@@ -2666,7 +2666,7 @@ def _get_shapes_text_values(fname, stream):
 
         # See if we can read Shapes() info from an XML file.
         if ("not an OLE2 structured storage file" in str(e)):
-            r = _get_shapes_text_values_xml(fname)
+            r = get_shapes_text_values_xml(fname)
 
     return r
 

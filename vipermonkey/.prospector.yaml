@@ -1,0 +1,34 @@
+strictness: medium
+test-warnings: true
+doc-warnings: false
+
+pep8:
+  disable:
+    - W602
+    - W603
+    - E129
+  enable:
+    - W601
+  options:
+    max-line-length: 140
+
+pylint:
+  disable:
+    - wrong-import-position
+    - logging-not-lazy
+    - len-as-condition
+  options:
+    max-nested-blocks: 7
+    max-branches: 60
+    max-locals: 30
+    max-statements: 150
+    max-args: 10
+
+mccabe:
+  run: true
+  options:
+    max-complexity: 60
+
+vulture:
+  run: false
+  
