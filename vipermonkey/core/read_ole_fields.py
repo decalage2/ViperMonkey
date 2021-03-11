@@ -375,6 +375,8 @@ def get_msftedit_variables(obj):
             f.close()
         except IOError:
             data = obj
+        except TypeError:
+            data = obj
 
     # Is this an Office 97 file?
     if (filetype.is_office97_file(data, True)):
@@ -1494,6 +1496,8 @@ def get_ole_textbox_values(obj, vba_code):
             f.close()
         except IOError:
             data = obj
+        except TypeError:
+            data = obj
 
     # Is this an Office97 file?
     if (not filetype.is_office97_file(data, True)):
@@ -2171,6 +2175,8 @@ def get_shapes_text_values_xml(fname):
             contents = f.read().strip()
             f.close()
         except IOError:
+            contents = fname
+        except TypeError:
             contents = fname
 
     # Is this an XML file?
