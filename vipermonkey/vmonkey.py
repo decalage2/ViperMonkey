@@ -1549,14 +1549,10 @@ def _process_file (filename,
                         if ((val == '') and (tag == '') and (caption == '')):
                             continue
 
-                        # Skip variables for which we already have a value.
-                        if (((var_name.lower() in vm.globals) and
-                             (len(vm.globals[var_name.lower()]) > len(val))) or
-                            ((var_name.lower() in vm.doc_vars) and
-                             (len(vm.doc_vars[var_name.lower()]) > len(val)))):
-                            if (log.getEffectiveLevel() == logging.DEBUG):
-                                log.debug("Already have longer value for '" + var_name + "'. Skipping.")
-                            continue
+                        # We will not skip variables for which we already have a value.
+                        # The form variables in this loop are picked out by olevba based
+                        # on the actual Office file spec, not heuristics, so these values
+                        # take precedence.
 
                         # Save full form variable names.
                         name = global_var_name.lower()                        
