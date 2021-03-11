@@ -526,7 +526,16 @@ def process_file(container,
     return r
 
 def read_sheet_from_csv(filename):
+    """
+    Read in an Excel sheet from a CSV file.
 
+    @param fname (str) The name of the CSV file.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    sheet as an ExcelBook object. Returns None on error.
+
+    """
+    
     # Open the CSV file.
     f = None
     try:
@@ -589,7 +598,17 @@ def read_sheet_from_csv(filename):
     return r
 
 def load_excel_libreoffice(data):
+    """
+    Read in an Excel file into an ExceBook object by using
+    LibreOffice.
 
+    @param data (str) The Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
     # Don't try this if it is not an Office file.
     if (not core.filetype.is_office_file(data, True)):
         log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
@@ -667,7 +686,17 @@ def load_excel_libreoffice(data):
     return result_book
         
 def load_excel_xlrd(data):
+    """
+    Read in an Excel file into an ExceBook object directly with the
+    xlrd Excel library.
 
+    @param data (str) The Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
     # Only use this on Office 97 Excel files.
     if (not core.filetype.is_office97_file(data, True)):
         log.warning("File is not an Excel 97 file. Not reading with xlrd2.")
@@ -689,9 +718,11 @@ def load_excel(data):
     contents with LibreOffice if it is installed, and if that does not work try reading
     it with the Python xlrd package.
 
-    data - The loaded Excel file contents.
+    @param data (str) The loaded Excel file contents.
 
-    return - An xlrd (like) object with the Excel file contents.
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
     """
     
     # Load the sheet with xlrd2.
@@ -712,7 +743,13 @@ def load_excel(data):
         
 def _remove_duplicate_iocs(iocs):
     """
-    Remove IOC strings that are substrings of other IOCs.
+    Remove IOC strings that are substrings of other IOC strings.
+
+    @param iocs (list) List of IOCs (str).
+
+    @return (set) The original IOC list with duplicate-ish IOC strings
+    stripped out.
+
     """
 
     # Track whether to keep an IOC string.
@@ -743,8 +780,20 @@ def _remove_duplicate_iocs(iocs):
     return r
 
 def _get_vba_parser(data):
+    """
+    Get an olevba VBA_Parser object for reading an Office file. This
+    handles regular Office files and HTA files with VBScript script
+    elements.
 
-    # First just try the most commin case where olevba can directly get the VBA.
+    @param data (str) The file contents for which to generate a
+    VBA_Parser.
+
+    @return (VBA_Parser object) On success, the olevba VBA_Parser
+    object for the given file contents. On error, None.
+
+    """
+    
+    # First just try the most common case where olevba can directly get the VBA.
     vba = None
     try:
         vba = VBA_Parser('', data, relaxed=True)
@@ -764,7 +813,15 @@ def _get_vba_parser(data):
 
 def pull_embedded_pe_files(data, out_dir):
     """
-    Directly pull out any PE files embedded in the given data.
+    Directly pull out any PE files embedded in the given data. The PE
+    files will be saved in a directory and will be named things like
+    embedded*.exe.
+
+    @param data (str) The contents of the file being analyzed.
+
+    @param out_dir (str) The directory in which to save extracted PE
+    files.
+
     """
 
     # Is this a Office 2007 (zip) file?
@@ -1080,12 +1137,15 @@ def _process_file (filename,
 
 def process_file_scanexpr (container, filename, data):
     """
-    Process a single file
+    Process a single file.
 
-    :param container: str, path and filename of container if the file is within
+    @param container (str) Path and filename of container if the file is within
     a zip archive, None otherwise.
-    :param filename: str, path and filename of file on disk, or within the container.
-    :param data: bytes, content of the file if it is in a container, None if it is a file on disk.
+
+    @param filename (str) path and filename of file on disk, or within the container.
+
+    @param data (bytes) Content of the file if it is in a container,
+    None if it is a file on disk.
     """
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
@@ -1151,7 +1211,8 @@ def process_file_scanexpr (container, filename, data):
 
 def print_version():
     """
-    Print version information.
+    Print ViperMonkey version information.
+
     """
 
     safe_print("Version Information:\n")
@@ -1164,7 +1225,8 @@ def print_version():
 
 def main():
     """
-    Main function, called when vipermonkey is run from the command line
+    Main function, called when vipermonkey is run from the command line.
+
     """
 
     # Increase recursion stack depth.
