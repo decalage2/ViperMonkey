@@ -1428,6 +1428,53 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     for curr_object in object_names:
         r.append((curr_object, aggregate_str))
     return r
+
+def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
+    """
+    """
+
+    # Move to the end of specific versions of the form string.
+    # "Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox", etc.
+    search_r = re.search(form_str_pat, data[index:])
+    index = search_r.start() + index
+    start = index + len(search_r.group(0))
+    while ((start < len(data)) and (ord(data[start]) in range(32, 127))):
+        start += 1
+
+    # More textbox forms?
+    if ((form_str in data[start:]) and
+        (end_object_marker in data[start:]) and
+        (data[start:].index(end_object_marker) < data[start:].index(form_str))):
+
+        # Other form chunks appear later in the file, but this is the end of
+        # the current group of form chunks.
+        end = data[start:].index(end_object_marker) + start
+
+    # Not at end of current group of form chunks.
+    elif (form_str in data[start:]):
+
+        # Just look at the current form chunk.
+        end = data[start:].index(form_str) + start
+
+    # No more textbox forms. Look for end object marker.
+    elif (end_object_marker in data[start:]):
+
+        # Just look at the current form chunk.
+        end = data[start:].index(end_object_marker) + start
+
+    # No more textbox forms and no end marker. Punt.
+    else:
+
+        # Jump an arbitrary amount ahead.
+        end = index + 2500000
+        if (end > len(data)):
+            end = len(data) - 1
+
+    # Pull out the current form data chunk.
+    chunk = data[index : end]
+
+    # Return the chunk and updated index.
+    return (chunk, index, end)
     
 def get_ole_textbox_values(obj, vba_code):
     """
@@ -1543,45 +1590,7 @@ def get_ole_textbox_values(obj, vba_code):
 
         # Break out the data for an embedded OLE textbox form.
 
-        # Move to the end of specific versions of the form string.
-        # "Microsoft Forms 2.0 TextBox", "Microsoft Forms 2.0 ComboBox", etc.
-        search_r = re.search(form_str_pat, data[index:])
-        index = search_r.start() + index
-        start = index + len(search_r.group(0))
-        while ((start < len(data)) and (ord(data[start]) in range(32, 127))):
-            start += 1
-
-        # More textbox forms?
-        if ((form_str in data[start:]) and
-            (end_object_marker in data[start:]) and
-            (data[start:].index(end_object_marker) < data[start:].index(form_str))):
-
-            # Other form chunks appear later in the file, but this is the end of
-            # the current group of form chunks.
-            end = data[start:].index(end_object_marker) + start
-
-        # Not at end of current group of form chunks.
-        elif (form_str in data[start:]):
-
-            # Just look at the current form chunk.
-            end = data[start:].index(form_str) + start
-
-        # No more textbox forms. Look for end object marker.
-        elif (end_object_marker in data[start:]):
-
-            # Just look at the current form chunk.
-            end = data[start:].index(end_object_marker) + start
-
-        # No more textbox forms and no end marker. Punt.
-        else:
-
-            # Jump an arbitrary amount ahead.
-            end = index + 2500000
-            if (end > len(data)):
-                end = len(data) - 1
-
-        # Pull out the current form data chunk.
-        chunk = data[index : end]
+        chunk, index, end = _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker)
 
         # Pull strings from the chunk.
         strs = re.findall(pat, chunk)
@@ -1657,80 +1666,85 @@ def get_ole_textbox_values(obj, vba_code):
                 print "\nName Marker: " + name_marker
             for field in strs:
 
-                # It might come after the name marker tag.
+                # No name marker?
                 if debug:
                     print "\nField: '" + field.replace("\x00", "") + "'"
-                if (field.replace("\x00", "") == name_marker):
+                if (field.replace("\x00", "") != name_marker):
+                    # Move to the next field.
+                    curr_pos += 1
+                    continue
+                
+                # It might come after the name marker tag.
 
-                    # If the next field does not look something like '_1619423091' the
-                    # next field might be the name.
-                    poss_name = strs[curr_pos + 1].replace("\x00", "")
+                # If the next field looks something like '_1619423091' the
+                # next field is not the name.                
+                poss_name = strs[curr_pos + 1].replace("\x00", "")
+                if debug:
+                    print "\nTry: '" + poss_name + "'"
+                if (poss_name.startswith("_") and poss_name[1:].isdigit()):
+
+                    # Move to the next field.
+                    curr_pos += 1
+                    continue
+
+                # Got the name now?
+                if (poss_name != 'contents'):
+
+                    # We have found the name.
+                    name = poss_name
+                    break
+
+                # If the string after 'OCXNAME' is 'contents' the actual name comes
+                # after 'contents'
+                name_pos = curr_pos + 1
+                poss_name = strs[curr_pos + 2].replace("\x00", "")
+                if debug:
+                    print "\nTry: '" + poss_name + "'"
+                            
+                # Does the next field does not look something like '_1619423091'?
+                if ((not poss_name.startswith("_")) or
+                    (not poss_name[1:].isdigit())):
+
+                    # We have found the name.
+                    name = poss_name
+                    name_pos = curr_pos + 2
+                    break
+
+                # Try the next field.
+                if ((curr_pos + 3) < len(strs)):                                    
+                    poss_name = strs[curr_pos + 3].replace("\x00", "")
                     if debug:
                         print "\nTry: '" + poss_name + "'"
-                    if ((not poss_name.startswith("_")) or
-                        (not poss_name[1:].isdigit())):
 
-                        # If the string after 'OCXNAME' is 'contents' the actual name comes
-                        # after 'contents'
-                        name_pos = curr_pos + 1
-                        if (poss_name == 'contents'):
-                            poss_name = strs[curr_pos + 2].replace("\x00", "")
-                            if debug:
-                                print "\nTry: '" + poss_name + "'"
-                            
-                            # Does the next field does not look something like '_1619423091'?
-                            if ((not poss_name.startswith("_")) or
-                                (not poss_name[1:].isdigit())):
+                    # CompObj is not an object name.
+                    if (poss_name != "CompObj"):
+                        name = poss_name
+                        name_pos = curr_pos + 3
+                        break
 
-                                # We have found the name.
-                                name = poss_name
-                                name_pos = curr_pos + 2
-                                break
+                # And try the next field.
+                if ((curr_pos + 4) < len(strs)):
+                    poss_name = strs[curr_pos + 4].replace("\x00", "")
+                    if debug:
+                        print "\nTry: '" + poss_name + "'"
 
-                            # Try the next field.
-                            else:
-                                if ((curr_pos + 3) < len(strs)):                                    
-                                    poss_name = strs[curr_pos + 3].replace("\x00", "")
-                                    if debug:
-                                        print "\nTry: '" + poss_name + "'"
+                    # ObjInfo is not an object name.
+                    if (poss_name != "ObjInfo"):
+                        name = poss_name
+                        name_pos = curr_pos + 4
+                        break
 
-                                    # CompObj is not an object name.
-                                    if (poss_name != "CompObj"):
-                                        name = poss_name
-                                        name_pos = curr_pos + 3
-                                        break
+                # Heaven help us all. Try the next one.
+                if ((curr_pos + 5) < len(strs)):
+                    poss_name = strs[curr_pos + 5].replace("\x00", "")
+                    if debug:
+                        print "\nTry: '" + poss_name + "'"
 
-                                    # And try the next field.
-                                    else:
-
-                                        if ((curr_pos + 4) < len(strs)):
-                                            poss_name = strs[curr_pos + 4].replace("\x00", "")
-                                            if debug:
-                                                print "\nTry: '" + poss_name + "'"
-
-                                            # ObjInfo is not an object name.
-                                            if (poss_name != "ObjInfo"):
-                                                name = poss_name
-                                                name_pos = curr_pos + 4
-                                                break
-
-                                            # Heaven help us all. Try the next one.
-                                            if ((curr_pos + 5) < len(strs)):
-                                                poss_name = strs[curr_pos + 5].replace("\x00", "")
-                                                if debug:
-                                                    print "\nTry: '" + poss_name + "'"
-
-                                                # ObjInfo is not an object name.
-                                                if (poss_name != "ObjInfo"):
-                                                    name = poss_name
-                                                    name_pos = curr_pos + 5
-                                                    break
-
-                        else:
-
-                            # We have found the name.
-                            name = poss_name
-                            break
+                    # ObjInfo is not an object name.
+                    if (poss_name != "ObjInfo"):
+                        name = poss_name
+                        name_pos = curr_pos + 5
+                        break
 
                 # Move to the next field.
                 curr_pos += 1
@@ -1755,9 +1769,8 @@ def get_ole_textbox_values(obj, vba_code):
         asc_str = None
         if (name_pos + 1 < len(strs)):
             asc_str = strs[name_pos + 1].replace("\x00", "").strip()
-        skip_names = set(["contents", "ObjInfo", "CompObj"])
-        if ((asc_str is not None) and
-            ("Calibr" not in asc_str) and
+        skip_names = set(["contents", "ObjInfo", "CompObj", None])
+        if (("Calibr" not in asc_str) and
             ("OCXNAME" not in asc_str) and
             (asc_str not in skip_names) and
             (not asc_str.startswith("_DELETED_NAME_")) and
@@ -3187,278 +3200,100 @@ def _get_doc_var_info(ole):
     
     return (doc_var_offset, doc_var_size)
 
-def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
+def _read_payload_default_target_frame(data, vm):
     """
-    Read in text values from all of the various places in Office
-    97/2000+ that text values can be hidden. This reads values from
-    things like ActiveX captions, embedded image alternate text,
-    document variables, form variables, etc.
-
-    @params (data) The contents (bytes) of the Office file being
-    analyzed.
-
-    @params orig_filename (str) The name of the Office file being
-    analyzed.
-
-    @params vm (ViperMonkey object) The ViperMonkey emulation engine
-    object that will do the emulation.
-
-    @params vba_code (str) The VB code that will be emulated.
-
-    @params vba (VBA_Parser object) The olevba VBA_Parser object for
-    reading the Office file being analyzed.
     """
 
-    # Pull out document variables.
-    log.info("Reading document variables...")
-    for (var_name, var_val) in _read_doc_vars(data, orig_filename):
-        vm.doc_vars[var_name] = var_val
+    # Save DefaultTargetFrame value. This only works for 2007+ files.
+    def_targ_frame_val = get_defaulttargetframe_text(data)
+    if (def_targ_frame_val is not None):
+        vm.globals["DefaultTargetFrame"] = def_targ_frame_val
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
-        vm.doc_vars[var_name.lower()] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
+            log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
+    
+def _read_payload_form_strings(vba, vm):
+    """
+    """
 
-    # Pull text associated with document comments.
-    log.info("Reading document comments...")
-    got_it = False
-    comments = get_comments(data)
-    if (len(comments) > 0):
-        vm.comments = []
-        for (_, comment_text) in comments:
-            # TODO: Order the commens based on the IDs or actually track them.
-            vm.comments.append(comment_text)
-                
-    # Pull text associated with Shapes() objects.
-    log.info("Reading Shapes object text fields...")
-    got_it = False
-    shape_text = get_shapes_text_values(data, 'worddocument')
-    pos = 1
-    for (var_name, var_val) in shape_text:
-        got_it = True
-        var_name = var_name.lower()
-        vm.doc_vars[var_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
-        vm.doc_vars["thisdocument."+var_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name, var_val))
-        vm.doc_vars["thisdocument."+var_name+".caption"] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name+".caption", var_val))
-        vm.doc_vars["activedocument."+var_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name, var_val))
-        vm.doc_vars["activedocument."+var_name+".caption"] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name+".caption", var_val))
-        tmp_name = "shapes('" + var_name + "').textframe.textrange.text"
-        vm.doc_vars[tmp_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
-        tmp_name = "shapes('" + str(pos) + "').textframe.textrange.text"
-        vm.doc_vars[tmp_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
-        tmp_name = "me.storyranges('" + str(pos) + "')"
-        vm.doc_vars[tmp_name] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA StoryRange text %r = %r to doc_vars." % (tmp_name, var_val))
-        # activedocument.shapes('1').alternativetext
-        tmp_name = "ActiveDocument.shapes('" + str(pos) + "').AlternativeText"
-        vm.doc_vars[tmp_name] = var_val
-        vm.doc_vars[tmp_name.lower()] = var_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
-        pos += 1
-    if (not got_it):
-        shape_text = get_shapes_text_values(data, '1table')
-        for (var_name, var_val) in shape_text:
-            vm.doc_vars[var_name.lower()] = var_val
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+    # Save the form strings.
 
-    # Pull text associated with InlineShapes() objects.
-    log.info("Reading InlineShapes object text fields...")
-    got_inline_shapes = False
-    for (var_name, var_val) in _get_inlineshapes_text_values(data):
-        got_inline_shapes = True
-        vm.doc_vars[var_name.lower()] = var_val
-        log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
-                    
-    # Pull out embedded OLE form textbox text.
-    log.info("Reading TextBox and RichEdit object text fields...")
-    object_data = get_ole_textbox_values(data, vba_code)
-    tmp_data = get_msftedit_variables(data)
-    object_data.extend(tmp_data)
-    tmp_data = get_customxml_text(data)
-    object_data.extend(tmp_data)
-    tmp_data = get_drawing_titles(data)
-    object_data.extend(tmp_data)
-    for (var_name, var_val) in object_data:
-        var_name_variants = [var_name,
-                             "ActiveDocument." + var_name,
-                             var_name + ".Tag",
-                             var_name + ".Text",
-                             var_name + ".AlternativeText",
-                             var_name + ".Title",
-                             var_name + ".Value",
-                             var_name + ".Caption",
-                             var_name + ".Content",
-                             var_name + ".ControlTipText",
-                             "me." + var_name,
-                             "me." + var_name + ".Tag",
-                             "me." + var_name + ".Text",
-                             "me." + var_name + ".AlternativeText",
-                             "me." + var_name + ".Title",
-                             "me." + var_name + ".Value",
-                             "me." + var_name + ".Caption",
-                             "me." + var_name + ".Content",
-                             "me." + var_name + ".ControlTipText"]
-        for tmp_var_name in var_name_variants:
+    # First group the form strings for each stream in order.
+    tmp_form_strings = read_form_strings(vba)
+    stream_form_map = {}
+    for string_info in tmp_form_strings:
+        stream_name = string_info[0]
+        if (stream_name not in stream_form_map):
+            stream_form_map[stream_name] = []
+        curr_form_string = string_info[1]
+        stream_form_map[stream_name].append(curr_form_string)
 
-            # Skip big values that are basically just repeats of the
-            # same character.
-            if ((isinstance(var_val, str)) and
-                (len(var_val) > 1000)):
-                num_1st = float(var_val.count(var_val[0]))
-                pct = num_1st/len(var_val) * 100
-                if (pct > 95):
-                    log.warning("Not assigning " + tmp_var_name + " value '" + var_val[:15] + "...'. " +\
-                                "Too many repeated characters.")
-                    continue
-
-            # Save the value as a global variable.
-            tmp_var_val = var_val
-            if ((tmp_var_name == 'ActiveDocument.Sections') or
-                (tmp_var_name == 'Sections')):
-                tmp_var_val = [var_val, var_val]
-            if ((tmp_var_name.lower() in vm.doc_vars) and
-                (len(str(vm.doc_vars[tmp_var_name.lower()])) > len(str(tmp_var_val)))):
-                continue
-            vm.doc_vars[tmp_var_name.lower()] = tmp_var_val
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Added potential VBA OLE form textbox text (1) %r = %r to doc_vars." % (tmp_var_name, tmp_var_val))
-
-        # Handle Pages(NN) and Tabs(NN) references.
-        page_pat = r"Page(\d+)"
-        if (re.match(page_pat, var_name)):
-            page_index = str(int(re.findall(page_pat, var_name)[0]) - 1)
-            page_var_name = "Pages('" + page_index + "')"
-            tab_var_name = "Tabs('" + page_index + "')"
-            var_name_variants = [page_var_name,
-                                 "ActiveDocument." + page_var_name,
-                                 page_var_name + ".Tag",
-                                 page_var_name + ".Text",
-                                 page_var_name + ".Caption",
-                                 page_var_name + ".ControlTipText",
-                                 "me." + page_var_name,
-                                 "me." + page_var_name + ".Tag",
-                                 "me." + page_var_name + ".Text",
-                                 "me." + page_var_name + ".Caption",
-                                 "me." + page_var_name + ".ControlTipText",
-                                 tab_var_name,
-                                 "ActiveDocument." + tab_var_name,
-                                 tab_var_name + ".Tag",
-                                 tab_var_name + ".Text",
-                                 tab_var_name + ".Caption",
-                                 tab_var_name + ".ControlTipText",
-                                 "me." + tab_var_name,
-                                 "me." + tab_var_name + ".Tag",
-                                 "me." + tab_var_name + ".Text",
-                                 "me." + tab_var_name + ".Caption",
-                                 "me." + tab_var_name + ".ControlTipText"]
-
-            # Handle InlineShapes.                    
-            if (not got_inline_shapes):
-                # InlineShapes().Item(1).AlternativeText
-                var_name_variants.extend(["InlineShapes('" + page_index + "').TextFrame.TextRange.Text",
-                                          "InlineShapes('" + page_index + "').TextFrame.ContainingRange",
-                                          "InlineShapes('" + page_index + "').AlternativeText",
-                                          "InlineShapes('" + page_index + "').AlternativeText$",
-                                          "InlineShapes.Item('" + page_index + "').TextFrame.TextRange.Text",
-                                          "InlineShapes.Item('" + page_index + "').TextFrame.ContainingRange",
-                                          "InlineShapes.Item('" + page_index + "').AlternativeText",
-                                          "InlineShapes.Item('" + page_index + "').AlternativeText$",
-                                          "StoryRanges.Item('" + page_index + "')",
-                                          "me.StoryRanges.Item('" + page_index + "')"])
-            for tmp_var_name in var_name_variants:
-                vm.doc_vars[tmp_var_name.lower()] = var_val
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Added potential VBA OLE form textbox text (2) %r = %r to doc_vars." % (tmp_var_name, var_val))
-                            
-    # Pull out custom document properties.
-    log.info("Reading custom document properties...")
-    for (var_name, var_val) in _read_custom_doc_props(data):
-        vm.doc_vars[var_name.lower()] = var_val
+    # Now add the form strings as a list for each stream to the global
+    # variables.
+    for stream_name in stream_form_map:
+        tmp_name = (stream_name + ".Controls").lower()
+        form_strings = stream_form_map[stream_name]
+        vm.globals[tmp_name] = form_strings
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
+            log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
-    # Pull text associated with embedded objects.
-    log.info("Reading embedded object text fields...")
-    for (var_name, caption_val, tag_val) in _get_embedded_object_values(data):
-        tag_name = var_name.lower() + ".tag"
-        vm.doc_vars[tag_name] = tag_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA object tag text %r = %r to doc_vars." % \
-                      (tag_name, tag_val))
-        caption_name = var_name.lower() + ".caption"
-        vm.doc_vars[caption_name] = caption_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added potential VBA object caption text %r = %r to doc_vars." % \
-                      (caption_name, caption_val))
-                
-    # Pull out the document text.
-    log.info("Reading document text and tables...")
-    vm.doc_text, vm.doc_tables = _read_doc_text('', data=data)
+def _get_form_var_val(var_name, form_vars):
+    """
+    """
 
+    # Get a reasonable value for the form variable.
+    r = form_vars[var_name] if (var_name in form_vars and form_vars[var_name] is not None) else ''
+    r = r.replace('\xb1', '').replace('\x03', '')
+    return r
+    
+def _read_payload_form_vars(vba, vm):
+    """
+    """
+
+    # Read text from form variables.
     log.info("Reading form variables...")
     try:
+
         # Pull out form variables.
         for (_, stream_path, form_variables) in vba.extract_form_strings_extended():
             if form_variables is not None:
+
+                # Get the sanitized field values for the current form var.
+
+                # Var name.
                 var_name = form_variables['name']
                 if (var_name is None):
                     continue
+
+                # Where var is defined.
                 macro_name = stream_path
                 if ("/" in macro_name):
                     start = macro_name.rindex("/") + 1
                     macro_name = macro_name[start:]
+
+                # Absolute var name.
                 global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
-                tag = ''
-                if 'tag' in form_variables:
-                    tag = form_variables['tag']
-                if (tag is None):
-                    tag = ''
-                tag = tag.replace('\xb1', '').replace('\x03', '')
-                caption = ''
-                if 'caption' in form_variables:
-                    caption = form_variables['caption']
-                if (caption is None):
-                    caption = ''
-                caption = caption.replace('\xb1', '').replace('\x03', '')
+                tag = _get_form_var_val('tag', form_variables)
+
+                # Caption for form var.
+                caption = _get_form_var_val('caption', form_variables)
                 if 'value' in form_variables:
                     val = form_variables['value']
                 else:
                     val = caption
-                control_tip_text = ''
-                if 'control_tip_text' in form_variables:
-                    control_tip_text = form_variables['control_tip_text']
-                if (control_tip_text is None):
-                    control_tip_text = ''
-                control_tip_text = control_tip_text.replace('\xb1', '').replace('\x03', '')
-                group_name = ''
-                if 'group_name' in form_variables:
-                    group_name = form_variables['group_name']
-                if (group_name is None):
-                    group_name = ''
-                group_name = group_name.replace('\xb1', '').replace('\x03', '')
+
+                # Control tip text for form var.
+                control_tip_text = _get_form_var_val('control_tip_text', form_variables)
+
+                # Group name for form var.
+                group_name = _get_form_var_val('group_name', form_variables)
                 if (len(group_name) > 10):
                     group_name = group_name[3:]
                 
                 # Maybe the caption is used for the text when the text is not there?
                 if (val is None):
                     val = caption
+
+                # Skip form vars for which we have no interesting text.
                 if ((val == '') and (tag == '') and (caption == '')):
                     continue
 
@@ -3629,34 +3464,293 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
         except Exception as e:
             log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
 
+    
+def _read_payload_embedded_obj_text(data, vm):
+    """
+    """
+
+    # Pull text associated with embedded objects.
+    log.info("Reading embedded object text fields...")
+    for (var_name, caption_val, tag_val) in _get_embedded_object_values(data):
+        tag_name = var_name.lower() + ".tag"
+        vm.doc_vars[tag_name] = tag_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA object tag text %r = %r to doc_vars." % \
+                      (tag_name, tag_val))
+        caption_name = var_name.lower() + ".caption"
+        vm.doc_vars[caption_name] = caption_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA object caption text %r = %r to doc_vars." % \
+                      (caption_name, caption_val))    
+
+def _read_payload_custom_doc_props(data, vm):
+    """
+    """
+
+    # Pull out custom document properties.
+    log.info("Reading custom document properties...")
+    for (var_name, var_val) in _read_custom_doc_props(data):
+        vm.doc_vars[var_name.lower()] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
+    
+def _read_payload_textbox_text(data, vba_code, vm):
+    """
+    """
+
+    # Pull out embedded OLE form textbox text.
+    log.info("Reading TextBox and RichEdit object text fields...")
+    object_data = get_ole_textbox_values(data, vba_code)
+    tmp_data = get_msftedit_variables(data)
+    object_data.extend(tmp_data)
+    tmp_data = get_customxml_text(data)
+    object_data.extend(tmp_data)
+    tmp_data = get_drawing_titles(data)
+    object_data.extend(tmp_data)
+    for (var_name, var_val) in object_data:
+        var_name_variants = [var_name,
+                             "ActiveDocument." + var_name,
+                             var_name + ".Tag",
+                             var_name + ".Text",
+                             var_name + ".AlternativeText",
+                             var_name + ".Title",
+                             var_name + ".Value",
+                             var_name + ".Caption",
+                             var_name + ".Content",
+                             var_name + ".ControlTipText",
+                             "me." + var_name,
+                             "me." + var_name + ".Tag",
+                             "me." + var_name + ".Text",
+                             "me." + var_name + ".AlternativeText",
+                             "me." + var_name + ".Title",
+                             "me." + var_name + ".Value",
+                             "me." + var_name + ".Caption",
+                             "me." + var_name + ".Content",
+                             "me." + var_name + ".ControlTipText"]
+        for tmp_var_name in var_name_variants:
+
+            # Skip big values that are basically just repeats of the
+            # same character.
+            if ((isinstance(var_val, str)) and
+                (len(var_val) > 1000)):
+                num_1st = float(var_val.count(var_val[0]))
+                pct = num_1st/len(var_val) * 100
+                if (pct > 95):
+                    log.warning("Not assigning " + tmp_var_name + " value '" + var_val[:15] + "...'. " +\
+                                "Too many repeated characters.")
+                    continue
+
+            # Save the value as a global variable.
+            tmp_var_val = var_val
+            if ((tmp_var_name == 'ActiveDocument.Sections') or
+                (tmp_var_name == 'Sections')):
+                tmp_var_val = [var_val, var_val]
+            if ((tmp_var_name.lower() in vm.doc_vars) and
+                (len(str(vm.doc_vars[tmp_var_name.lower()])) > len(str(tmp_var_val)))):
+                continue
+            vm.doc_vars[tmp_var_name.lower()] = tmp_var_val
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Added potential VBA OLE form textbox text (1) %r = %r to doc_vars." % (tmp_var_name, tmp_var_val))
+
+        # Handle Pages(NN) and Tabs(NN) references.
+        page_pat = r"Page(\d+)"
+        if (re.match(page_pat, var_name)):
+            page_index = str(int(re.findall(page_pat, var_name)[0]) - 1)
+            page_var_name = "Pages('" + page_index + "')"
+            tab_var_name = "Tabs('" + page_index + "')"
+            var_name_variants = [page_var_name,
+                                 "ActiveDocument." + page_var_name,
+                                 page_var_name + ".Tag",
+                                 page_var_name + ".Text",
+                                 page_var_name + ".Caption",
+                                 page_var_name + ".ControlTipText",
+                                 "me." + page_var_name,
+                                 "me." + page_var_name + ".Tag",
+                                 "me." + page_var_name + ".Text",
+                                 "me." + page_var_name + ".Caption",
+                                 "me." + page_var_name + ".ControlTipText",
+                                 tab_var_name,
+                                 "ActiveDocument." + tab_var_name,
+                                 tab_var_name + ".Tag",
+                                 tab_var_name + ".Text",
+                                 tab_var_name + ".Caption",
+                                 tab_var_name + ".ControlTipText",
+                                 "me." + tab_var_name,
+                                 "me." + tab_var_name + ".Tag",
+                                 "me." + tab_var_name + ".Text",
+                                 "me." + tab_var_name + ".Caption",
+                                 "me." + tab_var_name + ".ControlTipText"]
+
+            # Handle InlineShapes.                    
+            if (not got_inline_shapes):
+                # InlineShapes().Item(1).AlternativeText
+                var_name_variants.extend(["InlineShapes('" + page_index + "').TextFrame.TextRange.Text",
+                                          "InlineShapes('" + page_index + "').TextFrame.ContainingRange",
+                                          "InlineShapes('" + page_index + "').AlternativeText",
+                                          "InlineShapes('" + page_index + "').AlternativeText$",
+                                          "InlineShapes.Item('" + page_index + "').TextFrame.TextRange.Text",
+                                          "InlineShapes.Item('" + page_index + "').TextFrame.ContainingRange",
+                                          "InlineShapes.Item('" + page_index + "').AlternativeText",
+                                          "InlineShapes.Item('" + page_index + "').AlternativeText$",
+                                          "StoryRanges.Item('" + page_index + "')",
+                                          "me.StoryRanges.Item('" + page_index + "')"])
+            for tmp_var_name in var_name_variants:
+                vm.doc_vars[tmp_var_name.lower()] = var_val
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Added potential VBA OLE form textbox text (2) %r = %r to doc_vars." % (tmp_var_name, var_val))
+
+                    
+got_inline_shapes = False                    
+def _read_payload_inline_shape_text(data, vm):
+    """
+    """
+
+    # Pull text associated with InlineShapes() objects.
+    log.info("Reading InlineShapes object text fields...")
+    global got_inline_shapes
+    got_inline_shapes = False
+    for (var_name, var_val) in _get_inlineshapes_text_values(data):
+        got_inline_shapes = True
+        vm.doc_vars[var_name.lower()] = var_val
+        log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
+    
+def _read_payload_shape_text(data, vm):
+    """
+    """
+
+    # Pull text associated with Shapes() objects.
+    log.info("Reading Shapes object text fields...")
+    got_it = False
+    shape_text = get_shapes_text_values(data, 'worddocument')
+    pos = 1
+    for (var_name, var_val) in shape_text:
+        got_it = True
+        var_name = var_name.lower()
+        vm.doc_vars[var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+        vm.doc_vars["thisdocument."+var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name, var_val))
+        vm.doc_vars["thisdocument."+var_name+".caption"] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("thisdocument."+var_name+".caption", var_val))
+        vm.doc_vars["activedocument."+var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name, var_val))
+        vm.doc_vars["activedocument."+var_name+".caption"] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % ("activedocument."+var_name+".caption", var_val))
+        tmp_name = "shapes('" + var_name + "').textframe.textrange.text"
+        vm.doc_vars[tmp_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+        tmp_name = "shapes('" + str(pos) + "').textframe.textrange.text"
+        vm.doc_vars[tmp_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+        tmp_name = "me.storyranges('" + str(pos) + "')"
+        vm.doc_vars[tmp_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA StoryRange text %r = %r to doc_vars." % (tmp_name, var_val))
+        # activedocument.shapes('1').alternativetext
+        tmp_name = "ActiveDocument.shapes('" + str(pos) + "').AlternativeText"
+        vm.doc_vars[tmp_name] = var_val
+        vm.doc_vars[tmp_name.lower()] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
+        pos += 1
+    if (not got_it):
+        shape_text = get_shapes_text_values(data, '1table')
+        for (var_name, var_val) in shape_text:
+            vm.doc_vars[var_name.lower()] = var_val
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
+    
+def _read_payload_doc_comments(data, vm):
+    """
+    """
+
+    # Pull text associated with document comments.
+    log.info("Reading document comments...")
+    comments = get_comments(data)
+    if (len(comments) > 0):
+        vm.comments = []
+        for (_, comment_text) in comments:
+            # TODO: Order the comments based on the IDs or actually track them.
+            vm.comments.append(comment_text)
+
+def _read_payload_doc_vars(data, orig_filename, vm):
+    """
+    """
+
+    # Pull out document variables.
+    log.info("Reading document variables...")
+    for (var_name, var_val) in _read_doc_vars(data, orig_filename):
+        vm.doc_vars[var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+        vm.doc_vars[var_name.lower()] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
+
+
+def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
+    """
+    Read in text values from all of the various places in Office
+    97/2000+ that text values can be hidden. This reads values from
+    things like ActiveX captions, embedded image alternate text,
+    document variables, form variables, etc.
+
+    @params (data) The contents (bytes) of the Office file being
+    analyzed.
+
+    @params orig_filename (str) The name of the Office file being
+    analyzed.
+
+    @params vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation.
+
+    @params vba_code (str) The VB code that will be emulated.
+
+    @params vba (VBA_Parser object) The olevba VBA_Parser object for
+    reading the Office file being analyzed.
+    """
+
+    # Pull out document variables.
+    _read_payload_doc_vars(data, orig_filename, vm)
+
+    # Pull text associated with document comments.
+    _read_payload_doc_comments(data, vm)
+                
+    # Pull text associated with Shapes() objects.
+    _read_payload_shape_text(data, vm)
+
+    # Pull text associated with InlineShapes() objects.
+    _read_payload_inline_shape_text(data, vm)
+                    
+    # Pull out embedded OLE form textbox text.
+    _read_payload_textbox_text(data, vba_code, vm)
+                            
+    # Pull out custom document properties.
+    _read_payload_custom_doc_props(data, vm)
+
+    # Pull text associated with embedded objects.
+    _read_payload_embedded_obj_text(data, vm)
+                
+    # Pull out the document text.
+    log.info("Reading document text and tables...")
+    vm.doc_text, vm.doc_tables = _read_doc_text('', data=data)
+
+    # Read text from form variables.
+    _read_payload_form_vars(vba, vm)
+
     # Save the form strings.
     #sys.exit(0)
-
-    # First group the form strings for each stream in order.
-    tmp_form_strings = read_form_strings(vba)
-    stream_form_map = {}
-    for string_info in tmp_form_strings:
-        stream_name = string_info[0]
-        if (stream_name not in stream_form_map):
-            stream_form_map[stream_name] = []
-        curr_form_string = string_info[1]
-        stream_form_map[stream_name].append(curr_form_string)
-
-    # Now add the form strings as a list for each stream to the global
-    # variables.
-    for stream_name in stream_form_map:
-        tmp_name = (stream_name + ".Controls").lower()
-        form_strings = stream_form_map[stream_name]
-        vm.globals[tmp_name] = form_strings
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
+    _read_payload_form_strings(vba, vm)
 
     # Save DefaultTargetFrame value. This only works for 2007+ files.
-    def_targ_frame_val = get_defaulttargetframe_text(data)
-    if (def_targ_frame_val is not None):
-        vm.globals["DefaultTargetFrame"] = def_targ_frame_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
+    _read_payload_default_target_frame(data, vm)
 
     
 ###########################################################################
