@@ -113,7 +113,7 @@ def unzip_data(data):
     delete_file = False
     fname = None
     if data.startswith(zip_magic):
-        #raise ValueError("_get_shapes_text_values_2007() currently does not support in-memory Office files.")
+        #raise ValueError("get_shapes_text_values_2007() currently does not support in-memory Office files.")
         # TODO: Fix this. For now just save to a tmp file.
         # we use tempfile.NamedTemporaryFile to create a temporary file in a platform-independent
         # and secure way. The file needs to be accessible with a filename until it is explicitly
@@ -2230,7 +2230,7 @@ def get_shapes_text_values_xml(fname):
 
     return r
 
-def _get_shapes_text_values_direct_2007(data):
+def get_shapes_text_values_direct_2007(data):
     """
     Read in shapes name/value mappings directly from word/document.xml from an 
     unzipped Word 2007+ file.
@@ -2261,7 +2261,7 @@ def _get_shapes_text_values_direct_2007(data):
     r = [(name, val)]
     return r
 
-def _get_shapes_text_values_direct_2007_1(data):
+def get_shapes_text_values_direct_2007_1(data):
     """
     Read in shapes name/value mappings directly from word/document.xml from an 
     unzipped Word 2007+ file another way.
@@ -2474,7 +2474,7 @@ def get_comments(fname):
     # Read comments from 2007+ file.
     return _get_comments_2007(fname)
 
-def _get_shapes_text_values_2007(fname):
+def get_shapes_text_values_2007(fname):
     """
     Read in the text associated with Shape objects in a document saved
     in the 2007+ format.
@@ -2502,10 +2502,10 @@ def _get_shapes_text_values_2007(fname):
     f1.close()
 
     # First see if the shapes text is stored directly in document.xml.
-    r = _get_shapes_text_values_direct_2007(data)
+    r = get_shapes_text_values_direct_2007(data)
     if (len(r) > 0):
         return r
-    r = _get_shapes_text_values_direct_2007_1(data)
+    r = get_shapes_text_values_direct_2007_1(data)
     if (len(r) > 0):
         #print r
         return r
@@ -2582,14 +2582,14 @@ def _get_shapes_text_values_2007(fname):
     #sys.exit(0)
     return r
 
-def _get_shapes_text_values(fname, stream):
+def get_shapes_text_values(fname, stream):
     """
     Read in the text associated with Shape objects in the document.
     NOTE: This currently is a hack.
     """
 
     # Maybe 2007+ file?
-    r = _get_shapes_text_values_2007(fname)
+    r = get_shapes_text_values_2007(fname)
     if (len(r) > 0):
         return r
     
@@ -2735,5 +2735,5 @@ def pull_urls_office97(fname, is_data, vba):
 ## Main Program
 ###########################################################################
 if __name__ == '__main__':
-    print _get_shapes_text_values(sys.argv[1], "worddocument")
-    print _get_shapes_text_values(sys.argv[1], '1table')
+    print get_shapes_text_values(sys.argv[1], "worddocument")
+    print get_shapes_text_values(sys.argv[1], '1table')

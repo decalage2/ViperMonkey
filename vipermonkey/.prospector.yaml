@@ -5,6 +5,7 @@ doc-warnings: false
 pep8:
   disable:
     - W602
+    - W605    
     - W603
     - E129
   enable:

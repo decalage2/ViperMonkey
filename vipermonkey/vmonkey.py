@@ -827,7 +827,45 @@ def process_file(container,
                  artifact_dir=None,
                  out_file_name=None,
                  do_jit=False):
+    """
+    Process an Office file with VBA macros, a VBScript file, or
+    VBScript HTA file with ViperMonkey. This is the main programatic
+    interface for ViperMonkey.
 
+    @param container (str) Path and filename of container if the file is within
+    a zip archive, None otherwise.
+    @param filename (str) str, path and filename of file on disk, or
+    within the container.
+    @param data (bytes) content of the file if it is in a container,
+    None if it is a file on disk.
+    @param strip_useless (boolean) Flag turning on/off modification of
+    VB code prior to parsing.
+    @param entry_points (list) A list of the names (str) of the VB functions
+    from which to start emulation.
+    @param time_limit (int) The emulation time limit, in minutes. If
+    None there is not time limit.
+    @param verbose (boolean) Flag turning debug logging on/off.
+    @param display_int_iocs (boolean) Flag turning on/off the
+    reporting of intermediate IOCs (base64 strings and URLs) found
+    during the emulation process.
+    @param set_log (boolean) A flag??
+    @param tee_log (boolean) A flag turning on/off saving all of
+    ViperMonkey's output in a text log file. The log file will be
+    FNAME.log, where FNAME is the name of the file being analyzed.
+    @param tee_bytes (int) If tee_log is true, this gives the number
+    of bytes at which to cap the saved log file.
+    @param artifact_dir (str) The directory in which to save artifacts
+    dropped by the sample under analysis. If None the artifact
+    directory will be FNAME_artifacts/ where FNAME is the name of the
+    file being analyzed.
+    @param out_file_name (str) The name of the file in which to store
+    the ViperMonkey analysis results as JSON. If None no JSON results
+    will be saved.
+    @param do_jit (str) A flag turning on/off doing VB -> Python
+    transpiling of loops to speed up loop emulation.
+
+    """
+    
     # set logging level
     if verbose:
         colorlog.basicConfig(level=logging.DEBUG, format='%(log_color)s%(levelname)-8s %(message)s')
@@ -1309,7 +1347,7 @@ def _process_file (filename,
             # Pull text associated with Shapes() objects.
             log.info("Reading Shapes object text fields...")
             got_it = False
-            shape_text = read_ole_fields._get_shapes_text_values(data, 'worddocument')
+            shape_text = read_ole_fields.get_shapes_text_values(data, 'worddocument')
             pos = 1
             for (var_name, var_val) in shape_text:
                 got_it = True
@@ -1349,7 +1387,7 @@ def _process_file (filename,
                     log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
                 pos += 1
             if (not got_it):
-                shape_text = read_ole_fields._get_shapes_text_values(data, '1table')
+                shape_text = read_ole_fields.get_shapes_text_values(data, '1table')
                 for (var_name, var_val) in shape_text:
                     vm.doc_vars[var_name.lower()] = var_val
                     if (log.getEffectiveLevel() == logging.DEBUG):
