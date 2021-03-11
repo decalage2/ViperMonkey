@@ -36,6 +36,10 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import io
+import json
+import subprocess
+import struct
 import logging
 import zipfile
 import tempfile
@@ -50,6 +54,8 @@ import olefile
 
 from logger import log
 import filetype
+
+_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
 def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     """
@@ -110,7 +116,6 @@ def unzip_data(data):
     # Unzip the data.
     # PKZip magic #: 50 4B 03 04
     zip_magic = chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)
-    contents = None
     delete_file = False
     fname = None
     if data.startswith(zip_magic):
@@ -134,7 +139,7 @@ def unzip_data(data):
             if (delete_file):
                 os.remove(fname)
             return (None, None)
-    except:
+    except OSError:
         if (delete_file):
             os.remove(fname)
         return (None, None)
@@ -205,7 +210,6 @@ def get_drawing_titles(data):
     r = []
     for drawing_info in drawings:
         drawing_id = drawing_info[0]
-        drawing_name = drawing_info[1]
         drawing_text = _clean_2007_text(drawing_info[2])
         var_name = "Shapes('" + drawing_id + "')"
         r.append((var_name, drawing_text))
@@ -369,7 +373,7 @@ def get_msftedit_variables(obj):
             f = open(fname, "rb")
             data = f.read()
             f.close()
-        except:
+        except IOError:
             data = obj
 
     # Is this an Office 97 file?
@@ -415,14 +419,15 @@ def entropy(text):
     for each in text:
         try:
             exr[each]+=1
-        except:
+        except KeyError:
             exr[each]=1
     textlen=len(text)
-    for k,v in exr.items():
+    for _,v in exr.items():
         freq  =  1.0*v/textlen
         infoc+=freq*log2(freq)
     infoc*=-1
     return infoc
+
 
 # There is some MS cruft strings that should be eliminated from the
 # strings pulled from the chunk.
@@ -430,7 +435,9 @@ cruft_pats = [r'Microsoft Forms 2.0 Form',
               r'Embedded Object',
               r'CompObj',
               r'VBFrame',
-              r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
+              r'VERSION [\d\.]+\r\nBegin {[\w\-]+} \w+ \r\n\s+Caption\s+=\s+"UserForm1"\r\n\s+ClientHeight\s+=\s+\d+\r\n' + \
+              r'\s+ClientLeft\s+=\s+\d+\r\n\s+ClientTop\s+=\s+\d+\r\n\s+ClientWidth\s+=\s+\d+\r\n' + \
+              r'\s+StartUpPosition\s+=\s+\d+\s+\'CenterOwner\r\n\s+TypeInfoVer\s+=\s+\d+\r\nEnd\r\n',
               r'DEFAULT',
               r'InkEdit\d+',
               r'MS Sans Serif',
@@ -506,7 +513,8 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     # Read in the large chunk of data with the object names and string values.
     # chunk_pats are (anchor string, full chunk regex).
     chunk_pats = [('ID="{',
-                   r'ID="\{.{20,}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,10}(.+?)Microsoft Forms '),
+                   r'ID="\{.{20,}(?:UserForm\d{1,10}=\d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, ' + \
+                   r'\w{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \d{1,10}, \r\n){1,10}(.+?)Microsoft Forms '),
                   ('\x05\x00\x00\x00\x17\x00',
                    r'\x05\x00\x00\x00\x17\x00(.*)(?:(?:Microsoft Forms 2.0 Form)|(?:ID="{))'),
                   ('\xd7\x8c\xfe\xfb',
@@ -583,7 +591,6 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     # Looks like control tip text goes right after var names in the string
     # list.
     r = []
-    updated_vals = []
     skip = set()
     if debug:
         print "\nCONTROL TIP PROCESSING:"
@@ -1308,7 +1315,6 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             # 2345bar
             first_half_rep = None
             second_half_rep = None
-            got_match = False
             matched_agg_str = ""
             # Might have extra characters on the end of the aggregate string.
             # Walk back from the end of the string trying to match up the
@@ -1419,8 +1425,8 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     
     # Just assign every item accessed in the VBA to this value and hope for the best.
     r = []
-    for object in object_names:
-        r.append((object, aggregate_str))
+    for curr_object in object_names:
+        r.append((curr_object, aggregate_str))
     return r
     
 def get_ole_textbox_values(obj, vba_code):
@@ -1439,7 +1445,7 @@ def get_ole_textbox_values(obj, vba_code):
             f = open(fname, "rb")
             data = f.read()
             f.close()
-        except:
+        except IOError:
             data = obj
 
     # Is this an Office97 file?
@@ -1618,12 +1624,11 @@ def get_ole_textbox_values(obj, vba_code):
                     poss_name = None
                     if ((curr_pos + 1) < len(strs)):
                         poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
+                    skip_names = set(["contents", "ObjInfo", "CompObj"])
                     if ((poss_name is not None) and
                         ((not poss_name.startswith("_")) or
                          (not poss_name[1:].isdigit())) and
-                        (poss_name != "CompObj") and
-                        (poss_name != "ObjInfo") and
-                        (poss_name != "contents")):
+                        (poss_name not in skip_names)):
     
                         # We have found the name.
                         name = poss_name
@@ -1750,12 +1755,11 @@ def get_ole_textbox_values(obj, vba_code):
         asc_str = None
         if (name_pos + 1 < len(strs)):
             asc_str = strs[name_pos + 1].replace("\x00", "").strip()
+        skip_names = set(["contents", "ObjInfo", "CompObj"])
         if ((asc_str is not None) and
             ("Calibr" not in asc_str) and
             ("OCXNAME" not in asc_str) and
-            ("contents" != asc_str) and
-            ("ObjInfo" != asc_str) and
-            ("CompObj" != asc_str) and
+            (asc_str not in skip_names) and
             (not asc_str.startswith("_DELETED_NAME_")) and
             (re.match(r"_\d{10}", asc_str) is None)):
             if debug:
@@ -1914,7 +1918,6 @@ def get_ole_textbox_values(obj, vba_code):
         else:
             if debug:
                 print "\nSkip 1: " + str(dat)
-            pass
         last_val = dat[1].strip()
     r = tmp
 
@@ -2111,7 +2114,7 @@ def read_form_strings(vba):
     try:
         r = []
         skip_strings = ["Tahoma", "Tahomaz"]
-        for (subfilename, stream_path, form_string) in vba.extract_form_strings():
+        for (_, stream_path, form_string) in vba.extract_form_strings():
 
             # Skip default strings.
             if (form_string in skip_strings):
@@ -2154,7 +2157,7 @@ def get_shapes_text_values_xml(fname):
             f = open(fname, "r")
             contents = f.read().strip()
             f.close()
-        except:
+        except IOError:
             contents = fname
 
     # Is this an XML file?
@@ -2549,7 +2552,7 @@ def get_shapes_text_values_2007(fname):
     #print id_activex_map
 
     # Read in the activeX objects.
-    for shape in id_activex_map.keys():
+    for shape in id_activex_map:
 
         # Do we have this object file?
         path = "word/" + id_activex_map[shape]
@@ -2670,6 +2673,7 @@ def get_shapes_text_values(fname, stream):
             r = get_shapes_text_values_xml(fname)
 
     return r
+
 
 URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
 def pull_urls_from_comments(vba):
@@ -3558,7 +3562,7 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
             count = 0
             skip_strings = ["Tahoma", "Tahomaz"]
             for (_, stream_path, form_string) in vba.extract_form_strings():
-                 # Skip strings that are large and almost all the same character.
+                # Skip strings that are large and almost all the same character.
                 if ((len(form_string) > 100) and (entropy(form_string) < 1)):
                     continue
                 # Skip default strings.

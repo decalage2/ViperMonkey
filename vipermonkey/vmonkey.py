@@ -94,8 +94,6 @@ pyparsing.ParserElement.enablePackrat(cache_size_limit=100000)
 import logging
 import json
 import random
-import struct
-import multiprocessing
 import optparse
 import sys
 import os
@@ -135,8 +133,6 @@ from core.utils import safe_str_convert
 from core.logger import log
 from core.logger import CappedFileHandler
 from logging import FileHandler
-
-# === MAIN (for tests) ===============================================================================================
     
 def get_vb_contents_from_hta(vba_code):
     """
