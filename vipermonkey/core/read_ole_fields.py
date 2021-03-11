@@ -2699,6 +2699,17 @@ def pull_urls_from_comments(vba):
 def pull_urls_office97(fname, is_data, vba):
     """
     Pull URLs directly from an Office97 file.
+
+    @param fname (str) The name of the file from which to scrape
+    URLs or the raw file contents.
+
+    @param is_data (boolean) A flag indicating whether fname is a file
+    name (False) or the raw file contents (True).
+
+    @param vba (str) The decompressed VBA macro code.
+
+    @return (set) The URLs scraped from the file. This will be empty
+    if there are no URLs.
     """
 
     # Is this an Office97 file?
@@ -2784,7 +2795,7 @@ def _read_doc_vars_ole(fname):
         #
         # TODO: Check the FIB to see if we should read from 0Table or 1Table.
         ole = olefile.OleFileIO(fname, write_mode=False)
-        var_offset, var_size = get_doc_var_info(ole)
+        var_offset, var_size = _get_doc_var_info(ole)
         if ((var_offset is None) or (var_size is None) or (var_size == 0)):
             return []
         data = ole.openstream("1Table").read()[var_offset : (var_offset + var_size + 1)]
@@ -3130,6 +3141,47 @@ def _read_doc_text(fname, data=None):
     r = _read_doc_text_strings(data)
 
     return r
+
+def _get_doc_var_info(ole):
+    """
+    Get the byte offset and size of the chunk of data containing the document
+    variables. This information is read from the FIB 
+    (https://msdn.microsoft.com/en-us/library/dd944907(v=office.12).aspx). The doc
+    vars appear in the 1Table or 0Table stream.
+    """
+
+    # Read the WordDocument stream. This contains the FIB.
+    if (not ole.exists('worddocument')):
+        return (None, None)
+    data = ole.openstream("worddocument").read()
+
+    # Get the byte offset of the doc vars.
+    # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
+    # offset to fcStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
+    #
+    # Get offset to FibRgFcLcb97 blob:
+    #
+    # base (32 bytes): The FibBase.
+    # csw (2 bytes): An unsigned integer that specifies the count of 16-bit values corresponding to fibRgW that follow.
+    # fibRgW (28 bytes): The FibRgW97.
+    # cslw (2 bytes): An unsigned integer that specifies the count of 32-bit values corresponding to fibRgLw that follow.
+    # fibRgLw (88 bytes): The FibRgLw97.
+    # cbRgFcLcb (2 bytes):
+    #
+    # The fcStwUser field holds the offset of the doc var info in the 0Table or 1Table stream. It is preceded
+    # by 119 other 4 byte values, hence the 120*4 offset.
+    fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4)
+    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    doc_var_offset = struct.unpack('!I', tmp)[0]
+
+    # Get the size of the doc vars (lcbStwUser).
+    # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
+    # offset to lcbStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
+    fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4) + 4
+    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    doc_var_size = struct.unpack('!I', tmp)[0]
+    
+    return (doc_var_offset, doc_var_size)
 
 def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     """
