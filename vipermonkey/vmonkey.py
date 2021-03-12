@@ -91,6 +91,7 @@ __version__ = '1.0.2'
 import pyparsing
 pyparsing.ParserElement.enablePackrat(cache_size_limit=100000)
 
+import shutil
 import logging
 import json
 import random
@@ -982,6 +983,8 @@ def _process_file (filename,
             out_dir = None
             if (only_filename is not None):
                 out_dir = artifact_dir + "/" + only_filename + "_artifacts/"
+                if os.path.exists(out_dir):
+                    shutil.rmtree(out_dir)
             else:
                 out_dir = "/tmp/tmp_file_" + str(random.randrange(0, 10000000000))
             log.info("Saving dropped analysis artifacts in " + out_dir)
