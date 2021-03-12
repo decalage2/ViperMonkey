@@ -1477,66 +1477,11 @@ def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
 
     # Return the chunk and updated index.
     return (chunk, index, end)
-    
-def get_ole_textbox_values(obj, vba_code):
+
+def _pull_object_names(vba_code):
     """
-    Read in the text associated with embedded OLE form textbox objects.
-    NOTE: This currently is a NASTY hack.
     """
 
-    # Figure out if we have been given already read in data or a file name.
-    if obj[0:4] == '\xd0\xcf\x11\xe0':
-        #its the data blob
-        data = obj
-    else:
-        fname = obj
-        try:
-            f = open(fname, "rb")
-            data = f.read()
-            f.close()
-        except IOError:
-            data = obj
-        except TypeError:
-            data = obj
-
-    # Is this an Office97 file?
-    if (not filetype.is_office97_file(data, True)):
-
-        # See if we can pul vbaProject.bin from a 2007+ Office file.
-        data = get_vbaprojectbin(data)
-        if (data is None):
-            return []
-
-    # Set to True to print lots of debugging.
-    #debug = True
-    debug = False
-    if debug:
-        print "\nExtracting OLE/ActiveX TextBox strings..."
-        
-    # Pull out the stream names so we don't treat those as data values.
-    stream_names = _get_stream_names(vba_code)
-    if debug:
-        print "\nStream Names: " + str(stream_names) + "\n"
-        
-    # Clear out some troublesome byte sequences.
-    data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
-    data = data.replace("o" + "\x00" * 40, "\x00" * 40)
-    data = re.sub("Tahoma\w{0,5}", "\x00", data)
-
-    # Try a method specific to a certain maldoc campaign first.
-    r = get_ole_text_method_1(vba_code, data)
-    if (r is not None):
-        return r
-    
-    # And try alternate method of pulling data. These will be merged in later.
-    v1_vals = get_ole_textbox_values1(data, debug, stream_names)
-
-    # And try another alternate method of pulling data. These will be merged in later.
-    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code, stream_names)
-
-    if debug:
-        print "\nget_ole_textbox_values()\n"
-    
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
     # guess the names of ActiveX forms parsed from the raw Office file.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
@@ -1554,374 +1499,370 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
-    if debug:
-        print "\nNames from VBA code:"
-        print object_names
-            
-    # Sanity check.
-    if (data is None):
-        if debug:
-            print "\nNO DATA"
-            sys.exit(0)
-        return []
 
-    # Make sure some special fields are seperated.
-    data = data.replace("c\x00o\x00n\x00t\x00e\x00n\x00t\x00s", "\x00c\x00o\x00n\x00t\x00e\x00n\x00t\x00s\x00")
-    data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
+    # Done.
+    return (object_names, page_names)
 
-    # Normalize Page object naming.
-    # Page1M3A
-    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
-    data = re.sub(page_name_pat, r"Page\1", data)
+def _guess_name_from_data(curr_pos, strs, field_marker, debug):
+    """
+    """
+
+    # Pull out the variable name (and maybe part of the text).
+    name = None
+    curr_pos = 0
+    for field in strs:
     
-    # Set the general marker for Form data chunks and fields in the Form chunks.
-    form_str = "Microsoft Forms 2.0"
-    form_str_pat = r"Microsoft Forms 2.0 [A-Za-z]{2,30}(?!Form)"
-    field_marker = "Forms."
-    if (re.search(form_str_pat, data) is None):
-        if debug:
-            print "\nNO FORMS"
-            sys.exit(0)
-        return []
-
-    pat = r"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
-    index = 0
-    r = []
-    found_names = set()
-    long_strs = []
-    end_object_marker = "D\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00S\x00u\x00m\x00m\x00a\x00r\x00y\x00I\x00n\x00f\x00o\x00r\x00m\x00a\x00t\x00i\x00o\x00n"
-    while (re.search(form_str_pat, data[index:]) is not None):
-
-        # Break out the data for an embedded OLE textbox form.
-
-        chunk, index, end = _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker)
-
-        # Pull strings from the chunk.
-        strs = re.findall(pat, chunk)
-        if debug:
-            print "\n\n-------------- CHUNK ---------------"
-            print chunk
-            print str(strs).replace("\\x00", "").replace("\\xff", "")
-
-        # Save long strings. Maybe they are the value of a previous variable?
-        longest_str = ""
-        orig_strs = strs
-        for field in strs:
-            if ((len(field) > 30) and
-                (len(field) > len(longest_str)) and
-                (not field.startswith("Microsoft "))):
-                longest_str = field
-        long_strs.append(longest_str)
-
-        # We want to handle Page objects first.
-        curr_pos, name_pos, name = _find_name_in_data(page_names, found_names, strs, debug)
-
-        # No Page names?
-        if (name is None):
-
-            # Does this look like it might be 1 of the objects referenced in the VBA code?
-            curr_pos, name_pos, name = _find_name_in_data(object_names, found_names, strs, debug)
-
-        # Did we find the name?
-        if (name is None):
-            
-            # Pull out the variable name (and maybe part of the text).
-            curr_pos = 0
-            for field in strs:
+        # It might come after the 'Forms.TextBox.1' tag.
+        if (field.startswith(field_marker)):
     
-                # It might come after the 'Forms.TextBox.1' tag.
-                if (field.startswith(field_marker)):
+            # If the next field does not look something like '_1619423091' the
+            # next field is the name. CompObj does not count either.
+            poss_name = None
+            if ((curr_pos + 1) < len(strs)):
+                poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
+            skip_names = set(["contents", "ObjInfo", "CompObj"])
+            if ((poss_name is not None) and
+                ((not poss_name.startswith("_")) or
+                 (not poss_name[1:].isdigit())) and
+                (poss_name not in skip_names)):
     
-                    # If the next field does not look something like '_1619423091' the
-                    # next field is the name. CompObj does not count either.
-                    poss_name = None
-                    if ((curr_pos + 1) < len(strs)):
-                        poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
-                    skip_names = set(["contents", "ObjInfo", "CompObj"])
-                    if ((poss_name is not None) and
-                        ((not poss_name.startswith("_")) or
-                         (not poss_name[1:].isdigit())) and
-                        (poss_name not in skip_names)):
-    
-                        # We have found the name.
-                        name = poss_name
-                        name_pos = curr_pos + 1
-    
-                    # Seems like there is only 1 'Forms.TextBox.1', so we are
-                    # done with this loop.
-                    break
-
-                # Move to the next field.
-                curr_pos += 1
-
-        # Did we find the name?
-        if (name is None):
-
-            # No. The name comes after an 'OCXNAME' or 'OCXPROPS' field. Figure out
-            # which one.
-            name_marker = "OCXNAME"
-            for field in strs:
-                if (field.replace("\x00", "") == 'OCXPROPS'):
-                    name_marker = "OCXPROPS"
-
-            # Now look for the name after the name marker.
-            curr_pos = 0
-            if debug:
-                print "\nName Marker: " + name_marker
-            for field in strs:
-
-                # No name marker?
-                if debug:
-                    print "\nField: '" + field.replace("\x00", "") + "'"
-                if (field.replace("\x00", "") != name_marker):
-                    # Move to the next field.
-                    curr_pos += 1
-                    continue
-                
-                # It might come after the name marker tag.
-
-                # If the next field looks something like '_1619423091' the
-                # next field is not the name.                
-                poss_name = strs[curr_pos + 1].replace("\x00", "")
-                if debug:
-                    print "\nTry: '" + poss_name + "'"
-                if (poss_name.startswith("_") and poss_name[1:].isdigit()):
-
-                    # Move to the next field.
-                    curr_pos += 1
-                    continue
-
-                # Got the name now?
-                if (poss_name != 'contents'):
-
-                    # We have found the name.
-                    name = poss_name
-                    break
-
-                # If the string after 'OCXNAME' is 'contents' the actual name comes
-                # after 'contents'
+                # We have found the name.
+                name = poss_name
                 name_pos = curr_pos + 1
-                poss_name = strs[curr_pos + 2].replace("\x00", "")
-                if debug:
-                    print "\nTry: '" + poss_name + "'"
-                            
-                # Does the next field does not look something like '_1619423091'?
-                if ((not poss_name.startswith("_")) or
-                    (not poss_name[1:].isdigit())):
+    
+            # Seems like there is only 1 'Forms.TextBox.1', so we are
+            # done with this loop.
+            break
 
-                    # We have found the name.
-                    name = poss_name
-                    name_pos = curr_pos + 2
-                    break
+        # Move to the next field.
+        curr_pos += 1
 
-                # Try the next field.
-                if ((curr_pos + 3) < len(strs)):                                    
-                    poss_name = strs[curr_pos + 3].replace("\x00", "")
-                    if debug:
-                        print "\nTry: '" + poss_name + "'"
+    # Did we find the name?
+    if (name is None):
 
-                    # CompObj is not an object name.
-                    if (poss_name != "CompObj"):
-                        name = poss_name
-                        name_pos = curr_pos + 3
-                        break
+        # No. The name comes after an 'OCXNAME' or 'OCXPROPS' field. Figure out
+        # which one.
+        name_marker = "OCXNAME"
+        for field in strs:
+            if (field.replace("\x00", "") == 'OCXPROPS'):
+                name_marker = "OCXPROPS"
 
-                # And try the next field.
-                if ((curr_pos + 4) < len(strs)):
-                    poss_name = strs[curr_pos + 4].replace("\x00", "")
-                    if debug:
-                        print "\nTry: '" + poss_name + "'"
+        # Now look for the name after the name marker.
+        curr_pos = 0
+        if debug:
+            print "\nName Marker: " + name_marker
+        for field in strs:
 
-                    # ObjInfo is not an object name.
-                    if (poss_name != "ObjInfo"):
-                        name = poss_name
-                        name_pos = curr_pos + 4
-                        break
+            # No name marker?
+            if debug:
+                print "\nField: '" + field.replace("\x00", "") + "'"
+            if (field.replace("\x00", "") != name_marker):
+                # Move to the next field.
+                curr_pos += 1
+                continue
+                
+            # It might come after the name marker tag.
 
-                # Heaven help us all. Try the next one.
-                if ((curr_pos + 5) < len(strs)):
-                    poss_name = strs[curr_pos + 5].replace("\x00", "")
-                    if debug:
-                        print "\nTry: '" + poss_name + "'"
-
-                    # ObjInfo is not an object name.
-                    if (poss_name != "ObjInfo"):
-                        name = poss_name
-                        name_pos = curr_pos + 5
-                        break
+            # If the next field looks something like '_1619423091' the
+            # next field is not the name.                
+            poss_name = strs[curr_pos + 1].replace("\x00", "")
+            if debug:
+                print "\nTry: '" + poss_name + "'"
+            if (poss_name.startswith("_") and poss_name[1:].isdigit()):
 
                 # Move to the next field.
                 curr_pos += 1
+                continue
 
-        # Move to the next chunk if we cannot find a name.
-        if (not is_name(name)):
-            index = end
+            # Got the name now?
+            if (poss_name != 'contents'):
+
+                # We have found the name.
+                name = poss_name
+                break
+
+            # If the string after 'OCXNAME' is 'contents' the actual name comes
+            # after 'contents'
+            name_pos = curr_pos + 1
+            poss_name = strs[curr_pos + 2].replace("\x00", "")
             if debug:
-                print "\nNo name found. Moving to next chunk."
-            r.append(("no name found", "placeholder"))
-            continue
+                print "\nTry: '" + poss_name + "'"
+                            
+            # Does the next field does not look something like '_1619423091'?
+            if ((not poss_name.startswith("_")) or
+                (not poss_name[1:].isdigit())):
 
-        # Remove sketchy characters from name.
-        name = strip_name(name)
-        
-        # Get a text value after the name if it looks like the following field
-        # is not a font.
+                # We have found the name.
+                name = poss_name
+                name_pos = curr_pos + 2
+                break
+
+            # Try the next field.
+            if ((curr_pos + 3) < len(strs)):                                    
+                poss_name = strs[curr_pos + 3].replace("\x00", "")
+                if debug:
+                    print "\nTry: '" + poss_name + "'"
+
+                # CompObj is not an object name.
+                if (poss_name != "CompObj"):
+                    name = poss_name
+                    name_pos = curr_pos + 3
+                    break
+
+            # And try the next field.
+            if ((curr_pos + 4) < len(strs)):
+                poss_name = strs[curr_pos + 4].replace("\x00", "")
+                if debug:
+                    print "\nTry: '" + poss_name + "'"
+
+                # ObjInfo is not an object name.
+                if (poss_name != "ObjInfo"):
+                    name = poss_name
+                    name_pos = curr_pos + 4
+                    break
+
+            # Heaven help us all. Try the next one.
+            if ((curr_pos + 5) < len(strs)):
+                poss_name = strs[curr_pos + 5].replace("\x00", "")
+                if debug:
+                    print "\nTry: '" + poss_name + "'"
+
+                # ObjInfo is not an object name.
+                if (poss_name != "ObjInfo"):
+                    name = poss_name
+                    name_pos = curr_pos + 5
+                    break
+
+            # Move to the next field.
+            curr_pos += 1
+
+    # Done.
+    return (name_pos, name)
+
+def _get_raw_text_for_name(name_pos, strs, chunk, debug):
+    """
+    """
+
+    # Get a text value after the name if it looks like the following field
+    # is not a font.
+    text = ""
+    # This is not working quite right.
+    asc_str = None
+    if (name_pos + 1 < len(strs)):
+        asc_str = strs[name_pos + 1].replace("\x00", "").strip()
+    skip_names = set(["contents", "ObjInfo", "CompObj", None])
+    if (("Calibr" not in asc_str) and
+        ("OCXNAME" not in asc_str) and
+        (asc_str not in skip_names) and
+        (not asc_str.startswith("_DELETED_NAME_")) and
+        (re.match(r"_\d{10}", asc_str) is None)):
         if debug:
-            print "\nPossible Name: '" + name + "'"
-        text = ""
-        # This is not working quite right.
-        asc_str = None
-        if (name_pos + 1 < len(strs)):
-            asc_str = strs[name_pos + 1].replace("\x00", "").strip()
-        skip_names = set(["contents", "ObjInfo", "CompObj", None])
-        if (("Calibr" not in asc_str) and
-            ("OCXNAME" not in asc_str) and
-            (asc_str not in skip_names) and
-            (not asc_str.startswith("_DELETED_NAME_")) and
-            (re.match(r"_\d{10}", asc_str) is None)):
+            print "\nValue: 1"
+            print strs[name_pos + 1]
+                
+        # Only used with large text values?
+        if (len(strs[name_pos + 1]) > 3):
+            text = strs[name_pos + 1]
             if debug:
-                print "\nValue: 1"
+                print "\nValue: 2"
                 print strs[name_pos + 1]
+
+    # Break out the (possible additional) value.
+    val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
+    vals = re.findall(val_pat, chunk)
+    if (len(vals) > 0):
+        empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
+        if (len(re.findall(empty_pat, vals[0])) == 0):
+            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+            if ((poss_val != text) and (len(poss_val) > 1)):
+                text += poss_val.replace("\x00", "")
+                if debug:
+                    print "\nValue: 3"
+                    print poss_val.replace("\x00", "")
+
+    # Pattern 2                    
+    val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
+    vals = re.findall(val_pat, chunk)
+    if (len(vals) > 0):
+        tmp_text = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])
+        if (len(tmp_text) > 0):
+            poss_val = tmp_text[0]
+            if (poss_val != text):
+                if debug:
+                    print "\nValue: 4"
+                    print poss_val
+                text += poss_val
+
+    # Pattern 3
+    val_pat = r"([\x20-\x7e]{5,})\x00\x02\x0c\x00\x34"
+    vals = re.findall(val_pat, chunk)
+    if (len(vals) > 0):
+        for v in vals:
+            text += v
+            if debug:
+                print "\nValue: 5"
+                print v
+
+    # Pattern 4
+    val_pat = r"([\x20-\x7e]{5,})\x00{2,4}\x02\x0c"
+    vals = re.findall(val_pat, chunk)
+    if (len(vals) > 0):
+        for v in vals:
+            text += v
+            if debug:
+                print "\nValue: 6"
+                print v
                 
-            # Only used with large text values?
-            if (len(strs[name_pos + 1]) > 3):
-                text = strs[name_pos + 1]
-                if debug:
-                    print "\nValue: 2"
-                    print strs[name_pos + 1]
+    # Maybe big chunks of text after the name are part of the value?
+    for pos in range(name_pos + 2, len(strs)):
+        curr_str = strs[pos].replace("\x00", "")
+        if ((len(curr_str) > 40) and (not curr_str.startswith("Microsoft "))):
+            text += curr_str
 
-        # Break out the (possible additional) value.
-        val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
-        vals = re.findall(val_pat, chunk)
-        if (len(vals) > 0):
-            empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
-            if (len(re.findall(empty_pat, vals[0])) == 0):
-                poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
-                if ((poss_val != text) and (len(poss_val) > 1)):
-                    text += poss_val.replace("\x00", "")
-                    if debug:
-                        print "\nValue: 3"
-                        print poss_val.replace("\x00", "")
+    # Done.
+    return text
 
-        # Pattern 2                    
-        val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
-        vals = re.findall(val_pat, chunk)
-        if (len(vals) > 0):
-            tmp_text = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])
-            if (len(tmp_text) > 0):
-                poss_val = tmp_text[0]
-                if (poss_val != text):
-                    if debug:
-                        print "\nValue: 4"
-                        print poss_val
-                    text += poss_val
+def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_str, orig_strs, debug):
+    """
+    """
 
-        # Pattern 3
-        val_pat = r"([\x20-\x7e]{5,})\x00\x02\x0c\x00\x34"
-        vals = re.findall(val_pat, chunk)
-        if (len(vals) > 0):
-            for v in vals:
-                text += v
-                if debug:
-                    print "\nValue: 5"
-                    print v
-
-        # Pattern 4
-        val_pat = r"([\x20-\x7e]{5,})\x00{2,4}\x02\x0c"
-        vals = re.findall(val_pat, chunk)
-        if (len(vals) > 0):
-            for v in vals:
-                text += v
-                if debug:
-                    print "\nValue: 6"
-                    print v
-                
-        # Maybe big chunks of text after the name are part of the value?
-        for pos in range(name_pos + 2, len(strs)):
-            curr_str = strs[pos].replace("\x00", "")
-            if ((len(curr_str) > 40) and (not curr_str.startswith("Microsoft "))):
-                text += curr_str
-
-        if debug:
-            print "\nORIG:"
-            print name
-            print text
-            print len(text)
-            
-        # Pull out the size of the text.
-        # Try version 1.
-        size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+    # Pull out the size of the text.
+    # Try version 1.
+    size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+    tmp = re.findall(size_pat, chunk)
+    if (len(tmp) == 0):
+        # Try version 2.
+        size_pat = r"\x48\x80\x2c(.{2})"
         tmp = re.findall(size_pat, chunk)
-        if (len(tmp) == 0):
-            # Try version 2.
-            size_pat = r"\x48\x80\x2c(.{2})"
-            tmp = re.findall(size_pat, chunk)
-        if (len(tmp) == 0):
-            # Try version 3.
-            size_pat = r"\xf8\x00\x28\x00\x00\x00(.{2})"
-            tmp = re.findall(size_pat, chunk)
-        if (len(tmp) == 0):
-            # Try version 4.
-            size_pat = r"\x2c\x00\x00\x00\x1d\x00\x00\x00(.{2})"
-            tmp = re.findall(size_pat, chunk)
-        if (len(tmp) > 0):
-            size_bytes = tmp[0]
-            size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
-            if (debug):
-                print "SIZE: "
-                print size
-            if ((len(text) > size) and (not name.startswith("Page"))):
-                text = text[:size]
+    if (len(tmp) == 0):
+        # Try version 3.
+        size_pat = r"\xf8\x00\x28\x00\x00\x00(.{2})"
+        tmp = re.findall(size_pat, chunk)
+    if (len(tmp) == 0):
+        # Try version 4.
+        size_pat = r"\x2c\x00\x00\x00\x1d\x00\x00\x00(.{2})"
+        tmp = re.findall(size_pat, chunk)
+    if (len(tmp) > 0):
+        size_bytes = tmp[0]
+        size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+        if (debug):
+            print "SIZE: "
+            print size
+        if ((len(text) > size) and (not name.startswith("Page"))):
+            text = text[:size]
 
-        # Eliminate text values that look like variable names.
-        if ((strip_name(text) in object_names) or
-            (strip_name(text) in stream_names)):
-            if debug:
-                print "\nBAD: Val is name '" + text + "'"
+    # Eliminate text values that look like variable names.
+    if ((strip_name(text) in object_names) or
+        (strip_name(text) in stream_names)):
+        if debug:
+            print "\nBAD: Val is name '" + text + "'"
 
-            # Hack. If the bad value is a Page* name and we have a really long strings from
-            # the chunk, use those as the value.
-            if ((text.startswith("Page")) and (len(longest_str) > 30)):
-                tmp_str = ""
-                for field in orig_strs:
-                    if ((len(field) > 20) and
-                        (not field.startswith("Microsoft "))):
-                        tmp_field = ""
-                        for s in re.findall(r"[\x20-\x7f]{5,}", field):
-                            tmp_field += s
-                        tmp_str += tmp_field
-                text = tmp_str
-            else:
-                text = ""
-            if debug:
-                print len(longest_str)
-                print "BAD: Set Val to '" + text + "'"
-
-        # Eliminate text values that look like binary chunks.
-        text = text.replace("\x00", "")
-        if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
-            if debug:
-                print "\nBAD: Binary in Val. Set to ''"
+        # Hack. If the bad value is a Page* name and we have a really long strings from
+        # the chunk, use those as the value.
+        if ((text.startswith("Page")) and (len(longest_str) > 30)):
+            tmp_str = ""
+            for field in orig_strs:
+                if ((len(field) > 20) and
+                    (not field.startswith("Microsoft "))):
+                    tmp_field = ""
+                    for s in re.findall(r"[\x20-\x7f]{5,}", field):
+                        tmp_field += s
+                    tmp_str += tmp_field
+            text = tmp_str
+        else:
             text = ""
+        if debug:
+            print len(longest_str)
+            print "BAD: Set Val to '" + text + "'"
 
-        # Eliminate form references.
-        if ((text.startswith("Forms.")) and (len(text) < 20)):
-            text = ""
-            
-        # Save the form name and text value.
-        if ((text != "") or (not name.startswith("Page"))):
-            if debug:
-                print "\nSET '" + name + "' = '" + text + "'"
-            r.append((name, text))
+    # Eliminate text values that look like binary chunks.
+    text = text.replace("\x00", "")
+    if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
+        if debug:
+            print "\nBAD: Binary in Val. Set to ''"
+        text = ""
 
-        # Save that we found something for this variable.
-        if (text != ""):
-            found_names.add(name)
+    # Eliminate form references.
+    if ((text.startswith("Forms.")) and (len(text) < 20)):
+        text = ""
 
-        # Move to next chunk.
-        index = end
+    # Done.
+    return text
 
-    # The results are approximate. Fix some obvious errors.
+def _find_longest_strs_form_results(long_strs, r):
+    """
+    """
+
+    # Find the longest string value overall.
+    longest_val = ""
+    longest_str = ""
+    page_val = ""
+    for s in long_strs:
+        if (len(s) > len(longest_str)):
+            longest_str = s
+    
+    # Find the longest string assigned to Page1.
+    for pair in r:
+        name = pair[0]
+        val = pair[1]
+        if (name.startswith("Page")):
+            #page_names.add(name)
+            if (len(val) > len(page_val)):
+                page_val = val
+        if (name != "Page1"):
+            continue
+        if (len(val) > len(longest_val)):
+            longest_val = val
+
+    # Done.
+    return (longest_str, longest_val, page_val)
+
+def _merge_ole_form_results(r, v1_vals, v1_1_vals, cruft_pats):
+    """
+    """
+
+    # Merge in the variable/value pairs from the 1st alternate method. Override method 2
+    # results with method 1 results.
+    tmp = []
+    v2_vals = r
+    for v1_pair in v1_vals:
+        tmp.append(v1_pair)
+        for v2_pair in v2_vals:
+            if (v1_pair[0] != v2_pair[0]):
+                tmp.append(v2_pair)
+    r = tmp
+    if (len(r) == 0):
+        r = v2_vals
+
+    # Merge in the variable/value pairs from the 2nd alternate method. Override method 2
+    # results with method 1 results.
+    tmp = []
+    v2_vals = r
+    for v1_pair in v1_1_vals:
+        tmp.append(v1_pair)
+        for v2_pair in v2_vals:
+            if (v1_pair[0] != v2_pair[0]):
+                tmp.append(v2_pair)
+    r = tmp
+    if (len(r) == 0):
+        r = v2_vals
+
+    # Eliminate cruft in values.
+    tmp = []
+    for old_pair in r:
+        name = old_pair[0]
+        val = old_pair[1]
+        for cruft_pat in cruft_pats:
+            val = re.sub(cruft_pat, "", val)
+        tmp.append((name, val))
+    r = tmp
+
+    # Done.
+    return r
+
+def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, object_names, debug):
+    """
+    """
 
     # Fix variable names that are the same as previously seen variable values.
     last_val = None
@@ -1991,11 +1932,9 @@ def get_ole_textbox_values(obj, vba_code):
             # hope for the best.
             replaced = False
             for i in range(pos + 1, len(r)):
-                poss_val1 = r[i][1]
-                poss_val2 = long_strs[i]
-                poss_val = poss_val2
-                if (len(poss_val1) > len(poss_val2)):
-                    poss_val = poss_val1
+                poss_val = long_strs[i]
+                if (len(r[i][1]) > len(poss_val)):
+                    poss_val = r[i][1]
                 if (len(poss_val) > 15):
                     if debug:
                         print "\nREPLACE (1)"
@@ -2014,73 +1953,22 @@ def get_ole_textbox_values(obj, vba_code):
         last_val = curr_val
     r = tmp
 
-    # Merge in the variable/value pairs from the 1st alternate method. Override method 2
-    # results with method 1 results.
-    tmp = []
-    v2_vals = r
-    for v1_pair in v1_vals:
-        tmp.append(v1_pair)
-        for v2_pair in v2_vals:
-            if (v1_pair[0] != v2_pair[0]):
-                tmp.append(v2_pair)
-    r = tmp
-    if (len(r) == 0):
-        r = v2_vals
-
-    # Merge in the variable/value pairs from the 2nd alternate method. Override method 2
-    # results with method 1 results.
-    tmp = []
-    v2_vals = r
-    for v1_pair in v1_1_vals:
-        tmp.append(v1_pair)
-        for v2_pair in v2_vals:
-            if (v1_pair[0] != v2_pair[0]):
-                tmp.append(v2_pair)
-    r = tmp
-    if (len(r) == 0):
-        r = v2_vals
-
-    # Eliminate cruft in values.
-    tmp_r = []
-    for old_pair in r:
-        name = old_pair[0]
-        val = old_pair[1]
-        for cruft_pat in cruft_pats:
-            val = re.sub(cruft_pat, "", val)
-        tmp_r.append((name, val))
-    r = tmp_r
+    # Merge in the variable/value pairs from various methods.
+    r = _merge_ole_form_results(r, v1_vals, v1_1_vals, cruft_pats)
+    
+    # Get the longest string value overall and the longest string assigned
+    # to a PageNN variable.
+    longest_str, longest_val, page_val = _find_longest_strs_form_results(long_strs, r)
 
     # Fix Page1 values.
-    longest_val = ""
-    page_names = set()
-    page_val = ""
-
-    # Find the longest string value overall.
-    longest_str = ""
-    for s in long_strs:
-        if (len(s) > len(longest_str)):
-            longest_str = s
     
-    # Find the longest string assigned to Page1.
-    for pair in r:
-        name = pair[0]
-        val = pair[1]
-        if (name.startswith("Page")):
-            page_names.add(name)
-            if (len(val) > len(page_val)):
-                page_val = val
-        if (name != "Page1"):
-            continue
-        if (len(val) > len(longest_val)):
-            longest_val = val
-
     # Just have 1 var/val assignment pair assigning Page1 to the longest val.
+    page_names = set()
     if (longest_val != ""):
         tmp_r = []
         updated_page1 = False
         for pair in r:
             name = pair[0]
-            val = pair[1]
             # Super specific hack.
             if (name == "Page2"):
                 tmp_r.append((name, longest_str))
@@ -2114,7 +2002,188 @@ def get_ole_textbox_values(obj, vba_code):
     for curr_name in object_names:
         if ((curr_name not in handled_names) and (longest_str != "")):
             r.append((curr_name, longest_str))
+
+    # Done.
+    return r
             
+def get_ole_textbox_values(obj, vba_code):
+    """
+    Read in the text associated with embedded OLE form textbox objects.
+    NOTE: This currently is a NASTY hack.
+    """
+
+    # Figure out if we have been given already read in data or a file name.
+    if obj[0:4] == '\xd0\xcf\x11\xe0':
+
+        #its the data blob
+        data = obj
+    else:
+
+        # Probably a file name?
+        try:
+            f = open(obj, "rb")
+            data = f.read()
+            f.close()
+        except IOError:
+            data = obj
+        except TypeError:
+            data = obj
+
+    # Is this an Office97 file?
+    if (not filetype.is_office97_file(data, True)):
+
+        # See if we can pul vbaProject.bin from a 2007+ Office file.
+        data = get_vbaprojectbin(data)
+        if (data is None):
+            return []
+
+    # Set to True to print lots of debugging.
+    #debug = True
+    debug = False
+    if debug:
+        print "\nExtracting OLE/ActiveX TextBox strings..."
+        
+    # Pull out the stream names so we don't treat those as data values.
+    stream_names = _get_stream_names(vba_code)
+    if debug:
+        print "\nStream Names: " + str(stream_names) + "\n"
+        
+    # Clear out some troublesome byte sequences.
+    data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
+    data = data.replace("o" + "\x00" * 40, "\x00" * 40)
+    data = re.sub("Tahoma\w{0,5}", "\x00", data)
+
+    # Try a method specific to a certain maldoc campaign first.
+    r = get_ole_text_method_1(vba_code, data)
+    if (r is not None):
+        return r
+    
+    # And try alternate method of pulling data. These will be merged in later.
+    v1_vals = get_ole_textbox_values1(data, debug, stream_names)
+
+    # And try another alternate method of pulling data. These will be merged in later.
+    v1_1_vals = get_ole_textbox_values2(data, debug, vba_code, stream_names)
+
+    if debug:
+        print "\nget_ole_textbox_values()\n"
+
+    # Pull out the names of forms the VBA is accessing. We will use that later to try to
+    # guess the names of ActiveX forms parsed from the raw Office file.        
+    object_names, page_names = _pull_object_names(vba_code)
+    if debug:
+        print "\nNames from VBA code:"
+        print object_names
+            
+    # Sanity check.
+    if (data is None):
+        if debug:
+            print "\nNO DATA"
+            sys.exit(0)
+        return []
+
+    # Make sure some special fields are seperated.
+    data = data.replace("c\x00o\x00n\x00t\x00e\x00n\x00t\x00s", "\x00c\x00o\x00n\x00t\x00e\x00n\x00t\x00s\x00")
+    data = re.sub("(_(?:\x00\d){10})", "\x00" + r"\1", data)
+
+    # Normalize Page object naming.
+    # Page1M3A
+    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
+    data = re.sub(page_name_pat, r"Page\1", data)
+    
+    # Set the general marker for Form data chunks and fields in the Form chunks.
+    form_str = "Microsoft Forms 2.0"
+    form_str_pat = r"Microsoft Forms 2.0 [A-Za-z]{2,30}(?!Form)"
+    field_marker = "Forms."
+    if (re.search(form_str_pat, data) is None):
+        if debug:
+            print "\nNO FORMS"
+            sys.exit(0)
+        return []
+
+    pat = r"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
+    index = 0
+    r = []
+    found_names = set()
+    long_strs = []
+    end_object_marker = "D\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00S\x00u\x00m\x00m\x00a\x00r\x00y\x00I\x00n\x00f\x00o\x00r\x00m\x00a\x00t\x00i\x00o\x00n"
+    while (re.search(form_str_pat, data[index:]) is not None):
+
+        # Break out the data for an embedded OLE textbox form.
+
+        chunk, index, end = _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker)
+
+        # Pull strings from the chunk.
+        strs = re.findall(pat, chunk)
+        if debug:
+            print "\n\n-------------- CHUNK ---------------"
+            print chunk
+            print str(strs).replace("\\x00", "").replace("\\xff", "")
+
+        # Save long strings. Maybe they are the value of a previous variable?
+        longest_str = ""
+        orig_strs = strs
+        for field in strs:
+            if ((len(field) > 30) and
+                (len(field) > len(longest_str)) and
+                (not field.startswith("Microsoft "))):
+                longest_str = field
+        long_strs.append(longest_str)
+
+        # We want to handle Page objects first.
+        curr_pos, name_pos, name = _find_name_in_data(page_names, found_names, strs, debug)
+
+        # No Page names?
+        if (name is None):
+
+            # Does this look like it might be 1 of the objects referenced in the VBA code?
+            curr_pos, name_pos, name = _find_name_in_data(object_names, found_names, strs, debug)
+
+        # Use some heuristics to guess the name if we have not found
+        # it yet.
+        if (name is None):        
+            name_pos, name = _guess_name_from_data(curr_pos, strs, field_marker, debug)
+            
+        # Move to the next chunk if we cannot find a name.
+        if (not is_name(name)):
+            index = end
+            if debug:
+                print "\nNo name found. Moving to next chunk."
+            r.append(("no name found", "placeholder"))
+            continue
+
+        # Remove sketchy characters from name.
+        name = strip_name(name)
+        if debug:
+            print "\nPossible Name: '" + name + "'"
+        
+        # Get a text value after the name if it looks like the following field
+        # is not a font.
+        text = _get_raw_text_for_name(name_pos, strs, chunk, debug)
+        if debug:
+            print "\nORIG:"
+            print name
+            print text
+            print len(text)
+
+        # Clean up the text value.
+        text = _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_str, orig_strs, debug)
+                    
+        # Save the form name and text value.
+        if ((text != "") or (not name.startswith("Page"))):
+            if debug:
+                print "\nSET '" + name + "' = '" + text + "'"
+            r.append((name, text))
+
+        # Save that we found something for this variable.
+        if (text != ""):
+            found_names.add(name)
+
+        # Move to next chunk.
+        index = end
+
+    # The results are approximate. Fix some obvious errors.
+    r = _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, object_names, debug)
+                
     # Return the OLE form textbox information.
     if debug:
         print "\nFINAL RESULTS:" 
@@ -3072,7 +3141,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the text using soffice.
     output = None
     try:
-        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/export_doc_text.py",
+        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--text", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
@@ -3108,7 +3177,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the tables using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/export_doc_text.py",
+        output = subprocess.check_output(["python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--tables", "-f", out_dir])
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + str(e))
