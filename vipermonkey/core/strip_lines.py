@@ -815,15 +815,23 @@ def fix_unhandled_named_params(vba_code):
             # Do we actually have a named parameter?
             if (got_marker):
 
-                # Is this call part of a With statement?
+                # We don't handle these so comment them out.
                 log.warning("Named parameters are not currently handled. Commenting them out...")
                 line = line[:-1]
                 new_line = None
+
+                # Is this call part of a With statement?
                 if (line.strip().lower().startswith("with ")):
 
                     # Replace the with line with a bogus line and hope for the best.
-                    new_line = "\nwith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
+                    new_line = "\nWith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
 
+                # Part of an If statement?
+                elif (line.strip().lower().startswith("if ")):
+
+                    # Replace the with line with a bogus line and hope for the best.
+                    new_line = "\n' UNHANDLED_NAMED_PARAMS_REPLACEMENT in If.\n'" + line.strip() + "\nIf 1=1 Then\n"                
+                
                 # Comment out entire line.
                 else:
                     new_line = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", line) + "\n"
@@ -1747,6 +1755,12 @@ def rename_constants(vba_code):
     if (len(defined_constants) == 0):
         return vba_code
 
+    # Don't wipe out hex strings "&H..." if there is a constant named H.
+    changed = False
+    if ("H" in defined_constants):
+        vba_code = vba_code.replace("&H", "__HEX_STR__")
+        changed = True
+    
     # Replace all non-function call references to the const variables
     # with unique names.
     for const_name in defined_constants:
@@ -1760,6 +1774,10 @@ def rename_constants(vba_code):
         rep_pat = r"Const\s+(" + const_name + r")[\s=]"
         vba_code = re.sub(rep_pat, r"Const \1_CONST ", vba_code)
 
+    # Undo the hex replacement is needed.
+    if changed:
+        vba_code = vba_code.replace("__HEX_STR__", "&H")
+        
     # Done.
     return vba_code
 
