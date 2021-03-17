@@ -527,6 +527,20 @@ cruft_pats = [r'Microsoft Forms 2.0 Form',
 ]
 
 def _read_chunk(anchor, pat, data):
+    """Read in delimited chunks of data based on an anchor at the start
+    of the chunk and a pattern for recognizing a chunk.
+
+    @param anchor (str) The anchor string at the start of the chunk to
+    identify.
+
+    @param pat (str) The regex pattern for identifying a chunk.
+
+    @param data (str) The data from which to pull chunks.
+
+    @return (list) A list of recognized chunks (str).
+
+    """
+    
     if (anchor not in data):
         return None
     data = data[data.index(anchor):]
@@ -535,7 +549,16 @@ def _read_chunk(anchor, pat, data):
     return None
 
 def _get_field_names(vba_code, debug):
-    """
+    """Get the names of object fields referenced in the given VBA code.
+
+    @param vba_code (str) The VBA code to scan.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (list) A list of the names (str) of the object fields
+    referenced in the VBA code.
+
     """
 
     # Pull out the object text value references from the VBA code.
@@ -572,6 +595,16 @@ def _get_field_names(vba_code, debug):
 
 def _read_large_chunk(data, debug):
     """
+    Pull out a chunk of raw data containing mappings from object names to
+    object text values.
+
+    @param data (str) The Office 97 file data from which to pull an
+    object name/value chunk.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (str) A chunk of data.
     """
 
     # Read in the large chunk of data with the object names and string values.
@@ -619,7 +652,19 @@ def _read_large_chunk(data, debug):
     return chunk
 
 def _read_raw_strs(chunk, stream_names, debug):
-    """
+    """Pull out all the ASCII strings from a given chunk of data.
+
+    @param chunk (str) The data chunk from which to pull strings.
+    
+    @param stream_names (list) A list of the names of OLE streams in
+    the Office OLE file. OLE stream names will not be counted as
+    strings in the chunk.
+
+    @return (list) A list of strings from the chunk.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
     """
 
     # Pull out the strings from the value chunk.
@@ -663,7 +708,19 @@ def _read_raw_strs(chunk, stream_names, debug):
     return vals
 
 def _handle_control_tip_text(control_tip_var_names, vals, debug):
-    """
+    """Find the text for each named control tip object.
+
+    @param control_tip_var_names (list) The names (str) of the control
+    tip objects.
+
+    @param vals (list) Potential control tip text values (str).
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the control tip object name and the 2nd is the control tip text.
+
     """
 
     # Looks like control tip text goes right after var names in the string
@@ -703,7 +760,20 @@ def _handle_control_tip_text(control_tip_var_names, vals, debug):
     return r
 
 def _get_specific_values(chunk, stream_names, debug):
-    """
+    """Get possible OLE object text values.
+
+    @param chunk (str) A chunk of OLE data containing OLE object names
+    and text values.
+
+    @param stream_names (list) A list of the names of OLE streams in
+    the Office OLE file. OLE stream names will not be counted as
+    potential object values in the chunk.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (list) Potential OLE object text values (str).
+
     """
 
     # Get values.
@@ -808,7 +878,23 @@ def _get_specific_values(chunk, stream_names, debug):
     return var_vals, longest_val
 
 def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
-    """
+    """Get possible OLE object text names.
+
+    @param object_names (list) A list of the names (str) of the object fields
+    referenced in the VBA code.
+
+    @param chunk (str) A chunk of OLE data containing OLE object names
+    and text values.
+
+    @param control_tip_var_names (list) The names (str) of the control
+    tip objects.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (list) OLE object names (str) that appear in the given
+    chunk.
+
     """
 
     # Get names.
