@@ -4127,10 +4127,22 @@ call_statement1 = NotAny(known_keywords_statement_start) + \
                            Optional(call_params) + \
                            Suppress(Optional("," + CaselessKeyword("0")) + \
                                     Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
+call_statement2 = NotAny(known_keywords_statement_start) + \
+                  Optional(CaselessKeyword('Call').suppress()) + \
+                  Combine(lex_identifier + OneOrMore(Literal(".") + lex_identifier)).setResultsName('name') + \
+                  Suppress(Optional(NotAny(White()) + '$') + \
+                           Optional(NotAny(White()) + '#') + \
+                           Optional(NotAny(White()) + '@') + \
+                           Optional(NotAny(White()) + '%') + \
+                           Optional(NotAny(White()) + '!')) + \
+                           Optional(call_params) + \
+                           Suppress(Optional("," + CaselessKeyword("0")) + \
+                                    Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
 call_statement0.setParseAction(Call_Statement)
 call_statement1.setParseAction(Call_Statement)
+call_statement2.setParseAction(Call_Statement)
 
-call_statement = (call_statement1 ^ call_statement0)
+call_statement = (call_statement1 ^ call_statement0 ^ call_statement2)
 
 # --- EXIT FOR statement ----------------------------------------------------------
 
