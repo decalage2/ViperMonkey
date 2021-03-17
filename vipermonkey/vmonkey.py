@@ -136,8 +136,7 @@ from core.logger import CappedFileHandler
 from logging import FileHandler
     
 def get_vb_contents_from_hta(vba_code):
-    """
-    Pull out Visual Basic code from .hta file contents.
+    """Pull out Visual Basic code from .hta file contents.
 
     @param vba_code (str) The HTA file contents from which to extract
     the VBScript code.
@@ -202,8 +201,7 @@ def parse_stream(subfilename,
                  vba_code=None,
                  strip_useless=False,
                  local_funcs=None):
-    """
-    Parse the macros from a single OLE stream.
+    """Parse the macros from a single OLE stream.
 
     @param subfilename (str) The name of the file containing the    
     macros.
@@ -294,8 +292,7 @@ def parse_stream(subfilename,
     return m
 
 def get_all_local_funcs(vba):
-    """
-    Get the names of all locally defined functions. Also get the names
+    """Get the names of all locally defined functions. Also get the names
     of all defined constants. The constant names are saved in
     core.strip_lines.defined_constants.
 
@@ -323,8 +320,7 @@ def get_all_local_funcs(vba):
     return r
             
 def parse_streams(vba, strip_useless=False):
-    """
-    Parse all the VBA streams and return list of parsed module
+    """Parse all the VBA streams and return list of parsed module
     objects.
 
     @params vba (VBA_Parser object) The olevba VBA_Parser object for
@@ -352,8 +348,7 @@ def parse_streams(vba, strip_useless=False):
 # === Top level utility functions ================================================================================
 
 def read_excel_sheets(fname):
-    """
-    Read all the sheets of a given Excel file as CSV and return them
+    """Read all the sheets of a given Excel file as CSV and return them
     as a ExcelBook object.
 
     @param fname (str) The name of the Excel file to read.
@@ -375,14 +370,14 @@ def read_excel_sheets(fname):
         return None
     
 def pull_urls_office97(fname):
-    """
-    Pull URLs directly from an Office97 file.
+    """Pull URLs directly from an Office97 file.
 
     @param fname (str) The name of the file from which to scrape
     URLs.
 
     @return (set) The URLs scraped from the file. This will be empty
     if there are no URLs.
+
     """
     return read_ole_fields.pull_urls_office97(fname, False, None)
     
@@ -402,8 +397,7 @@ def process_file(container,
                  artifact_dir=None,
                  out_file_name=None,
                  do_jit=False):
-    """
-    Process an Office file with VBA macros, a VBScript file, or
+    """Process an Office file with VBA macros, a VBScript file, or
     VBScript HTA file with ViperMonkey. This is the main programatic
     interface for ViperMonkey.
 
@@ -523,8 +517,7 @@ def process_file(container,
     return r
 
 def read_sheet_from_csv(filename):
-    """
-    Read in an Excel sheet from a CSV file.
+    """Read in an Excel sheet from a CSV file.
 
     @param fname (str) The name of the CSV file.
 
@@ -595,8 +588,7 @@ def read_sheet_from_csv(filename):
     return r
 
 def load_excel_libreoffice(data):
-    """
-    Read in an Excel file into an ExceBook object by using
+    """Read in an Excel file into an ExceBook object by using
     LibreOffice.
 
     @param data (str) The Excel file contents.
@@ -683,8 +675,7 @@ def load_excel_libreoffice(data):
     return result_book
         
 def load_excel_xlrd(data):
-    """
-    Read in an Excel file into an ExceBook object directly with the
+    """Read in an Excel file into an ExceBook object directly with the
     xlrd Excel library.
 
     @param data (str) The Excel file contents.
@@ -710,10 +701,10 @@ def load_excel_xlrd(data):
         return None
     
 def load_excel(data):
-    """
-    Load the cells from a given Excel spreadsheet. This first tries getting the sheet
-    contents with LibreOffice if it is installed, and if that does not work try reading
-    it with the Python xlrd package.
+    """Load the cells from a given Excel spreadsheet. This first tries
+    getting the sheet contents with LibreOffice if it is installed,
+    and if that does not work try reading it with the Python xlrd
+    package.
 
     @param data (str) The loaded Excel file contents.
 
@@ -739,8 +730,7 @@ def load_excel(data):
     return None
         
 def _remove_duplicate_iocs(iocs):
-    """
-    Remove IOC strings that are substrings of other IOC strings.
+    """Remove IOC strings that are substrings of other IOC strings.
 
     @param iocs (list) List of IOCs (str).
 
@@ -777,8 +767,7 @@ def _remove_duplicate_iocs(iocs):
     return r
 
 def _get_vba_parser(data):
-    """
-    Get an olevba VBA_Parser object for reading an Office file. This
+    """Get an olevba VBA_Parser object for reading an Office file. This
     handles regular Office files and HTA files with VBScript script
     elements.
 
@@ -809,8 +798,7 @@ def _get_vba_parser(data):
     return vba
 
 def pull_embedded_pe_files(data, out_dir):
-    """
-    Directly pull out any PE files embedded in the given data. The PE
+    """Directly pull out any PE files embedded in the given data. The PE
     files will be saved in a directory and will be named things like
     embedded*.exe.
 
@@ -879,8 +867,7 @@ def _process_file (filename,
                    artifact_dir=None,
                    out_file_name=None,
                    do_jit=False):
-    """
-    Process a single file.
+    """Process a single file.
 
     @param container (str) Path and filename of container if the file is within
     a zip archive, None otherwise.
@@ -1135,8 +1122,7 @@ def _process_file (filename,
         return None
 
 def process_file_scanexpr (container, filename, data):
-    """
-    Process a single file.
+    """Process a single file.
 
     @param container (str) Path and filename of container if the file is within
     a zip archive, None otherwise.
@@ -1145,6 +1131,7 @@ def process_file_scanexpr (container, filename, data):
 
     @param data (bytes) Content of the file if it is in a container,
     None if it is a file on disk.
+
     """
     #TODO: replace print by writing to a provided output file (sys.stdout by default)
     if container:
@@ -1209,8 +1196,7 @@ def process_file_scanexpr (container, filename, data):
     safe_print('')
 
 def print_version():
-    """
-    Print ViperMonkey version information.
+    """Print ViperMonkey version information.
 
     """
 
@@ -1223,8 +1209,8 @@ def print_version():
     safe_print("olevba:\t\t\t" + str(oletools.olevba.__version__))
 
 def main():
-    """
-    Main function, called when vipermonkey is run from the command line.
+    """Main function, called when vipermonkey is run from the command
+    line.
 
     """
 
