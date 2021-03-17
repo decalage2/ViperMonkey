@@ -58,8 +58,18 @@ import filetype
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
 def is_garbage_vba(vba, test_all=False, bad_pct=.6):
-    """
-    Check to see if the given supposed VBA is actually just a bunch of non-ASCII characters.
+    """Check to see if the given supposed VBA is actually just a bunch of
+    non-ASCII characters.
+
+    @param vba (str) The VBA code to check.
+    
+    @param test_all (boolean) A flag indicating whether to look at all
+    the code (True) or just the first part of the code (False).
+
+    @param bad_pct (float) The max ratio of bad code to all code for
+    this to be considered to be bad (i.e. percent bad divided by
+    100).
+
     """
 
     # PE files are not analyzable.
@@ -99,8 +109,12 @@ def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     return ((num_bad/total_len) > bad_pct)
 
 def pull_base64(data):
-    """
-    Pull base64 strings from some data.
+    """Pull base64 strings from some data.
+
+    @param data (str) The data from which to extract base64 strings.
+    
+    @return (list) A list of base64 strings found in the input.
+
     """
 
     # Pull out strings that might be base64.
@@ -109,8 +123,15 @@ def pull_base64(data):
     return r
 
 def unzip_data(data):
-    """
-    Unzip zipped data in memory.
+    """Unzip zipped data in memory.
+
+    @param data (str) The data to unzip.
+
+    @return (tuple) A 2 element tuple where the 1st element is the
+    unzipped data and the 2nd element is the name of a temp file used
+    in the unzipping process. Someone will need to clean this file
+    up.
+
     """
 
     # Unzip the data.
@@ -152,8 +173,13 @@ def unzip_data(data):
     return (unzipped_data, fname)
 
 def _clean_2007_text(s):
-    """
-    Replace special 2007 formatting strings with actual text,
+    """Replace special 2007 formatting strings (XML escaped, etc.) with
+    actual text.
+
+    @param s (str) The string to clean.
+
+    @return (str) The cleaned string.
+
     """    
     s = s.replace("&amp;", "&")\
          .replace("&gt;", ">")\
@@ -165,8 +191,15 @@ def _clean_2007_text(s):
     return s
 
 def get_drawing_titles(data):
-    """
-    Read custom Drawing element title values from an Office 2007+ file.
+    """Read custom Drawing element title values from an Office 2007+
+    file.
+    
+    @param data (str) The read in Office 2007+ file (data).
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the name of the drawing element and the 2nd element is
+    the title of the drawing element.
+
     """
 
     # We can only do this with 2007+ files.
@@ -218,8 +251,13 @@ def get_drawing_titles(data):
     return r
 
 def get_defaulttargetframe_text(data):
-    """
-    Read custom DefaultTargetFrame value from an Office 2007+ file.
+    """Read custom DefaultTargetFrame value from an Office 2007+ file.
+
+    @param data (str) The read in Office 2007+ file (data).
+
+    @return (str) On success return the DefaultTargetFrame value. On
+    error return None.
+
     """
 
     # We can only do this with 2007+ files.
@@ -262,8 +300,14 @@ def get_defaulttargetframe_text(data):
     return r
 
 def get_customxml_text(data):
-    """
-    Read custom CustomXMLParts text values from an Office 2007+ file.
+    """Read custom CustomXMLParts text values from an Office 2007+ file.
+
+    @param data (str) The read in Office 2007+ file (data).
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the name of the custom XML part and the 2nd element is
+    the text of the part.
+
     """
 
     # We can only do this with 2007+ files.
@@ -315,9 +359,16 @@ def get_customxml_text(data):
     return r
     
 def get_msftedit_variables_97(data):
-    """
-    Looks for variable/text value pairs stored in an embedded rich edit control from an Office 97 doc.
-    See https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+    """Looks for variable/text value pairs stored in an embedded rich
+    edit control from an Office 97 doc. See
+    https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+
+    @param data (str) The read in Office 97 file (data).
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the name of the rich edit control variable and the 2nd
+    element is the variable value.
+
     """
 
     # Pattern for the object data
@@ -358,9 +409,16 @@ def get_msftedit_variables_97(data):
     return r
 
 def get_msftedit_variables(obj):
-    """
-    Looks for variable/text value pairs stored in an embedded rich edit control from an Office 97 or 2007+ doc.
-    See https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+    """Looks for variable/text value pairs stored in an embedded rich edit
+    control from an Office 97 or 2007+ doc.  See
+    https://docs.microsoft.com/en-us/windows/win32/controls/about-rich-edit-controls.
+
+    @param data (str) The read in Office 97 or 2007+ file (data).
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the name of the rich edit control variable and the 2nd
+    element is the variable value.
+
     """
 
     # Figure out if we have been given already read in data or a file name.
@@ -386,10 +444,14 @@ def get_msftedit_variables(obj):
     return []
 
 def remove_duplicates(lst):
-    """
-    Remove duplicate subsequences from a list.
+    """Remove duplicate subsequences from a list. Taken from
+    https://stackoverflow.com/questions/49833528/python-identifying-and-deleting-duplicate-sequences-in-list/49835215.
+
+    @param lst (list) The list from which to remove duplicate
+    subsequences.
     
-    Taken from https://stackoverflow.com/questions/49833528/python-identifying-and-deleting-duplicate-sequences-in-list/49835215
+    @return (list) The list with duplicate subsequences removed.
+
     """
 
     # Want to delete all but last subsequence, so reverse list.
@@ -411,8 +473,10 @@ def remove_duplicates(lst):
 
 def entropy(text):
     """
-    Compute the entropy of a string.
-    Taken from https://rosettacode.org/wiki/Entropy#Uses_Python_2
+    Compute the entropy of a string. Taken from
+    https://rosettacode.org/wiki/Entropy#Uses_Python_2.
+    
+    @param text (str) The string for which to compute the entropy.
     """
     import math
     log2=lambda x:math.log(x)/math.log(2)
@@ -470,10 +534,8 @@ def _read_chunk(anchor, pat, data):
         return re.findall(pat, data, re.DOTALL)
     return None
 
-def get_ole_textbox_values2(data, debug, vba_code, stream_names):
+def _get_field_names(vba_code, debug):
     """
-    Read in the text associated with embedded OLE form textbox objects.
-    NOTE: This currently is a really NASTY hack.
     """
 
     # Pull out the object text value references from the VBA code.
@@ -497,7 +559,6 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
             
     # Break out the variables from which we want control tip text and non-control tip text variables.
     control_tip_var_names = set()
-    other_var_names = set()
     for name in object_names:
 
         # Getting control tip text for this object?
@@ -506,11 +567,12 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
             short_name = fields[-1]
             control_tip_var_names.add(short_name)
 
-        # Not getting control tip text.
-        else:
-            fields = name.split(".")
-            short_name = fields[-1]
-            other_var_names.add(short_name)
+    # Done.
+    return object_names, control_tip_var_names
+
+def _read_large_chunk(data, debug):
+    """
+    """
 
     # Read in the large chunk of data with the object names and string values.
     # chunk_pats are (anchor string, full chunk regex).
@@ -535,7 +597,7 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     if (chunk is None):                
         if debug:
             print "\nNO VALUES"
-        return []
+        return None
 
     # Get the actual chunk.
     chunk = chunk[0]
@@ -552,7 +614,14 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     if debug:
         print "\nChunk:"
         print chunk
-    
+
+    # Done.
+    return chunk
+
+def _read_raw_strs(chunk, stream_names, debug):
+    """
+    """
+
     # Pull out the strings from the value chunk.
     ascii_pat = r"(?:[\x09\x20-\x7f]|\x0d\x0a){4,}|(?:(?:[\x09\x20-\x7f]\x00|\x0d\x00\x0a\x00)){4,}"
     vals = re.findall(ascii_pat, chunk)
@@ -590,10 +659,16 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
         print "\nORIG RAW VALS:"
         print vals
 
+    # Done.
+    return vals
+
+def _handle_control_tip_text(control_tip_var_names, vals, debug):
+    """
+    """
+
     # Looks like control tip text goes right after var names in the string
     # list.
     r = []
-    skip = set()
     if debug:
         print "\nCONTROL TIP PROCESSING:"
     for name in control_tip_var_names:
@@ -623,29 +698,13 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
                 if (len(n) > 2):
                     n = n[:-1]
                     r.append((n, vals[pos + 1]))
-                
-                # We've handled with name and value, so skip them.
-                skip.add(pos)
-                skip.add(pos + 1)
 
-    # Now use detailed regexes to pull out the var names and values.
+    # Done.
+    return r
 
-    # Get names.
-    name_pat1 = r"(?:(?:\x17\x00)|(?:\x00\x80))(\w{2,})"
-    name_pat = r"(?:" + name_pat1 + ")|("
-    first = True
-    for object_name in object_names:
-        if (not first):
-            name_pat += "|"
-        first = False
-        if ("." in object_name):
-            object_name = object_name[:object_name.index(".")]
-        name_pat += object_name
-    name_pat += ")"
-    names = re.findall(name_pat, chunk)
-    if debug:
-        print "\nORIG NAMES:"
-        print names
+def _get_specific_values(chunk, stream_names, debug):
+    """
+    """
 
     # Get values.
     val_pat = r"(?:[\x02\x10]\x00\x00([\x09\x20-\x7f]{2,}))|" + \
@@ -744,7 +803,31 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
         if (len(v) > len(longest_val)):
             longest_val = v
     var_vals = tmp_vals
-            
+
+    # Done.
+    return var_vals, longest_val
+
+def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
+    """
+    """
+
+    # Get names.
+    name_pat1 = r"(?:(?:\x17\x00)|(?:\x00\x80))(\w{2,})"
+    name_pat = r"(?:" + name_pat1 + ")|("
+    first = True
+    for object_name in object_names:
+        if (not first):
+            name_pat += "|"
+        first = False
+        if ("." in object_name):
+            object_name = object_name[:object_name.index(".")]
+        name_pat += object_name
+    name_pat += ")"
+    names = re.findall(name_pat, chunk)
+    if debug:
+        print "\nORIG NAMES:"
+        print names
+
     # Get rid of control tip text names, we have already handled those.
     tmp_names = []
     for name in names:
@@ -760,6 +843,37 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
         tmp_names.append(name)
     var_names = tmp_names
 
+    # Done.
+    return var_names
+
+def get_ole_textbox_values2(data, debug, vba_code, stream_names):
+    """
+    Read in the text associated with embedded OLE form textbox objects.
+    NOTE: This currently is a really NASTY hack.
+    """
+
+    # Pull out the object text value references from the VBA code.
+    object_names, control_tip_var_names = _get_field_names(vba_code, debug)
+    
+    # Read in the large chunk of data with the object names and string values.
+    chunk = _read_large_chunk(data, debug)
+    if (chunk is None):                
+        return []
+    
+    # Pull out the raw strings from the value chunk.
+    vals = _read_raw_strs(chunk, stream_names, debug)
+
+    # Match control tip names with control tip text.
+    r = _handle_control_tip_text(control_tip_var_names, vals, debug)
+
+    # Now use detailed regexes to pull out the var names and values.
+
+    # Get names.
+    var_names = _get_specific_names(object_names, chunk, control_tip_var_names, debug)
+
+    # Get values.        
+    var_vals, longest_val = _get_specific_values(chunk, stream_names, debug)
+    
     # Make sure the # of names = # of values.
     if (len(var_names) > len(var_vals)):
         # TODO: How to intelligently pick whether to knock a name off the front or end.
@@ -1508,6 +1622,7 @@ def _guess_name_from_data(curr_pos, strs, field_marker, debug):
     """
 
     # Pull out the variable name (and maybe part of the text).
+    name_pos = None
     name = None
     curr_pos = 0
     for field in strs:
