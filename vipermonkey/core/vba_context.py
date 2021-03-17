@@ -46,6 +46,11 @@ from hashlib import sha256
 from datetime import datetime
 from logger import log
 import re
+try:
+    # sudo pypy -m pip install rure
+    import rure as re2
+except:
+    import re as re2
 import random
 import string
 import codecs
@@ -1212,14 +1217,20 @@ class Context(object):
                 log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
-        if (num_b64_iocs < 200):
-            B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-            b64_strs = re.findall(B64_REGEX, value)
-            for curr_value in b64_strs:
-                if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
-                    got_ioc = True
-                    num_b64_iocs += 1
-                    log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
+        if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):
+            uni_value = None
+            try:
+                uni_value = value.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+            if (uni_value is not None):
+                B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+                b64_strs = re2.findall(unicode(B64_REGEX), uni_value)
+                for curr_value in b64_strs:
+                    if (len(curr_value) > 200):
+                        got_ioc = True
+                        num_b64_iocs += 1
+                        log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
 
         # Did we find anything?
         if (not got_ioc):
