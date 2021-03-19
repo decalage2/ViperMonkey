@@ -1484,7 +1484,21 @@ def _find_str_with_most_repeats(strs):
     return (max_str, max_subst)
 
 def get_ole_text_method_1(vba_code, data, debug=False):
+    """Pull OLE object name/value pairs from given OLE data using
+    heuristic 1.
 
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @param data (str) The read in Office 97 file (data).
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the object name and the 2nd is the object text.
+
+    """
+    
     # Debug this thing.
     debug1 = debug
     #debug1 = True
@@ -1734,7 +1748,27 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     return r
 
 def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
-    """
+    """Get the next chunk of OLE object name/value information from the
+    given OLE data.
+
+    @param data (str) The read in Office 97 file (data).
+
+    @param index (int) The position in the OLE data from which to
+    start looking for the next chunk.
+
+    @param form_str (str) A string marking the start of the data for
+    an OLE form.
+
+    @param form_str_pat (str) A regex for recognizing strings marking
+    the start of an OLE form.
+
+    @param end_object_marker (str) The string marking the end of a
+    chunk.
+
+    @return (tuple) A 3 element tuple where the 1st element is the
+    next chunk, the 2nd element is the index of the start of the chunk
+    and the 3rd element is the index of the end of the chunk.
+
     """
 
     # Move to the end of specific versions of the form string.
@@ -1781,7 +1815,15 @@ def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
     return (chunk, index, end)
 
 def _pull_object_names(vba_code):
-    """
+    """Pull out the names of object fields referenced in the given VBA
+    code.
+
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @return (tuple) A 2 element tuple, where the 1st element is a set
+    of object field names and the 2nd element is a set of page
+    (PageNN) object field names.
+
     """
 
     # Pull out the names of forms the VBA is accessing. We will use that later to try to
@@ -1805,8 +1847,23 @@ def _pull_object_names(vba_code):
     # Done.
     return (object_names, page_names)
 
-def _guess_name_from_data(curr_pos, strs, field_marker, debug):
-    """
+def _guess_name_from_data(strs, field_marker, debug):
+    """Use heuristics to guess the object name in the given list of
+    strings pulled from a chunk of OLE data.
+
+    @param strs (list) The strings pulled from the OLE chunk.
+
+    @param field_marker (str) A string that marks the start of an
+    object text value.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (tuple) A 2 element tuple where the 1st element is the
+    position in the given list of strings where the name was found and
+    the 2nd element is the name. If a name was not found the 2nd
+    element will be None.
+
     """
 
     # Pull out the variable name (and maybe part of the text).
@@ -1943,7 +2000,24 @@ def _guess_name_from_data(curr_pos, strs, field_marker, debug):
     return (name_pos, name)
 
 def _get_raw_text_for_name(name_pos, strs, chunk, debug):
-    """
+    """Use heuristics to get the potential text value for the object with
+    the name at the given name position.
+
+    @param name_pos (int) The position in the given list of strings
+    where the name was found.
+
+    @param strs (list) A list of strings pulled from the OLE chunk
+    being analyzed.
+
+    @param chunk (str) The OLE chunk being analyzed.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+    
+    @return (str) The text associated with the object with the name at
+    the given position. This will be an empty string if no associated
+    text value is found.
+
     """
 
     # Get a text value after the name if it looks like the following field
@@ -2026,7 +2100,32 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
     return text
 
 def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_str, orig_strs, debug):
-    """
+    """Clean up the text value associated with an object with a given
+    name.
+
+    @param chunk (str) The OLE chunk being analyzed.
+
+    @param name (str) The name of the object.
+
+    @param text (str) The raw text associated with the object.
+
+    @param object_names (list) The names of objects referenced in the
+    VBA code of the Office file being analyzed.
+
+    @param stream_names (list) The names of the OLE streams in the
+    Office file being analyzed.
+
+    @param longest_str (str) The longest string associated with an
+    object (so far).
+
+    @param orig_strs (list) The ASCII strings pulled from the OLE
+    chunk.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (str) The cleaned up text value.
+
     """
 
     # Pull out the size of the text.
@@ -2093,7 +2192,22 @@ def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_
     return text
 
 def _find_longest_strs_form_results(long_strs, r):
-    """
+    """Find various longest strings from a general list of extracted
+    strings and text values assigned to object names.
+
+    @param long_strs (list) A list of pretty long strings encountered
+    during processing.
+
+    @param r (list) A list of 2 element tuples where the 1st tuple
+    element is the name of an object and the 2nd element is the object's
+    associated text value.
+
+    @return (tuple) A 3 element tuple where the 1st element is the
+    longest string found in the longish string list, the 2nd element
+    is the longest text value associated with an object name, and the
+    3rd element is the longest text value associated with a PageNN
+    object.
+
     """
 
     # Find the longest string value overall.
@@ -2120,8 +2234,26 @@ def _find_longest_strs_form_results(long_strs, r):
     # Done.
     return (longest_str, longest_val, page_val)
 
-def _merge_ole_form_results(r, v1_vals, v1_1_vals, cruft_pats):
-    """
+def _merge_ole_form_results(r, v1_vals, v1_1_vals):
+    """Merge the results of various heuristic methods used to find the
+    text values of OLE objects.
+
+    @param r (list) Value results as a list of 2 element tuples where
+    the 1st element is the name (str) of an object and the 2nd element
+    is the text value (str) of the object.
+
+    @param v1_vals (list) Value results as a list of 2 element tuples
+    where the 1st element is the name (str) of an object and the 2nd
+    element is the text value (str) of the object.
+
+    @param v1_1_vals (list) Value results as a list of 2 element
+    tuples where the 1st element is the name (str) of an object and
+    the 2nd element is the text value (str) of the object.
+
+    @return (list) The merged results as a list of 2 element tuples
+    where the 1st element is the name (str) of an object and the 2nd
+    element is the text value (str) of the object.
+
     """
 
     # Merge in the variable/value pairs from the 1st alternate method. Override method 2
@@ -2163,8 +2295,32 @@ def _merge_ole_form_results(r, v1_vals, v1_1_vals, cruft_pats):
     # Done.
     return r
 
-def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, object_names, debug):
-    """
+def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, debug):
+    """Clean up the object name/value results computed in various ways,
+    merge the various results, and return the merged and cleaned
+    results.
+    
+    @param r (list) Value results as a list of 2 element tuples where
+    the 1st element is the name (str) of an object and the 2nd element
+    is the text value (str) of the object.
+
+    @param long_strs (list) A list of pretty long strings encountered
+    during processing.
+
+    @param v1_vals (list) Value results as a list of 2 element tuples
+    where the 1st element is the name (str) of an object and the 2nd
+    element is the text value (str) of the object.
+
+    @param v1_1_vals (list) Value results as a list of 2 element
+    tuples where the 1st element is the name (str) of an object and
+    the 2nd element is the text value (str) of the object.
+
+    @param object_names (list) A list of the names (str) of the object fields
+    referenced in the VBA code.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
     """
 
     # Fix variable names that are the same as previously seen variable values.
@@ -2257,7 +2413,7 @@ def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, obj
     r = tmp
 
     # Merge in the variable/value pairs from various methods.
-    r = _merge_ole_form_results(r, v1_vals, v1_1_vals, cruft_pats)
+    r = _merge_ole_form_results(r, v1_vals, v1_1_vals)
     
     # Get the longest string value overall and the longest string assigned
     # to a PageNN variable.
@@ -2310,9 +2466,19 @@ def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, obj
     return r
             
 def get_ole_textbox_values(obj, vba_code):
-    """
-    Read in the text associated with embedded OLE form textbox objects.
-    NOTE: This currently is a NASTY hack.
+    """Read in the text associated with embedded OLE form textbox
+    objects. NOTE: This currently is a NASTY hack.
+
+    @param obj (str) The read in Office file to analyze or the name
+    of the Office file to analyze. The file will be read in if a file
+    name is given.
+
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     # Figure out if we have been given already read in data or a file name.
@@ -2444,7 +2610,7 @@ def get_ole_textbox_values(obj, vba_code):
         # Use some heuristics to guess the name if we have not found
         # it yet.
         if (name is None):        
-            name_pos, name = _guess_name_from_data(curr_pos, strs, field_marker, debug)
+            name_pos, name = _guess_name_from_data(strs, field_marker, debug)
             
         # Move to the next chunk if we cannot find a name.
         if (not is_name(name)):
@@ -2485,7 +2651,7 @@ def get_ole_textbox_values(obj, vba_code):
         index = end
 
     # The results are approximate. Fix some obvious errors.
-    r = _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, cruft_pats, object_names, debug)
+    r = _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, debug)
                 
     # Return the OLE form textbox information.
     if debug:
@@ -2496,8 +2662,16 @@ def get_ole_textbox_values(obj, vba_code):
     return r
 
 def read_form_strings(vba):
-    """
-    Read in the form strings in order as a lists of tuples like (stream name, form string).
+    """Read in the form strings in order as a lists of tuples like
+    (stream name, form string).
+
+    @param vba (str) The VBA code to analyze, generated with
+    olevba. Note that olevba includes the form strings in the output.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the name of the stream holding the form and the 2nd element is the
+    form text.
+
     """
 
     try:
@@ -2528,11 +2702,17 @@ def read_form_strings(vba):
         return []
     
 def get_shapes_text_values_xml(fname):
-    """
-    Read in the text associated with Shape objects in a document saved
-    as Flat OPC XML files.
+    """Read in the text associated with Shape objects in a document saved
+    as Flat OPC XML files. NOTE: This currently is a hack.
 
-    NOTE: This currently is a hack.
+    @param fname (str) The OPC XML file contents (already read in) or
+    the name of the file to analyze. If a file name is given it will
+    be read in.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     contents = None
@@ -2626,9 +2806,16 @@ def get_shapes_text_values_xml(fname):
     return r
 
 def get_shapes_text_values_direct_2007(data):
-    """
-    Read in shapes name/value mappings directly from word/document.xml from an 
-    unzipped Word 2007+ file.
+    """Read in shapes name/value mappings directly from word/document.xml
+    from an unzipped Word 2007+ file.
+
+    @param data (str) The contents of the document.xml file to
+    analyze.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     # TODO: This only handles a single Shapes object.
@@ -2657,9 +2844,16 @@ def get_shapes_text_values_direct_2007(data):
     return r
 
 def get_shapes_text_values_direct_2007_1(data):
-    """
-    Read in shapes name/value mappings directly from word/document.xml from an 
-    unzipped Word 2007+ file another way.
+    """Read in shapes name/value mappings directly from word/document.xml
+    from an unzipped Word 2007+ file another way.
+
+    @param data (str) The contents of the document.xml file to
+    analyze.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     # TODO: This only handles a single Shapes object.
@@ -2679,8 +2873,14 @@ def get_shapes_text_values_direct_2007_1(data):
     return r
 
 def _parse_activex_chunk(data):
-    """
-    Parse out ActiveX text values from 2007+ activeXN.bin file contents.
+    """Parse out ActiveX text values from 2007+ activeXN.bin file
+    contents.
+
+    @param data (str) The contents of the activeXN.bin to analyze
+    (already read in).
+
+    @return (str) The ActiveX text value if found, None if not found.
+
     """
 
     # Pull out the text associated with the object.
@@ -2733,8 +2933,14 @@ def _parse_activex_chunk(data):
     return text
 
 def _parse_activex_rich_edit(data):
-    """
-    Parse out Rich Edit control text values from 2007+ activeXN.bin file contents.
+    """Parse out Rich Edit control text values from 2007+ activeXN.bin
+    file contents.
+
+    @param data (str) The contents of the activeXN.bin to analyze
+    (already read in).
+
+    @return (str) The ActiveX text value if found, None if not found.
+
     """
 
     # No wide char null padding.
@@ -2782,9 +2988,15 @@ def _get_comments_docprops_2007(unzipped_data):
     return r
         
 def _get_comments_2007(fname):
-    """
-    Read in the comments in a document saved in the 2007+ format.
+    """Read in the comments in a document saved in the 2007+ format.
     Gets comments from word/comments.xml.
+
+    @param fname (str) The name of the Office 2007+ file to analyze.
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the ID of the comment and the 2nd element is the
+    comment text.
+
     """
         
     # This might be a 2007+ Office file. Unzip it.
@@ -2858,8 +3070,14 @@ def _get_comments_2007(fname):
     return r
 
 def get_comments(fname):
-    """
-    Read the comments from an Office file.
+    """Read the comments from an Office file.
+
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) A list of 2 element tuples where the 1st tuple
+    element is the ID of the comment and the 2nd element is the
+    comment text.
+
     """
 
     # Currently only 2007+ Office files are supported.
@@ -2870,9 +3088,15 @@ def get_comments(fname):
     return _get_comments_2007(fname)
 
 def get_shapes_text_values_2007(fname):
-    """
-    Read in the text associated with Shape objects in a document saved
+    """Read in the text associated with Shape objects in a document saved
     in the 2007+ format.
+
+    @param fname (str) The name of the Office 2007+ file to analyze.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
         
     # This might be a 2007+ Office file. Unzip it.
@@ -2978,9 +3202,15 @@ def get_shapes_text_values_2007(fname):
     return r
 
 def get_shapes_text_values(fname, stream):
-    """
-    Read in the text associated with Shape objects in the document.
-    NOTE: This currently is a hack.
+    """Read in the text associated with Shape objects in the
+    document. NOTE: This currently is a hack.
+
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     # Maybe 2007+ file?
@@ -3068,8 +3298,14 @@ def get_shapes_text_values(fname, stream):
 
 URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
 def pull_urls_from_comments(vba):
-    """
-    Pull out URLs that just appear in VBA comments.
+    """Pull out URLs that just appear in VBA comments.
+
+    @params vba (VBA_Parser object) The olevba VBA_Parser object for
+    reading the Office file being analyzed.
+
+    @return (set) URLs (str) that just appear in VBA comment
+    statements.
+
     """
 
     # Get the VBA source code.
@@ -3092,8 +3328,7 @@ def pull_urls_from_comments(vba):
     return urls
 
 def pull_urls_office97(fname, is_data, vba):
-    """
-    Pull URLs directly from an Office97 file.
+    """Pull URLs directly from an Office97 file.
 
     @param fname (str) The name of the file from which to scrape
     URLs or the raw file contents.
@@ -3105,6 +3340,7 @@ def pull_urls_office97(fname, is_data, vba):
 
     @return (set) The URLs scraped from the file. This will be empty
     if there are no URLs.
+
     """
 
     # Is this an Office97 file?
@@ -3139,8 +3375,13 @@ def pull_urls_office97(fname, is_data, vba):
     return r
 
 def _read_doc_vars_zip(fname):
-    """
-    Read doc vars from an Office 2007+ file.
+    """Read doc vars from an Office 2007+ file.
+
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the document variable name and the 2nd element is the value.
+
     """
 
     # Open the zip archive.
@@ -3175,13 +3416,20 @@ def _read_doc_vars_zip(fname):
     return r
     
 def _read_doc_vars_ole(fname):
-    """
-    Use a heuristic to try to read in document variable names and values from
-    the 1Table OLE stream. Note that this heuristic is kind of hacky and is not
-    close to being a general solution for reading in document variables, but it
-    serves the need for ViperMonkey emulation.
+    """Use a heuristic to try to read in document variable names and
+    values from the 1Table OLE stream. Note that this heuristic is
+    kind of hacky and is not close to being a general solution for
+    reading in document variables, but it serves the need for
+    ViperMonkey emulation.
 
-    TODO: Replace this when actual support for reading doc vars is added to olefile.
+    TODO: Replace this when actual support for reading doc vars is
+    added to olefile.
+
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the document variable name and the 2nd element is the value.
+
     """
 
     try:
@@ -3227,8 +3475,17 @@ def _read_doc_vars_ole(fname):
         return []
 
 def _read_doc_vars(data, fname):
-    """
-    Read document variables from Office 97 or 2007+ files.
+    """Read document variables from Office 97 or 2007+ files.
+
+    @param data (str) The read in Office file data. Can be None if data
+    should be read from a file (fname).
+
+    @param fname (str) The name of the Office file to analyze. Can be
+    None if data is given (data).
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the document variable name and the 2nd element is the value.
+
     """
     # TODO: make sure this test makes sense
     if ((fname is None) or (len(fname) < 1)):
@@ -3251,9 +3508,15 @@ def _read_doc_vars(data, fname):
     return r
 
 def _get_inlineshapes_text_values(data):
-    """
-    Read in the text associated with InlineShape objects in the document.
-    NOTE: This currently is a hack.
+    """Read in the text associated with InlineShape objects in the
+    document.  NOTE: This currently is a hack.
+
+    @param data (str) The read in Office file (data).
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
     """
 
     r = []
@@ -3299,8 +3562,7 @@ def _get_inlineshapes_text_values(data):
     return r
 
 def _read_custom_doc_props(fname):
-    """
-    Use a heuristic to try to read in custom document property names
+    """Use a heuristic to try to read in custom document property names
     and values from the DocumentSummaryInformation OLE stream. Note
     that this heuristic is kind of hacky and is not close to being a
     general solution for reading in document properties, but it serves
@@ -3308,6 +3570,12 @@ def _read_custom_doc_props(fname):
 
     TODO: Replace this when actual support for reading doc properties
     is added to olefile.
+
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the document property name and the 2nd element is the value.
+
     """
 
     try:
@@ -3359,11 +3627,14 @@ def _read_custom_doc_props(fname):
         return []
 
 def _get_embedded_object_values(fname):
-    """
-    Read in the tag and caption associated with Embedded Objects in the document.
-    NOTE: This currently is a hack.
+    """Read in the tag and caption associated with Embedded Objects in
+    the document.  NOTE: This currently is a hack.
 
-    return - List of tuples of the form (var name, caption value, tag value)
+    @param fname (str) The name of the Office file to analyze.
+
+    @return (list) List of tuples of the form (var name, caption
+    value, tag value)
+
     """
 
     r = []
@@ -3415,8 +3686,14 @@ def _get_embedded_object_values(fname):
     return r
 
 def _read_doc_text_libreoffice(data):
-    """
-    Returns a tuple containing the doc text and a list of tuples containing dumped tables.
+    """Read in the document text and tables from a Word file (already
+    read in) using LibreOffice.
+
+    @param data (str) The read in Office file (data).
+
+    @return (tuple) Returns a tuple containing the doc text and a list
+    of tuples containing dumped tables.
+
     """
     
     # Don't try this if it is not an Office file.
@@ -3497,9 +3774,15 @@ def _read_doc_text_libreoffice(data):
     return (r, r1)
 
 def _read_doc_text_strings(data):
-    """
-    Use a heuristic to read in the document text. This is used as a fallback if reading
-    the text with libreoffice fails.
+    """Use a heuristic to read in the document text. This is used as a
+    fallback if reading the text with libreoffice fails.
+
+    @param data (str) The read in Office file (data).
+
+    @return (tuple) A 2 element tuple where the 1st element is the
+    strings grabbed from the raw Word file data and the 2nd element is
+    an empty list (no table data).
+
     """
 
     # Pull strings from doc.
@@ -3512,8 +3795,13 @@ def _read_doc_text_strings(data):
     return (r, [])
 
 def _read_doc_text(fname, data=None):
-    """
-    Read in text from the given document.
+    """Read in text from the given document.
+
+    @param data (str) The read in Office file (data).
+
+    @return (tuple) Returns a tuple containing the doc text and a list
+    of tuples containing dumped tables.
+
     """
 
     # Read in the file.
@@ -3538,11 +3826,18 @@ def _read_doc_text(fname, data=None):
     return r
 
 def _get_doc_var_info(ole):
-    """
-    Get the byte offset and size of the chunk of data containing the document
-    variables. This information is read from the FIB 
-    (https://msdn.microsoft.com/en-us/library/dd944907(v=office.12).aspx). The doc
-    vars appear in the 1Table or 0Table stream.
+    """Get the byte offset and size of the chunk of data containing the
+    document variables. This information is read from the FIB
+    (https://msdn.microsoft.com/en-us/library/dd944907(v=office.12).aspx). The
+    doc vars appear in the 1Table or 0Table stream.
+
+    @param ole (OLE object) The olevba OLE object for the file being
+    analyzed.
+
+    @return (tuple) A 2 element tuple where the 1st element is the
+    byte offset os the document variables and the 2nd element is the
+    size of the document variable data chunk.
+
     """
 
     # Read the WordDocument stream. This contains the FIB.

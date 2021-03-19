@@ -1195,6 +1195,9 @@ def fix_difficult_code(vba_code):
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
+    # Bad characters from olevba.
+    vba_code = vba_code.replace(chr(0x85), "")
+    
     # Targeted fix for some maldocs.
     if debug_strip:
         print "HERE: 1"
