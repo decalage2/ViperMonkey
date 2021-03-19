@@ -878,7 +878,7 @@ def _get_specific_values(chunk, stream_names, debug):
     return var_vals, longest_val
 
 def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
-    """Get possible OLE object text names.
+    """Get possible OLE object names.
 
     @param object_names (list) A list of the names (str) of the object fields
     referenced in the VBA code.
@@ -933,9 +933,22 @@ def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
     return var_names
 
 def get_ole_textbox_values2(data, debug, vba_code, stream_names):
-    """
-    Read in the text associated with embedded OLE form textbox objects.
-    NOTE: This currently is a really NASTY hack.
+    """Read in the text associated with embedded OLE form textbox
+    objects (hack!). NOTE: This currently is a really NASTY hack.
+
+    @param data (str) The read in Office 97 file (data).
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @param stream_names (list) A list of the names of OLE streams in
+    the Office OLE file.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the object name and the 2nd is the object text.
+
     """
 
     # Pull out the object text value references from the VBA code.
@@ -1013,9 +1026,20 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     return r
 
 def get_ole_textbox_values1(data, debug, stream_names):
-    """
-    Read in the text associated with embedded OLE form textbox objects.
-    NOTE: This currently is a really NASTY hack.
+    """Read in the text associated with embedded OLE form textbox
+    objects (hack!). NOTE: This currently is a really NASTY hack. 
+
+    @param data (str) The read in Office 97 file (data).
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @param stream_names (list) A list of the names of OLE streams in
+    the Office OLE file.
+
+    @return (list) A list of 2 element tuples where the 1st element is
+    the object name and the 2nd is the object text.
+
     """
 
     # This handles some form of ActiveX object embedding where the list of object names
@@ -1146,10 +1170,13 @@ def get_ole_textbox_values1(data, debug, stream_names):
     return r
 
 def get_vbaprojectbin(data):
-    """
-    Pull vbaProject.bin from a 2007+ Office file.
+    """Pull the vbaProject.bin file from a 2007+ Office (ZIP) file.
 
-    data - Already read in 2007+ file contents.
+    @param data (str) Already read in 2007+ file contents.
+
+    @return (str) On success return the read in contents of
+    vbaProject.bin. On error return None.
+
     """
     # TODO: [Phil] olevba already extracts vbaProject.bin in a safer way, so we should not have to do it here
 
@@ -1188,12 +1215,28 @@ def get_vbaprojectbin(data):
     return r
 
 def strip_name(poss_name):
+    """Remove bad characters from a potential OLE object name.
+
+    @param poss_name (str) The potential object name.
+
+    @return (str) The given name with bad characters stripped out.
+
+    """
+    
     # Remove sketchy characters from name.
     name = re.sub(r"[^A-Za-z\d_]", r"", poss_name)
     return name.strip()
 
 def is_name(poss_name):
+    """Check a given string to see if it could be an OLE object name.
 
+    @param poss_name (str) The string to check.
+
+    @return (boolean) True if the given string could be an object
+    name, False if not.
+
+    """
+    
     # Sanity check.
     if (poss_name is None):
         return False
@@ -1209,6 +1252,14 @@ def is_name(poss_name):
     return (len(bad_chars) < 5)
     
 def clean_names(names):
+    """Strip out bad characters from the given OLE object names.
+
+    @param names (list) A list of object names (str) to clean.
+
+    @return (set) A set of cleaned names.
+
+    """
+    
     r = set()    
     for poss_name in names:
         poss_name = poss_name.strip()
@@ -1217,15 +1268,39 @@ def clean_names(names):
     return r
 
 def _get_stream_names(vba_code):
-    """
-    Pull the names of OLE streams from olevba output.
+    """Pull the names of OLE streams from olevba output.
+
+    @param vba_code (str) The olevba output for the Office file being
+    analyzed.
+
+    @return (list) The names of the OLE streams pulled from the olevba
+    output.
+
     """
     stream_pat = r'Attribute VB_Name = "([\w_]+)"'
     return re.findall(stream_pat, vba_code)    
 
 def _find_name_in_data(object_names, found_names, strs, debug):
-    """
-    Look for a VBA name in the string vals of a chunk of data.
+    """Look for a VBA name in the string values pulled from a chunk of an
+    Office 97 file.
+
+    @param object_names (list) A list of the names (str) of the object
+    fields referenced in the Office file's VBA code. These are the
+    names being looked for.
+
+    @param found_names (set) Names that we have already found.
+
+    @param strs (list) All of the ASCII strings found in the current
+    file chunk being analyzed.
+
+    @param debug (boolean) A flag indicating whether to print debug
+    information.
+
+    @return (tuple) A 3 element tuple where the 1st element is the
+    last checked position in the string list, the 2nd element is the
+    position in the string list where the name was found, and the 3rd
+    element is the name that was found.
+
     """
 
     # Look through the strings in reverse to get the last referenced name.
@@ -1267,10 +1342,22 @@ def _find_name_in_data(object_names, found_names, strs, debug):
     return (curr_pos, name_pos, name)
 
 def _find_repeated_substrings(s, chunk_size, min_str_size):
-    """
-    Find all of the repeated substrings in a given string that are longer
+    """Find all of the repeated substrings in a given string that are longer
     than a certain length. This assumes that repeated substrings of interest
     show up in a prefix of a given size.
+
+    @param s (str) The string to check for repeated substrings. Only
+    a prefix of the string will be checked.
+
+    @param chunk_size (int) The size of the string prefix to check for
+    repeated substrings. If bigger than the given string length an
+    empty set will be returned.
+
+    @param min_str_size (int) The minimum substring size to
+    track. Shorter repeated substrings will not be reported.
+
+    @return (set) A set of repeated substrings.
+
     """
     
     # If there is a repeated string it will show up in the 1st NN characters
@@ -1318,8 +1405,14 @@ def _find_repeated_substrings(s, chunk_size, min_str_size):
     return r
 
 def _find_most_repeated_substring(strs):
-    """
-    Find the most common repeated substring in a given list of strings.
+    """Find the most common repeated substring in a given list of strings.
+
+    @param strs (list) The strings to check for the most common
+    repeated substring.
+
+    @return (str) The most common repeated substring if any were
+    found. If no repeats are found None will be returned.
+
     """
     
     # Find all the repeated substrings in all the given strings.
@@ -1357,9 +1450,18 @@ def _find_most_repeated_substring(strs):
     return max_subst
 
 def _find_str_with_most_repeats(strs):
-    """
-    Find the string in the given list of strings that contains the most
-    instances of some repeated substring.
+    """Find the string in the given list of strings that contains the most
+    instances of some repeated substring. In more detail, this finds
+    the most commonly repeated substring in all the given strings and
+    then finds the given string that contains the most repeats of the
+    most common repeated substring.
+
+    @param strs (list) The strings to check.
+
+    @return (str) If repeated substrings were found return the given
+    string that has the most repeats of the most common repeated
+    substring. If no repeated substrings were found None is returned.
+
     """
     
     # Find the substring that is repeated most overall. This substring
