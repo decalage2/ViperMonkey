@@ -1050,34 +1050,36 @@ def load_excel_xlrd(data):
     except Exception as e:
         log.error("Reading in file as Excel with xlrd failed. " + str(e))
         return None
-    
+
 def load_excel(data):
-    """
-    Load the cells from a given Excel spreadsheet. This first tries getting the sheet
-    contents with LibreOffice if it is installed, and if that does not work try reading
-    it with the Python xlrd package.
+    """Load the cells from a given Excel spreadsheet. This first tries
+    getting the sheet contents with LibreOffice if it is installed,
+    and if that does not work try reading it with the Python xlrd
+    package.
 
-    data - The loaded Excel file contents.
+    @param data (str) The loaded Excel file contents.
 
-    return - An xlrd (like) object with the Excel file contents.
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
     """
     
-    # Load the sheet with xlrd2.
-    wb = load_excel_xlrd(data)
+    # Load the sheet with Libreoffice.
+    wb = load_excel_libreoffice(data)
     if (wb is not None):
 
-        # Did we load sheets with xlrd2?
+        # Did we load sheets with libreoffice?
         if (len(wb.sheet_names()) > 0):
             return wb
 
-    # Next try loading the sheets with LibreOffice.
-    wb = load_excel_libreoffice(data)
+    # Next try loading the sheets with xlrd2.
+    wb = load_excel_xlrd(data)
     if (wb is not None):
         return wb
         
     # Nothing worked.
     return None
-        
+
 def _remove_duplicate_iocs(iocs):
     """
     Remove IOC strings that are substrings of other IOCs.
