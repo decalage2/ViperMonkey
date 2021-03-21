@@ -4389,18 +4389,18 @@ class Sheets(VbaLibraryFunc):
                 curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
                 if (curr_sheet.name == sheet_id):
                     return curr_sheet
-            except:
+            except Exception as e:
                 continue
 
         # Next see if the sheet ID is an index.
         try:
             sheet_id = int(sheet_id) - 1
-        except:
+        except Exception as e:
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
             return curr_sheet
-        except:
+        except Exception as e:
             return None
 
 class Worksheets(Sheets):

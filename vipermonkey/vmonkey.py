@@ -114,6 +114,7 @@ import olefile
 try:
     import xlrd2 as xlrd
 except ImportError:
+    log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
     
 from core.meta import get_metadata_exif
@@ -713,16 +714,16 @@ def load_excel(data):
 
     """
     
-    # Load the sheet with xlrd2.
-    wb = load_excel_xlrd(data)
+    # Load the sheet with Libreoffice.
+    wb = load_excel_libreoffice(data)
     if (wb is not None):
 
-        # Did we load sheets with xlrd2?
+        # Did we load sheets with libreoffice?
         if (len(wb.sheet_names()) > 0):
             return wb
 
-    # Next try loading the sheets with LibreOffice.
-    wb = load_excel_libreoffice(data)
+    # Next try loading the sheets with xlrd2.
+    wb = load_excel_xlrd(data)
     if (wb is not None):
         return wb
         
