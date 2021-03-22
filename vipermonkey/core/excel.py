@@ -89,7 +89,7 @@ def get_largest_sheet(workbook):
             return None
 
         # Read all the cells.
-        curr_cells = pull_cells_sheet(sheet)
+        curr_cells = pull_cells_sheet(sheet, strip_empty=True)
         if (curr_cells is None):
             curr_cells = []
                     
@@ -134,7 +134,7 @@ def get_num_cols(sheet):
     # Unhandled sheet object.
     return 0
 
-def _pull_cells_sheet_xlrd(sheet):
+def _pull_cells_sheet_xlrd(sheet, strip_empty):
     """
     Pull all the cells from a xlrd Sheet object.
     """
@@ -142,7 +142,7 @@ def _pull_cells_sheet_xlrd(sheet):
     # Find the max row and column for the cells.
     if (not hasattr(sheet, "nrows") or
         not hasattr(sheet, "ncols")):
-        log.warning("Cannot read all cells from xlrd sheet. Sheet object has no 'nrows' or 'ncols' attribute.")
+        # This is not a xlrd sheet object.
         return None
     max_row = sheet.nrows
     max_col = sheet.ncols
@@ -153,7 +153,10 @@ def _pull_cells_sheet_xlrd(sheet):
         for curr_col in range(0, max_col + 1):
             try:
                 curr_cell_xlrd = sheet.cell(curr_row, curr_col)
-                curr_cell = { "value" : curr_cell_xlrd.value,
+                curr_val = curr_cell_xlrd.value
+                if (strip_empty and (len(str(curr_val).strip()) == 0)):
+                    continue
+                curr_cell = { "value" : curr_val,
                               "row" : curr_row + 1,
                               "col" : curr_col + 1,
                               "index" : _get_alphanum_cell_index(curr_row, curr_col) }
@@ -164,7 +167,7 @@ def _pull_cells_sheet_xlrd(sheet):
     # Return the cells.
     return curr_cells
             
-def _pull_cells_sheet_internal(sheet):
+def _pull_cells_sheet_internal(sheet, strip_empty):
     """
     Pull all the cells from a Sheet object defined internally in excel.py.
     """
@@ -172,7 +175,7 @@ def _pull_cells_sheet_internal(sheet):
     # We are going to use the internal cells field to build the list of all
     # cells, so this will only work with the ExcelSheet class defined in excel.py.
     if (not hasattr(sheet, "cells")):
-        log.warning("Cannot read all cells from internal sheet. Sheet object has no 'cells' attribute.")
+        # This is not an internal sheet object.
         return None
         
     # Cycle row by row through the sheet, tracking all the cells.
@@ -193,7 +196,10 @@ def _pull_cells_sheet_internal(sheet):
     for curr_row in range(0, max_row + 1):
         for curr_col in range(0, max_col + 1):
             try:
-                curr_cell = { "value" : sheet.cell(curr_row, curr_col),
+                curr_val = sheet.cell(curr_row, curr_col)
+                if (strip_empty and (len(str(curr_val).strip()) == 0)):
+                    continue
+                curr_cell = { "value" : curr_val,
                               "row" : curr_row + 1,
                               "col" : curr_col + 1,
                               "index" : _get_alphanum_cell_index(curr_row, curr_col) }
@@ -204,13 +210,13 @@ def _pull_cells_sheet_internal(sheet):
     # Return the cells.
     return curr_cells
 
-def pull_cells_sheet(sheet):
+def pull_cells_sheet(sheet, strip_empty=False):
     """
     Pull all the cells from an xlrd or internal Sheet object.
     """
-    curr_cells = _pull_cells_sheet_xlrd(sheet)
+    curr_cells = _pull_cells_sheet_xlrd(sheet, strip_empty)
     if (curr_cells is None):
-        curr_cells = _pull_cells_sheet_internal(sheet)
+        curr_cells = _pull_cells_sheet_internal(sheet, strip_empty)
     return curr_cells
     
 def pull_cells_workbook(workbook):

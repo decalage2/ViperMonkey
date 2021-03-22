@@ -4305,42 +4305,61 @@ class Cells(VbaLibraryFunc):
             # Pull out all the cells  in the sheet and return that.
             return excel.pull_cells_sheet(params[0])
         
-        # Currently only handles Cells(x, y) calls.
-        if (len(params) != 2):
+        # The row and column must always be the 1st 2 arguments.
+        if (len(params) < 2):
             context.increase_general_errors()
-            log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
+            log.warning("Cells() called with < 2 arguments. Returning NULL.")
             return "NULL"
 
+        # The sheet will be the 3rd argument, if given.
+        sheet = None
+        if (len(params) >= 3):
+            sheet = params[2]
+            if (not hasattr(sheet, "cell")):
+                log.warning("3rd Cells() argument is not sheet object. Returning NULL.")
+                return "NULL"
+                
         # Get the indices of the cell.
+
+        # Column.
+        tmp = params[1]
+        if (isinstance(tmp, dict) and ("value" in tmp)):
+            tmp = tmp["value"]
         col = None
         try:
-            col = int(params[1]) - 1
+            col = int(tmp) - 1
         except:
             try:
-                col = excel_col_letter_to_index(params[1])
+                col = excel_col_letter_to_index(tmp)
             except:
                 context.increase_general_errors()
                 log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
                 return "NULL"
+
+        # Row.
+        tmp = params[0]
+        if (isinstance(tmp, dict) and ("value" in tmp)):
+            tmp = tmp["value"]
         row = None
         try:
-            row = int(params[0]) - 1
+            row = int(tmp) - 1
         except:
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
 
-        # First try the sheet with the most cells.
-        # TODO: Figure out the actual sheet to load.
-        sheet = get_largest_sheet(context.loaded_excel)
+        # Try the sheet with the most cells if we are guessing the sheet.
+        if (sheet is None):
+            sheet = get_largest_sheet(context.loaded_excel)
         if (sheet is None):
             return "NULL"
+
         # Return the cell contents.
         cell_val = _read_cell(sheet, row, col)
         if (cell_val is not None):
             return cell_val
         
-        # The largest sheet did not work. Try each sheet until we read a cell.
+        # The largest sheet or given sheet did not work. Try each sheet until we read a cell.
         for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
             
             # Load the current sheet.
