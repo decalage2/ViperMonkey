@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+"""@package expressions VBA Grammar - Expressions
+"""
+
 """
 ViperMonkey: VBA Grammar - Expressions
 
@@ -52,19 +56,23 @@ import string
 import base64
 import unidecode
 
-from identifiers import *
-from reserved import *
-from lib_functions import *
-from literals import *
-from operators import *
+from pyparsing import CaselessKeyword, CaselessLiteral, Combine, FollowedBy, Forward, Group, infixNotation, \
+    Keyword, Literal, NotAny, oneOf, OneOrMore, opAssoc, Optional, ParseException, Regex, \
+    Suppress, White, Word, ZeroOrMore, delimitedList
+import pyparsing
+
+from identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
+    strict_reserved_keywords, unrestricted_name, enum_val_id, identifier, typed_name, \
+    TODO_identifier_or_object_attrib_loose
+#from reserved import *
+from lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
+from literals import date_string, decimal_literal, float_literal, literal, \
+    quoted_string_keep_quotes, integer, quoted_string
+from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
+    Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg
-from vba_object import to_python
-from vba_object import coerce_to_int
-from vba_object import coerce_to_str
-from vba_object import strip_nonvb_chars
-from vba_object import int_convert
-from vba_object import VbaLibraryFunc
+from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, strip_nonvb_chars, \
+    int_convert, VbaLibraryFunc, VBA_Object
 import vba_context
 import utils
 
@@ -436,7 +444,7 @@ class MemberAccessExpression(VBA_Object):
             curr_func = curr_obj
             if isinstance(curr_obj, SimpleNameExpression):
                 obj_name = str(curr_obj)
-                curr_func = expressions.function_call.parseString(obj_name + "()", parseAll=True)[0]
+                curr_func = function_call.parseString(obj_name + "()", parseAll=True)[0]
                 curr_func.params = []
             elif isinstance(curr_obj, Function_Call):
                 obj_name = str(curr_obj.name)
@@ -636,7 +644,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[0], parseAll=True)[0]
+            obj = expression.parseString(indices[0], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             table_index = obj
@@ -656,7 +664,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[1], parseAll=True)[0]
+            obj = expression.parseString(indices[1], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             cell_index_row = obj
@@ -676,7 +684,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[2], parseAll=True)[0]
+            obj = expression.parseString(indices[2], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             cell_index_col = obj
@@ -757,7 +765,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(ids[0], parseAll=True)[0]
+            obj = expression.parseString(ids[0], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -971,7 +979,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            obj = expression.parseString(index, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -1660,7 +1668,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            obj = expression.parseString(index, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -1866,7 +1874,7 @@ class MemberAccessExpression(VBA_Object):
         # Make the UsedRange call with or without a sheet.
         new_usedrange = None
         try:
-            new_usedrange = expressions.function_call.parseString("UsedRange()", parseAll=True)[0]
+            new_usedrange = function_call.parseString("UsedRange()", parseAll=True)[0]
             new_usedrange.params = []
         except ParseException as e:
             log.error("Parsing synthetic UsedRange() failed. " + str(e))
@@ -1890,7 +1898,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(range_exp_str, parseAll=True)[0]
+            obj = expression.parseString(range_exp_str, parseAll=True)[0]
             if just_expr:
                 return obj
 
@@ -2699,7 +2707,7 @@ class Function_Call(VBA_Object):
             array = None
             orig_array = self.params[2]
             try:
-                array = expressions.expression.parseString(self.params[2].name, parseAll=True)[0]
+                array = expression.parseString(self.params[2].name, parseAll=True)[0]
             except ParseException:
                 pass
             if (array is not None):

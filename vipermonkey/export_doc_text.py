@@ -165,7 +165,6 @@ def get_tables(document):
 ## Main Program
 ###########################################################################
 if __name__ == '__main__':
-    print(convert_csv(sys.argv[1]))
     arg_parser = argparse.ArgumentParser(description="export text from various properties in a Word "
                                          "document via the LibreOffice API")
     arg_parser.add_argument("--tables", action="store_true",
