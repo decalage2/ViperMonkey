@@ -1,7 +1,17 @@
 #!/usr/bin/env python
-"""
-ViperMonkey: VBA Grammar - Comments and End of Line
 
+"""@package comments_eol
+Parsing of VB comments and end of line markers.
+"""
+
+import logging
+from pyparsing import Literal, SkipTo, Combine, Suppress, Optional, CaselessKeyword, OneOrMore
+from vba_lines import line_terminator
+from logger import log
+if (log.getEffectiveLevel() == logging.DEBUG ):
+    log.debug('importing comments_eol')
+
+"""
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
 
@@ -49,20 +59,6 @@ __version__ = '0.02'
 # ------------------------------------------------------------------------------
 # TODO:
 
-# --- IMPORTS ------------------------------------------------------------------
-
-import logging
-
-from pyparsing import *
-
-from vba_lines import line_terminator
-
-from logger import log
-
-if (log.getEffectiveLevel() == logging.DEBUG ):
-    log.debug('importing comments_eol')
-
-
 # --- COMMENT ----------------------------------------------------------------
 
 # 3.3.1 Separator and Special Tokens
@@ -78,7 +74,6 @@ comment_single_quote = Combine(single_quote + comment_body)
 # 5.4.1.2 Rem Statement
 # rem-statement = "Rem" comment-body
 rem_statement = Suppress(Combine(CaselessKeyword('Rem') + comment_body))
-
 
 # --- SEPARATOR AND SPECIAL TOKENS ---------------------------------------
 
@@ -96,4 +91,3 @@ EOL = Optional(comment_single_quote) + line_terminator
 
 # End Of Statement, INCLUDING line terminator
 EOS = Suppress(Optional(";")) + OneOrMore(EOL | Literal(':'))
-
