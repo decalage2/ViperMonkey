@@ -1,6 +1,8 @@
+"""@package read_ole_fields
+Read in data values from OLE items like shapes and text boxes.
 """
-read_ole_fields.py - Read in data values from OLE items like shapes and text boxes.
 
+"""
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
 
