@@ -700,7 +700,7 @@ def load_excel_xlrd(data):
     except Exception as e:
         log.error("Reading in file as Excel with xlrd failed. " + str(e))
         return None
-    
+
 def load_excel(data):
     """Load the cells from a given Excel spreadsheet. This first tries
     getting the sheet contents with LibreOffice if it is installed,
@@ -729,7 +729,7 @@ def load_excel(data):
         
     # Nothing worked.
     return None
-        
+
 def _remove_duplicate_iocs(iocs):
     """Remove IOC strings that are substrings of other IOC strings.
 

@@ -1595,6 +1595,66 @@ class VbaConstants(object):
         self.globals["xlPrintErrorsDisplayed".lower()] = 0
         self.globals["xlPrintErrorsNA".lower()] = 3
 
+        # MsoColorType enumeration (Office)
+        #
+        # Specifies the color type.
+        #
+        # Color Management System color type.
+        self.globals["msoColorTypeCMS".lower()] = 4
+        # Color is determined by values of cyan, magenta, yellow, and black.
+        self.globals["msoColorTypeCMYK".lower()] = 3
+        # Not supported.
+        self.globals["msoColorTypeInk".lower()] = 5
+        # Not supported.
+        self.globals["msoColorTypeMixed".lower()] = -2
+        # Color is determined by values of red, green, and blue.
+        self.globals["msoColorTypeRGB".lower()] = 1
+        # Color is defined by an application-specific scheme.
+        self.globals["msoColorTypeScheme".lower()] = 2
+
+        # MsoTextUnderlineType enumeration (Office)
+        #
+        # Indicates the type of underline for text.
+        #
+        # Specifies no underline.
+        self.globals["msoNoUnderline".lower()] = 0
+        # Specifies a dash underline.
+        self.globals["msoUnderlineDashHeavyLine".lower()] = 8
+        # Specifies a dash line underline.
+        self.globals["msoUnderlineDashLine".lower()] = 7
+        # Specifies a long heavy line underline.
+        self.globals["msoUnderlineDashLongHeavyLine".lower()] = 10
+        # Specifies a dashed long line underline.
+        self.globals["msoUnderlineDashLongLine".lower()] = 9
+        # Specifies a dot dash heavy line underline.
+        self.globals["msoUnderlineDotDashHeavyLine".lower()] = 12
+        # Specifies a dot dash line underline.
+        self.globals["msoUnderlineDotDashLine".lower()] = 11
+        # Specifies a dot dot dash heavy line underline.
+        self.globals["msoUnderlineDotDotDashHeavyLine".lower()] = 14
+        # Specifies a dot dot dash line underline.
+        self.globals["msoUnderlineDotDotDashLine".lower()] = 13
+        # Specifies a dotted heavy line underline.
+        self.globals["msoUnderlineDottedHeavyLine".lower()] = 6
+        # Specifies a dotted line underline.
+        self.globals["msoUnderlineDottedLine".lower()] = 5
+        # Specifies a double line underline.
+        self.globals["msoUnderlineDoubleLine".lower()] = 3
+        # Specifies a heavy line underline.
+        self.globals["msoUnderlineHeavyLine".lower()] = 4
+        # Specifies a mixed of underline types.
+        self.globals["msoUnderlineMixed".lower()] = -2
+        # Specifies a single line underline.
+        self.globals["msoUnderlineSingleLine".lower()] = 2
+        # Specifies a wavy double line underline.
+        self.globals["msoUnderlineWavyDoubleLine".lower()] = 17
+        # Specifies a wavy heavy line underline.
+        self.globals["msoUnderlineWavyHeavyLine".lower()] = 16
+        # Specifies a wavy line underline.
+        self.globals["msoUnderlineWavyLine".lower()] = 15
+        # Specifies underlining words.
+        self.globals["msoUnderlineWords".lower()] = 1
+        
         # MsoContactCardAddressType Enum        
         self.globals["msoContactCardAddressTypeIM".lower()] = 3
         self.globals["msoContactCardAddressTypeOutlook".lower()] = 1

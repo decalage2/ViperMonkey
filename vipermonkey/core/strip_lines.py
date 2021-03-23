@@ -1140,13 +1140,19 @@ def break_up_whiles(vba_code):
     vba_code += "\n"
     while ("while" in vba_code_l[pos:]):
 
-        # Pull out the current while line.
+        # Pull out the current while statement.
         start = vba_code_l[pos:].index("while")
         end = vba_code_l[start + pos:].index("\n")
         curr_while = vba_code[start + pos:end + start + pos]
 
-        # We are only doing this for whiles where the predicate is in parens.
-        if (not (curr_while.replace(" ", "").strip().lower()).startswith("while(")):
+        # Pull out the current full line of code.
+        line_start = vba_code_l[:start + pos].rindex("\n")
+        curr_line = vba_code_l[line_start:end + start + pos]
+        
+        # We are only doing this for whiles where the predicate is in parens and
+        # the while is not in a string.
+        if ((not (curr_while.replace(" ", "").strip().lower()).startswith("while(")) or
+            (is_in_string(curr_line, "while"))):
             pos = end + start + pos
             continue
 
@@ -1155,9 +1161,9 @@ def break_up_whiles(vba_code):
 
         # First find the position of the closing paren.
         parens = 0
-        pos = -1
+        curr_pos = -1
         for c in curr_while:
-            pos += 1
+            curr_pos += 1
             if (c == "("):
                 parens += 1
             if (c == ")"):
@@ -1166,10 +1172,10 @@ def break_up_whiles(vba_code):
                     break
 
         # Is there text after the closing paren?        
-        if (len(curr_while[pos+1:].strip()) > 0):
+        if (len(curr_while[curr_pos+1:].strip()) > 0):
 
             # Add a newline after the closing paren.
-            new_while = curr_while[:pos+1] + "\n" + curr_while[pos+1:]
+            new_while = curr_while[:curr_pos+1] + "\n" + curr_while[curr_pos+1:]
             changes[curr_while] = new_while
 
         # Move to next while.
