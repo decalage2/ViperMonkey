@@ -1,4 +1,5 @@
-"""
+"""@package deobfuscation
+
 Utility to help deobfuscate some VBA code before it gets processed.
 This can also be used by the user to help clean up code for analysis.
 
@@ -12,6 +13,22 @@ License: BSD, see source code or documentation
 Project Repository:
 https://github.com/decalage2/ViperMonkey
 """
+
+from functools import reduce
+
+# attempt to import regex if it's installed, otherwise it will be ignored
+# (this is because regex does not work on PyPy2 on Windows)
+try:
+    import regex
+    REGEX = True
+except ImportError:
+    # TODO: it would be good to log a warning
+    REGEX = False
+
+from operator import xor
+
+from vipermonkey.core.vba_lines import vba_collapse_long_lines
+from vipermonkey.core.logger import log
 
 # === LICENSE ==================================================================
 
@@ -38,22 +55,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from functools import reduce
-
-# attempt to import regex if it's installed, otherwise it will be ignored
-# (this is because regex does not work on PyPy2 on Windows)
-try:
-    import regex
-    REGEX = True
-except ImportError:
-    # TODO: it would be good to log a warning
-    REGEX = False
-
-from operator import xor
-
-from vipermonkey.core.vba_lines import vba_collapse_long_lines
-from vipermonkey.core.logger import log
-
+# Only do this if the regex library was successfully imported.
 if REGEX:
 
     # language=PythonRegExp
@@ -83,10 +85,14 @@ if REGEX:
 
 
     def _replace_code(code, replacements):
-        """
-        Replaces code with new code.
-        :param str code: code to replace
-        :param list replacements: list of tuples containing (start, end, replacement)
+        """Replaces code with new code.
+
+        @param code (str) The code to replace.
+
+        @param replacements (list) List of tuples containing (start,
+        end, replacement).
+
+        @return (str) The modified code.
         """
         new_code = ''
         index = 0
@@ -98,7 +104,12 @@ if REGEX:
 
 
     def _replace_var_runs(code):
-        """Replace long variable runs."""
+        """Replace long variable runs.
+
+        @param code (str) The code to replace.
+
+        @return (str) The modified code.
+        """
         code_replacements = []
         for match in VAR_RUN.finditer(code):
             code_string = '{var} = {value}{newline}'.format(
@@ -112,7 +123,12 @@ if REGEX:
 
 
     def _replace_concat_runs(code):
-        """Replace long chr runs."""
+        """Replace long chr runs.
+
+        @param code (str) The code to replace.
+
+        @return (str) The modified code.
+        """
         code_replacements = []
         for match in CONCAT_RUN.finditer(code):
             code_string = ''
@@ -131,12 +147,12 @@ if REGEX:
 
 
 def deobfuscate(code):
-    """
-    Deobfuscates VBA code.
+    """Deobfuscates VBA code.
 
-    :param code: obfuscated VBA code
+    @param code (str) Obfuscated VBA code.
 
-    returns: deobfuscated code
+    @return (str) Deobfuscated code.
+
     """
     code = vba_collapse_long_lines(code)
     if REGEX:
