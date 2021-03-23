@@ -3300,7 +3300,7 @@ URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+
 def pull_urls_from_comments(vba):
     """Pull out URLs that just appear in VBA comments.
 
-    @params vba (VBA_Parser object) The olevba VBA_Parser object for
+    @param vba (VBA_Parser object) The olevba VBA_Parser object for
     reading the Office file being analyzed.
 
     @return (set) URLs (str) that just appear in VBA comment
@@ -3509,7 +3509,7 @@ def _read_doc_vars(data, fname):
 
 def _get_inlineshapes_text_values(data):
     """Read in the text associated with InlineShape objects in the
-    document.  NOTE: This currently is a hack.
+    document. NOTE: This currently is a hack.
 
     @param data (str) The read in Office file (data).
 
@@ -3874,7 +3874,15 @@ def _get_doc_var_info(ole):
     return (doc_var_offset, doc_var_size)
 
 def _read_payload_default_target_frame(data, vm):
-    """
+    """Read and save the custom DefaultTargetFrame value from an Office
+    file.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Save DefaultTargetFrame value. This only works for 2007+ files.
@@ -3885,7 +3893,16 @@ def _read_payload_default_target_frame(data, vm):
             log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
     
 def _read_payload_form_strings(vba, vm):
-    """
+    """Read in and save the text values of OLE forms as given by the
+    output of olevba.
+
+    @param vba (str) The VBA code to analyze, generated with
+    olevba. Note that olevba includes the form strings in the output.
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Save the form strings.
@@ -3910,7 +3927,17 @@ def _read_payload_form_strings(vba, vm):
             log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
 def _get_form_var_val(var_name, form_vars):
-    """
+    """Fix the raw value of the text associated with a given OLE form variable.
+
+    @param var_name (str) The name of the form variable whose value is
+    to be fixed.
+
+    @param form_vars (dict) A map from form variable names to raw
+    values.
+
+    @return (str) The fixed formm variable value. '' will be returned
+    if the form variable is not found in form_vars.
+
     """
 
     # Get a reasonable value for the form variable.
@@ -3919,7 +3946,15 @@ def _get_form_var_val(var_name, form_vars):
     return r
     
 def _read_payload_form_vars(vba, vm):
-    """
+    """Read and save the text values associated with OLE form variables.
+
+    @param vba (str) The VBA code to analyze, generated with
+    olevba. Note that olevba includes the form strings in the output.
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Read text from form variables.
@@ -4139,7 +4174,15 @@ def _read_payload_form_vars(vba, vm):
 
     
 def _read_payload_embedded_obj_text(data, vm):
-    """
+    """Read in and save the tag and caption associated with Embedded OLE
+    Objects in an Office document.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull text associated with embedded objects.
@@ -4157,7 +4200,15 @@ def _read_payload_embedded_obj_text(data, vm):
                       (caption_name, caption_val))    
 
 def _read_payload_custom_doc_props(data, vm):
-    """
+    """Read in and save custom document property names and values from
+    the DocumentSummaryInformation OLE stream.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull out custom document properties.
@@ -4168,7 +4219,16 @@ def _read_payload_custom_doc_props(data, vm):
             log.debug("Added potential VBA custom doc prop variable %r = %r to doc_vars." % (var_name, var_val))
     
 def _read_payload_textbox_text(data, vba_code, vm):
-    """
+    """Read in and save text hidden in TextBox and RichText objects.
+
+    @param data (str) The read in Office file (data).
+
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull out embedded OLE form textbox text.
@@ -4275,7 +4335,15 @@ def _read_payload_textbox_text(data, vba_code, vm):
                     
 got_inline_shapes = False                    
 def _read_payload_inline_shape_text(data, vm):
-    """
+    """Read in and save the text associated with InlineShape objects in
+    the document.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull text associated with InlineShapes() objects.
@@ -4288,7 +4356,15 @@ def _read_payload_inline_shape_text(data, vm):
         log.info("Added potential VBA InlineShape text %r = %r to doc_vars." % (var_name, var_val))
     
 def _read_payload_shape_text(data, vm):
-    """
+    """Read in and save the text associated with Shape objects in a
+    document saved as Flat OPC XML files.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull text associated with Shapes() objects.
@@ -4341,7 +4417,14 @@ def _read_payload_shape_text(data, vm):
                 log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (var_name, var_val))
     
 def _read_payload_doc_comments(data, vm):
-    """
+    """Read in and save the comments in an Office document.
+
+    @param data (str) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull text associated with document comments.
@@ -4354,7 +4437,18 @@ def _read_payload_doc_comments(data, vm):
             vm.comments.append(comment_text)
 
 def _read_payload_doc_vars(data, orig_filename, vm):
-    """
+    """Read and save document variables from Office 97 or 2007+ files.
+
+    @param data (str) The read in Office file data. Can be None if data
+    should be read from a file (orig_fname).
+
+    @param orig_fname (str) The name of the Office file to analyze. Can be
+    None if data is given (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
     """
 
     # Pull out document variables.
@@ -4375,18 +4469,19 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     things like ActiveX captions, embedded image alternate text,
     document variables, form variables, etc.
 
-    @params (data) The contents (bytes) of the Office file being
+    @param (data) The contents (bytes) of the Office file being
     analyzed.
 
-    @params orig_filename (str) The name of the Office file being
+    @param orig_filename (str) The name of the Office file being
     analyzed.
 
-    @params vm (ViperMonkey object) The ViperMonkey emulation engine
-    object that will do the emulation.
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
 
-    @params vba_code (str) The VB code that will be emulated.
+    @param vba_code (str) The VB code that will be emulated.
 
-    @params vba (VBA_Parser object) The olevba VBA_Parser object for
+    @param vba (VBA_Parser object) The olevba VBA_Parser object for
     reading the Office file being analyzed.
     """
 
