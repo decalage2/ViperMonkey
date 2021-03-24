@@ -268,12 +268,10 @@ def load_excel(data):
         if (len(wb.sheet_names()) > 0):
             return wb
 
-    """
     # Next try loading the sheets with xlrd2.
     wb = load_excel_xlrd(data)
     if (wb is not None):
         return wb
-    """
 
     # Nothing worked.
     return None
