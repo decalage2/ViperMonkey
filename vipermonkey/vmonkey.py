@@ -637,7 +637,30 @@ def pull_embedded_pe_files(data, out_dir):
         out_index += 1
 
 def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name):
-    """
+    """Report analysis results (screen and file) to the user. Results will
+    be printed to stdout and saved in an output file as JSON if needed.
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that did the emulation.
+
+    @param data (str) The read in Office file (data).
+
+    @param display_int_iocs (boolean) Flag turning on/off the
+    reporting of intermediate IOCs (base64 strings and URLs) found
+    during the emulation process.
+
+    @param orig_filename (str) path and filename of file on disk, or
+    within the container.
+
+    @param out_file_name (str) The name of the file in which to store
+    the ViperMonkey analysis results as JSON. If None no JSON results
+    will be saved.
+
+    @return (tuple) A 3 element tuple where the 1st element is a list
+    of reported actions all converted to strings, the 2nd element is a
+    list of unique intermediate IOCs, and the 3rd element is a list of
+    shell code bytes injected by the VB (empty list if no shell code).
+
     """
 
     # Print table of all recorded actions
@@ -919,7 +942,8 @@ def process_file_scanexpr (container, filename, data):
     @param container (str) Path and filename of container if the file is within
     a zip archive, None otherwise.
 
-    @param filename (str) path and filename of file on disk, or within the container.
+    @param filename (str) path and filename of file on disk, or within
+    the container.
 
     @param data (bytes) Content of the file if it is in a container,
     None if it is a file on disk.
