@@ -33,7 +33,6 @@ import colorlog
 import re
 from datetime import datetime
 from datetime import timedelta
-import subprocess
 import zipfile
 import io
 
@@ -41,11 +40,6 @@ import prettytable
 from oletools.thirdparty.xglob import xglob
 from oletools.olevba import VBA_Parser, filter_vba, FileOpenError
 import olefile
-try:
-    import xlrd2 as xlrd
-except ImportError:
-    log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
-    import xlrd
     
 from core.meta import get_metadata_exif
 
@@ -361,7 +355,7 @@ def read_excel_sheets(fname):
         f = open(fname, 'rb')
         data = f.read()
         f.close()
-        return load_excel_libreoffice(data)
+        return excel.load_excel_libreoffice(data)
     except Exception as e:
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Reading Excel sheets failed. " + str(e))
@@ -381,6 +375,7 @@ def pull_urls_office97(fname):
     
 # === Top level Programatic Interface ================================================================================    
 
+# pylint: disable=too-many-arguments
 def process_file(container,
                  filename,
                  data,
@@ -514,219 +509,6 @@ def process_file(container,
     # Done.
     return r
 
-def read_sheet_from_csv(filename):
-    """Read in an Excel sheet from a CSV file.
-
-    @param fname (str) The name of the CSV file.
-
-    @return (core.excel.ExceBook object) On success return the Excel
-    sheet as an ExcelBook object. Returns None on error.
-
-    """
-    
-    # Open the CSV file.
-    f = None
-    try:
-        f = open(filename, 'r')
-    except Exception as e:
-        log.error("Cannot open CSV file. " + str(e))
-        return None
-
-    # Read in all the cells. Note that this only works for a single sheet.
-    row = 0
-    r = {}
-    for line in f:
-
-        # Escape ',' in cell values so the split works correctly.
-        line = line.strip()
-        in_str = False
-        tmp = ""
-        for c in line:
-            if (c == '"'):
-                in_str = not in_str
-            if (in_str and (c == ',')):
-                tmp += "#A_COMMA!!#"
-            else:
-                tmp += c
-        line = tmp
-
-        # Break out the individual cell values.
-        cells = line.split(",")
-        col = 0
-        for cell in cells:
-
-            # Add back in escaped ','.
-            cell = cell.replace("#A_COMMA!!#", ",")
-
-            # Strip " from start and end of value.
-            dat = str(cell)
-            if (dat.startswith('"')):
-                dat = dat[1:]
-            if (dat.endswith('"')):
-                dat = dat[:-1]
-
-            # LibreOffice escapes '"' as '""'. Undo that.
-            dat = dat.replace('""', '"')
-
-            # Save the cell value.
-            r[(row, col)] = dat
-
-            # Next column.
-            col += 1
-        row += 1
-
-    # Close file.
-    f.close()
-
-    # Make an object with a subset of the xlrd book methods.
-    r = excel.make_book(r)
-    #print("EXCEL:\n")
-    #print(r)
-    #sys.exit(0)
-    return r
-
-def load_excel_libreoffice(data):
-    """Read in an Excel file into an ExceBook object by using
-    LibreOffice.
-
-    @param data (str) The Excel file contents.
-
-    @return (core.excel.ExceBook object) On success return the Excel
-    spreadsheet as an ExcelBook object. Returns None on error.
-
-    """
-    
-    # Don't try this if it is not an Office file.
-    if (not core.filetype.is_office_file(data, True)):
-        log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
-        return None
-    
-    # Save the Excel data to a temporary file.
-    out_dir = "/tmp/tmp_excel_file_" + str(random.randrange(0, 10000000000))
-    f = open(out_dir, 'wb')
-    f.write(data)
-    f.close()
-    
-    # Dump all the sheets as CSV files using soffice.
-    output = None
-    try:
-        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
-    except Exception as e:
-        log.error("Running export_all_excel_sheets.py failed. " + str(e))
-        os.remove(out_dir)
-        return None
-
-    # Get the names of the sheet files, if there are any.
-    try:
-        sheet_files = json.loads(output.replace("'", '"'))
-    except Exception as e:
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Loading sheeti file names failed. " + str(e))
-        os.remove(out_dir)
-        return None
-    if (len(sheet_files) == 0):
-        os.remove(out_dir)
-        return None
-
-    # Load the CSV files into Excel objects.
-    sheet_map = {}
-    for sheet_file in sheet_files:
-
-        # Read the CSV file into a single Excel workbook object.
-        tmp_workbook = read_sheet_from_csv(sheet_file)
-
-        # Pull the cell data for the current sheet.
-        cell_data = tmp_workbook.sheet_by_name("Sheet1").cells
-        
-        # Pull out the name of the current sheet.
-        start = sheet_file.index("--") + 2
-        end = sheet_file.rindex(".")
-        sheet_name = sheet_file[start : end]
-
-        # Pull out the index of the current sheet.
-        start = sheet_file.index("-") + 1
-        end = sheet_file[start:].index("-") + start
-        sheet_index = int(sheet_file[start : end])
-        
-        # Make a sheet with the current name and data.
-        tmp_sheet = excel.ExcelSheet(cell_data, sheet_name)
-
-        # Map the sheet to its index.
-        sheet_map[sheet_index] = tmp_sheet
-
-    # Save the sheets in the proper order into a workbook.
-    result_book = excel.ExcelBook(None)
-    sorted_indices = list(sheet_map.keys())
-    sorted_indices.sort()
-    for index in sorted_indices:
-        result_book.sheets.append(sheet_map[index])
-
-    # Delete the temp files with the CSV sheet data.
-    for sheet_file in sheet_files:
-        os.remove(sheet_file)
-
-    # Delete the temporary Excel file.
-    if os.path.isfile(out_dir):
-        os.remove(out_dir)
-        
-    # Return the workbook.
-    return result_book
-        
-def load_excel_xlrd(data):
-    """Read in an Excel file into an ExceBook object directly with the
-    xlrd Excel library.
-
-    @param data (str) The Excel file contents.
-
-    @return (core.excel.ExceBook object) On success return the Excel
-    spreadsheet as an ExcelBook object. Returns None on error.
-
-    """
-    
-    # Only use this on Office 97 Excel files.
-    if (not core.filetype.is_office97_file(data, True)):
-        log.warning("File is not an Excel 97 file. Not reading with xlrd2.")
-        return None
-
-    # It is Office 97. See if we can read it with xlrd2.
-    try:
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Trying to load with xlrd...")
-        r = xlrd.open_workbook(file_contents=data)
-        return r
-    except Exception as e:
-        log.error("Reading in file as Excel with xlrd failed. " + str(e))
-        return None
-
-def load_excel(data):
-    """Load the cells from a given Excel spreadsheet. This first tries
-    getting the sheet contents with LibreOffice if it is installed,
-    and if that does not work try reading it with the Python xlrd
-    package.
-
-    @param data (str) The loaded Excel file contents.
-
-    @return (core.excel.ExceBook object) On success return the Excel
-    spreadsheet as an ExcelBook object. Returns None on error.
-
-    """
-    
-    # Load the sheet with Libreoffice.
-    wb = load_excel_libreoffice(data)
-    if (wb is not None):
-
-        # Did we load sheets with libreoffice?
-        if (len(wb.sheet_names()) > 0):
-            return wb
-
-    # Next try loading the sheets with xlrd2.
-    wb = load_excel_xlrd(data)
-    if (wb is not None):
-        return wb
-        
-    # Nothing worked.
-    return None
-
 def _remove_duplicate_iocs(iocs):
     """Remove IOC strings that are substrings of other IOC strings.
 
@@ -853,7 +635,89 @@ def pull_embedded_pe_files(data, out_dir):
         f.close()
         pos += 1
         out_index += 1
-    
+
+def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name):
+    """
+    """
+
+    # Print table of all recorded actions
+    safe_print('\nRecorded Actions:')
+    safe_print(vm.dump_actions())
+    safe_print('')
+    full_iocs = core.vba_context.intermediate_iocs
+    raw_b64_iocs = read_ole_fields.pull_base64(data)
+    for ioc in raw_b64_iocs:
+        if (core.vba_context.num_b64_iocs > 200):
+            log.warning("Found too many potential base64 IOCs. Skipping the rest.")
+            break
+        full_iocs.add(ioc)
+        core.vba_context.num_b64_iocs += 1
+
+    # Report intermediate IOCs.
+    tmp_iocs = []
+    if (len(full_iocs) > 0):
+        tmp_iocs = _remove_duplicate_iocs(full_iocs)
+        if (display_int_iocs):
+            safe_print('Intermediate IOCs:')
+            safe_print('')
+            for ioc in tmp_iocs:
+                safe_print("+---------------------------------------------------------+")
+                safe_print(ioc)
+            safe_print("+---------------------------------------------------------+")
+            safe_print('')
+
+    # Display injected shellcode.
+    shellcode_bytes = core.vba_context.get_shellcode_data()
+    if (len(shellcode_bytes) > 0):
+        safe_print("+---------------------------------------------------------+")
+        safe_print("Shell Code Bytes: " + str(shellcode_bytes))
+        safe_print("+---------------------------------------------------------+")
+        safe_print('')
+
+    # See if we can directly pull any embedded PE files from the file.
+    pull_embedded_pe_files(data, core.vba_context.out_dir)
+                
+    safe_print('VBA Builtins Called: ' + str(vm.external_funcs))
+    safe_print('')
+    safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
+
+    # Reporting results in JSON file?
+    if out_file_name:
+
+        # Create the results data structure.
+        actions_data = []
+        for action in vm.actions:
+            actions_data.append({
+                "action": str(action[0]),
+                "parameters": str(action[1]),
+                "description": str(action[2])
+            })
+
+        out_data = {
+            "file_name": orig_filename,
+            "potential_iocs": list(tmp_iocs),
+            "shellcode" : shellcode_bytes,
+            "vba_builtins": vm.external_funcs,
+            "actions": actions_data
+        }
+
+        # Write out the results as JSON.
+        try:
+            with open(out_file_name, 'w') as out_file:
+                out_file.write("\n" + json.dumps(out_data, indent=4))
+        except Exception as exc:
+            log.error("Failed to output results to output file. " + str(exc))
+
+    # Make sure all the action fields are strings before returning.
+    str_actions = []
+    for action in vm.actions:
+        str_actions.append((safe_str_convert(action[0]),
+                            safe_str_convert(action[1]),
+                            safe_str_convert(action[2])))    
+
+    # Done.
+    return (str_actions, tmp_iocs, shellcode_bytes)
+        
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename,
@@ -952,7 +816,7 @@ def _process_file (filename,
                 vm.set_metadata(get_metadata_exif(orig_filename))
 
             # If this is an Excel spreadsheet, read it in.
-            vm.loaded_excel = load_excel(data)
+            vm.loaded_excel = excel.load_excel(data)
 
             # Set where to store directly dropped files if needed.
             if (artifact_dir is None):
@@ -1016,81 +880,11 @@ def _process_file (filename,
             vm.trace()
 
             # Done with emulation.
+
+            # Report the results.
+            str_actions, tmp_iocs, shellcode_bytes = _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
             
-            # Print table of all recorded actions
-            safe_print('\nRecorded Actions:')
-            safe_print(vm.dump_actions())
-            safe_print('')
-            full_iocs = core.vba_context.intermediate_iocs
-            raw_b64_iocs = read_ole_fields.pull_base64(data)
-            for ioc in raw_b64_iocs:
-                if (core.vba_context.num_b64_iocs > 200):
-                    log.warning("Found too many potential base64 IOCs. Skipping the rest.")
-                    break
-                full_iocs.add(ioc)
-                core.vba_context.num_b64_iocs += 1
-
-            # Report intermediate IOCs.
-            tmp_iocs = []
-            if (len(full_iocs) > 0):
-                tmp_iocs = _remove_duplicate_iocs(full_iocs)
-                if (display_int_iocs):
-                    safe_print('Intermediate IOCs:')
-                    safe_print('')
-                    for ioc in tmp_iocs:
-                        safe_print("+---------------------------------------------------------+")
-                        safe_print(ioc)
-                    safe_print("+---------------------------------------------------------+")
-                    safe_print('')
-
-            # Display injected shellcode.
-            shellcode_bytes = core.vba_context.get_shellcode_data()
-            if (len(shellcode_bytes) > 0):
-                safe_print("+---------------------------------------------------------+")
-                safe_print("Shell Code Bytes: " + str(shellcode_bytes))
-                safe_print("+---------------------------------------------------------+")
-                safe_print('')
-
-            # See if we can directly pull any embedded PE files from the file.
-            pull_embedded_pe_files(data, core.vba_context.out_dir)
-                
-            safe_print('VBA Builtins Called: ' + str(vm.external_funcs))
-            safe_print('')
-            safe_print('Finished analyzing ' + str(orig_filename) + " .\n")
-
-            # Reporting results in JSON file?
-            if out_file_name:
-
-                # Create the results data structure.
-                actions_data = []
-                for action in vm.actions:
-                    actions_data.append({
-                        "action": str(action[0]),
-                        "parameters": str(action[1]),
-                        "description": str(action[2])
-                    })
-
-                out_data = {
-                    "file_name": orig_filename,
-                    "potential_iocs": list(tmp_iocs),
-                    "shellcode" : shellcode_bytes,
-                    "vba_builtins": vm.external_funcs,
-                    "actions": actions_data
-                }
-
-                # Write out the results as JSON.
-                try:
-                    with open(out_file_name, 'w') as out_file:
-                        out_file.write("\n" + json.dumps(out_data, indent=4))
-                except Exception as exc:
-                    log.error("Failed to output results to output file. " + str(exc))
-
-            # Make sure all the action fields are strings before returning.
-            str_actions = []
-            for action in vm.actions:
-                str_actions.append((safe_str_convert(action[0]),
-                                    safe_str_convert(action[1]),
-                                    safe_str_convert(action[2])))
+            # Return the results.
             return (str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes)
 
         # No VBA/VBScript found?

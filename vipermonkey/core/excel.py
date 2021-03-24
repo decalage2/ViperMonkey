@@ -1,7 +1,10 @@
 """@package excel
-Partial implementation of xlrd.book object interface.
+Partial implementation of xlrd.book object interface and some Excel
+functions.
+
 """
 
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -43,9 +46,235 @@ __version__ = '0.03'
 #import traceback
 #import sys
 from logger import log
+import logging
+import json
+import os
+import filetype
+import random
+import subprocess
+try:
+    import xlrd2 as xlrd
+except ImportError:
+    log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
+    import xlrd
 
+_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+    
 #debug = True
 debug = False
+
+def _read_sheet_from_csv(filename):
+    """Read in an Excel sheet from a CSV file.
+
+    @param fname (str) The name of the CSV file.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    sheet as an ExcelBook object. Returns None on error.
+
+    """
+    
+    # Open the CSV file.
+    f = None
+    try:
+        f = open(filename, 'r')
+    except Exception as e:
+        log.error("Cannot open CSV file. " + str(e))
+        return None
+
+    # Read in all the cells. Note that this only works for a single sheet.
+    row = 0
+    r = {}
+    for line in f:
+
+        # Escape ',' in cell values so the split works correctly.
+        line = line.strip()
+        in_str = False
+        tmp = ""
+        for c in line:
+            if (c == '"'):
+                in_str = not in_str
+            if (in_str and (c == ',')):
+                tmp += "#A_COMMA!!#"
+            else:
+                tmp += c
+        line = tmp
+
+        # Break out the individual cell values.
+        cells = line.split(",")
+        col = 0
+        for cell in cells:
+
+            # Add back in escaped ','.
+            cell = cell.replace("#A_COMMA!!#", ",")
+
+            # Strip " from start and end of value.
+            dat = str(cell)
+            if (dat.startswith('"')):
+                dat = dat[1:]
+            if (dat.endswith('"')):
+                dat = dat[:-1]
+
+            # LibreOffice escapes '"' as '""'. Undo that.
+            dat = dat.replace('""', '"')
+
+            # Save the cell value.
+            r[(row, col)] = dat
+
+            # Next column.
+            col += 1
+        row += 1
+
+    # Close file.
+    f.close()
+
+    # Make an object with a subset of the xlrd book methods.
+    r = make_book(r)
+    #print("EXCEL:\n")
+    #print(r)
+    #sys.exit(0)
+    return r
+
+def load_excel_libreoffice(data):
+    """Read in an Excel file into an ExcelBook object by using
+    LibreOffice.
+
+    @param data (str) The Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
+    # Don't try this if it is not an Office file.
+    if (not filetype.is_office_file(data, True)):
+        log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
+        return None
+    
+    # Save the Excel data to a temporary file.
+    out_dir = "/tmp/tmp_excel_file_" + str(random.randrange(0, 10000000000))
+    f = open(out_dir, 'wb')
+    f.write(data)
+    f.close()
+    
+    # Dump all the sheets as CSV files using soffice.
+    output = None
+    try:
+        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
+    except Exception as e:
+        log.error("Running export_all_excel_sheets.py failed. " + str(e))
+        os.remove(out_dir)
+        return None
+
+    # Get the names of the sheet files, if there are any.
+    try:
+        sheet_files = json.loads(output.replace("'", '"'))
+    except Exception as e:
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Loading sheeti file names failed. " + str(e))
+        os.remove(out_dir)
+        return None
+    if (len(sheet_files) == 0):
+        os.remove(out_dir)
+        return None
+
+    # Load the CSV files into Excel objects.
+    sheet_map = {}
+    for sheet_file in sheet_files:
+
+        # Read the CSV file into a single Excel workbook object.
+        tmp_workbook = _read_sheet_from_csv(sheet_file)
+
+        # Pull the cell data for the current sheet.
+        cell_data = tmp_workbook.sheet_by_name("Sheet1").cells
+        
+        # Pull out the name of the current sheet.
+        start = sheet_file.index("--") + 2
+        end = sheet_file.rindex(".")
+        sheet_name = sheet_file[start : end]
+
+        # Pull out the index of the current sheet.
+        start = sheet_file.index("-") + 1
+        end = sheet_file[start:].index("-") + start
+        sheet_index = int(sheet_file[start : end])
+        
+        # Make a sheet with the current name and data.
+        tmp_sheet = ExcelSheet(cell_data, sheet_name)
+
+        # Map the sheet to its index.
+        sheet_map[sheet_index] = tmp_sheet
+
+    # Save the sheets in the proper order into a workbook.
+    result_book = ExcelBook(None)
+    sorted_indices = list(sheet_map.keys())
+    sorted_indices.sort()
+    for index in sorted_indices:
+        result_book.sheets.append(sheet_map[index])
+
+    # Delete the temp files with the CSV sheet data.
+    for sheet_file in sheet_files:
+        os.remove(sheet_file)
+
+    # Delete the temporary Excel file.
+    if os.path.isfile(out_dir):
+        os.remove(out_dir)
+        
+    # Return the workbook.
+    return result_book
+        
+def load_excel_xlrd(data):
+    """Read in an Excel file into an ExceBook object directly with the
+    xlrd Excel library.
+
+    @param data (str) The Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
+    # Only use this on Office 97 Excel files.
+    if (not filetype.is_office97_file(data, True)):
+        log.warning("File is not an Excel 97 file. Not reading with xlrd2.")
+        return None
+
+    # It is Office 97. See if we can read it with xlrd2.
+    try:
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Trying to load with xlrd...")
+        r = xlrd.open_workbook(file_contents=data)
+        return r
+    except Exception as e:
+        log.error("Reading in file as Excel with xlrd failed. " + str(e))
+        return None
+
+def load_excel(data):
+    """Load the cells from a given Excel spreadsheet. This first tries
+    getting the sheet contents with LibreOffice if it is installed,
+    and if that does not work try reading it with the Python xlrd
+    package.
+
+    @param data (str) The loaded Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
+    # Load the sheet with Libreoffice.
+    wb = load_excel_libreoffice(data)
+    if (wb is not None):
+
+        # Did we load sheets with libreoffice?
+        if (len(wb.sheet_names()) > 0):
+            return wb
+
+    # Next try loading the sheets with xlrd2.
+    wb = load_excel_xlrd(data)
+    if (wb is not None):
+        return wb
+        
+    # Nothing worked.
+    return None
 
 def is_cell_dict(x):
     """Test to see if the given item is a dict used to represent an Excel
@@ -108,6 +337,7 @@ def get_largest_sheet(workbook):
         sheet = None
         try:
             sheet = workbook.sheet_by_index(sheet_index)
+        # pylint: disable=bare-except
         except:
             return None
 
@@ -205,6 +435,7 @@ def _pull_cells_sheet_xlrd(sheet, strip_empty):
                               "col" : curr_col + 1,
                               "index" : _get_alphanum_cell_index(curr_row, curr_col) }
                 curr_cells.append(curr_cell)
+            # pylint: disable=bare-except
             except:
                 pass
 
