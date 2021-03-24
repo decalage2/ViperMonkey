@@ -4408,18 +4408,18 @@ class Sheets(VbaLibraryFunc):
                 curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
                 if (curr_sheet.name == sheet_id):
                     return curr_sheet
-            except:
+            except Exception as e:
                 continue
 
         # Next see if the sheet ID is an index.
         try:
             sheet_id = int(sheet_id) - 1
-        except:
+        except Exception as e:
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
             return curr_sheet
-        except:
+        except Exception as e:
             return None
 
 class Worksheets(Sheets):
@@ -4590,10 +4590,8 @@ class Range(VbaLibraryFunc):
         # Were we given an Excel sheet object?
         sheet = None
         for p in params:
-            if isinstance(p, ExcelSheet):
-                #print "GOT RANGE SHEET!!"
+            if ("Sheet" in str(type(p))):
                 sheet = p
-                #print sheet
                 break
             
         # Return a cell dict rather than the cell value?
@@ -4615,7 +4613,10 @@ class Range(VbaLibraryFunc):
             the_cell = params[0]
             if ("value" in the_cell):
                 next_index = the_cell["value"]
-                return self.eval(context, [next_index, return_dict])
+                new_params = [next_index]
+                for p in params[1:]:
+                    new_params.append(p)
+                return self.eval(context, new_params)
 
             # Unexpected. This is not a proper read cell dict.
             log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
@@ -4664,11 +4665,16 @@ class Range(VbaLibraryFunc):
                     val = str(sheet.cell_value(row, col))
             
                 # Return the cell value.
-                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = '" + str(val) +"'")
+                sheet_name = ""
+                if (hasattr(sheet, "name")):
+                    sheet_name = sheet.name
+                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_name) + " = '" + str(val) +"'")
                 return val            
 
             except Exception as e:
                 # Try the next sheet.
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Cell read failed. " + str(e))
                 continue
 
         # We did not get the cell.
@@ -4678,6 +4684,7 @@ class Range(VbaLibraryFunc):
             row, col = self._get_row_and_column(params[0])
         except:
             pass
+        #print sheet
         log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "] (2)")
         context.increase_general_errors()
         return "NULL"
