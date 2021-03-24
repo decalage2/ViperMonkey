@@ -159,7 +159,7 @@ def load_excel_libreoffice(data):
     # Dump all the sheets as CSV files using soffice.
     output = None
     try:
-        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/export_all_excel_sheets.py", out_dir])
+        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_all_excel_sheets.py", out_dir])
     except Exception as e:
         log.error("Running export_all_excel_sheets.py failed. " + str(e))
         os.remove(out_dir)
@@ -259,7 +259,7 @@ def load_excel(data):
     spreadsheet as an ExcelBook object. Returns None on error.
 
     """
-    
+
     # Load the sheet with Libreoffice.
     wb = load_excel_libreoffice(data)
     if (wb is not None):
@@ -268,11 +268,13 @@ def load_excel(data):
         if (len(wb.sheet_names()) > 0):
             return wb
 
+    """
     # Next try loading the sheets with xlrd2.
     wb = load_excel_xlrd(data)
     if (wb is not None):
         return wb
-        
+    """
+
     # Nothing worked.
     return None
 
@@ -580,10 +582,7 @@ class ExcelSheet(object):
         """
         if (self.gloss is not None):
             return self.gloss
-        #for line in traceback.format_stack():
-        #    print(line.strip())
         log.info("Converting Excel sheet to str ...")
-        #sys.exit(0)
         r = ""
         if debug:
             r += "Sheet: '" + self.name + "'\n\n"
