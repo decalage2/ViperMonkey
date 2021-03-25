@@ -1963,6 +1963,62 @@ class MemberAccessExpression(VBA_Object):
         #print "RESULT!!"
         #print r
         return r
+
+    def _handle_stringbuilder_method(self, context, lhs_val):
+        """
+        Handle string builder object appends like 'foo.Append_3 "aaa"' and
+        string builder string conversions like 'foo.ToString'.
+        """
+
+        # Is the LHS a StringBuilder object?
+        if (not str(lhs_val).lower().endswith("stringbuilder")):
+            return None
+
+        # We are doing something with a StringBuilder object.
+
+        # Are we doing an append?
+        rhs = self.rhs
+        if (isinstance(rhs, list)):
+            rhs = rhs[0]
+        if (isinstance(rhs, Function_Call) and (str(rhs.name) == "Append_3")):
+
+            # We save the stringbuilder buffer with a synthetic
+            # variable.
+            synth_var = str(self.lhs) + ".__BUFFER__"
+
+            # Get the current buffer value.
+            buffer_val = ""
+            if (context.contains(synth_var)):
+                buffer_val = context.get(synth_var)
+
+            # Get the string to append to the buffer.
+            if (len(rhs.params) == 0):
+                return None
+            str_val = eval_arg(rhs.params[0], context)
+
+            # Save the updated buffer value.
+            buffer_val += str_val
+            context.set(synth_var, buffer_val, force_global=True)
+
+            # Done.
+            return buffer_val
+
+        # Getting the string builder as a string?
+        if (str(rhs) == "ToString"):
+
+            # We save the stringbuilder buffer with a synthetic
+            # variable.
+            synth_var = str(self.lhs) + ".__BUFFER__"
+
+            # Get the current buffer value.
+            buffer_val = ""
+            if (context.contains(synth_var)):
+                buffer_val = context.get(synth_var)
+
+            # Done.
+            return buffer_val
+                
+        return None
     
     def eval(self, context, params=None):
 
@@ -1996,7 +2052,14 @@ class MemberAccessExpression(VBA_Object):
         if (r is not None):
             #print "OUT: 1"
             return r
-            
+
+        # StringBuilder object string append or string conversion?
+        #print "HERE: 1.1"
+        r = self._handle_stringbuilder_method(context, tmp_lhs)
+        if (r is not None):
+            #print "OUT: 1.1"
+            return r
+        
         # Easy case. Do we have this saved as a variable?
         #print "HERE: 3"
         r = self._read_member_expression_as_var(context, tmp_lhs)
