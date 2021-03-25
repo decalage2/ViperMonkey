@@ -61,9 +61,11 @@ from pyparsing import CaselessKeyword, CaselessLiteral, Combine, FollowedBy, For
 import pyparsing
 
 from identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
-    strict_reserved_keywords, unrestricted_name, enum_val_id
+    strict_reserved_keywords, unrestricted_name, enum_val_id, identifier, typed_name, \
+    TODO_identifier_or_object_attrib_loose
 from lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
-from literals import date_string, decimal_literal, float_literal, literal
+from literals import date_string, decimal_literal, float_literal, literal, \
+    quoted_string_keep_quotes, integer, quoted_string
 from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
 import procedures
