@@ -3860,7 +3860,7 @@ class Call_Statement(VBA_Object):
         
         # It's a method call. Is it one we are handling as a member
         # access expression?
-        memb_funcs = set(["AddItem"])
+        memb_funcs = set(["AddItem", "Append_3"])
         if (short_func_name not in memb_funcs):
             return None
 

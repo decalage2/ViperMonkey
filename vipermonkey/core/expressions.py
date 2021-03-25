@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+"""@package expressions VBA Grammar - Expressions
+"""
+
 """
 ViperMonkey: VBA Grammar - Expressions
 
@@ -52,19 +56,23 @@ import string
 import base64
 import unidecode
 
-from identifiers import *
-from reserved import *
-from lib_functions import *
-from literals import *
-from operators import *
+from pyparsing import CaselessKeyword, CaselessLiteral, Combine, FollowedBy, Forward, Group, infixNotation, \
+    Keyword, Literal, NotAny, oneOf, OneOrMore, opAssoc, Optional, ParseException, Regex, \
+    Suppress, White, Word, ZeroOrMore, delimitedList
+import pyparsing
+
+from identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
+    strict_reserved_keywords, unrestricted_name, enum_val_id, identifier, typed_name, \
+    TODO_identifier_or_object_attrib_loose
+#from reserved import *
+from lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
+from literals import date_string, decimal_literal, float_literal, literal, \
+    quoted_string_keep_quotes, integer, quoted_string
+from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
+    Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg
-from vba_object import to_python
-from vba_object import coerce_to_int
-from vba_object import coerce_to_str
-from vba_object import strip_nonvb_chars
-from vba_object import int_convert
-from vba_object import VbaLibraryFunc
+from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, strip_nonvb_chars, \
+    int_convert, VbaLibraryFunc, VBA_Object
 import vba_context
 import utils
 
@@ -436,7 +444,7 @@ class MemberAccessExpression(VBA_Object):
             curr_func = curr_obj
             if isinstance(curr_obj, SimpleNameExpression):
                 obj_name = str(curr_obj)
-                curr_func = expressions.function_call.parseString(obj_name + "()", parseAll=True)[0]
+                curr_func = function_call.parseString(obj_name + "()", parseAll=True)[0]
                 curr_func.params = []
             elif isinstance(curr_obj, Function_Call):
                 obj_name = str(curr_obj.name)
@@ -636,7 +644,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[0], parseAll=True)[0]
+            obj = expression.parseString(indices[0], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             table_index = obj
@@ -656,7 +664,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[1], parseAll=True)[0]
+            obj = expression.parseString(indices[1], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             cell_index_row = obj
@@ -676,7 +684,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(indices[2], parseAll=True)[0]
+            obj = expression.parseString(indices[2], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             cell_index_col = obj
@@ -757,7 +765,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(ids[0], parseAll=True)[0]
+            obj = expression.parseString(ids[0], parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -971,7 +979,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            obj = expression.parseString(index, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -1660,7 +1668,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(index, parseAll=True)[0]
+            obj = expression.parseString(index, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
             index = obj
@@ -1866,7 +1874,7 @@ class MemberAccessExpression(VBA_Object):
         # Make the UsedRange call with or without a sheet.
         new_usedrange = None
         try:
-            new_usedrange = expressions.function_call.parseString("UsedRange()", parseAll=True)[0]
+            new_usedrange = function_call.parseString("UsedRange()", parseAll=True)[0]
             new_usedrange.params = []
         except ParseException as e:
             log.error("Parsing synthetic UsedRange() failed. " + str(e))
@@ -1890,7 +1898,7 @@ class MemberAccessExpression(VBA_Object):
         try:
 
             # Parse it. Assume this is an expression.
-            obj = expressions.expression.parseString(range_exp_str, parseAll=True)[0]
+            obj = expression.parseString(range_exp_str, parseAll=True)[0]
             if just_expr:
                 return obj
 
@@ -1955,6 +1963,62 @@ class MemberAccessExpression(VBA_Object):
         #print "RESULT!!"
         #print r
         return r
+
+    def _handle_stringbuilder_method(self, context, lhs_val):
+        """
+        Handle string builder object appends like 'foo.Append_3 "aaa"' and
+        string builder string conversions like 'foo.ToString'.
+        """
+
+        # Is the LHS a StringBuilder object?
+        if (not str(lhs_val).lower().endswith("stringbuilder")):
+            return None
+
+        # We are doing something with a StringBuilder object.
+
+        # Are we doing an append?
+        rhs = self.rhs
+        if (isinstance(rhs, list)):
+            rhs = rhs[0]
+        if (isinstance(rhs, Function_Call) and (str(rhs.name) == "Append_3")):
+
+            # We save the stringbuilder buffer with a synthetic
+            # variable.
+            synth_var = str(self.lhs) + ".__BUFFER__"
+
+            # Get the current buffer value.
+            buffer_val = ""
+            if (context.contains(synth_var)):
+                buffer_val = context.get(synth_var)
+
+            # Get the string to append to the buffer.
+            if (len(rhs.params) == 0):
+                return None
+            str_val = eval_arg(rhs.params[0], context)
+
+            # Save the updated buffer value.
+            buffer_val += str_val
+            context.set(synth_var, buffer_val, force_global=True)
+
+            # Done.
+            return buffer_val
+
+        # Getting the string builder as a string?
+        if (str(rhs) == "ToString"):
+
+            # We save the stringbuilder buffer with a synthetic
+            # variable.
+            synth_var = str(self.lhs) + ".__BUFFER__"
+
+            # Get the current buffer value.
+            buffer_val = ""
+            if (context.contains(synth_var)):
+                buffer_val = context.get(synth_var)
+
+            # Done.
+            return buffer_val
+                
+        return None
     
     def eval(self, context, params=None):
 
@@ -1988,7 +2052,14 @@ class MemberAccessExpression(VBA_Object):
         if (r is not None):
             #print "OUT: 1"
             return r
-            
+
+        # StringBuilder object string append or string conversion?
+        #print "HERE: 1.1"
+        r = self._handle_stringbuilder_method(context, tmp_lhs)
+        if (r is not None):
+            #print "OUT: 1.1"
+            return r
+        
         # Easy case. Do we have this saved as a variable?
         #print "HERE: 3"
         r = self._read_member_expression_as_var(context, tmp_lhs)
@@ -2522,6 +2593,7 @@ class With_Member_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens, old_call=None):
         super(With_Member_Expression, self).__init__(original_str, location, tokens)
+        old_call = old_call # pylint warning
         self.expr = tokens.expr
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as With_Member_Expression' % self)
@@ -2530,7 +2602,8 @@ class With_Member_Expression(VBA_Object):
         return "." + str(self.expr)
 
     def to_python(self, context, params=None, indent=0):
-
+        indent = indent # pylint warning
+        
         # Currently we are only supporting JIT emulation of With blocks
         # based on Scripting.Dictionary. Is that what we have?
         with_dict = None
@@ -2620,7 +2693,9 @@ class With_Member_Expression(VBA_Object):
         # Plain eval.
         return self.expr.eval(context, params)
 
-with_member_access_expression = Suppress(".") + (simple_name_expression("expr") ^ function_call_limited("expr") ^ member_access_expression("expr")) 
+
+with_member_access_expression = Suppress(".") + \
+                                (simple_name_expression("expr") ^ function_call_limited("expr") ^ member_access_expression("expr")) 
 with_member_access_expression.setParseAction(With_Member_Expression)
 with_dictionary_access_expression = Suppress("!") + unrestricted_name
 with_expression = with_member_access_expression | with_dictionary_access_expression
@@ -2644,6 +2719,7 @@ with_expression = with_member_access_expression | with_dictionary_access_express
 
 boolean_expression = Forward()
 new_expression = Forward()
+# pylint: disable=pointless-statement
 l_expression << (with_expression ^ member_access_expression ^ new_expression ^ member_access_expression_loose) | \
     instance_expression | \
     dictionary_access_expression | \
@@ -2699,7 +2775,7 @@ class Function_Call(VBA_Object):
             array = None
             orig_array = self.params[2]
             try:
-                array = expressions.expression.parseString(self.params[2].name, parseAll=True)[0]
+                array = expression.parseString(self.params[2].name, parseAll=True)[0]
             except ParseException:
                 pass
             if (array is not None):
@@ -2780,7 +2856,8 @@ class Function_Call(VBA_Object):
             except KeyError:
                 log.warning("External function " + str(self.name) + " not found.")
                 return "NULL"
-            
+
+        # pylint: disable=protected-access
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
             if ("Scripting.Dictionary" not in str(params)):
@@ -2801,8 +2878,7 @@ class Function_Call(VBA_Object):
                     index = params[0]
                     if (index in f):
                         return f[index]
-                    else:
-                        return "NULL"
+                    return "NULL"
             
             # Is this actually an array access?
             if (isinstance(f, list)):
@@ -2830,10 +2906,10 @@ class Function_Call(VBA_Object):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug('Returning: %r' % r)
                         return r
-                    except:
+                    except Exception as e:
 
                         # Return error array access result.
-                        msg = 'Array Access Failed: %r[%r]' % (tmp, str(params))
+                        msg = 'Array Access Failed: %r[%r] %r' % (tmp, str(params), str(e))
                         context.set_error(msg)
                         return 0
 
@@ -2856,8 +2932,7 @@ class Function_Call(VBA_Object):
             # Emulate the action.
             #print "WHERE: 4"
             if (f is not None):
-                if (isinstance(f, procedures.Function) or
-                    isinstance(f, procedures.Sub) or
+                if (isinstance(f, (procedures.Function, procedures.Sub)) or
                     ("vba_library." in str(type(f)))):
                     try:
 
@@ -2874,10 +2949,7 @@ class Function_Call(VBA_Object):
                                     if (context.contains(arg_var_name)):
 
                                         # Don't overwrite functions.
-                                        arg_var_val = context.get(arg_var_name)
-                                        if (not (isinstance(f, procedures.Function) or
-                                                 isinstance(f, procedures.Sub) or
-                                                 isinstance(f, VbaLibraryFunc))):
+                                        if (not isinstance(f, (VbaLibraryFunc, procedures.Function, procedures.Sub))):
                                             context.set(arg_var_name, f.byref_params[byref_param_info])
                                 except IndexError:
                                     break
@@ -2919,10 +2991,10 @@ class Function_Call(VBA_Object):
                             log.debug("Return " + str(r))
                         return r
 
-                    except:
+                    except Exception as e:
 
                         # Return result.
-                        log.error("Array access %r[%r] failed." % (f, params[0]))
+                        log.error("Array access %r[%r] failed. %r" % (f, params[0], str(e)))
                         return 0
             else:
 
@@ -2956,9 +3028,7 @@ class Function_Call(VBA_Object):
 
                         # Drill down through layers of indirection to get the name of the function to run.
                         s = context.get(s)
-                        if (isinstance(s, procedures.Function) or
-                            isinstance(s, procedures.Sub) or
-                            isinstance(s, VbaLibraryFunc)):
+                        if (isinstance(s, (VbaLibraryFunc, procedures.Function, procedures.Sub))):
                             s = s.eval(context=context, params=new_params)
                             r = s
 
@@ -2992,8 +3062,12 @@ class Function_Call(VBA_Object):
             log.warning('Function %r not found' % self.name)
             return None
 
+        # Fell through to here. Must be an error.
+        return None
+        
     def to_python(self, context, params=None, indent=0):
-
+        indent = indent # pylint warning
+        
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
         dll_func_name = context.get_true_name(self.name)
@@ -3069,6 +3143,7 @@ class Function_Call(VBA_Object):
         # Done.
         return r
         
+
 # comma-separated list of parameters, each of them can be an expression:
 # TODO: Since the VB designers in their infinite wisdom decided to use the same operators
 # for bitwise arithmetic as boolean logic, we somehow have to tell based on the context
@@ -3079,7 +3154,8 @@ expr_item_strict = Forward()
 # expression given as a function call parameter. Allowing these keywords for all expressions is
 # not strictly correct (invalid VB could be parsed and treated as valid), but we assume that
 # ViperMonkey is working with valid VB to begin with so this should not be a problem.
-expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + expression ^ boolean_expression ^ member_access_expression_loose
+expr_list_item = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
+                 expression ^ boolean_expression ^ member_access_expression_loose
 expr_list_item_strict = Optional(Suppress(CaselessKeyword("ByVal") | CaselessKeyword("ByRef"))) + \
                         NotAny(CaselessKeyword("End")) + \
                         (expression ^ boolean_expression ^ member_access_expression_loose)
@@ -3103,6 +3179,7 @@ def quick_parse_int_or_var(text):
     r = expression.parseString(text, parseAll=True)[0]
     return r
     
+
 # Parse large array expressions quickly with a regex.
 # language=PythonRegExp
 # No newlines in whitespace.
@@ -3113,7 +3190,6 @@ expr_list_fast.setParseAction(lambda t: [quick_parse_int_or_var(i) for i in t[0]
 expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
 
 # WARNING: This may break parsing in function calls when the 1st argument is skipped.
-#expr_list = Suppress(Optional(",")) + expr_list_item + NotAny(':=') + Optional(Suppress(",") + delimitedList(Optional(expr_list_item, default="")))
 expr_list = (
     expr_list_item
     + NotAny(':=')
@@ -3207,6 +3283,7 @@ class Function_Call_Array_Access(VBA_Object):
         return r
 
     def eval(self, context, params=None):
+        params = params # pylint warning
 
         # Evaluate the value of the function returing the array.
         array_val = eval_arg(self.array, context=context)
@@ -3229,10 +3306,15 @@ class Function_Call_Array_Access(VBA_Object):
         # Everything is valid. Return the array element.
         return array_val[array_index]
             
-func_call_array_access = function_call("array") + Suppress("(") + expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + Suppress(")")
+
+func_call_array_access = function_call("array") + Suppress("(") + \
+                         expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + \
+                         Suppress(")")
 func_call_array_access.setParseAction(Function_Call_Array_Access)
 
-func_call_array_access_limited <<= function_call_limited("array") + Suppress("(") + expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + Suppress(")")
+func_call_array_access_limited <<= function_call_limited("array") + Suppress("(") + \
+                                   expression("index") + ZeroOrMore(Suppress(Literal(",")) + expression)("other_indices") + \
+                                   Suppress(")")
 func_call_array_access_limited.setParseAction(Function_Call_Array_Access)
 
 # --- EXPRESSION ITEM --------------------------------------------------------
@@ -3380,9 +3462,8 @@ class BoolExprItem(VBA_Object):
             return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
         elif (self.lhs is not None):
             return self.lhs.__repr__()
-        else:
-            log.error("BoolExprItem: Improperly parsed.")
-            return ""
+        log.error("BoolExprItem: Improperly parsed.")
+        return ""
 
     def _vba_to_python_op(self, op, context):
         return _vba_to_python_op(op, not context.in_bitwise_expression)
@@ -3392,7 +3473,10 @@ class BoolExprItem(VBA_Object):
         expr_str = None
         got_op = True
         if (self.op is not None):
-            expr_str = to_python(self.lhs, context, params) + " " + self._vba_to_python_op(self.op, context) + " " + to_python(self.rhs, context, params)
+            # LHS op RHS
+            expr_str = to_python(self.lhs, context, params) + " " + \
+                       self._vba_to_python_op(self.op, context) + " " + \
+                       to_python(self.rhs, context, params)
         elif (self.lhs is not None):
             got_op = False
             expr_str = to_python(self.lhs, context, params)
@@ -3408,7 +3492,8 @@ class BoolExprItem(VBA_Object):
         return r
         
     def eval(self, context, params=None):
-
+        params = params # pylint warning
+        
         # We always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
         try:
@@ -3454,6 +3539,7 @@ class BoolExprItem(VBA_Object):
             # Convert both to ints, if possible.
             try:
                 lhs = int(lhs)
+            # pylint: disable=bare-except
             except:
                 pass
 
@@ -3462,6 +3548,7 @@ class BoolExprItem(VBA_Object):
             # Convert both to ints, if possible.
             try:
                 rhs = int(rhs)
+            # pylint: disable=bare-except
             except:
                 pass
 
@@ -3478,8 +3565,9 @@ class BoolExprItem(VBA_Object):
             rhs = ''.join(filter(lambda x:x in string.printable, rhs))
             
         # Handle unexpected types.
-        if (((not isinstance(rhs, int)) and (not isinstance(rhs, str)) and (not isinstance(rhs, float))) or
-            ((not isinstance(lhs, int)) and (not isinstance(lhs, str)) and (not isinstance(lhs, float)))):
+        rhs_invalid_type = ((not isinstance(rhs, int)) and (not isinstance(rhs, str)) and (not isinstance(rhs, float)))
+        lhs_invalid_type = ((not isinstance(lhs, int)) and (not isinstance(lhs, str)) and (not isinstance(lhs, float)))
+        if (rhs_invalid_type or lhs_invalid_type):
 
             # Punt and compare everything as strings.
             lhs = str(lhs)
@@ -3529,8 +3617,10 @@ class BoolExprItem(VBA_Object):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
             except Exception as e:
-
-                # Not a valid Pyhton regex. Just check string equality.
+                
+                # Not a valid python regex. Just check string equality.
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug(str(rhs) + " not valid python regex. " + str(e))
                 r = (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
@@ -3550,6 +3640,7 @@ class BoolExprItem(VBA_Object):
         # Done.                
         return r
         
+
 bool_expr_item <<= (limited_expression + \
                     (oneOf(">= => <= =< <> = > < <>") | CaselessKeyword("Like") | CaselessKeyword("Is")) + \
                     limited_expression) | \
@@ -3569,6 +3660,7 @@ class BoolExpr(VBA_Object):
             self.lhs = tokens
             try:
                 self.lhs = tokens[0]
+            # pylint: disable=bare-except
             except:
                 pass
             self.op = None
@@ -3576,6 +3668,7 @@ class BoolExpr(VBA_Object):
             try:
                 self.op = tokens[1]
                 self.rhs = BoolExpr(original_str, location, [tokens[2:], None])
+            # pylint: disable=bare-except
             except:
                 pass
 
@@ -3597,13 +3690,11 @@ class BoolExpr(VBA_Object):
         if (self.op is not None):
             if (self.lhs is not None):
                 return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
-            else:
-                return self.op + " " + self.rhs.__repr__()
+            return self.op + " " + self.rhs.__repr__()
         elif (self.lhs is not None):
             return self.lhs.__repr__()
-        else:
-            log.error("BoolExpr: Improperly parsed.")
-            return ""
+        log.error("BoolExpr: Improperly parsed.")
+        return ""
 
     def _vba_to_python_op(self, op, context):
         return _vba_to_python_op(op, not context.in_bitwise_expression)
@@ -3638,7 +3729,8 @@ class BoolExpr(VBA_Object):
         return r
         
     def eval(self, context, params=None):
-
+        params = params # pylint warning
+        
         # Unary operator?
         if (self.lhs is None):
 
@@ -3646,8 +3738,8 @@ class BoolExpr(VBA_Object):
             rhs = None
             try:
                 rhs = eval_arg(self.rhs, context)
-            except:
-                log.error("BoolExpr: Cannot eval " + self.__repr__() + ".")
+            except Exception as e:
+                log.error("BoolExpr: Cannot eval " + self.__repr__() + ". " + str(e))
                 return ''
 
             # Bitwise operation?
@@ -3655,17 +3747,16 @@ class BoolExpr(VBA_Object):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Bitwise boolean operation: " + str(self))
                 if (self.op.lower() == "not"):
+                    # pylint: disable=invalid-unary-operand-type
                     return (~ rhs)
-                else:
-                    log.error("BoolExpr: Unknown bitwise unary op " + str(self.op))
-                    return 0
+                log.error("BoolExpr: Unknown bitwise unary op " + str(self.op))
+                return 0
                 
             # Evalue the unary expression.
             if (self.op.lower() == "not"):
                 return (not rhs)
-            else:
-                log.error("BoolExpr: Unknown boolean unary op " + str(self.op))
-                return ''
+            log.error("BoolExpr: Unknown boolean unary op " + str(self.op))
+            return ''
                 
         # If we get here we always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
@@ -3684,7 +3775,7 @@ class BoolExpr(VBA_Object):
         rhs = self.rhs
         try:
             rhs = eval_arg(self.rhs, context)
-        except AttributeError as e:
+        except AttributeError:
             pass
 
         # Bitwise operation?
@@ -3699,9 +3790,9 @@ class BoolExpr(VBA_Object):
                 return lhs | rhs
             elif (self.op.lower() == "xor"):
                 return lhs ^ rhs
-            else:
-                log.error("BoolExpr: Unknown bitwise operator %r" % self.op)
-                return 0
+
+            log.error("BoolExpr: Unknown bitwise operator %r" % self.op)
+            return 0
             
         # Evaluate the expression.
         if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
@@ -3710,10 +3801,11 @@ class BoolExpr(VBA_Object):
             return lhs or rhs
         elif ((self.op.lower() == "eqv") or (self.op.lower() == "=")):
             return (lhs == rhs)
-        else:
-            log.error("BoolExpr: Unknown operator boolean %r" % self.op)
-            return False
 
+        log.error("BoolExpr: Unknown operator boolean %r" % self.op)
+        return False
+
+        
 boolean_expression <<= infixNotation(bool_expr_item,
                                      [
                                          (CaselessKeyword("Not"), 1, opAssoc.RIGHT),
@@ -3739,7 +3831,10 @@ class New_Expression(VBA_Object):
         return ('New %r' % self.obj)
 
     def to_python(self, context, params=None, indent=0):
-
+        context = context # pylint warning
+        params = params # pylint warning
+        indent = indent # pylint warning
+        
         # We can fake RegEx objects.
         if (str(self.obj).strip().lower() == "regexp"):
             return "core.utils.vb_RegExp()"
@@ -3748,9 +3843,13 @@ class New_Expression(VBA_Object):
         return "ERROR: Not emulating " + str(self)
     
     def eval(self, context, params=None):
+        context = context # pylint warning
+        params = params # pylint warning
+        
         # TODO: Not sure how to handle this. For now just return what is being created.
         return self.obj
 
+# pylint: disable=expression-not-assigned
 new_expression << CaselessKeyword('New').suppress() + expression('expression')
 new_expression.setParseAction(New_Expression)
 
@@ -3770,8 +3869,12 @@ class TypeOf_Expression(VBA_Object):
         return "TypeOf " + str(self.item) + " Is " + str(self.the_type)
 
     def eval(self, context, params=None):
+        context = context # pylint warning
+        params = params # pylint warning
+        
         # TODO: Not sure how to handle this. For now just always matches.
         return True
+
 
 typeof_expression <<= CaselessKeyword("TypeOf") + expression("item") + CaselessKeyword("Is") + expression("the_type")
 typeof_expression.setParseAction(TypeOf_Expression)
@@ -3789,8 +3892,11 @@ class AddressOf_Expression(VBA_Object):
         return "AddressOf " + str(self.item)
 
     def eval(self, context, params=None):
+        context = context # pylint warning
+        params = params # pylint warning
         # TODO: Not sure how to handle this. For now just always matches anything.
         return "**MATCH ANY**"
+
 
 addressof_expression <<= CaselessKeyword("AddressOf") + expression("item")
 addressof_expression.setParseAction(AddressOf_Expression)
@@ -3810,11 +3916,16 @@ class Excel_Expression(VBA_Object):
         return "[" + str(self.row) + ":" + str(self.col) + "]"
 
     def eval(self, context, params=None):
+        context = context # pylint warning
+        params = params # pylint warning
         # TODO: Not sure how to handle this. For now do nothing.
         return "NULL"
+
     
 # ex. [A:B]
-excel_expression <<= Suppress(Literal("[")) + lex_identifier("row") + Suppress(Literal(":")) + lex_identifier("col") + Suppress(Literal("]"))
+excel_expression <<= Suppress(Literal("[")) + \
+                     lex_identifier("row") + Suppress(Literal(":")) + lex_identifier("col") + \
+                     Suppress(Literal("]"))
 excel_expression.setParseAction(Excel_Expression)
 
 # --- LITERAL LIST EXPRESSION --------------------------------------------------------------
@@ -3831,10 +3942,12 @@ class Literal_List_Expression(VBA_Object):
         return "[" + str(self.item) + "]"
 
     def eval(self, context, params=None):
+        params = params # pylint warning
         if (isinstance(self.item, str)):
             return self.item
         return self.item.eval(context)
     
+
 literal_list_expression <<= Suppress("[") + (unrestricted_name | decimal_literal)("item") + Suppress("]")
 literal_list_expression.setParseAction(Literal_List_Expression)
 
@@ -3867,5 +3980,8 @@ class Tuple_Expression(VBA_Object):
         # TODO: Fill this in if needed.
         pass
 
-tuple_expression <<= Suppress(Literal("(")) + (expression + OneOrMore(Suppress(Literal(",")) + expression))("expr_items") + Suppress(Literal(")"))
+    
+tuple_expression <<= Suppress(Literal("(")) + \
+                     (expression + OneOrMore(Suppress(Literal(",")) + expression))("expr_items") + \
+                     Suppress(Literal(")"))
 tuple_expression.setParseAction(Tuple_Expression)

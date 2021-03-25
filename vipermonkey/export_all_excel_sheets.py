@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-# Export all of the sheets of an Excel file as separate CSV files.
-# This is Python 3.
+"""@package export_all_excel_sheets 
+Export all of the sheets of an Excel file as separate CSV files. This
+is Python 3.
+"""
 
 import sys
-import os, signal
+import os
+import signal
 # sudo pip3 install psutil
 import psutil
 import subprocess
@@ -22,12 +25,12 @@ HOST = "127.0.0.1"
 PORT = 2002
 
 def is_excel_file(maldoc):
-    """
-    Check to see if the given file is an Excel file..
+    """Check to see if the given file is an Excel file.
 
-    @param name (str) The name of the file to check.
+    @param maldoc (str) The name of the file to check.
 
     @return (bool) True if the file is an Excel file, False if not.
+
     """
     typ = subprocess.check_output(["file", maldoc])
     if ((b"Excel" in typ) or (b"Microsoft OOXML" in typ)):
@@ -37,10 +40,11 @@ def is_excel_file(maldoc):
 
 ###################################################################################################
 def wait_for_uno_api():
-    """
-    Sleeps until the libreoffice UNO api is available by the headless libreoffice process. Takes
-    a bit to spin up even after the OS reports the process as running. Tries 3 times before giving
-    up and throwing an Exception.
+    """Sleeps until the libreoffice UNO api is available by the headless
+    libreoffice process. Takes a bit to spin up even after the OS
+    reports the process as running. Tries 3 times before giving up and
+    throwing an Exception.
+
     """
 
     tries = 0
@@ -57,10 +61,11 @@ def wait_for_uno_api():
 
 ###################################################################################################
 def get_office_proc():
-    """
-    Returns the process info for the headless libreoffice process. None if it's not running
+    """Returns the process info for the headless LibreOffice
+    process. None if it's not running
 
-    @return (psutil.Process)
+    @return (psutil.Process) The LibreOffice process if found, None if not found.
+
     """
 
     for proc in psutil.process_iter():
@@ -75,19 +80,19 @@ def get_office_proc():
 
 ###################################################################################################
 def is_office_running():
-    """
-    Check to see if the headless libreoffice process is running.
+    """Check to see if the headless LibreOffice process is running.
 
     @return (bool) True if running False otherwise
+
     """
 
     return True if get_office_proc() else False
 
 ###################################################################################################
 def run_soffice():
-    """
-    Start the headless, UNO supporting, libreoffice process to access the API, if it is not already
-    running.
+    """Start the headless, UNO supporting, LibreOffice process to access
+    the API, if it is not already running.
+
     """
 
     # start the process
@@ -102,8 +107,15 @@ def run_soffice():
         wait_for_uno_api()
 
 def get_component(fname, context):
-    """
-    Load the object for the Excel spreadsheet.
+    """Load the object for the Excel spreadsheet.
+
+    @param fname (str) The name of the Excel file.
+
+    @param context (??) The UNO object connected to the local LibreOffice server.
+
+    @return (??) UNO LibreOffice Calc object representing the loaded
+    Excel file.
+
     """
     url = convert_path_to_url(fname)
     component = Calc(context, url)
@@ -123,11 +135,13 @@ def fix_file_name(fname):
     return r
 
 def convert_csv(fname):
-    """
-    Convert all of the sheets in a given Excel spreadsheet to CSV files.
+    """Convert all of the sheets in a given Excel spreadsheet to CSV
+    files.
 
-    fname - The name of the file.
-    return - A list of the names of the CSV sheet files.
+    @param fname (str) The name of the Excel file.
+    
+    @return (list) A list of the names (str) of the CSV sheet files.
+
     """
 
     # Make sure this is an Excel file.
@@ -187,4 +201,8 @@ def convert_csv(fname):
     # Done.
     return r
 
-print(convert_csv(sys.argv[1]))
+###########################################################################
+## Main Program
+###########################################################################
+if __name__ == '__main__':
+    print(convert_csv(sys.argv[1]))
