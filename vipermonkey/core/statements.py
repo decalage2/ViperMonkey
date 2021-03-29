@@ -55,7 +55,6 @@ from expressions import *
 from vba_context import *
 from reserved import *
 from from_unicode_str import *
-from vba_object import int_convert
 from vba_object import to_python
 from vba_object import _eval_python
 from vba_object import _boilerplate_to_python
@@ -947,8 +946,8 @@ class Let_Statement(VBA_Object):
                 return False
             the_str = eval_arg(args[0], context)
             the_str_var = args[0]
-            start = int_convert(eval_arg(args[1], context), leave_alone=True)
-            size = int_convert(eval_arg(args[2], context), leave_alone=True)
+            start = utils.int_convert(eval_arg(args[1], context), leave_alone=True)
+            size = utils.int_convert(eval_arg(args[2], context), leave_alone=True)
             
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
@@ -1234,10 +1233,10 @@ class Let_Statement(VBA_Object):
                     value = num
                         
             # Evaluate the index expression(s).
-            index = int_convert(eval_arg(self.index, context=context))
+            index = utils.int_convert(eval_arg(self.index, context=context))
             index1 = None
             if (self.index1 is not None):
-                index1 = int_convert(eval_arg(self.index1, context=context))
+                index1 = utils.int_convert(eval_arg(self.index1, context=context))
                 #log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, self.index, self.index1, value))
                 #return
                 
@@ -1454,7 +1453,7 @@ class For_Statement(VBA_Object):
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
-            start = int_convert(start)
+            start = utils.int_convert(start)
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
@@ -1462,7 +1461,7 @@ class For_Statement(VBA_Object):
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
-            end = int_convert(end)
+            end = utils.int_convert(end)
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
             return (None, None, None)
@@ -1474,7 +1473,7 @@ class For_Statement(VBA_Object):
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             if (isinstance(step, basestring)):
-                step = int_convert(step)
+                step = utils.int_convert(step)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
@@ -3271,8 +3270,8 @@ class Case_Clause_Atomic(VBA_Object):
             start = None
             end = None
             try:
-                start = int_convert(eval_arg(self.case_val[0], context))
-                end = int_convert(eval_arg(self.case_val[1], context)) + 1
+                start = utils.int_convert(eval_arg(self.case_val[0], context))
+                end = utils.int_convert(eval_arg(self.case_val[1], context)) + 1
             except:
                 return False                
 

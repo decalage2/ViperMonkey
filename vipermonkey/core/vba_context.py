@@ -1196,8 +1196,7 @@ class Context(object):
         global num_b64_iocs
         
         # Strip NULLs and unprintable characters from the potential IOC.
-        from vba_object import strip_nonvb_chars
-        value = strip_nonvb_chars(value)
+        value = utils.strip_nonvb_chars(value)
         if (len(re.findall(r"NULL", str(value))) > 20):
             value = str(value).replace("NULL", "")
         
@@ -1596,19 +1595,17 @@ class Context(object):
         if (strip_null_bytes):
 
             # Strip bad characters.
-            from vba_object import strip_nonvb_chars
-
-            action = strip_nonvb_chars(action)
-            new_params = strip_nonvb_chars(params)
+            action = utils.strip_nonvb_chars(action)
+            new_params = utils.strip_nonvb_chars(params)
             if (isinstance(params, list)):
                 new_params = []
                 for p in params:
-                    tmp_p = strip_nonvb_chars(p)
+                    tmp_p = utils.strip_nonvb_chars(p)
                     if (len(re.findall(r"NULL", str(tmp_p))) > 20):
                         tmp_p = str(tmp_p).replace("NULL", "")
                     new_params.append(tmp_p)
             params = new_params
-            description = strip_nonvb_chars(description)
+            description = utils.strip_nonvb_chars(description)
 
             # Strip repeated NULLs in the action.
             if (len(re.findall(r"NULL", action)) > 20):

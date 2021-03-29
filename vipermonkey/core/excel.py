@@ -51,6 +51,7 @@ import json
 import os
 import filetype
 import random
+import re
 import subprocess
 try:
     import xlrd2 as xlrd
@@ -134,6 +135,22 @@ def _read_sheet_from_csv(filename):
     #sys.exit(0)
     return r
 
+def _fix_sheet_name(sheet_name):
+    """Replace characters given as hex with the actual character values.
+
+    @param sheet_name (str) The name of the sheet to fix.
+
+    @return (str) The given name with 0xNN substrings replaced with
+    chr(0xNN).
+
+    """
+    pat = r"(0x[0-9a-f]{2})"
+    r = sheet_name
+    for hex_val in re.findall(pat, sheet_name):
+        chr_val = int(hex_val, 16)
+        r = r.replace(hex_val, chr(chr_val))
+    return r
+
 def load_excel_libreoffice(data):
     """Read in an Excel file into an ExcelBook object by using
     LibreOffice.
@@ -165,21 +182,28 @@ def load_excel_libreoffice(data):
         os.remove(out_dir)
         return None
 
-    # Get the names of the sheet files, if there are any.
+    # Get the names of the sheet files, if there are any. Also get the name of
+    # the currently active sheet.
     try:
         sheet_files = json.loads(output.replace("'", '"'))
     except Exception as e:
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Loading sheeti file names failed. " + str(e))
-        os.remove(out_dir)
-        return None
-    if (len(sheet_files) == 0):
+            log.debug("Loading sheet file names failed. " + str(e))
         os.remove(out_dir)
         return None
 
+    # No sheets exported? The 1st element is the name of the active sheet,
+    # hence the <= 1.
+    if (len(sheet_files) <= 1):
+        os.remove(out_dir)
+        return None
+
+    # Save the name of the active sheet.
+    active_sheet_name = sheet_files[0]
+    
     # Load the CSV files into Excel objects.
     sheet_map = {}
-    for sheet_file in sheet_files:
+    for sheet_file in sheet_files[1:]:
 
         # Read the CSV file into a single Excel workbook object.
         tmp_workbook = _read_sheet_from_csv(sheet_file)
@@ -190,7 +214,7 @@ def load_excel_libreoffice(data):
         # Pull out the name of the current sheet.
         start = sheet_file.index("--") + 2
         end = sheet_file.rindex(".")
-        sheet_name = sheet_file[start : end]
+        sheet_name = _fix_sheet_name(sheet_file[start : end])
 
         # Pull out the index of the current sheet.
         start = sheet_file.index("-") + 1
@@ -210,8 +234,12 @@ def load_excel_libreoffice(data):
     for index in sorted_indices:
         result_book.sheets.append(sheet_map[index])
 
+    # Set the name of the active sheet.
+    if (active_sheet_name != "NO_ACTIVE_SHEET"):
+        result_book.active_sheet_name = active_sheet_name
+        
     # Delete the temp files with the CSV sheet data.
-    for sheet_file in sheet_files:
+    for sheet_file in sheet_files[1:]:
         os.remove(sheet_file)
 
     # Delete the temporary Excel file.
@@ -312,7 +340,7 @@ def _get_alphanum_cell_index(row, col):
 
     # Return the alphanumeric cell index.
     return column_name + str(row)
-        
+    
 def get_largest_sheet(workbook):
     """Get the sheet in a workbook with the most cells.
 

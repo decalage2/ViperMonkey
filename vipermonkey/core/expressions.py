@@ -71,8 +71,8 @@ from literals import date_string, decimal_literal, float_literal, literal, \
 from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, strip_nonvb_chars, \
-    int_convert, VbaLibraryFunc, VBA_Object
+from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, \
+    VbaLibraryFunc, VBA_Object
 import vba_context
 import utils
 
@@ -2892,10 +2892,10 @@ class Function_Call(VBA_Object):
                     #    tmp = f[0]
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug('Array Access: %r[%r]' % (tmp, str(params)))
-                    index = int_convert(params[0])
+                    index = utils.int_convert(params[0])
                     index1 = None
                     if (len(params) > 1):
-                        index1 = int_convert(params[1])
+                        index1 = utils.int_convert(params[1])
                     try:
 
                         # Return array access result.
@@ -2983,7 +2983,7 @@ class Function_Call(VBA_Object):
                     try:
 
                         # Return result.
-                        i = int_convert(params[0])
+                        i = utils.int_convert(params[0])
                         r = f[i]
                         if (isinstance(f, str)):
                             r = ord(r)
@@ -3575,8 +3575,8 @@ class BoolExprItem(VBA_Object):
 
         # Always evaluate to true if comparing against a wildcard.
         # We will treat logic looking at the current file name as a wildcard also.
-        rhs = strip_nonvb_chars(rhs)
-        lhs = strip_nonvb_chars(lhs)
+        rhs = utils.strip_nonvb_chars(rhs)
+        lhs = utils.strip_nonvb_chars(lhs)
         rhs_str = str(rhs)
         lhs_str = str(lhs)
         if (("**MATCH ANY**" in lhs_str) or
