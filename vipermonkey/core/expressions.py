@@ -77,8 +77,14 @@ import utils
 from logger import log
 
 def _vba_to_python_op(op, is_boolean):
-    """
-    Convert a VBA boolean operator to a Python boolean operator.
+    """Convert a VBA boolean operator to a Python boolean operator or a
+    Python bitwise operator.
+
+    @param op (str) The VBA boolean operator.
+
+    @param is_boolean (boolean) If True return a Python boolean
+    operator, if False return a Python bitwise operator.
+
     """
     op_map = {
         "Not" : "not",
@@ -117,9 +123,9 @@ file_pointer_loose.setParseAction(lambda t: "#" + str(t[0]))
 
 missed_var_count = {}
 class SimpleNameExpression(VBA_Object):
-    """
-    Identifier referring to a variable within a VBA expression:
-    single identifier with no qualification or argument list
+    """Identifier referring to a variable within a VBA expression: single
+    identifier with no qualification or argument list
+
     """
 
     def __init__(self, original_str, location, tokens, name=None):
@@ -246,10 +252,10 @@ placeholder.setParseAction(lambda t: str(t[0]))
 # --- INSTANCE EXPRESSIONS ------------------------------------------------------------
 
 class InstanceExpression(VBA_Object):
-    """
-    An instance expression consists of the keyword "Me".
-    It represents the current instance of the type defined by the
+    """An instance expression consists of the keyword "Me".  It
+    represents the current instance of the type defined by the
     enclosing class module and has this type as its value type.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -293,8 +299,8 @@ instance_expression.setParseAction(InstanceExpression)
 # Examples: varname.attrname, varname(2).attrname, varname .attrname
 
 class MemberAccessExpression(VBA_Object):
-    """
-    Handle member access expressions.
+    """Handle member access expressions like 'foo/bar/baz()'.
+
     """
 
     def __init__(self, original_str, location, tokens, raw_fields=None):
@@ -331,9 +337,20 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _to_python_handle_listbox_list(self, context, indent):
-        """
-        Handle List() object method calls like foo.List(bar).
+        """Convert List() object method calls like foo.List(bar) to Python.
         foo is (currently) a ListBox object.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current List() method call with it's
+        emulation implemented as Python code if this object is a
+        ListBox object, None if this is not a ListBox object.
+
         """
         indent = indent # pylint warning
         
@@ -367,9 +384,16 @@ class MemberAccessExpression(VBA_Object):
         return r
         
     def _get_with_prefix_value(self, context):
-        """
-        Get the value of the With prefix. None is returned if there is no
+        """Get the value of the With prefix. None is returned if there is no
         With prefix.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (str) The value of the With prefix variable if there is
+        one, None if there is no With prefix.
+
         """
         with_value = None
         if ((context.with_prefix_raw is not None) and
@@ -383,9 +407,20 @@ class MemberAccessExpression(VBA_Object):
         return with_value
     
     def _to_python_handle_add(self, context, indent):
-        """
-        Handle Add() object method calls like foo.Add(bar, baz). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Add() object method calls like foo.Add(bar, baz).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current Add() method call with it's
+        emulation implemented as Python code if this object is a
+        Dictionary object, None if this is not a Dictionary object.
+
         """
 
         # Currently we are only supporting JIT emulation of With blocks
@@ -411,9 +446,14 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _convert_nested_methods_to_func_call(self):
-        """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        return (conceptually) baz(3, bar(2, foo(1))).
+        """Given a member access expression like foo(1).bar(2).baz(3) return
+        (conceptually) baz(3, bar(2, foo(1))). Note that the objects
+        are broken out as function arguments in the calls.
+
+        @return (Function_Call object) The member access expression
+        calls converted to nested function calls if possible, None if
+        conversion is not possible.
+
         """
 
         # Sheets(d).UsedRange.SpecialCells(xlCellTypeConstants)
@@ -475,9 +515,24 @@ class MemberAccessExpression(VBA_Object):
         return res_func
         
     def _to_python_nested_methods(self, context, indent):
-        """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        return (conceptually) baz(3, bar(2, foo(1))), but in Python.
+        """Given a member access expression like foo(1).bar(2).baz(3) return
+        (conceptually) baz(3, bar(2, foo(1))), but in Python.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current List() method call with it's
+        emulation implemented as Python code if this object is a
+        ListBox object, None if this is not a ListBox object.
+
+        @return (str) The member access expression calls converted to
+        Python nested function calls if possible, None if conversion
+        is not possible.
+
         """
         indent = indent # pylint warning
         
@@ -611,8 +666,17 @@ class MemberAccessExpression(VBA_Object):
         return ""
     
     def _handle_indexed_pages_access(self, context):
-        """
-        Handle getting the caption of a Page object referenced via index.
+        """Handle getting the caption of a Page object referenced via
+        index. Handles things like
+        "Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the caption if this is a caption,
+        None if not.
+
         """
 
         # Do we have an indexed page caption reference?
@@ -630,8 +694,16 @@ class MemberAccessExpression(VBA_Object):
         return None
     
     def _handle_table_cell(self, context):
-        """
-        Handle reading a value from a table cell.
+        """Handle reading a value from a table cell. Handles things like
+        "ActiveDocument.Tables(1).Cell(1, 1).Range".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the table cell if this is a table
+        read, None if not.
+
         """
 
         # Pull out the table index and cell indices.
@@ -718,8 +790,16 @@ class MemberAccessExpression(VBA_Object):
         return cell
     
     def _handle_paragraphs(self, context):
-        """
-        Handle references to the .Paragraphs field of the current doc.
+        """Handle references to the .Paragraphs field of the current
+        doc. Handles things like "ActiveDocument.Paragraphs".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the paragraphs field if this is a
+        paragraphs field read, None if not.
+
         """
 
         # Get all paragraphs?
@@ -738,8 +818,16 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_comments(self, context):
-        """
-        Handle references to the .Comments field of the current doc.
+        """Handle references to the .Comments field of the current doc.
+        Handles things like "ActiveDocument.Comments" and "ActiveDocument.Comments(2)"
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the comments field if this is a
+        comments field read, None if not.
+
         """
 
         # Comments reference?
@@ -793,16 +881,35 @@ class MemberAccessExpression(VBA_Object):
         return comments[index]
             
     def _handle_count(self, curr_item):
-        """
-        Handle references to the .Count field of the current item.
+        """Handle references to the .Count field of the current item. Handles
+        things like "foo.count".
+
+        @param curr_item (any) The thing we may be getting the count
+        of.
+
+        @return (any) If curr_item is a list and the current
+        expression is a .count reference, return the length of the
+        list (int), otherwise return None.
+
         """
         if ((".count" in str(self).lower()) and (isinstance(curr_item, list))):
             return len(curr_item)
         return None
         
     def _handle_item(self, context, curr_item):
-        """
-        Handle accessing a list item.
+        """Handle accessing a list item. Handles things like "foo.item(2)".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @param curr_item (any) The thing we may be getting the item()
+        of.
+
+        @return (any) If curr_item is a list and the current
+        expression is a .item() call, return the referenced item,
+        otherwise return None.
+
         """
 
         # Only works for lists.
@@ -830,16 +937,32 @@ class MemberAccessExpression(VBA_Object):
         return curr_item[index]
         
     def _handle_oslanguage(self, context):
-        """
-        Handle references to the OSlanguage field.
+        """Handle references to the OSlanguage field. Handles things like
+        "ActiveDocument.OSLanguage".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the oslanguage field if this is a
+        oslanguage field read, None if not.
+
         """
         if (str(self).lower().endswith(".oslanguage")):
             return context.get("oslanguage")
         return None
         
     def _handle_application_run(self, context):
-        """
-        Handle functions called with Application.Run()
+        """Handle functions called with Application.Run(). Handles things like
+        'Application.Run "Book1.xls!MyMacroName"'.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Application.Run
+        if this is a Application.Run, None if not.
+
         """
 
         # Is this an Application.Run() instance?
@@ -890,8 +1013,17 @@ class MemberAccessExpression(VBA_Object):
             return None
 
     def _handle_set_clipboard(self, context):
-        """
-        Handle calls like objHTML.ParentWindow.clipboardData.setData(...).
+        """Handle calls like
+        objHTML.ParentWindow.clipboardData.setData(...). Will set the
+        clipboard contents in the given context.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (boolean) True if this is a clipboard setData() call,
+        None if not.
+
         """
 
         # Is this a setData() instance?
@@ -915,8 +1047,15 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_get_clipboard(self, context):
-        """
-        Handle calls like objHTML.ParentWindow.clipboardData.getData(...).
+        """Handle calls like objHTML.ParentWindow.clipboardData.getData(...). 
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the clipboard from
+        the context if this is a clipboard read, None if not.
+
         """
 
         # Is this an getData() instance?
@@ -929,8 +1068,19 @@ class MemberAccessExpression(VBA_Object):
         return None
         
     def _handle_docprops_read(self, context):
-        """
-        Handle data reads with ActiveDocument.BuiltInDocumentProperties(...).
+        """Handle data reads with
+        ActiveDocument.BuiltInDocumentProperties(...). Handles things
+        like
+        'ActiveDocument.BuiltInDocumentProperties(wdPropertyWords)'.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the
+        BuiltInDocumentProperties read if this is a
+        BuiltInDocumentProperties read, None if not.
+
         """
 
         # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
@@ -954,8 +1104,16 @@ class MemberAccessExpression(VBA_Object):
         return context.read_metadata_item(field_name)
 
     def _handle_control_read(self, context):
-        """
-        Handle data reads with StreamName.Controls(...).Value.
+        """Handle data reads with StreamName.Controls(...).Value. Handles
+        things like "banrcboyjdipc.Controls(1).Value".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Controls() value
+        read if this is a Controls() value read, None if not.
+
         """
 
         # Something like banrcboyjdipc.Controls(1).Value ?
@@ -1004,8 +1162,17 @@ class MemberAccessExpression(VBA_Object):
         return None
 
     def handle_docvars_read(self, context):
-        """
-        Handle data reads from a document variable.
+        """Handle data reads from a document variable. Handles things like
+        'ActiveDocument.Variables("Value1")'. Also handles more
+        general reads.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Variables() value
+        read if this is a Variables() value read, None if not.
+
         """
 
         # Try an actual doc var read first.
@@ -1047,8 +1214,15 @@ class MemberAccessExpression(VBA_Object):
         return val
 
     def _handle_text_file_read(self, context):
-        """
-        Handle OpenTextFile(...).ReadAll() calls.
+        """Handle OpenTextFile(...).ReadAll() calls.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the text file read if
+        this is a text file read, None if not.
+
         """
 
         # Do we have a text file read?
@@ -2533,7 +2707,10 @@ addressof_expression = CaselessKeyword("addressof").suppress() + procedure_point
 argument_expression = (Optional(CaselessKeyword("byval")) + expression) | addressof_expression
 
 class NamedArgument(VBA_Object):
+    """Handle named arguments like 'foo := 12' to functions/subs.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(NamedArgument, self).__init__(original_str, location, tokens)
 
@@ -2605,6 +2782,9 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
 class With_Member_Expression(VBA_Object):
+    """Handle field references in With statements like '.foo'.
+
+    """
     
     def __init__(self, original_str, location, tokens, old_call=None):
         super(With_Member_Expression, self).__init__(original_str, location, tokens)
@@ -2743,8 +2923,9 @@ l_expression << (with_expression ^ member_access_expression ^ new_expression ^ m
 # --- FUNCTION CALL ---------------------------------------------------------
 
 class Function_Call(VBA_Object):
-    """
-    Function call within a VBA expression
+    """Handle function calls within a VBA expression like 'foo(2,3)' in
+    '12 + foo(2,3)'.
+
     """
 
     # List of interesting functions to log calls to.
@@ -3299,8 +3480,9 @@ function_call_limited.setParseAction(Function_Call)
 # --- ARRAY ACCESS OF FUNCTION CALL --------------------------------------------------------
 
 class Function_Call_Array_Access(VBA_Object):
-    """
-    Array access of the return value of a function call.
+    """Handle array access of the return value of a function call like
+    'foo(1,2)[4]'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3478,8 +3660,9 @@ expr_const <<= infixNotation(expr_const_item,
 # ----------------------------- BOOLEAN expressions --------------
 
 class BoolExprItem(VBA_Object):
-    """
-    A comparison expression or other item appearing in a boolean expression.
+    """Handle a comparison expression or other item appearing in a
+    boolean expression like 'foo > 12'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3685,8 +3868,8 @@ bool_expr_item <<= (limited_expression + \
 bool_expr_item.setParseAction(BoolExprItem)
 
 class BoolExpr(VBA_Object):
-    """
-    A boolean expression.
+    """Handle boolean expressions like '(foo > 12) And (bar < 12)'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3858,6 +4041,10 @@ boolean_expression.setParseAction(BoolExpr)
 # --- NEW EXPRESSION --------------------------------------------------------------
 
 class New_Expression(VBA_Object):
+    """Handle expressions like 'New foo'.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(New_Expression, self).__init__(original_str, location, tokens)
         self.obj = tokens.expression
@@ -3896,6 +4083,10 @@ any_expression = expression ^ boolean_expression
 # --- TYPEOF EXPRESSION --------------------------------------------------------------
 
 class TypeOf_Expression(VBA_Object):
+    """Handle type check expressions like 'TypeOf foo Is String'.
+
+    """
+
     def __init__(self, original_str, location, tokens):
         super(TypeOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -3920,6 +4111,11 @@ typeof_expression.setParseAction(TypeOf_Expression)
 # --- ADDRESSOF EXPRESSION --------------------------------------------------------------
 
 class AddressOf_Expression(VBA_Object):
+    """Handle expressions for getting the memory address of a variable
+    like 'AddressOf foo'.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(AddressOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -3942,7 +4138,10 @@ addressof_expression.setParseAction(AddressOf_Expression)
 # --- EXCEL ROW/COLUMN EXPRESSION --------------------------------------------------------------
 
 class Excel_Expression(VBA_Object):
+    """Handle Excel row/column expressions like '[A:B]'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Excel_Expression, self).__init__(original_str, location, tokens)
         self.row = tokens.row
@@ -3969,7 +4168,10 @@ excel_expression.setParseAction(Excel_Expression)
 # --- LITERAL LIST EXPRESSION --------------------------------------------------------------
 
 class Literal_List_Expression(VBA_Object):
+    """Handle a list of variables or integers like '[1, 2, foo, 3, bar]'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Literal_List_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -3996,7 +4198,10 @@ literal_range_expression.setParseAction(lambda t: str(t[0]) + ":" + str(t[1]))
 
 # --- TUPLE EXPRESSION --------------------------------------------------------------
 class Tuple_Expression(VBA_Object):
+    """Handle a tuple expression like '(1, foo(2), bar)'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Tuple_Expression, self).__init__(original_str, location, tokens)
         self.expr_items = tokens.expr_items

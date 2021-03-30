@@ -135,13 +135,17 @@ class VBA_Object(object):
     loop_upper_bound = 10000000
     
     def __init__(self, original_str, location, tokens):
-        """
-        VBA_Object constructor, to be called as a parse action by a pyparsing parser
+        """VBA_Object constructor, to be called as a parse action by a
+        pyparsing parser
 
-        :param original_str: original string matched by the parser
-        :param location: location of the match
-        :param tokens: tokens extracted by the parser
-        :return: nothing
+        @param original_str (str) original string matched by the
+        parser.
+
+        @param location (int) location of the match.
+
+        @param tokens (PyParsing tokens thing) tokens extracted by the
+        parser
+
         """
         self.original_str = original_str
         self.location = location
@@ -152,22 +156,43 @@ class VBA_Object(object):
         self.exited_with_goto = False
         
     def eval(self, context, params=None):
-        """
-        Evaluate the current value of the object.
+        """Evaluate the current value of the object.
 
-        :param context: Context for the evaluation (local and global variables)
-        :return: current value of the object
+        @param context (Context object) Context for the evaluation
+        (local and global variables). State updates will be reflected
+        in the given context.
+
+        @param params (list) Any parameters provided to the object.
+
+        @return (any) The result of emulating the current object.
+
         """
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug(self)
         # raise NotImplementedError
 
+    def __repr__(self):
+        """Full string representation of the object.
+
+        @return (str) Object as a string.
+
+        """
+        raise NotImplementedError("__repr__() not implemented in " + str(type(self)))
+    
     def full_str(self):
+        """Full string representation of the object.
+
+        @return (str) Object as a string.
+
+        """
         return str(self)
         
     def get_children(self):
-        """
-        Return the child VBA objects of the current object.
+        """Return the child VBA objects of the current object.
+
+        @return (list) The children (VBA_Object objects) of the
+        current object.
+
         """
 
         # Check for timeouts.
@@ -194,8 +219,14 @@ class VBA_Object(object):
         return r
                         
     def accept(self, visitor, no_embedded_loops=False):
-        """
-        Visitor design pattern support. Accept a visitor.
+        """Visitor design pattern support, Accept a visitor.
+        
+        @param visitor (visitor object) The visitor object to use to
+        visit the current object and it's children.
+
+        @param no_embedded_loops (boolean) Whether to skip visiting
+        loops (While, For, etc.) in the current object.
+
         """
 
         # Check for timeouts.
@@ -235,8 +266,20 @@ class VBA_Object(object):
         visitor.in_loop = old_in_loop
 
     def to_python(self, context, params=None, indent=0):
-        """
-        JIT compile this VBA object to Python code for direct emulation.
+        """JIT compile this VBA object to Python code for direct emulation.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param params (list) Any parameters provided to the object.
+        
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current object with it's emulation
+        implemented as Python code.
+
         """
         raise NotImplementedError("to_python() not implemented in " + str(type(self)))
 
