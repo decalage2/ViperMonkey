@@ -64,13 +64,10 @@ from pyparsing import *
 import vb_str
 from vba_context import VBA_LIBRARY
 from vba_object import coerce_to_int
-from vba_object import str_convert
-from vba_object import int_convert
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
-from vba_object import strip_nonvb_chars
 import expressions
 import excel
 import modules
@@ -761,7 +758,7 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
             return len(str(params[0]))
-        val = str_convert(params[0])
+        val = utils.str_convert(params[0])
         if (hasattr(params[0], '__len__')):
 
             # Is this a string?            
@@ -901,10 +898,10 @@ class Mid(VbaLibraryFunc):
         # If start is NULL, NULL is also returned.
         if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
         if not isinstance(s, basestring):
-            s = str(s)
+            s = utils.str_convert(s)
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -933,7 +930,7 @@ class Mid(VbaLibraryFunc):
             return s[start-1:]
         length = 0
         try:
-            length = int_convert(params[2])
+            length = utils.int_convert(params[2])
         except:
             pass
 
@@ -995,7 +992,7 @@ class Left(VbaLibraryFunc):
         # "If String contains the data value Null, Null is returned."
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -1087,7 +1084,7 @@ class Right(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -1310,7 +1307,7 @@ class Eval(VbaLibraryFunc):
         # Pull out the expression to eval.
         if (len(params) < 1):
             return 0
-        expr = strip_nonvb_chars(str(params[0]))
+        expr = utils.strip_nonvb_chars(str(params[0]))
 
         # Save original expression.
         orig_expr = expr
@@ -1400,7 +1397,7 @@ class Execute(VbaLibraryFunc):
             return "NULL"
         
         # Save the command.
-        command = strip_nonvb_chars(str(params[0]))
+        command = utils.strip_nonvb_chars(str(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
@@ -1747,7 +1744,7 @@ class StrComp(VbaLibraryFunc):
         method = 0
         if (len(params) >= 3):
             try:
-                method = int_convert(params[2])
+                method = utils.int_convert(params[2])
             except Exception as e:
                 log.error("StrComp: Invalid comparison method. " + str(e))
                 pass
@@ -1796,7 +1793,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int_convert(eval_arg(params[1], context=context))
+            conv = utils.int_convert(eval_arg(params[1], context=context))
 
         # Do the conversion.
         r = params[0]
@@ -2058,7 +2055,7 @@ class Int(VbaLibraryFunc):
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
             else:
-                r = int_convert(val)
+                r = utils.int_convert(val)
             # -32,768 to 32,767
             if ((r > 32767) or (r < -32768)):
                 # Overflow. Assume On Error Resume Next.
@@ -2561,7 +2558,7 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = ''
         try:
-            n = int_convert(num)
+            n = utils.int_convert(num)
             if n == 0:
                 r = 0
             else:
@@ -2582,7 +2579,7 @@ class Sqr(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0]) + 0.0
+            num = utils.int_convert(params[0]) + 0.0
             r = math.sqrt(num)
         except:
             pass
@@ -2600,7 +2597,7 @@ class Abs(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             r = abs(num)
         except:
             pass
@@ -2639,7 +2636,7 @@ class Round(VbaLibraryFunc):
             num = float(params[0])
             sig = 0
             if (len(params) == 2):
-                sig = int_convert(params(1))                
+                sig = utils.int_convert(params(1))                
             r = round(num, sig)
         except:
             pass
@@ -2665,7 +2662,7 @@ class Hex(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             # Number treated as an unsigned int by VBA.
             if (num < 0):
                 num += (1 << 32)
@@ -2893,7 +2890,7 @@ class String(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             char = params[1]
             r = char * num
         except:
@@ -2972,9 +2969,9 @@ class RGB(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            red = int_convert(params[0])
-            green = int_convert(params[1])
-            blue = int_convert(params[2])
+            red = utils.int_convert(params[0])
+            green = utils.int_convert(params[1])
+            blue = utils.int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
         except:
             pass
@@ -3049,7 +3046,7 @@ class Val(VbaLibraryFunc):
             return r
         
         # Ignore whitespace.
-        tmp = str_convert(params[0]).strip().replace(" ", "")
+        tmp = utils.str_convert(params[0]).strip().replace(" ", "")
 
         # No nulls.
         tmp = tmp.replace("\x00", "")
@@ -3225,7 +3222,7 @@ class Pmt(VbaLibraryFunc):
         try:
             # Pull out the arguments.
             rate = float(params[0])
-            nper = int_convert(params[1]) + 0.0
+            nper = utils.int_convert(params[1]) + 0.0
             pv = float(params[2])
             fv = 0
             if (len(params) >= 4):
@@ -3282,7 +3279,7 @@ class Space(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        n = int_convert(params[0])
+        n = utils.int_convert(params[0])
         r = " " * n
         return r
 
@@ -4348,9 +4345,21 @@ class Cells(VbaLibraryFunc):
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
 
-        # Try the sheet with the most cells if we are guessing the sheet.
+        # If we were not given a sheet use the current active sheet (if we know it).
+        if ((sheet is None) and
+            hasattr(context.loaded_excel, "active_sheet_name")):
+            try:
+                sheet_name = context.loaded_excel.active_sheet_name
+                sheet = context.loaded_excel.sheet_by_name(sheet_name)
+            except ValueError as e:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Can't find active sheet. " + str(e))
+                    
+        # Now try the sheet with the most cells if we still need to guess the sheet.
         if (sheet is None):
             sheet = get_largest_sheet(context.loaded_excel)
+
+        # Punt if we still have no idea what sheet to work with.
         if (sheet is None):
             return "NULL"
 
@@ -4389,8 +4398,13 @@ class Sheets(VbaLibraryFunc):
         
     def eval(self, context, params=None):
 
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Get sheet Sheets(" + str(params) + ") ...")
+        
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sheets() params are bad. Returning None")
             return None
 
         # Do we have a loaded Excel file?
@@ -4403,13 +4417,13 @@ class Sheets(VbaLibraryFunc):
         sheet_id = str(params[0])
 
         # First try treating this as a sheet name.
-        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
-            try:
-                curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
-                if (curr_sheet.name == sheet_id):
-                    return curr_sheet
-            except Exception as e:
-                continue
+        try:
+            curr_sheet = context.loaded_excel.sheet_by_name(str(sheet_index))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning sheet with name '" + str(sheet_id) + "'")
+            return curr_sheet
+        except Exception as e:
+            pass
 
         # Next see if the sheet ID is an index.
         try:
@@ -4418,8 +4432,11 @@ class Sheets(VbaLibraryFunc):
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning sheet with index " + str(sheet_id))
             return curr_sheet
         except Exception as e:
+            log.warning("Did not find sheet with index " + str(sheet_id))
             return None
 
 class Worksheets(Sheets):

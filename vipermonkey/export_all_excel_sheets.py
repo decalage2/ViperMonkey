@@ -136,11 +136,14 @@ def fix_file_name(fname):
 
 def convert_csv(fname):
     """Convert all of the sheets in a given Excel spreadsheet to CSV
-    files.
+    files. Also get the name of the currently active sheet.
 
     @param fname (str) The name of the Excel file.
     
-    @return (list) A list of the names (str) of the CSV sheet files.
+    @return (list) A list where the 1st element is the name of the
+    currently active sheet ("NO_ACTIVE_SHEET" if no sheets are active)
+    and the rest of the elements are the names (str) of the CSV sheet
+    files.
 
     """
 
@@ -162,11 +165,18 @@ def convert_csv(fname):
     # Load the Excel sheet.
     component = get_component(fname, context)
 
-    # Iterate on all the sheets in the spreadsheet.
+    # Save the currently active sheet.
+    r = []
     controller = component.getCurrentController()
+    active_sheet = controller.ActiveSheet
+    active_sheet_name = "NO_ACTIVE_SHEET"
+    if (active_sheet is not None):
+        active_sheet_name = active_sheet.getName()
+    r.append(active_sheet_name)
+        
+    # Iterate on all the sheets in the spreadsheet.
     sheets = component.getSheets()
     enumeration = sheets.createEnumeration()
-    r = []
     pos = 0
     if sheets.getCount() > 0:
         while enumeration.hasMoreElements():

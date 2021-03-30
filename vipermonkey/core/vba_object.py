@@ -248,14 +248,16 @@ def _read_from_excel(arg, context):
     # Try handling reading value from an Excel spreadsheet cell.
     # ThisWorkbook.Sheets('YHRPN').Range('J106').Value
     if ("MemberAccessExpression" not in str(type(arg))):
-        return None
+        return None        
     arg_str = str(arg)
     if (("sheets(" in arg_str.lower()) and
         (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Try as Excel cell read...")
-        
+
+        return arg.eval(context)
+            
         # Pull out the sheet name.
         tmp_arg_str = arg_str.lower()
         start = tmp_arg_str.index("sheets(") + len("sheets(")
@@ -1865,88 +1867,3 @@ def coerce_args(orig_args, preferred_type=None):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Coerce to int " + str(new_args))
         return coerce_args_to_int(new_args)
-
-def int_convert(arg, leave_alone=False):
-    """
-    Convert a VBA expression to an int, handling VBA NULL.
-    """
-
-    # Easy case.
-    if (isinstance(arg, int)):
-        return arg
-    
-    # NULLs are 0.
-    if (arg == "NULL"):
-        return 0
-
-    # Empty strings are NULL.
-    if (arg == ""):
-        return "NULL"
-    
-    # Leave the wildcard matching value alone.
-    if (arg == "**MATCH ANY**"):
-        return arg
-
-    # Convert float to int?
-    if (isinstance(arg, float)):
-        arg = int(round(arg))
-
-    # Convert hex to int?
-    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
-        hex_str = "0x" + arg.strip()[2:]
-        try:
-            return int(hex_str, 16)
-        except:
-            log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-            
-    arg_str = str(arg)
-    if ("." in arg_str):
-        arg_str = arg_str[:arg_str.index(".")]
-    try:
-        return int(arg_str)
-    except Exception as e:
-        if (not leave_alone):
-            log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
-        return arg_str
-
-def str_convert(arg):
-    """
-    Convert a VBA expression to an str, handling VBA NULL.
-    """
-    if (arg == "NULL"):
-        return ''
-    try:
-        return str(arg)
-    except Exception as e:
-        if (isinstance(arg, unicode)):
-            return ''.join(filter(lambda x:x in string.printable, arg))
-        log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
-        return ''
-
-def strip_nonvb_chars(s):
-    """
-    Strip invalid VB characters from a string.
-    """
-
-    # Handle unicode strings.
-    if (isinstance(s, unicode)):
-        s = s.encode('ascii','replace')
-    
-    # Sanity check.
-    if (not isinstance(s, str)):
-        return s
-
-    # Do we need to do this?
-    if (re.search(r"[^\x09-\x7e]", s) is None):
-        return s
-    
-    # Strip non-ascii printable characters.
-    r = re.sub(r"[^\x09-\x7e]", "", s)
-    
-    # Strip multiple 'NULL' substrings from the string.
-    if (r.count("NULL") > 10):
-        r = r.replace("NULL", "")
-    return r
