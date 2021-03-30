@@ -161,7 +161,7 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 0
         xlm = str(params[0])
         context.report_action('XLM Macro Execution', xlm, 'Dynamic XLM Macro Execution', strip_null_bytes=True)
@@ -198,6 +198,33 @@ class IsObject(VbaLibraryFunc):
 
     def return_type(self):
         return "BOOLEAN"
+
+class CreateFolder(VbaLibraryFunc):
+    """
+    CreatFolder() method.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        folder = str(params[0])
+        context.report_action('Create Folder', folder, 'CreateFolder()', strip_null_bytes=True)
+        return 0
+
+    def num_args(self):
+        return 1
+    
+class BuildPath(VbaLibraryFunc):
+    """
+    BuildPath() method
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
+        return str(params[0]) + str(params[1])
     
 class GetSpecialFolder(VbaLibraryFunc):
     """
@@ -383,7 +410,7 @@ class WeekDay(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Get date string.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 1
         date_str = str(params[0]).replace("#", "")
         date_obj = None
@@ -416,6 +443,10 @@ class Format(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        
         # Are we faking a value for this particular format call?
         r = params[0]
         if (len(params) > 1):
@@ -584,7 +615,7 @@ class QBColor(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 0
         val = int(params[0])
         if ((val < 0) or (val > 15)):
@@ -1068,10 +1099,10 @@ class Right(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) > 2):
-            params = params[-2:]
         if ((params is None) or (len(params) < 2)):
             return "NULL"
+        if (len(params) > 2):
+            params = params[-2:]
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
@@ -1289,7 +1320,7 @@ class ShellExecute(Shell):
     
     def eval(self, context, params=None):
 
-        if (len(params) < 2):
+        if ((params is None) or (len(params) < 2)):
             return 0
         command = str(params[0])
         args = str(params[1])
@@ -1305,7 +1336,7 @@ class Eval(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Pull out the expression to eval.
-        if (len(params) < 1):
+        if ((params is None) or (len(params) < 1)):
             return 0
         expr = utils.strip_nonvb_chars(str(params[0]))
 
@@ -2132,6 +2163,103 @@ class SetStringValue(VbaLibraryFunc):
         context.report_action("Registry Write", str(params), "Set String Value", strip_null_bytes=True)
         return "NULL"
 
+class GetRef(VbaLibraryFunc):
+    """
+    GetRef() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Get the function.
+        obj_name = str(params[0])
+        if (not context.contains(obj_name)):
+            return "NULL"
+        return context.get(obj_name)
+            
+class Filter(VbaLibraryFunc):
+    """
+    The VBA Filter function returns a subset of a supplied string array, based on supplied criteria.
+
+    The syntax of the function is: Filter( SourceArray, Match, [Include], [Compare] )
+
+    The function arguments are:
+
+    SourceArray	-	The original array of Strings, that you want to filter.
+    Match	-	The string that you want to search for, within each element of the supplied SourceArray.
+    [Include]	-	
+    An option boolean argument that specifies whether the returns array should consist of elements that include or do not include the supplied Match String.
+
+    This can have the value True or False, meaning:
+
+    True	-	Only return elements that include the Match String
+    False	-	Only return elements that do not include the Match String
+    If the [Include] argument is omitted, it takes on the default value True.
+
+    [Compare]	-	
+    An optional argument, specifying the type of String comparison to make.
+
+    This can be any of the following values:
+
+    vbBinaryCompare	-	performs a binary comparison (0)
+    vbTextCompare	-	performs a text comparison (1)
+    vbDatabaseCompare	-	performs a database comparison (2)
+    If omitted, the [Compare] argument takes on the default value vbBinaryCompare.
+    """
+    
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            log.warning("Too few arguments to Filter() call. Returning NULL")
+            return "NULL"
+
+        # SourceArray and Match are required.
+        source_array = params[0]
+        match = params[1]
+        if (not isinstance(source_array, list)):
+            log.warning("SourceArray argument to Filter() call not an array. Returning NULL")
+            return "NULL"
+        if (not isinstance(match, str)):
+            log.warning("Match argument to Filter() call not a string. Returning NULL")
+            return "NULL"
+
+        # Include/exclude argument is optional.
+        include = True
+        if (len(params) >=3):
+            include = params[2]
+            if (not isinstance(match, str)):
+                log.warning("Include/exclude argument to Filter() call not a boolean. Returning NULL")
+                return "NULL"
+
+        # Compare argument is optional.
+        compare = 0
+        if (len(params) >=4):
+            compare = params[3]
+            if (not isinstance(compare, int)):
+                log.warning("Compare argument to Filter() call not an int. Returning NULL")
+                return "NULL"
+
+        # Currently only handling vbBinaryCompare.
+        if (compare != 0):
+            log.warning("Only handling Compare == vbBinaryCompare in Filter() call. Returning NULL")
+            return "NULL"
+
+        # Find the items to return.
+        r = []
+        for s in source_array:
+            found_match = (match in s)
+            if (not include):
+                found_match = not found_match
+            if found_match:
+                r.append(s)
+
+        # Done.
+        return r
+            
 class Replace(VbaLibraryFunc):
     """
     Replace() string function.
@@ -2147,6 +2275,8 @@ class Replace(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return ""
         if (len(params) < 3):
             if (len(params) > 0):
                 return params[0]
@@ -2222,7 +2352,7 @@ class SaveToFile(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return ""
 
         # Just return the file name. This is used in
@@ -2278,7 +2408,7 @@ class SaveAs(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) < 2):
+        if ((params is None) or (len(params) < 2)):
             return 0
 
         # Pull out the name of the file to save to and the format
@@ -2335,7 +2465,7 @@ class LoadXML(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return ""
 
         # Get the XML.
@@ -3964,6 +4094,18 @@ class Run(VbaLibraryFunc):
             log.warning("Application.Run() failed. Cannot find function " + str(func_name) + ".")
             return 0
 
+class Arguments(VbaLibraryFunc):
+    """
+    WScriptShell Arguments field.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        return "_COMMAND_LINE_ARG_" + str(params[0])
+            
 class Exec(VbaLibraryFunc):
     """
     Application.Exec() function.
@@ -4959,6 +5101,8 @@ class DeleteFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) > 1):
             context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
         if (len(params) == 1):
@@ -4970,6 +5114,8 @@ class MoveFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) > 1):
             context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
                                   'MoveFile() Call', strip_null_bytes=True)
@@ -4980,6 +5126,8 @@ class URLDownloadToFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) >= 3):
             context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
             context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
@@ -4990,12 +5138,16 @@ class FollowHyperlink(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) >= 1):
             context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
 
 class GetExtensionName(VbaLibraryFunc):
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         r = ""
         if (len(params) >= 1):
             fname = str(params[0])
@@ -5011,6 +5163,9 @@ class NumPut(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        if (params is None):
+            return
+        
         # Do we need to open the simulated file?
         if ("DOM_NumPut.dat" not in context.open_files):
             context.open_file("DOM_NumPut.dat")
@@ -5316,7 +5471,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
-               Worksheets, Value, IsObject):
+               Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
+               Arguments):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
