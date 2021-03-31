@@ -5331,6 +5331,14 @@ class InternetGetConnectedState(VbaLibraryFunc):
         # Always connected.
         return True
 
+class DateDiff(VbaLibraryFunc):
+    """
+    Stubbed DateDiff() function.
+    """
+
+    def eval(self, context, params=None):
+        return 15904387438 + (5000 - random.randint(100, 10000))
+    
 class Not(VbaLibraryFunc):
     """
     Boolean Not() called as a function.
@@ -5472,7 +5480,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
-               Arguments):
+               Arguments, DateDiff):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
