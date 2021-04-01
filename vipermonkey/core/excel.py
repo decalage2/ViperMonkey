@@ -156,8 +156,11 @@ def _fix_sheet_name(sheet_name):
 
     # Replace them with the actual values.
     for hex_val in hex_strs:
-        chr_val = int(hex_val, 16)
-        r = r.replace(hex_val, chr(chr_val))
+        try:
+            chr_val = int(hex_val, 16)
+            r = r.replace(hex_val, chr(chr_val))
+        except Exception as e:
+            log.error("Fixing sheet named failed. " + str(e))
     return r
 
 def load_excel_libreoffice(data):
