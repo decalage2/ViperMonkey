@@ -171,7 +171,7 @@ def convert_csv(fname):
     active_sheet = controller.ActiveSheet
     active_sheet_name = "NO_ACTIVE_SHEET"
     if (active_sheet is not None):
-        active_sheet_name = active_sheet.getName()
+        active_sheet_name = fix_file_name(active_sheet.getName())
     r.append(active_sheet_name)
         
     # Iterate on all the sheets in the spreadsheet.

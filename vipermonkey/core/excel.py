@@ -211,7 +211,7 @@ def load_excel_libreoffice(data):
         return None
 
     # Save the name of the active sheet.
-    active_sheet_name = sheet_files[0]
+    active_sheet_name = _fix_sheet_name(sheet_files[0])
     
     # Load the CSV files into Excel objects.
     sheet_map = {}
