@@ -2268,6 +2268,35 @@ class MemberAccessExpression(VBA_Object):
         #print "OUT: 29"
         #print "HERE: 36"
         return tmp_rhs
+
+    def _handle_parentdirectory(self, context):
+        """Handle reading the ParentFolder property for things like
+        undertakesPurposes.GetSpecialFolder(2).ParentFolder.
+
+        """
+
+        # Reading the ParentFolder?
+        self_str = str(self).strip()
+        if (not self_str.endswith(".ParentFolder")):
+            return None
+
+        # Get the child folder.
+        child_folder = ""
+        if (isinstance(self.rhs, list) and (len(self.rhs) > 1)):
+            child_folder = str(eval_arg(self.rhs[-2], context))
+        return child_folder + "\.."
+
+    def _handle_exec(self, context):
+        """Handle calling the WSCriptShell Exec() method.
+
+        """
+
+        # Just call the Exec() method if needed. The actions will
+        # be tracked in the context.
+        if (isinstance(self.rhs, list) and
+            (len(self.rhs) > 0) and
+            (str(self.rhs[0]).startswith("Exec("))):
+            eval_arg(self.rhs[0], context)            
     
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -2290,6 +2319,9 @@ class MemberAccessExpression(VBA_Object):
             tmp_lhs = eval_arg(context.with_prefix, context)
             #print "HERE: 0.4"
 
+        # Always emulate WScriptShell() Exec() methods.
+        self._handle_exec(context)
+            
         # Excel UsedRange call?
         #print "HERE: 1"
         r = self._handle_usedrange_call(context)
@@ -2308,6 +2340,13 @@ class MemberAccessExpression(VBA_Object):
         r = self._handle_stringbuilder_method(context, tmp_lhs)
         if (r is not None):
             #print "OUT: 1.1"
+            return r
+
+        # Getting ParentDirectory?
+        #print "HERE: 1.2"
+        r = self._handle_parentdirectory(context)
+        if (r is not None):
+            #print "OUT: 1.2"
             return r
         
         # Easy case. Do we have this saved as a variable?

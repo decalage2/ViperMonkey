@@ -38,10 +38,9 @@ echo "[*] Attempting to copy file $1 into container ID $docker_id"
 
 file_basename=$(basename "$1")
 
-
 # TODO: Remove this after base Docker image is updated.
-echo "[*] Installing exiftool..."
-docker exec $docker_id sh -c 'apt-get install -y libimage-exiftool-perl'
+#echo "[*] Installing exiftool..."
+#docker exec $docker_id sh -c 'apt-get install -y libimage-exiftool-perl'
 
 echo "[*] Starting openoffice listener for file content conversions..."
 docker exec $docker_id sh -c '/usr/lib/libreoffice/program/soffice.bin --headless --invisible --nocrashreport --nodefault --nofirststartwizard --nologo --norestore --accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext" &'

@@ -12,6 +12,8 @@ import signal
 import psutil
 import subprocess
 import time
+import codecs
+import string
 
 # sudo pip3 install unotools
 # sudo apt install libreoffice-calc, python3-uno
@@ -20,9 +22,55 @@ from unotools.component.calc import Calc
 from unotools.unohelper import convert_path_to_url
 from unotools import ConnectionError
 
+# Please please let printing work.
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+
 # Connection information for LibreOffice.
 HOST = "127.0.0.1"
 PORT = 2002
+
+def strip_unprintable(the_str):
+    """Strip out unprinatble chars from a string.
+
+    @param the_str (str) The string to strip.
+
+    @return (str) The given string with unprintable chars stripped
+    out.
+
+    """
+    
+    # Grr. Python2 unprintable stripping.
+    r = the_str
+    if ((isinstance(r, str)) or (not isinstance(r, bytes))):
+        r = ''.join(filter(lambda x:x in string.printable, r))
+        
+    # Grr. Python3 unprintable stripping.
+    else:
+        tmp_r = ""
+        for char_code in filter(lambda x:chr(x) in string.printable, r):
+            tmp_r += chr(char_code)
+        r = tmp_r
+
+    # Done.
+    return r
+
+def to_str(s):
+    """
+    Convert a bytes like object to a str.
+
+    param s (bytes) The string to convert to str. If this is already str
+    the original string will be returned.
+
+    @return (str) s as a str.
+    """
+
+    # Needs conversion?
+    if (isinstance(s, bytes)):
+        try:
+            return s.decode()
+        except UnicodeDecodeError:
+            return strip_unprintable(s)
+    return s
 
 def is_excel_file(maldoc):
     """Check to see if the given file is an Excel file.
@@ -171,7 +219,7 @@ def convert_csv(fname):
     active_sheet = controller.ActiveSheet
     active_sheet_name = "NO_ACTIVE_SHEET"
     if (active_sheet is not None):
-        active_sheet_name = active_sheet.getName()
+        active_sheet_name = fix_file_name(active_sheet.getName())
     r.append(active_sheet_name)
         
     # Iterate on all the sheets in the spreadsheet.
@@ -215,4 +263,5 @@ def convert_csv(fname):
 ## Main Program
 ###########################################################################
 if __name__ == '__main__':
-    print(convert_csv(sys.argv[1]))
+    r = to_str(str(convert_csv(sys.argv[1])))
+    print(r)

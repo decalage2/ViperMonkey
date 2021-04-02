@@ -59,6 +59,8 @@ except ImportError:
     log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
 
+import utils
+    
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     
 #debug = True
@@ -144,11 +146,21 @@ def _fix_sheet_name(sheet_name):
     chr(0xNN).
 
     """
+
+    # Get the characters given as hex strings in the name.
     pat = r"(0x[0-9a-f]{2})"
-    r = sheet_name
-    for hex_val in re.findall(pat, sheet_name):
-        chr_val = int(hex_val, 16)
-        r = r.replace(hex_val, chr(chr_val))
+    r = utils.safe_str_convert(sheet_name)
+    hex_strs = re.findall(pat, r)
+    if (len(hex_strs) == 0):
+        return sheet_name
+
+    # Replace them with the actual values.
+    for hex_val in hex_strs:
+        try:
+            chr_val = int(hex_val, 16)
+            r = r.replace(hex_val, chr(chr_val))
+        except Exception as e:
+            log.error("Fixing sheet named failed. " + str(e))
     return r
 
 def load_excel_libreoffice(data):
@@ -199,7 +211,7 @@ def load_excel_libreoffice(data):
         return None
 
     # Save the name of the active sheet.
-    active_sheet_name = sheet_files[0]
+    active_sheet_name = _fix_sheet_name(sheet_files[0])
     
     # Load the CSV files into Excel objects.
     sheet_map = {}
