@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""@package identifiers Handle parsing and emulation of identifiers.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Identifiers
 
@@ -45,9 +49,10 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from pyparsing import *
-from reserved import *
-from logger import log
+from pyparsing import CaselessKeyword, Regex, Word, Suppress, Optional, NotAny, \
+    Literal, CharsNotIn, Combine, CaselessLiteral
+from reserved import alphas, reserved_identifier, reserved_type_identifier, \
+    alphanums, alphas8bit
 
 # TODO: reduce this list when corresponding statements are implemented
 # Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.
