@@ -1,5 +1,11 @@
+"""@package function_import_visitor Visitor for collecting the names
+of functions imported from DLLs in a VBA object.
+
 """
-ViperMonkey: Visitor for collecting the names of locally defined functions
+
+# pylint: disable=pointless-string-statement
+"""
+ViperMonkey: Visitor for collecting the names of functions impoorted from DLLs.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -36,12 +42,12 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from procedures import *
+from visitor import visitor
+import procedures
 
 class function_import_visitor(visitor):
-    """
-    Collect the names and aliases of all functions imported from DLLs.
+    """Collect the names and aliases of all functions imported from DLLs.
+
     """
 
     def __init__(self):
@@ -54,7 +60,7 @@ class function_import_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)
-        if (isinstance(item, External_Function)):
+        if (isinstance(item, procedures.External_Function)):
             self.funcs[str(item.name)] = str(item.alias_name)
             self.names.add(str(item.alias_name))
             self.aliases.add(str(item.name))
