@@ -1,3 +1,9 @@
+"""@package function_defn_visitor Visitor for collecting the names of
+locally defined functions in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting the names of locally defined functions
 
@@ -39,7 +45,8 @@ https://github.com/decalage2/ViperMonkey
 
 # === IMPORTS ================================================================
 
-import os, sys
+import os
+import sys
 
 # IMPORTANT: it must be possible to run vipermonkey tools directly as scripts
 # in any directory without installing with pip or setup.py, for tests during
@@ -55,12 +62,12 @@ _parent_dir = os.path.normpath(os.path.join(_thismodule_dir, '../..'))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-from vipermonkey.core import *
-
+import procedures
+from visitor import visitor
 
 class function_defn_visitor(visitor):
-    """
-    Collect the names of all locally declared functions.
+    """Collect the names of all locally declared functions.
+
     """
 
     def __init__(self):
@@ -72,9 +79,9 @@ class function_defn_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)
-        if ((isinstance(item, procedures.Sub)) or
-            (isinstance(item, procedures.Function)) or
-            (isinstance(item, procedures.PropertyLet))):
+        if isinstance(item, (procedures.Function,
+                             procedures.PropertyLet,
+                             procedures.Sub)):
             self.funcs.add(str(item.name))
             self.func_objects.add(item)
         return True
