@@ -5389,6 +5389,18 @@ class Send(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return 200
+
+class setRequestHeader(VbaLibraryFunc):
+    """
+    HTTP setRequestHeader().
+    """
+
+    def eval(self, context, params=None):
+        headers = str(params)
+        context.report_action('Set HTTP Headers', headers, 'setRequestHeader()', strip_null_bytes=True)
+
+    def num_args(self):
+        return 1
     
 class WriteProcessMemory(VbaLibraryFunc):
     """
@@ -5480,7 +5492,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
-               Arguments, DateDiff):
+               Arguments, DateDiff, setRequestHeader):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

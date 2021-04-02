@@ -1220,7 +1220,7 @@ class MemberAccessExpression(VBA_Object):
         and global variables). Current program state will be read from
         the context.
 
-        @return (any) The value of the emulating the text file read if
+        @return (any) The value of emulating the text file read if
         this is a text file read, None if not.
 
         """
@@ -1263,8 +1263,17 @@ class MemberAccessExpression(VBA_Object):
                 return None
 
     def _handle_docvar_value(self, lhs, rhs):
-        """
-        Handle reading .Name and .Value fields from doc vars.
+        """Handle reading .Name and .Value fields from document variables.
+
+        @param lhs (tuple) A 2 element tuple representing the doc var
+        (name, value).
+
+        @param rhs (str) "Name" (get doc var name) or "Value" (get doc
+        var value).
+
+        @return (any) The doc var name or value if proper values for
+        lhs and rhs were given, None if not.
+
         """
         
         # Pull out proper RHS.
@@ -1303,8 +1312,20 @@ class MemberAccessExpression(VBA_Object):
         return None
 
     def _handle_file_close(self, context, lhs, rhs):
-        """
-        Handle close of file object foo like foo.Close().
+        """Handle close of file object foo like foo.Close().
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of closing a file if this is a file
+        close, None if not.
+
         """
 
         # Pull out proper RHS.
@@ -1319,8 +1340,17 @@ class MemberAccessExpression(VBA_Object):
         return file_close.eval(context, [str(lhs)])
     
     def _handle_replace(self, context, lhs, rhs):
-        """
-        Handle string replaces of the form foo.Replace(bar, baz). foo is a RegExp object.
+        """Handle string replaces of the form foo.Replace(bar, baz). foo is a
+        RegExp object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of doing the string replace if this is
+        a RegEx object replace() method call, None if not.
+
         """
 
         # Sanity check.
@@ -1355,9 +1385,17 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_add(self, context, lhs, rhs):
-        """
-        Handle Add() object method calls like foo.Add(bar, baz). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Add() object method calls like foo.Add(bar, baz).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of adding an element if this is a
+        Dictionary Add() method call, None if not.
+
         """
 
         # Get the LHS as a dict if possible.
@@ -1411,9 +1449,17 @@ class MemberAccessExpression(VBA_Object):
         return new_dict
 
     def _handle_listbox_list(self, context, lhs, rhs):
-        """
-        Handle List() object method calls like foo.List(bar).
-        foo is (currently) a ListBox object.
+        """Handle List() object method calls like foo.List(bar).  foo is
+        (currently) a ListBox object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of listing the items in a ListBox if
+        this is a ListBox List() method call, None if not.
+
         """
 
         # Get the LHS as a list if possible.
@@ -1462,9 +1508,17 @@ class MemberAccessExpression(VBA_Object):
         return lhs[index]
     
     def _handle_listbox_additem(self, context, lhs, rhs):
-        """
-        Handle AddItem() object method calls like foo.AddItem(bar).
-        foo is (currently) a ListBox object.
+        """Handle AddItem() object method calls like foo.AddItem(bar).  foo
+        is (currently) a ListBox object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of adding an item to a ListBox if this
+        is a ListBox AddItem() method call, None if not.
+
         """
 
         # Get the LHS as a list if possible.
@@ -1531,9 +1585,18 @@ class MemberAccessExpression(VBA_Object):
         return new_list
 
     def _handle_exists(self, context, lhs, rhs):
-        """
-        Handle Exists() object method calls like foo.Exists(bar). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Exists() object method calls like foo.Exists(bar).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of checking if a key exists in a
+        Dictionary object if this is a Dictionary Exists() method
+        call, None if not.
+
         """
 
         # Get the LHS as a dict if possible.
@@ -1578,8 +1641,25 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
-        """
-        Handle expressions like "foo.Write(...)" where foo = "ADODB.Stream".
+        """Handle expressions like "foo.Write(...)" where foo =
+        "ADODB.Stream".
+
+        @param lhs_orig (VBA_Object object) The original unevaluated
+        LHS of the member access expression.
+
+        @param lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The value of doing the ADODB write if this is a
+        ADODB.Stream.Write() method call, None if not.
+
         """
 
         # Is this a .Write() call?
@@ -1660,8 +1740,18 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_0_arg_call(self, context, rhs=None):
-        """
-        Handle calls to 0 argument functions.
+        """Handle calls to 0 argument functions.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param rhs (list) The rightmost item NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of emulating the 0 argument function
+        call if this is a 0 argument function call, None if not.
+
         """
 
         # Get the last item in the member access, if needed.
@@ -1699,9 +1789,21 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_loadxml(self, context, load_xml_result):
-        """
-        Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is 
-        specifically targeting BASE64 XML elements used for base64 decoding.
+        """Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is
+        specifically targeting BASE64 XML elements used for base64
+        decoding. The context will be updated with synthetic variables
+        representing the loaded value.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param load_xml_result (str) The XML or base64 being loaded
+        into the object on the LHS of the member access expression.
+
+        @return (boolean) True if this is a LoadXML() method call,
+        False if not.
+
         """
 
         # Is this a call to LoadXML()?
@@ -1724,8 +1826,18 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_savetofile(self, context, filename):
-        """
-        Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+        """Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param filename (str) The name of the file in which data is
+        being saved.
+
+        @return (boolean) True if this is a SaveToFile() method call,
+        False if not.
+
         """
 
         # Is this a call to SaveToFile()?
@@ -1804,8 +1916,11 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_path_access(self):
-        """
-        See if this is accessing the Path field of a file/folder object.
+        """See if this is accessing the Path field of a file/folder object.
+
+        @return (str) A fake path if this is a .path field access,
+        None if not.
+
         """
         tmp = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
         if (tmp == "path"):
@@ -1817,8 +1932,15 @@ class MemberAccessExpression(VBA_Object):
         return None
         
     def _handle_indexed_form_access(self, context):
-        """
-        See if this is accessing a control in a form by index.
+        """See if this is accessing a control in a form by index.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The text value for the form if this is an
+        indexed form access, None if not.
+
         """
 
         # ex. form1.Controls('0').ControlTipText
@@ -1878,12 +2000,23 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_regex_execute(self, context, tmp_lhs):
-        """
-        Handle application of a RegEx object to a string via the RegEx object's Execute() method.
+        """Handle application of a RegEx object to a string via the RegEx
+        object's Execute() method.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (list) The results of doing the regex string search if
+        this is a Regex Execute() method call, None if not.
+
         """
 
         # Is this dealing with a RegEx object?
-        if (str(tmp_lhs).lower() != "vbscript.regexp"):
+        if (not str(tmp_lhs).lower().endswith("regexp")):
             return None
 
         # Are we calling the Execute() method?
@@ -1920,11 +2053,91 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Find all the regex matches in the string.
-        r = re.findall(pat, mod_str)
+        r = None
+        try:
+            r = re.findall(pat, mod_str)
+        except Exception as e:
+            log.error("Regex.Execute() failed. " + str(e))
         return r
+
+    def _handle_regex_test(self, context, tmp_lhs):
+        """Handle application of a RegEx object to a string via the RegEx
+        object's Test() method.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (boolean) The results of doing the regex string test if
+        this is a Regex Test() method call, None if not.
+
+        """
+
+        # Is this dealing with a RegEx object?
+        if (not str(tmp_lhs).lower().endswith("regexp")):
+            return None
+
+        # Are we calling the Test() method?
+        if (".Test(" not in str(self)):
+            return None
+
+        # We are doing a regex execute. Pull out the regex pattern and string
+        # to which to apply the regex.
+
+        # Get pattern.
+        pat_var = str(self.lhs).lower() + ".pattern"
+        pat = None
+        try:
+            pat = context.get(pat_var)
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Get string.
+        tmp_rhs = self.rhs
+        if (isinstance(tmp_rhs, list) and (len(tmp_rhs) > 0)):
+            tmp_rhs = tmp_rhs[0]
+        if ((not isinstance(tmp_rhs, Function_Call)) or
+            (tmp_rhs.name != "Test")):
+            return None
+        mod_str = tmp_rhs.params[0]
+        try:
+            str_val = context.get(mod_str)
+            mod_str = str_val
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Return whether the regex matches.
+        r = None
+        try:
+            r = re.search(str(pat), str(mod_str))
+        except Exception as e:
+            log.error("Regex.Test() failed. " + str(e))
+            return None
+        return (r is not None)
         
     def _read_member_expression_as_var(self, context, tmp_lhs):
+        """See if we can read a variable with the same name as the member
+        access expression.
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (list) The value of the variable with a name like the
+        member access expression if found in the context, None if not.
+
+        """
+        
         # Reading a field from a dict?
         #print "CHECK DICT"
         #print tmp_lhs
@@ -2033,8 +2246,15 @@ class MemberAccessExpression(VBA_Object):
         return None
 
     def _handle_usedrange_call(self, context):
-        """
-        Handle things like ActiveSheet.UsedRange or Sheets(a).UsedRange.
+        """Handle things like ActiveSheet.UsedRange or Sheets(a).UsedRange.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (list) The Excel cells in the used range if this is a
+        UsedRange field access, None if not.
+
         """
 
         # UsedRange call?
@@ -2067,8 +2287,21 @@ class MemberAccessExpression(VBA_Object):
         return eval_arg(new_usedrange, context)
     
     def _eval_cell_range(self, context, just_expr=False):
-        """
-        Evaluate a member access expression that results in a range of Excel cells.
+        """Evaluate a member access expression that results in a range of
+        Excel cells.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param just_expr (boolean) If true just return the unevaluated
+        expression representing the cell range, if False evaulte the
+        expression and return the actual list of Excel cells.
+
+        @return (VBA_Object object or list) The expression to get the
+        cells or the Excel cells if this is an Excel cell range access
+        expression, None if not.
+
         """
 
         # Pull out just the cell range expression.
@@ -2094,8 +2327,16 @@ class MemberAccessExpression(VBA_Object):
             return None
         
     def _handle_specialcells_call(self, context):
-        """
-        Handle things like ActiveSheet.UsedRange.SpecialCells(xlCellTypeConstants)
+        """Handle things like
+        ActiveSheet.UsedRange.SpecialCells(xlCellTypeConstants).
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (list) The Excel cells if this is a SpecialCells()
+        method call, None if not.
+
         """
 
         # Do we have a SpecialCells() method call?
@@ -2124,9 +2365,10 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _eval_nested_methods(self, context):
-        """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        evaluate this as nested function calls (conceptually) like baz(3, bar(2, foo(1))).
+        """Given a member access expression like foo(1).bar(2).baz(3)
+        evaluate this as nested function calls (conceptually) like
+        baz(3, bar(2, foo(1))).
+
         """
 
         # Convert this to nested function calls
@@ -2492,6 +2734,14 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_regex_execute(context, tmp_lhs)
         if (call_retval is not None):
             #print "OUT: 18"
+            return call_retval
+
+        # Handle Regex object applications.
+        #print "HERE: 21.1"
+        call_retval = self._handle_regex_test(context, tmp_lhs)
+        if (call_retval is not None):
+            #print "OUT: 18.1"
+            #print call_retval
             return call_retval
 
         # Handle simple 0-argument function calls.
@@ -3072,10 +3322,10 @@ class Function_Call(VBA_Object):
         #    tmp = f[0]
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('Array Access: %r[%r]' % (tmp, str(params)))
-        index = int_convert(params[0])
+        index = utils.int_convert(params[0])
         index1 = None
         if (len(params) > 1):
-            index1 = int_convert(params[1])
+            index1 = utils.int_convert(params[1])
         try:
             # Return array access result.
             if (index1 is None):
@@ -3245,7 +3495,7 @@ class Function_Call(VBA_Object):
                 try:
 
                     # Return result.
-                    i = int_convert(params[0])
+                    i = utils.int_convert(params[0])
                     r = f[i]
                     if (isinstance(f, str)):
                         r = ord(r)
