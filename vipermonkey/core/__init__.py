@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: core package - ViperMonkey class
 
@@ -83,32 +82,31 @@ __version__ = '0.04'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-import sys
 import logging
 import string
+import re
 
-# TODO: add pyparsing to thirdparty folder, update setup.py
-from pyparsing import *
-
-# TODO: replace with tablestream
+from pyparsing import ParseException
 import prettytable
-
-# sudo pypy -m pip install unidecode
-import unidecode
-import string
-
-import subprocess
 
 from logger import log
 from procedures import Function
 from procedures import Sub
-from function_call_visitor import *
-from function_defn_visitor import *
-from function_import_visitor import *
-from var_defn_visitor import *
+from function_call_visitor import function_call_visitor
+from function_defn_visitor import function_defn_visitor
+from function_import_visitor import function_import_visitor
+from var_defn_visitor import var_defn_visitor
 import filetype
 import read_ole_fields
 from meta import FakeMeta
+from vba_lines import vba_line, vba_collapse_long_lines
+from modules import module
+# Make sure we populate the VBA Library:
+import vba_library
+from stubbed_engine import StubbedEngine
+import expressions
+import vba_context
+import excel
 
 # === FUNCTIONS ==============================================================
 
@@ -126,20 +124,11 @@ def list_startswith(_list, lstart):
     if lenlist >= lenstart:
         # if _list longer or as long as lstart, check 1st items:
         return (_list[:lenstart] == lstart)
-    else:
-        # _list smaller than lstart: always false
-        return False
+    # _list smaller than lstart: always false
+    return False
 
 
 # === VBA GRAMMAR ============================================================
-
-from vba_lines import *
-from modules import *
-
-# Make sure we populate the VBA Library:
-from vba_library import *
-
-from stubbed_engine import StubbedEngine
 
 def pull_urls_excel_sheets(workbook):
     """
@@ -244,7 +233,7 @@ class ViperMonkey(StubbedEngine):
             log.info("Emulating a VBScript file.")
 
         # Olevba uses '\n' as EOL, regular VBScript uses '\r\n'.
-        if (self.is_vbscript == True):
+        if self.is_vbscript:
             vba_library.VBA_LIBRARY['vbCrLf'] = '\r\n'
             
         # Track the loaded Excel spreadsheet (xlrd).
@@ -376,93 +365,6 @@ class ViperMonkey(StubbedEngine):
             print(err.line)
             print(" " * (err.column - 1) + "^")
             print(err)
-
-    def add_module2(self, vba_code):
-        """
-        add VBA code for a module and parse it using the alternate line parser
-        :param vba_code: str, VBA code
-        :return: None
-        """
-        # collapse long lines ending with " _"
-        vba_code = vba_collapse_long_lines(vba_code)
-        # m = Module(original_str=vba_code, location=0, tokens=[])
-        # # store the code in the module object:
-        # m.code = vba_code
-        # parse lines one by one:
-        self.lines = vba_code.splitlines(True)
-        tokens = []
-        self.line_index = 0
-        while self.lines:
-            line_index, line, line_keywords = self.parse_next_line()
-            # ignore empty lines
-            if line_keywords is None:
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug('Empty line or comment: ignored')
-                continue
-            try:
-                # flag set to True when line starts with "public" or "private":
-                pub_priv = False
-                if line_keywords[0] in ('public', 'private'):
-                    pub_priv = True
-                    # remove the public/private keyword:
-                    line_keywords = line_keywords[1:]
-                if line_keywords[0] == 'attribute':
-                    l = header_statements_line.parseString(line, parseAll=True)
-                elif line_keywords[0] in ('option', 'dim', 'declare'):
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('DECLARATION LINE')
-                    l = declaration_statements_line.parseString(line, parseAll=True)
-                elif line_keywords[0] == 'sub':
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('SUB')
-                    l = sub_start_line.parseString(line, parseAll=True)
-                    l[0].statements = self.parse_block(end=['end', 'sub'])
-                elif line_keywords[0] == 'function':
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('FUNCTION')
-                    l = function_start_line.parseString(line, parseAll=True)
-                    l[0].statements = self.parse_block(end=['end', 'function'])
-                elif line_keywords[0] == 'for':
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('FOR LOOP')
-                    # NOTE: a for clause may be followed by ":" and statements on the same line
-                    l = for_start.parseString(line) #, parseAll=True)
-                    l[0].statements = self.parse_block(end=['next'])
-                else:
-                    l = vba_line.parseString(line, parseAll=True)
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug(l)
-                # if isinstance(l[0], Sub):
-                #     # parse statements
-                #     pass
-                # l is a list of tokens: add it to the module tokens
-                tokens.extend(l)
-            except ParseException as err:
-                print('*** PARSING ERROR (2) ***')
-                print(err.line)
-                print(" " * (err.column - 1) + "^")
-                print(err)
-            self.line_index += 1
-        # Create the module object once we have all the tokens:
-        m = Module(original_str=vba_code, location=0, tokens=tokens)
-        self.modules.append(m)
-        # # TODO: add all subs/functions and global variables to self.globals
-        for name, _sub in m.subs.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(2) storing sub "%s" in globals' % name)
-            self.globals[name.lower()] = _sub
-        for name, _function in m.functions.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(2) storing function "%s" in globals' % name)
-            self.globals[name.lower()] = _function
-        for name, _function in m.external_functions.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(2) storing external function "%s" in globals' % name)
-            self.globals[name.lower()] = _function
-            self.externals[name.lower()] = _function
-        for name, _var in m.global_vars.items():
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug('(2) storing global var "%s" in globals (2)' % name)
             
     def parse_next_line(self):
         # extract next line
@@ -479,26 +381,28 @@ class ViperMonkey(StubbedEngine):
             return self.line_index-1, line, None
         return self.line_index-1, line, line_keywords
 
-    def parse_block(self, end=['end', 'sub']):
+    def parse_block(self, end=None):
         """
         Parse a block of statements, until reaching a line starting with the end string
         :param end: string indicating the end of the block
         :return: list of statements (excluding the last line matching end)
         """
+        if (end is None):
+            end = ['end', 'sub']
         statements = []
-        line_index, line, line_keywords = self.parse_next_line()
+        _, line, line_keywords = self.parse_next_line()
         while not list_startswith(line_keywords, end):
             try:
-                l = vba_line.parseString(line, parseAll=True)
+                parsed_line = vba_line.parseString(line, parseAll=True)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug(l)
-                statements.extend(l)
+                    log.debug(parsed_line)
+                statements.extend(parsed_line)
             except ParseException as err:
                 print('*** PARSING ERROR (3) ***')
                 print(err.line)
                 print(" " * (err.column - 1) + "^")
                 print(err)
-            line_index, line, line_keywords = self.parse_next_line()
+            _, line, line_keywords = self.parse_next_line()
         return statements
 
     def _get_external_funcs(self):
@@ -511,11 +415,11 @@ class ViperMonkey(StubbedEngine):
         defn_visitor = function_defn_visitor()
         var_visitor = var_defn_visitor()
         import_visitor = function_import_visitor()
-        for module in self.modules:
-            module.accept(call_visitor)
-            module.accept(defn_visitor)
-            module.accept(var_visitor)
-            module.accept(import_visitor)
+        for curr_module in self.modules:
+            curr_module.accept(call_visitor)
+            curr_module.accept(defn_visitor)
+            curr_module.accept(var_visitor)
+            curr_module.accept(import_visitor)
 
         # Eliminate variables and local functions from the list of called functions.
         r = []
@@ -523,13 +427,13 @@ class ViperMonkey(StubbedEngine):
             if ((f in defn_visitor.funcs) or
                 (f in var_visitor.variables) or
                 (len(f) == 0) or
-                (("." in f) and (not "Shell" in f))):
+                (("." in f) and ("Shell" not in f))):
                 continue
 
             # Resolve aliases of imported functions to the actual function.
             if (f in import_visitor.aliases):
                 if (len(import_visitor.funcs[f]) > 0):
-                     r.append(import_visitor.funcs[f])
+                    r.append(import_visitor.funcs[f])
                 continue
 
             # Regular local function call.
@@ -539,7 +443,7 @@ class ViperMonkey(StubbedEngine):
         r.sort()
         return r
         
-    def trace(self, entrypoint='*auto'):
+    def trace(self):
 
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
@@ -547,12 +451,12 @@ class ViperMonkey(StubbedEngine):
         vba_context.shellcode = {}
         
         # Create the global context for the engine
-        context = Context(_globals=self.globals,
-                          engine=self,
-                          doc_vars=self.doc_vars,
-                          loaded_excel=self.loaded_excel,
-                          filename=self.filename,
-                          metadata=self.metadata)
+        context = vba_context.Context(_globals=self.globals,
+                                      engine=self,
+                                      doc_vars=self.doc_vars,
+                                      loaded_excel=self.loaded_excel,
+                                      filename=self.filename,
+                                      metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
         context.do_jit = self.do_jit
 
@@ -575,7 +479,7 @@ class ViperMonkey(StubbedEngine):
             context.save_intermediate_iocs(cell_b64_blob)
             
         # Save the true names of imported external functions.
-        for func_name in self.externals.keys():
+        for func_name in self.externals:
             func = self.externals[func_name]
             context.dll_func_true_names[func.name] = func.alias_name
 
@@ -654,6 +558,7 @@ class ViperMonkey(StubbedEngine):
             context.globals["ThisDocument.Comments".lower()] = self.comments
             if (self.metadata is not None):
                 all_comments = ""
+                # pylint: disable=not-an-iterable
                 for comment in self.comments:
                     all_comments += comment + "/n"
                 self.metadata.comments = all_comments
@@ -684,7 +589,7 @@ class ViperMonkey(StubbedEngine):
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
                 # entry points.
-                tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                 self.globals[entry_point].eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
                 # Save whether we got actions from this entry point.
@@ -692,7 +597,7 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = True
 
         # Look for callback functions that can act as entry points.
-        for name in self.globals.keys():
+        for name in self.globals:
 
             # Look for functions whose name ends with a callback suffix.
             for suffix in self.callback_suffixes:
@@ -702,14 +607,14 @@ class ViperMonkey(StubbedEngine):
 
                     # Is this a function?
                     item = self.globals[name]
-                    if (isinstance(item, Function) or isinstance(item, Sub)):
+                    if isinstance(item, (Function, Sub)):
 
                         # Emulate it.
                         context.report_action('Found Entry Point', str(name), '')
                         # We will be trying multiple entry points, so make a copy
                         # of the context so we don't accumulate stage changes across
                         # entry points.
-                        tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                        tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                         item.eval(context=tmp_context)
                         tmp_context.dump_all_files(autoclose=True)
                         # Save whether we got actions from this entry point.
@@ -723,7 +628,7 @@ class ViperMonkey(StubbedEngine):
             
             # Find any 0 argument subroutines. We will try emulating these as potential entry points.
             zero_arg_subs = []
-            for name in self.globals.keys():
+            for name in self.globals:
                 item = self.globals[name]
                 if ((isinstance(item, Sub)) and (len(item.params) == 0)):
                     zero_arg_subs.append(item)
@@ -742,13 +647,13 @@ class ViperMonkey(StubbedEngine):
         :return: value of the evaluated expression
         """
         # Create the global context for the engine
-        context = Context(_globals=self.globals,
-                          engine=self,
-                          doc_vars=self.doc_vars,
-                          loaded_excel=self.loaded_excel)
+        context = vba_context.Context(_globals=self.globals,
+                                      engine=self,
+                                      doc_vars=self.doc_vars,
+                                      loaded_excel=self.loaded_excel)
         # reset the actions list, in case it is called several times
         self.actions = []
-        e = expression.parseString(expr)[0]
+        e = expressions.expression.parseString(expr)[0]
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('e=%r - type=%s' % (e, type(e)))
         value = e.eval(context=context)
@@ -785,8 +690,8 @@ def scan_expressions(vba_code):
     :return: iterator, yield (expression, evaluated value)
     """
     # context to evaluate expressions:
-    context = Context()
-    for m in expr_const.scanString(vba_code):
+    context = vba_context.Context()
+    for m in expressions.expr_const.scanString(vba_code):
         e = m[0][0]
         # only yield expressions which are not plain constants
         # a VBA expression should have an eval() method:
