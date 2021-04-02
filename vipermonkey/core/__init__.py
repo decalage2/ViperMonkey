@@ -99,8 +99,8 @@ from var_defn_visitor import var_defn_visitor
 import filetype
 import read_ole_fields
 from meta import FakeMeta
-from vba_lines import vba_line, vba_collapse_long_lines
-from modules import module
+from vba_lines import vba_collapse_long_lines
+from modules import module, vba_line
 # Make sure we populate the VBA Library:
 import vba_library
 from stubbed_engine import StubbedEngine
