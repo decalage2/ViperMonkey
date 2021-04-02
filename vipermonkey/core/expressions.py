@@ -1746,7 +1746,7 @@ class MemberAccessExpression(VBA_Object):
         generation (local and global variables). Current program state
         will be read from the context.
 
-        @param rhs (list) The rightmost item NN in the member access
+        @param rhs (any) The rightmost item NN in the member access
         expression N1.N2...NN.
 
         @return (any) The value of emulating the 0 argument function
@@ -2388,9 +2388,20 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_stringbuilder_method(self, context, lhs_val):
-        """
-        Handle string builder object appends like 'foo.Append_3 "aaa"' and
+        """Handle string builder object appends like 'foo.Append_3 "aaa"' and
         string builder string conversions like 'foo.ToString'.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param lhs_val (any) The evaluated LHS of the member access
+        expression.
+
+        @return (any) The result of the stringbuilder append or
+        tostring operation if this one of those operations, None if
+        not.
+
         """
 
         # Is the LHS a StringBuilder object?
@@ -2444,7 +2455,23 @@ class MemberAccessExpression(VBA_Object):
         return None
 
     def _handle_function_call(self, context, rhs, tmp_lhs):
-        """
+        """Handle various types of function calls that can appear as the
+        rightmost component of a N1.N2...NN() member access
+        expression.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param rhs (any) The rightmost item NN in the member access
+        expression N1.N2...NN.
+
+        @param tmp_lhs (any) The evaulated leftmost element of the
+        N1.N2...NN() member access expression.
+
+        @return (any) The result of the leftmost function call if it
+        is a handled function call, None if not.
+
         """
 
         # Handle the RHS of the member access expression being a
@@ -2515,6 +2542,13 @@ class MemberAccessExpression(VBA_Object):
         """Handle reading the ParentFolder property for things like
         undertakesPurposes.GetSpecialFolder(2).ParentFolder.
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The value of the PathFolder property if that is
+        what we have, None if not.
+
         """
 
         # Reading the ParentFolder?
@@ -2529,7 +2563,12 @@ class MemberAccessExpression(VBA_Object):
         return child_folder + "\.."
 
     def _handle_exec(self, context):
-        """Handle calling the WSCriptShell Exec() method.
+        """Handle calling the WSCriptShell Exec() method. The executed command
+        will be saved in the actions in the context.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
 
         """
 
@@ -3130,8 +3169,15 @@ class With_Member_Expression(VBA_Object):
         return r
         
     def _handle_method_calls(self, context):
-        """
-        Handle Scripting.Dictionary...() calls.
+        """Handle Scripting.Dictionary...() calls in a With expression.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) Return the result of the scripting dictionary
+        method call if we have one, None if not.
+
         """
 
         # Is this a method call?
@@ -3283,7 +3329,19 @@ class Function_Call(VBA_Object):
         return '%s(%r)' % (self.name, parms)
 
     def _handle_dict_access(self, f, params):
-        """
+        """Handle something parsed as a call that is actually reading the
+        field in a dictionary.
+
+        @param f (dict or VBA_Object object) The resolved value of the
+        function being called (function object) or the resolved value
+        of the dict variable.
+
+        @param params (list) The resolved parameters for the function
+        call or dict access.
+
+        @return (any) The value returned from the dict lookup if
+        appropriate, None if not.
+
         """
 
         # Is this actually a hash lookup?
@@ -3301,7 +3359,23 @@ class Function_Call(VBA_Object):
         return None
         
     def _handle_array_access(self, context, f, params):
-        """
+        """Handle a thing that was parsed as a function call that is actually
+        an array access.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param f (list or VBA_Object object) The resolved value of the
+        function being called (function object) or the resolved value
+        of the list (array) variable.
+
+        @param params (list) The resolved parameters for the function
+        call or list access.
+
+        @return (any) The value returned from the array access if
+        appropriate, None if not.
+
         """
         
         # Is this actually an array access?
@@ -3671,6 +3745,14 @@ expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 expr_list_item_strict = (expr_item_strict + FollowedBy(',')) | expr_list_item_strict
 
 def quick_parse_int_or_var(text):
+    """A fast regex based parsing helper function for parsing integers or
+    variable names.
+
+    @param text (str) The text to parse.
+
+    @return (VBA_Object object) The parsed int/variable.
+
+    """
     text = str(text).strip()
 
     # Integer?
@@ -3975,6 +4057,20 @@ class BoolExprItem(VBA_Object):
         return ""
 
     def _vba_to_python_op(self, op, context):
+        """Convert a VBA boolean operator to a Python boolean operator or a
+        Python bitwise operator. The context is used to determine
+        whether we need bitwise or boolean operators.
+        
+        @param op (str) The VBA boolean operator.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+        
+        @param is_boolean (boolean) If True return a Python boolean
+        operator, if False return a Python bitwise operator.
+
+        """        
         return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
@@ -4206,6 +4302,20 @@ class BoolExpr(VBA_Object):
         return ""
 
     def _vba_to_python_op(self, op, context):
+        """Convert a VBA boolean operator to a Python boolean operator or a
+        Python bitwise operator. The context is used to determine
+        whether we need bitwise or boolean operators.
+        
+        @param op (str) The VBA boolean operator.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+        
+        @param is_boolean (boolean) If True return a Python boolean
+        operator, if False return a Python bitwise operator.
+
+        """
         return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
