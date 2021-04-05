@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package lib_functions VBA library function definitions. TODO: Roll
+these over into vba_library.py.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Library Functions
 
@@ -63,8 +68,8 @@ expression = Forward()
 # --- CHR --------------------------------------------------------------------
 
 class Chr(VBA_Object):
-    """
-    6.1.2.11.1.4 VBA Chr function
+    """Emulator for VBA Chr function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -108,8 +113,8 @@ chr_.setParseAction(Chr)
 # --- ASC --------------------------------------------------------------------
 
 class Asc(VBA_Object):
-    """
-    VBA Asc function
+    """Emulator for VBA Asc function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -185,8 +190,8 @@ asc.setParseAction(Asc)
 # --- StrReverse() --------------------------------------------------------------------
 
 class StrReverse(VBA_Object):
-    """
-    VBA StrReverse function
+    """Emulator for VBA StrReverse function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -213,8 +218,8 @@ strReverse.setParseAction(StrReverse)
 # --- ENVIRON() --------------------------------------------------------------------
 
 class Environ(VBA_Object):
-    """
-    VBA Environ function
+    """Emulator for VBA Environ function
+
     """
 
     def __init__(self, original_str, location, tokens):
