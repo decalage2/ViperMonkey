@@ -1,3 +1,9 @@
+"""@package let_statement_visitor Visitor for collecting the Let
+statements appearing in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting Let statements.
 
@@ -39,8 +45,9 @@ https://github.com/decalage2/ViperMonkey
 from visitor import visitor
 
 class let_statement_visitor(visitor):
-    """
-    Get all Let statements.
+    """Get all Let statements. The Let statements found by the visitor
+    object are in the .let_statements field.
+
     """
 
     def __init__(self, var_name=None):
