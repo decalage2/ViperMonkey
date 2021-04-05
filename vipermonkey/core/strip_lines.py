@@ -1467,9 +1467,8 @@ def fix_difficult_code(vba_code):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)
 
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
-                         r"PAT:[\x7f-\xff]", r"\^", ";",
-                         r"\[", r"\]", "&"]
+    interesting_chars = [r'"', r'#', r"'", r"!", r"+", r"^",
+                         r"PAT:[\x7f-\xff]", ";", r"[", r"]", "&"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -1523,10 +1522,10 @@ def fix_difficult_code(vba_code):
 
         #print "--------"
         #print pos
-        #print c
+        #print "'" + c + "'"
         #print got_interesting
-        #print prev_char
-        #print next_char
+        #print "'" + prev_char + "'"
+        #print "'" + next_char + "'"
         if (not got_interesting):
 
             # We are not. Fast forward to the nearest interesting character.
@@ -1536,6 +1535,7 @@ def fix_difficult_code(vba_code):
             # string.
             curr_interesting_chars = interesting_chars
             if (in_str):
+                #print "IN STRING, only look for closing \""
                 curr_interesting_chars = [r'"']
             if (in_comment):
                 curr_interesting_chars = ["\n"]
@@ -1544,6 +1544,9 @@ def fix_difficult_code(vba_code):
             for interesting_c in curr_interesting_chars:
 
                 # Regex comparison?
+                #print "@@@"
+                #print interesting_c
+                #print vba_code[pos:]
                 index = None
                 if (interesting_c.startswith("PAT:")):
                     interesting_c = interesting_c[len("PAT:"):]
@@ -1566,7 +1569,7 @@ def fix_difficult_code(vba_code):
                 # Process the string starting at the interesting character we found.
                 poss_pos = index + pos
                 #print ">>>>>>>>>>>>>>>>>>"
-                #print interesting_c
+                #print "'" + interesting_c + "'"
                 #print pos
                 #print poss_pos
                 if (poss_pos < next_pos):
@@ -1647,18 +1650,19 @@ def fix_difficult_code(vba_code):
         if (c == "^"):
             r += " ^ "
             continue
-
-        # Add spaces areound "&" operators.
+        
+        # Add spaces around "&" operators.
         # TODO: This needs more work.
         if (c == "&"):
             r += "&"
             continue
 
         # Need to eliminate bogus =+ assignments.
-        if ((c == "+") and (prev_char == "=")):
-
-            # Skip the '+'.
+        if (c == "+"):
+            if (prev_char != "="):
+                r += " " + c
             continue
+            
 
         # Need to eliminate bogus &; string concatenations.
         if ((c == ";") and (prev_char == "&")):
