@@ -431,8 +431,6 @@ class MemberAccessExpression(VBA_Object):
 
         # See if every component of the member access expression has
         # a corresponding emulation function in ViperMonkey.
-        #print "STACK!!"
-        #print obj_stack
         prev_func = None
         curr_func = None
         res_func = None
@@ -454,16 +452,16 @@ class MemberAccessExpression(VBA_Object):
                 
             # Do we have an emulation function for this member item?
             if (obj_name.lower() not in vba_library.VBA_LIBRARY):
-                #print "MISSING!!"
-                #print obj_name
-                return None
+
+                # This is not a VBA function call. Is it a variable reference? We can
+                # handle a variable reference if it is the last item on the stack.
+                if ((context.contains(obj_name)) and (len(obj_stack) == 0)):
+                    curr_func = context.get(obj_name)
+                else:
+                    return None
 
             # Add the current call as an argument to the previous call.
-            #print "CURR FUNC!!"
-            #print curr_func
             if (prev_func is not None):
-                #print "APPEND FUNC!!"
-                #print curr_func
                 prev_func.params.append(curr_func)
             else:
                 res_func = curr_func

@@ -4560,7 +4560,7 @@ class Sheets(VbaLibraryFunc):
 
         # First try treating this as a sheet name.
         try:
-            curr_sheet = context.loaded_excel.sheet_by_name(str(sheet_index))
+            curr_sheet = context.loaded_excel.sheet_by_name(str(sheet_id))
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Returning sheet with name '" + str(sheet_id) + "'")
             return curr_sheet
@@ -4731,9 +4731,6 @@ class Range(VbaLibraryFunc):
             log.warning("Range() called with no parameters.")
             return "NULL"
 
-        #print "RANGE!!"
-        #print "# params: " + str(len(params))
-        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
 
