@@ -1,3 +1,9 @@
+"""@package __init__ Definition of the main ViperMonkey emulator
+class.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: core package - ViperMonkey class
 
@@ -111,11 +117,16 @@ import excel
 # === FUNCTIONS ==============================================================
 
 def list_startswith(_list, lstart):
-    """
-    Check if a list (_list) starts with all the items from another list (lstart)
-    :param _list: list
-    :param lstart: list
-    :return: bool, True if _list starts with all the items of lstart.
+    """Check if a list (_list) starts with all the items from another
+    list (lstart).
+
+    @param _list (list) The 1st list.
+
+    @param lstart (list) The 2nd list.
+
+    @return (boolean) True if _list starts with all the items of
+    lstart, False if not.
+
     """
     if _list is None:
         return False
@@ -131,13 +142,17 @@ def list_startswith(_list, lstart):
 # === VBA GRAMMAR ============================================================
 
 def pull_urls_excel_sheets(workbook):
-    """
-    Pull URLs from cells in a given ExcelBook object.
+    """Pull URLs from cells in a given ExcelBook object.
+
+    @param workbook (ExcelBook object) The Excel workbook to process.
+
+    @return (set) A set of all URLs (str) found in Excel cells.
+
     """
 
     # Got an Excel workbook?
     if (workbook is None):
-        return []
+        return set()
 
     # Look through each cell.
     all_cells = excel.pull_cells_workbook(workbook)
@@ -168,13 +183,18 @@ def pull_urls_excel_sheets(workbook):
     return r
 
 def pull_b64_excel_sheets(workbook):
-    """
-    Pull bas64 blobs from cells in a given ExcelBook object.
+    """Pull bas64 blobs from cells in a given ExcelBook object.
+
+    @param workbook (ExcelBook object) The Excel workbook to process.
+
+    @return (set) A set of all base64 blobs (str) found in Excel
+    cells.
+
     """
 
     # Got an Excel workbook?
     if (workbook is None):
-        return []
+        return set()
 
     # Look through each cell.
     all_cells = excel.pull_cells_workbook(workbook)
@@ -202,9 +222,25 @@ def pull_b64_excel_sheets(workbook):
 # === ViperMonkey class ======================================================
 
 class ViperMonkey(StubbedEngine):
+    """This is the main class defining the top level VBA/VBScript
+    emulator.
+
+    """
+    
     # TODO: load multiple modules from a file using olevba
 
     def __init__(self, filename, data, do_jit=False):
+        """Create a new VBA/VBScript emulator object.
+
+        @param filename (str) The name of the file being analyzed.
+
+        @param data (str) The VBA/VBScript code to emulate.
+
+        @param do_jit (boolean) If True use JIT transpilation of VB
+        code to Python to speed up loop analysis, if False just
+        emulate loops using the regular emulation engine.
+
+        """
         self.do_jit = do_jit
         self.comments = None
         self.metadata = None
@@ -296,7 +332,13 @@ class ViperMonkey(StubbedEngine):
                                   '_BeforeDropOrPaste']
                                   
     def set_metadata(self, dat):
+        """Save Office metadata of the file being analyzed.
 
+        @pram dat (dict) A mapping from metadata field names to
+        metadata vales.
+
+        """
+        
         # Handle meta information represented as a dict.
         new_dat = dat
         if (isinstance(dat, dict)):
@@ -306,8 +348,10 @@ class ViperMonkey(StubbedEngine):
         self.metadata = new_dat
         
     def add_compiled_module(self, m):
-        """
-        Add an already parsed and processed module.
+        """Add an already parsed and processed module.
+
+        @param m (Module object) The parsed object.
+
         """
         if (m is None):
             return
@@ -349,7 +393,12 @@ class ViperMonkey(StubbedEngine):
                 self.types[name[0].lower()] = name[1]
         
     def add_module(self, vba_code):
+        """Parse and then add the given VBA module.
 
+        @param vba_code (str) The module source code.
+
+        """
+        
         # collapse long lines ending with " _"
         vba_code = vba_collapse_long_lines(vba_code)
 
@@ -366,48 +415,13 @@ class ViperMonkey(StubbedEngine):
             print(" " * (err.column - 1) + "^")
             print(err)
             
-    def parse_next_line(self):
-        # extract next line
-        line = self.lines.pop(0)
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('Parsing line %d: %s' % (self.line_index, line.rstrip()))
-        self.line_index += 1
-        # extract first two keywords in lowercase, for quick matching
-        line_keywords = line.lower().split(None, 2)
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('line_keywords: %r' % line_keywords)
-        # ignore empty lines
-        if len(line_keywords) == 0 or line_keywords[0].startswith("'"):
-            return self.line_index-1, line, None
-        return self.line_index-1, line, line_keywords
-
-    def parse_block(self, end=None):
-        """
-        Parse a block of statements, until reaching a line starting with the end string
-        :param end: string indicating the end of the block
-        :return: list of statements (excluding the last line matching end)
-        """
-        if (end is None):
-            end = ['end', 'sub']
-        statements = []
-        _, line, line_keywords = self.parse_next_line()
-        while not list_startswith(line_keywords, end):
-            try:
-                parsed_line = vba_line.parseString(line, parseAll=True)
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug(parsed_line)
-                statements.extend(parsed_line)
-            except ParseException as err:
-                print('*** PARSING ERROR (3) ***')
-                print(err.line)
-                print(" " * (err.column - 1) + "^")
-                print(err)
-            _, line, line_keywords = self.parse_next_line()
-        return statements
-
     def _get_external_funcs(self):
-        """
-        Get a list of external functions called in the macros.
+        """Get a list of external (or VB builtin) functions called in the
+        VBA/VBScript code.
+
+        @return (list) The names of called external (or VB builtin)
+        functions.
+
         """
 
         # Get the names of all called functions, local functions, and defined variables.
@@ -444,7 +458,10 @@ class ViperMonkey(StubbedEngine):
         return r
         
     def trace(self):
+        """Perform the VBA/VBScript emulation.
 
+        """
+        
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
         vba_context.num_b64_iocs = 0
@@ -641,10 +658,12 @@ class ViperMonkey(StubbedEngine):
                 context.dump_all_files(autoclose=True)
                 
     def eval(self, expr):
-        """
-        Parse and evaluate a single VBA expression
-        :param expr: str, expression to be evaluated
-        :return: value of the evaluated expression
+        """Parse and evaluate a single VBA expression.
+
+        @param expr (str) expression to be evaluated
+
+        @return (any) value of the evaluated expression
+
         """
         # Create the global context for the engine
         context = vba_context.Context(_globals=self.globals,
@@ -660,9 +679,12 @@ class ViperMonkey(StubbedEngine):
         return value
 
     def dump_actions(self):
-        """
-        return a table of all actions recorded by trace(), as a prettytable object
-        that can be printed or reused.
+        """Return a table of all actions recorded by trace(), as a
+        prettytable object that can be printed or reused.
+
+        @return (PrettyTable object) The actions performed during
+        emulation saved as a PrettyTable object.
+
         """
         t = prettytable.PrettyTable(('Action', 'Parameters', 'Description'))
         t.align = 'l'
@@ -681,13 +703,15 @@ class ViperMonkey(StubbedEngine):
         return t
 
 def scan_expressions(vba_code):
-    """
-    Scan VBA code to extract constant VBA expressions, i.e. expressions
-    that can be evaluated as a constant value. Iterate over these expressions,
-    yield the expression and its evaluated value as a tuple.
+    """Scan VBA code to extract constant VBA expressions,
+    i.e. expressions that can be evaluated as a constant
+    value. Iterate over these expressions, yield the expression and
+    its evaluated value as a tuple.
 
-    :param vba_code: str, VBA source code
-    :return: iterator, yield (expression, evaluated value)
+    @param vba_code (str) The VBA/VBScript source code to scan.
+
+    @return (iterator) yield (expression, evaluated value)
+
     """
     # context to evaluate expressions:
     context = vba_context.Context()

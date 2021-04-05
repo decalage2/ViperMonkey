@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """@package expressions VBA Grammar - Expressions
 """
 
