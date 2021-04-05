@@ -41,12 +41,13 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import re
 from curses_ascii import isprint
 import logging
-from pyparsing import *
+from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
+    CaselessLiteral, Literal, Forward
 
-from vba_object import *
-from literals import *
+from vba_object import eval_arg, VBA_Object, to_python
 import vb_str
 
 from logger import log
@@ -86,12 +87,14 @@ class Chr(VBA_Object):
 
         # This is implemented in the common vba_library._Chr handler class.
         import vba_library
+        # pylint: disable=protected-access
         chr_handler = vba_library._Chr()
         param = eval_arg(self.arg, context)
         return chr_handler.eval(context, [param])
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)
+
 
 # Chr, Chr$, ChrB, ChrW()
 chr_ = (
@@ -202,6 +205,7 @@ class StrReverse(VBA_Object):
     def __repr__(self):
         return 'StrReverse(%s)' % repr(self.arg)
 
+
 # StrReverse()
 strReverse = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expression + Suppress(Literal(')'))
 strReverse.setParseAction(StrReverse)
@@ -233,6 +237,7 @@ class Environ(VBA_Object):
 
     def __repr__(self):
         return 'Environ(%s)' % repr(self.arg)
+
 
 # Environ("name") => just translated to "%name%", that is enough for malware analysis
 environ = Suppress(CaselessKeyword('Environ') + '(') + expression('arg') + Suppress(')')
