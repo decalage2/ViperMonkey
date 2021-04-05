@@ -1,3 +1,9 @@
+"""@package lhs_var_visitor Visitor for collecting variables on
+the LHS of assignments in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting variables on the LHS of assignments.
 
@@ -40,8 +46,9 @@ from visitor import visitor
 import pyparsing
 
 class lhs_var_visitor(visitor):
-    """
-    Get the LHS of all Let statements.
+    """Get the LHS of all Let statements. The variables on the LHSs of
+    assignments are saved in the .variables field of the visitor object.
+
     """
 
     def __init__(self):
