@@ -44,7 +44,7 @@ __version__ = '0.02'
 import logging
 import re
 
-from pyparsing import *
+from pyparsing import QuotedString, Regex
 
 from logger import log
 from vba_object import VBA_Object
@@ -157,6 +157,7 @@ class String(VBA_Object):
             r = r.replace(chr(i), repl)
         return '"' + r + '"'
 
+
 # NOTE: QuotedString creates a regex, so speed should not be an issue.
 #quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
 quoted_string = QuotedString('"', escQuote='""', convertWhitespaceEscapes=False)('value')
@@ -178,7 +179,8 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 # MS-GRAMMAR: right-date-value = decimal-literal / month-name
 # MS-GRAMMAR: date-separator = 1*WSC / (*WSC ("/" / "-" / ",") *WSC)
 # MS-GRAMMAR: month-name = English-month-name / English-month-abbreviation
-# MS-GRAMMAR: English-month-name = "january" / "february" / "march" / "april" / "may" / "june" / "august" / "september" / "october" / "november" / "december"
+# MS-GRAMMAR: English-month-name = "january" / "february" / "march" / "april" / "may" /
+#     "june" / "august" / "september" / "october" / "november" / "december"
 # MS-GRAMMAR: English-month-abbreviation = "jan" / "feb" / "mar" / "apr" / "jun" / "jul" / "aug" / "sep" / "oct" / "nov" / "dec"
 # MS-GRAMMAR: time-value = (hour-value ampm) / (hour-value time-separator minute-value [time-separator
 # MS-GRAMMAR: second-value] [ampm])
@@ -198,4 +200,3 @@ date_string.setParseAction(lambda t: str(t[0]))
 
 literal = boolean_literal | integer | quoted_string | date_string | float_literal
 literal.setParseAction(lambda t: t[0])
-
