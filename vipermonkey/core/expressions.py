@@ -589,13 +589,13 @@ class MemberAccessExpression(VBA_Object):
                 
                 # Don't have a variable with the field value.
                 lhs_str = to_python(self.lhs, context, params)
-                last_rhs = "core.vba_library.member_access(" + lhs_str + ", \"" + last_rhs + "\")"
+                last_rhs = "core.vba_library.member_access(" + lhs_str + ", \"" + last_rhs + "\", globals())"
 
                 # Special handling for things like Range(...).Column. The Range() operator
                 # needs to return a cell dict (with column information) rather than the cell
                 # value.
-                # core.vba_library.member_access(core.vba_library.run_function("Range", vm_context, [core.vba_library.member_access(p, "index")]), "Column")
-                pat = r"(core\.vba_library\.member_access\(core\.vba_library\.run_function\(\"Range\", vm_context, \[)(.+)(\]\), \"(?:Column|Row)\"\))"
+                # core.vba_library.member_access(core.vba_library.run_function("Range", vm_context, [core.vba_library.member_access(p, "index", globals())]), "Column", globals())
+                pat = r"(core\.vba_library\.member_access\(core\.vba_library\.run_function\(\"Range\", vm_context, \[)(.+)(\]\), \"(?:Column|Row)\",)"
                 last_rhs = re.sub(pat, r"\1\2, True\3", last_rhs)
                 
             # Done.

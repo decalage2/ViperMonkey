@@ -199,7 +199,7 @@ def safe_print(text):
             handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
 
 def fix_python_overlap(var_name):
-    builtins = set(["str", "list", "bytes"])
+    builtins = set(["str", "list", "bytes", "pass"])
     if (var_name.lower() in builtins):
         var_name = "MAKE_UNIQUE_" + var_name
     var_name = var_name.replace("$", "__DOLLAR__")

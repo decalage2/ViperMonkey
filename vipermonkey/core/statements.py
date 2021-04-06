@@ -793,11 +793,21 @@ class Let_Statement(VBA_Object):
             return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
 
     def to_python(self, context, params=None, indent=0):        
-        
-        # Regular assignment?
-        r = None        
-        if (self.index is None):
 
+        # Are we updating a global variable?
+        r = ""
+        try:
+            _ = context.get(self.name, global_only=True)
+            # It's global. Treat as global in Python.
+            spaces = " " * indent
+            r += "global " + utils.fix_python_overlap(str(self.name)) + \
+                 "\n" + spaces
+        except KeyError:
+            pass
+            
+        # Regular assignment?
+        if (self.index is None):
+            
             # Annoying Mid() assignment?
             if ((self.string_op is not None) and
                 ((self.string_op["op"] == "mid") or (self.string_op["op"] == "mid$"))):
@@ -812,21 +822,21 @@ class Let_Statement(VBA_Object):
                 rhs = to_python(self.expression, context)
                 
                 # Modify the string in Python.
-                r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
+                r += the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
 
             # Handle conversion of strings to byte arrays, if needed.
             elif (context.get_type(self.name) == "Byte Array"):
                 val = "coerce_to_int_list(" + to_python(self.expression, context, params=params) + ")"
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
 
             # Handle conversion of byte arrays to strings, if needed.
             elif (context.get_type(self.name) == "String"):
                 val = "coerce_to_str(" + to_python(self.expression, context, params=params) + ")"
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
 
             # Basic assignment.
             else:
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
                 
         # Array assignment?
         else:
@@ -848,9 +858,9 @@ class Let_Statement(VBA_Object):
                 index_str += i
             index_str = "[" + index_str + "]"
             if (op == "="):
-                r = py_var + " = update_array(" + py_var + ", " + index_str + ", " + val + ")"
+                r += py_var + " = update_array(" + py_var + ", " + index_str + ", " + val + ")"
             else:
-                r = py_var + "[" + index + "] " + op + " " + val
+                r += py_var + "[" + index + "] " + op + " " + val
 
         # Mark this variable as set so it does not get overwritten by
         # future to_python() code generation.
