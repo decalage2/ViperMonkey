@@ -1,3 +1,9 @@
+"""@package loop_transform Transform certain types of loops into
+easier to emulate constructs.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 loop_transform.py - Transform certain types of loops into easier to emulate constructs.
 
@@ -44,9 +50,13 @@ from logger import log
 import statements
 
 def _transform_dummy_loop1(loop):
-    """
-    Transform useless loops like 'y = 20:Do While x < 100:If x = 6 Then y = 30:x = x + 1:Loop' to
-    'y = 30'
+    """Transform useless loops like 'y = 20:Do While x < 100:If x = 6
+    Then y = 30:x = x + 1:Loop' to 'y = 30'
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Do we have this sort of loop?
@@ -111,9 +121,13 @@ def _transform_dummy_loop1(loop):
     return obj
 
 def _transform_wait_loop(loop):
-    """
-    Transform useless loops like 'Do While x <> y:SomeFunctionCall():Loop' to
-    'SomeFunctionCall()'
+    """Transform useless loops like 'Do While x <>
+    y:SomeFunctionCall():Loop' to 'SomeFunctionCall()'
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Do we have this sort of loop?
@@ -132,8 +146,13 @@ def _transform_wait_loop(loop):
     return loop.body[0]
     
 def transform_loop(loop):
-    """
-    Transform a given VBAObject representing a loop into an easier to emulate construct.
+    """Transform a given VBAObject representing a loop into an easier to
+    emulate construct.
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Sanity check.
