@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""@package logger Defines some logging helper classes and functions.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 vipermonkey logging helper
 
@@ -56,7 +60,10 @@ import logging
 # === LOGGING =================================================================
 
 class CappedFileHandler(logging.FileHandler):
+    """Logging file handler that limits the size of the log file.
 
+    """
+    
     # default size cap of 30M
     # log file is put in the working directory with the same name
     def __init__(self, filename, sizecap, mode='w', encoding=None, delay=False):
@@ -76,7 +83,10 @@ class CappedFileHandler(logging.FileHandler):
                 self.cap_exceeded = True
 
 class DuplicateFilter(logging.Filter):
+    """Filters out log messages that have been seen before.
 
+    """
+    
     def filter(self, record):
         # add other fields if you need more granular comparison, depends on your app
         current_log = (record.module, record.levelno, record.msg)
@@ -86,12 +96,16 @@ class DuplicateFilter(logging.Filter):
         return False
 
 def get_logger(name, level=logging.NOTSET):
-    """
-    Create a suitable logger object for this module.
-    The goal is not to change settings of the root logger, to avoid getting
-    other modules' logs on the screen.
-    If a logger exists with same name, reuse it. (Else it would have duplicate
-    handlers and messages would be doubled.)
+    """Create a suitable logger object for a module.  The goal is not to
+    change settings of the root logger, to avoid getting other
+    modules' logs on the screen.  If a logger exists with same name,
+    reuse it. (Else it would have duplicate handlers and messages
+    would be doubled.)
+
+    @param name (str) The name of the logger.
+
+    @param level (int??) The level of logging to perform.
+
     """
     # First, test if there is already a logger with the same name, else it
     # will generate duplicate messages (due to duplicate handlers):
@@ -117,4 +131,3 @@ def get_logger(name, level=logging.NOTSET):
 
 # a global logger object used for debugging:
 log = get_logger('VMonkey')
-
