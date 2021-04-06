@@ -5060,11 +5060,31 @@ class Print(VbaLibraryFunc):
     Debug.Print function.
     """
 
+    def _handle_file_print(self, context, params):
+
+        # Sanity check.
+        if (len(params) != 2):
+            log.warning("Wrong # of arguments for Print " + str(params))
+            return
+
+        # 1st arg should be file ID.
+        fileid = "#" + str(params[0])
+
+        # 2nd arg should be data to write.
+        data = utils.safe_str_convert(params[1])
+
+        # Try writing the file.
+        context.write_file(fileid, data)
+        
     def eval(self, context, params=None):
 
         # Sanity check.
         if (params is None):
             return
+
+        # Print #NN to a file ID?
+        if (len(params) == 2):
+            return self._handle_file_print(context, params)
         
         # Regular Debug.Print() ?
         if (len(params) != 1):
