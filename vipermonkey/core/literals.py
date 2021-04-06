@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""@package literals Parsing and emulation of VBA/VBScript literals.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Literals
 
@@ -107,7 +111,10 @@ float_literal.setParseAction(lambda t: float(t.value))
 # MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
 
 class String(VBA_Object):
+    """Emulate a VBA/VBScript string literal.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]        
