@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""@package meta Functionality for reading in Office file metadata.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Read in document metadata item.
 
@@ -18,10 +22,23 @@ import subprocess
 from logger import log
 
 class FakeMeta(object):
+    """Class used to hold Office file metadata fields and values.
+
+    """
     pass
 
 def get_metadata_exif(filename):
+    """Get the Office metadata for a given file with the exiftool
+    utility.
 
+    @param filename (str) The name of the Office file for which to get
+    metadata.
+
+    @return (FakeMeta object) An object with a field for each piece of
+    metadate.
+
+    """
+    
     # Use exiftool to get the document metadata.
     output = None
     try:
