@@ -36,8 +36,9 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
 import re
+
+from pyparsing import ParseException
 
 from logger import log
 import statements
@@ -103,10 +104,9 @@ def _transform_dummy_loop1(loop):
         loop_repl += run_statement + "\n"
 
     # Parse and return the loop replacement, if it works.
-    import statements
     try:
         obj = statements.statement_block.parseString(loop_repl, parseAll=True)[0]
-    except:
+    except ParseException:
         return loop
     return obj
 
@@ -137,7 +137,6 @@ def transform_loop(loop):
     """
 
     # Sanity check.
-    import statements
     if (not isinstance(loop, statements.While_Statement)):
         return loop
     
