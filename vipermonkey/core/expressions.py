@@ -482,7 +482,41 @@ class MemberAccessExpression(VBA_Object):
             return None
         r = to_python(res_func, context)
         return r
+
+    def _to_python_handle_regex(self, context, indent):
+        """Handle RegEx() object method calls like Replace() and Test().
+
+        """
+        # Is this a Regex method call?
+        if (len(self.rhs) == 0):
+            return None
+
+        # RegExp operations?
+        raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
+        if (not ((raw_last_func.startswith("Test(")) or
+                 (raw_last_func.startswith("Replace(")) or
+                 (raw_last_func == "Global") or
+                 (raw_last_func == "Pattern"))):
+            return None
             
+        # Got a RegEx method call. Use the simulated RegExp object for this.
+        exp_str = str(self)
+        call_str = raw_last_func
+        if (isinstance(self.rhs[-1], Function_Call)):
+            the_call = self.rhs[-1]
+            call_str = str(the_call.name) + "("
+            first = True
+            for p in the_call.params:
+                if (not first):
+                    call_str += ", "
+                first = False
+                call_str += to_python(p, context)
+            call_str += ")"
+        r = exp_str[:exp_str.rindex(".")] + "." + call_str
+        #print "OUT: 4"
+        #print r
+        return r
+        
     def to_python(self, context, params=None, indent=0):
 
         # Handle Scripting.Dictionary.Add() calls.
@@ -490,52 +524,34 @@ class MemberAccessExpression(VBA_Object):
         #print self
         add_code = self._to_python_handle_add(context, indent)
         if (add_code is not None):
-            #print"OUT: 1"
-            #printadd_code
+            #print "OUT: 1"
+            #print add_code
             return add_code
 
         # Handle ListBox.List() calls.
         add_code = self._to_python_handle_listbox_list(context, indent)
         if (add_code is not None):
-            #print"OUT: 2"
-            #printadd_code
+            #print "OUT: 2"
+            #print add_code
+            return add_code
+
+        # Handle RegExp object operations.
+        add_code = self._to_python_handle_regex(context, indent)
+        if (add_code is not None):
+            #print "OUT: 2.1"
+            #print add_code
             return add_code
 
         # Convert nested method calls to regular function calls for supported
         # VB methods.
         add_code = self._to_python_nested_methods(context, indent)
         if (add_code is not None):
-            #print"OUT: 3"
-            #printadd_code
+            #print "OUT: 3"
+            #print add_code
             return add_code
         
         # For now just pick off the last item in the expression.
         if (len(self.rhs) > 0):
-
-            # RegExp operations?
-            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
-            if ((raw_last_func.startswith("Test(")) or
-                (raw_last_func.startswith("Replace(")) or
-                (raw_last_func == "Global") or
-                (raw_last_func == "Pattern")):
-            
-                # Use the simulated RegExp object for this.
-                exp_str = str(self)
-                call_str = raw_last_func
-                if (isinstance(self.rhs[-1], Function_Call)):
-                    the_call = self.rhs[-1]
-                    call_str = str(the_call.name) + "("
-                    first = True
-                    for p in the_call.params:
-                        if (not first):
-                            call_str += ", "
-                        first = False
-                        call_str += to_python(p, context)
-                    call_str += ")"
-                r = exp_str[:exp_str.rindex(".")] + "." + call_str
-                #print"OUT: 4"
-                #printr
-                return r
 
             # Excel SpecialCells() method call?
             if (raw_last_func.startswith("SpecialCells(")):
@@ -548,8 +564,8 @@ class MemberAccessExpression(VBA_Object):
                 
                 # Convert the call with the cells as explicit parameters to python.
                 r = to_python(new_special_cells, context, params)
-                #print"OUT: 5"
-                #printr
+                #print "OUT: 5"
+                #print r
                 return r
 
             # No special operations.
@@ -579,8 +595,8 @@ class MemberAccessExpression(VBA_Object):
                     # Just reference the synthetic Python variable for this
                     # field.
                     r = str(self).replace(".", "")
-                    #print"OUT: 6"
-                    #printr
+                    #print "OUT: 6"
+                    #print r
                     return r
 
                 # We are tracking the address in the index field.
@@ -594,13 +610,14 @@ class MemberAccessExpression(VBA_Object):
                 # Special handling for things like Range(...).Column. The Range() operator
                 # needs to return a cell dict (with column information) rather than the cell
                 # value.
-                # core.vba_library.member_access(core.vba_library.run_function("Range", vm_context, [core.vba_library.member_access(p, "index", globals())]), "Column", globals())
+                # core.vba_library.member_access(core.vba_library.run_function("Range", vm_context, \
+                #   [core.vba_library.member_access(p, "index", globals())]), "Column", globals())
                 pat = r"(core\.vba_library\.member_access\(core\.vba_library\.run_function\(\"Range\", vm_context, \[)(.+)(\]\), \"(?:Column|Row)\",)"
                 last_rhs = re.sub(pat, r"\1\2, True\3", last_rhs)
                 
             # Done.
-            #print"OUT: 7"
-            #printlast_rhs
+            #print "OUT: 7"
+            #print last_rhs
             return last_rhs
         
         return ""
