@@ -2293,11 +2293,18 @@ class MemberAccessExpression(VBA_Object):
             #print "OUT: 22.2"
             return call_retval
 
-        # See if we can convert nested method calls to a nested function call.
+        # Handle things like foo.Replace(bar, baz).
         #print "HERE: 26.1"
-        call_retval = self._eval_nested_methods(context)
+        call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
         if (call_retval is not None):
             #print "OUT: 22.3"
+            return call_retval
+        
+        # See if we can convert nested method calls to a nested function call.
+        #print "HERE: 26.2"
+        call_retval = self._eval_nested_methods(context)
+        if (call_retval is not None):
+            #print "OUT: 22.4"
             return call_retval
         
         # If the final element in the member expression is a function call,
@@ -2318,13 +2325,6 @@ class MemberAccessExpression(VBA_Object):
                     if (rhs_name.lower() == func.lower()):
                         #print "OUT: 23"
                         return str(self)
-
-            # Handle things like foo.Replace(bar, baz).
-            #print "HERE: 29"
-            call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 24"
-                return call_retval
 
             # Handle things like foo.Add(bar, baz).
             #print "HERE: 30"
