@@ -554,6 +554,7 @@ class MemberAccessExpression(VBA_Object):
         if (len(self.rhs) > 0):
 
             # Excel SpecialCells() method call?
+            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
             if (raw_last_func.startswith("SpecialCells(")):
 
                 # Make the call with the cell range as the new 1st argument.
