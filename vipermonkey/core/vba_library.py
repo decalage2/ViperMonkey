@@ -82,11 +82,15 @@ from logger import log
 
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 
-def member_access(var, field):
+def member_access(var, field, globals_calling_scope=None):
     """
     Read a field from an object. Used in Python JIT code.
     """
 
+    # Were we given the globals in the calling scope?
+    if (globals_calling_scope is None):
+        globals_calling_scope = {}
+    
     # Reading a field from a dict?
     field = str(field)
     field_l = field.lower()
@@ -114,10 +118,14 @@ def member_access(var, field):
 
     # Punt and just see if we can return the value of a variable
     # with the same name as the field.
+    blah = list(globals().keys())
+    blah.sort()
     if (field in locals()):
         return locals[field]
     elif (field in globals()):
         return globals[field]
+    elif (field in globals_calling_scope):
+        return globals_calling_scope[field]
     else:
         return var
 
@@ -2578,7 +2586,12 @@ class InStr(VbaLibraryFunc):
             return None
         if ((not isinstance(s2, list)) and (not isinstance(s2, str))):
             return None
-                
+
+        # Always say we found the substring if the string in which we
+        # are searching is the special wildcard string.
+        if (s1 == "**MATCH ANY**"):
+            return 1
+        
         # TODO: Figure out how VB binary search works. For now just do text search.
         r = None
         if (len(s1) == 0):
@@ -5060,11 +5073,31 @@ class Print(VbaLibraryFunc):
     Debug.Print function.
     """
 
+    def _handle_file_print(self, context, params):
+
+        # Sanity check.
+        if (len(params) != 2):
+            log.warning("Wrong # of arguments for Print " + str(params))
+            return
+
+        # 1st arg should be file ID.
+        fileid = "#" + str(params[0])
+
+        # 2nd arg should be data to write.
+        data = utils.safe_str_convert(params[1])
+
+        # Try writing the file.
+        context.write_file(fileid, data)
+        
     def eval(self, context, params=None):
 
         # Sanity check.
         if (params is None):
             return
+
+        # Print #NN to a file ID?
+        if (len(params) == 2):
+            return self._handle_file_print(context, params)
         
         # Regular Debug.Print() ?
         if (len(params) != 1):
@@ -5213,7 +5246,7 @@ class CreateTextFile(VbaLibraryFunc):
 
         # How about returning the name of the opened file.
         return fname
-
+    
 class Open(CreateTextFile):
     """
     Open() file function. Also Open() HTTP function.
@@ -5387,17 +5420,42 @@ class Send(VbaLibraryFunc):
     def eval(self, context, params=None):
         return 200
 
-class setRequestHeader(VbaLibraryFunc):
+class SetTimeouts(VbaLibraryFunc):
     """
-    HTTP setRequestHeader().
+    ServerXMLHTTP SetTimeouts() method (stubbed).
     """
 
     def eval(self, context, params=None):
-        headers = str(params)
-        context.report_action('Set HTTP Headers', headers, 'setRequestHeader()', strip_null_bytes=True)
+        pass
 
-    def num_args(self):
-        return 1
+class SetOption(VbaLibraryFunc):
+    """
+    ServerXMLHTTP SetOption() method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        pass
+    
+class SetRequestHeader(VbaLibraryFunc):
+    """
+    ServerXMLHTTP SetRequestHeader() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return
+
+        # Field is 1st arg.
+        field = utils.safe_str_convert(params[0])
+
+        # Value is 2nd arg.
+        val = utils.safe_str_convert(params[1])
+
+        # Save the header value.
+        info = "'" + field + "' ==> '" + val + "'"
+        context.report_action('Set HTTP Header', info, "ServerXMLHTTP::SetRequestHeader()")
     
 class WriteProcessMemory(VbaLibraryFunc):
     """
@@ -5489,7 +5547,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
-               Arguments, DateDiff, setRequestHeader):
+               Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -4892,7 +4892,7 @@ class VbaConstants(object):
         self.globals["Application.Caption".lower()] = "**MATCH ANY**"
         self.globals["Application.System.Version".lower()] = "**MATCH ANY**"
         self.globals["BackStyle".lower()] = "**MATCH ANY**"
-        self.globals["responseText".lower()] = ""
+        self.globals["responseText".lower()] = "**MATCH ANY**"
         self.globals["NumberOfLogicalProcessors".lower()] = 4
         self.globals[".NumberOfLogicalProcessors".lower()] = 4
         self.globals["ActiveWorkbook.Name".lower()] = "**MATCH ANY**"

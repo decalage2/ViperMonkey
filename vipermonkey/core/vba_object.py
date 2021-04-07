@@ -846,9 +846,20 @@ def _get_var_vals(item, context, global_only=False):
         # Save the regex pattern if this is a regex object.
         if (utils.safe_str_convert(val) == "RegExp"):
             if (context.contains("RegExp.pattern")):
-                r[var + ".Pattern"] = to_python(context.get("RegExp.pattern"))
+                pval = to_python(context.get("RegExp.pattern"), context)
+                if (pval.startswith('"')):
+                    pval = pval[1:]
+                if (pval.endswith('"')):
+                    pval = pval[:-1]
+                r[var + ".Pattern"] = pval
             if (context.contains("RegExp.global")):
-                r[var + ".Global"] = to_python(context.get("RegExp.global"))
+                gval = to_python(context.get("RegExp.global"), context)
+                gval = gval.replace('"', "")
+                if (gval == "True"):
+                    gval = True
+                if (gval == "False"):
+                    gval = False
+                r[var + ".Global"] = gval
         
         # Mark this variable as being set in the Python code to avoid
         # embedded loop Python code generation stomping on the value.
@@ -876,7 +887,11 @@ def _loop_vars_to_python(loop, context, indent):
     sorted_vars.sort()
     for var in sorted_vars:
         val = to_python(init_vals[var], context)
-        loop_init += indent_str + str(var).replace(".", "") + " = " + val + "\n"
+        var_name = str(var)
+        if ((not var_name.endswith(".Pattern")) and
+            (not var_name.endswith(".Global"))):
+            var_name = var_name.replace(".", "")
+        loop_init += indent_str + var_name + " = " + val + "\n"
     try:
         hash_object = hashlib.md5(str(loop).encode())
     except UnicodeDecodeError:

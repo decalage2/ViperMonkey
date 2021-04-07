@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: VBA Grammar - Modules
 
