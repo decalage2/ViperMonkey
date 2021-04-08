@@ -797,15 +797,25 @@ class Let_Statement(VBA_Object):
         # Are we updating a global variable?
         r = ""
         try:
-            _ = context.get(self.name, global_only=True)
-            # It's global. Treat as global in Python.
-            spaces = " " * indent
-            r += "global " + utils.fix_python_overlap(str(self.name)) + \
-                 "\n" + spaces
+
+            # Don't flag funcs as global in Python JIT code.            
+            var_val = context.get(self.name, global_only=True)
+            if ((not (isinstance(var_val, procedures.Function) or
+                     isinstance(var_val, procedures.Sub) or
+                     isinstance(var_val, VbaLibraryFunc))) and
+                (var_val != "__ALREADY_SET__")):
+
+                # It's global and not a func. Treat as global in Python.
+                spaces = " " * indent
+                r += "global " + utils.fix_python_overlap(str(self.name)) + \
+                     "\n" + spaces
+
+        # Not a global.
         except KeyError:
             pass
-            
+
         # Regular assignment?
+        python_var_name = str(self.name)
         if (self.index is None):
             
             # Annoying Mid() assignment?
@@ -827,20 +837,20 @@ class Let_Statement(VBA_Object):
             # Handle conversion of strings to byte arrays, if needed.
             elif (context.get_type(self.name) == "Byte Array"):
                 val = "coerce_to_int_list(" + to_python(self.expression, context, params=params) + ")"
-                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + val
 
             # Handle conversion of byte arrays to strings, if needed.
             elif (context.get_type(self.name) == "String"):
                 val = "coerce_to_str(" + to_python(self.expression, context, params=params) + ")"
-                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + val
 
             # Basic assignment.
             else:
-                r += utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
                 
         # Array assignment?
         else:
-            py_var = utils.fix_python_overlap(str(self.name))
+            py_var = utils.fix_python_overlap(python_var_name)
             if (py_var.startswith(".")):
                 py_var = py_var[1:]
             index = to_python(self.index, context, params=params)

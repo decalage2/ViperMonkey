@@ -7219,6 +7219,52 @@ class VbaConstants(object):
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
 
+        # MsoAnimationType Enum
+        #
+        # This object, member, or enumeration is deprecated and is not intended to be used in your code.
+        self.globals["msoAnimationAppear".lower()] = 32	
+        self.globals["msoAnimationBeginSpeaking".lower()] = 4	
+        self.globals["msoAnimationCharacterSuccessMajor".lower()] = 6	
+        self.globals["msoAnimationCheckingSomething".lower()] = 103	
+        self.globals["msoAnimationDisappear".lower()] = 31	
+        self.globals["msoAnimationEmptyTrash".lower()] = 116	
+        self.globals["msoAnimationGestureDown".lower()] = 113	
+        self.globals["msoAnimationGestureLeft".lower()] = 114	
+        self.globals["msoAnimationGestureRight".lower()] = 19	
+        self.globals["msoAnimationGestureUp".lower()] = 115	
+        self.globals["msoAnimationGetArtsy".lower()] = 100	
+        self.globals["msoAnimationGetAttentionMajor".lower()] = 11	
+        self.globals["msoAnimationGetAttentionMinor".lower()] = 12	
+        self.globals["msoAnimationGetTechy".lower()] = 101	
+        self.globals["msoAnimationGetWizardy".lower()] = 102	
+        self.globals["msoAnimationGoodbye".lower()] = 3	
+        self.globals["msoAnimationGreeting".lower()] = 2	
+        self.globals["msoAnimationIdle".lower()] = 1	
+        self.globals["msoAnimationListensToComputer".lower()] = 26	
+        self.globals["msoAnimationLookDown".lower()] = 104	
+        self.globals["msoAnimationLookDownLeft".lower()] = 105	
+        self.globals["msoAnimationLookDownRight".lower()] = 106	
+        self.globals["msoAnimationLookLeft".lower()] = 107	
+        self.globals["msoAnimationLookRight".lower()] = 108	
+        self.globals["msoAnimationLookUp".lower()] = 109	
+        self.globals["msoAnimationLookUpLeft".lower()] = 110	
+        self.globals["msoAnimationLookUpRight".lower()] = 111	
+        self.globals["msoAnimationPrinting".lower()] = 18	
+        self.globals["msoAnimationRestPose".lower()] = 5	
+        self.globals["msoAnimationSaving".lower()] = 112	
+        self.globals["msoAnimationSearching".lower()] = 13	
+        self.globals["msoAnimationSendingMail".lower()] = 25	
+        self.globals["msoAnimationThinking".lower()] = 24	
+        self.globals["msoAnimationWorkingAtSomething".lower()] = 23	
+        self.globals["msoAnimationWritingNotingSomething".lower()] = 22	
+
+        # MsoAutoSize Enum
+        #
+        # Determines the type of automatic sizing allowed.        
+        self.globals["msoAutoSizeNone".lower()] = 0	
+        self.globals["msoAutoSizeShapeToFitText".lower()] = 1	
+        self.globals["msoAutoSizeTextToFitShape".lower()] = 2	
+        
         # WdSaveFormat enumeration (Word)
         self.globals["wdFormatDocument".lower()] = 0
         self.globals["wdFormatDOSText".lower()] = 4
