@@ -444,7 +444,7 @@ class MemberAccessExpression(VBA_Object):
         r = indent_str + to_python(new_add, context)        
         return r
 
-    def _convert_nested_methods_to_func_call(self):
+    def _convert_nested_methods_to_func_call(self, context):
         """Given a member access expression like foo(1).bar(2).baz(3) return
         (conceptually) baz(3, bar(2, foo(1))). Note that the objects
         are broken out as function arguments in the calls.
@@ -522,10 +522,6 @@ class MemberAccessExpression(VBA_Object):
         @param indent (int) The number of spaces of indent to use at
         the beginning of the generated Python code.
 
-        @return (str) The current List() method call with it's
-        emulation implemented as Python code if this object is a
-        ListBox object, None if this is not a ListBox object.
-
         @return (str) The member access expression calls converted to
         Python nested function calls if possible, None if conversion
         is not possible.
@@ -534,7 +530,7 @@ class MemberAccessExpression(VBA_Object):
         indent = indent # pylint warning
         
         # Return the nested function calls as Python.
-        res_func = self._convert_nested_methods_to_func_call()
+        res_func = self._convert_nested_methods_to_func_call(context)
         if (res_func is None):
             return None
         r = to_python(res_func, context)
@@ -543,7 +539,21 @@ class MemberAccessExpression(VBA_Object):
     def _to_python_handle_regex(self, context, indent):
         """Handle RegEx() object method calls like Replace() and Test().
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The RegEx method calls converted to Python if
+        possible, None if conversion is not possible.
+
         """
+
+        # pylint.
+        indent = indent
+        
         # Is this a Regex method call?
         if (len(self.rhs) == 0):
             return None
@@ -2389,7 +2399,7 @@ class MemberAccessExpression(VBA_Object):
         # Convert this to nested function calls
         #print "TRY EVAL NESTED!!"
         #print self
-        res_func = self._convert_nested_methods_to_func_call()
+        res_func = self._convert_nested_methods_to_func_call(context)
         if (res_func is None):
             #print "NO!!"
             return None
