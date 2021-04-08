@@ -84,32 +84,37 @@ def _read_sheet_from_csv(filename):
         log.error("Cannot open CSV file. " + str(e))
         return None
 
+    # Read in the full CSV file contents and escape ',' in cell values
+    # so the cell split works correctly. Also escape \n's in cell contents.
+    data = f.read()
+    f.close()
+    in_str = False
+    tmp = ""
+    for c in data:
+        if (c == '"'):
+            in_str = not in_str
+        if (in_str and (c == ',')):
+            tmp += "#A_COMMA!!#"
+        elif (in_str and (c == '\n')):
+            tmp += "#A_NEWLINE!!#"
+        else:
+            tmp += c
+    data = tmp
+    
     # Read in all the cells. Note that this only works for a single sheet.
     row = 0
     r = {}
-    for line in f:
-
-        # Escape ',' in cell values so the split works correctly.
-        line = line.strip()
-        in_str = False
-        tmp = ""
-        for c in line:
-            if (c == '"'):
-                in_str = not in_str
-            if (in_str and (c == ',')):
-                tmp += "#A_COMMA!!#"
-            else:
-                tmp += c
-        line = tmp
+    for line in data.split("\n"):
 
         # Break out the individual cell values.
+        line = line.strip()
         cells = line.split(",")
         col = 0
         for cell in cells:
 
-            # Add back in escaped ','.
-            cell = cell.replace("#A_COMMA!!#", ",")
-
+            # Add back in escaped characters.
+            cell = cell.replace("#A_COMMA!!#", ",").replace("#A_NEWLINE!!#", "\n")
+            
             # Strip " from start and end of value.
             dat = str(cell)
             if (dat.startswith('"')):
@@ -119,16 +124,13 @@ def _read_sheet_from_csv(filename):
 
             # LibreOffice escapes '"' as '""'. Undo that.
             dat = dat.replace('""', '"')
-
+            
             # Save the cell value.
             r[(row, col)] = dat
 
             # Next column.
             col += 1
         row += 1
-
-    # Close file.
-    f.close()
 
     # Make an object with a subset of the xlrd book methods.
     r = make_book(r)

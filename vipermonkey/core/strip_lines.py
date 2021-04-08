@@ -1585,10 +1585,10 @@ def fix_difficult_code(vba_code):
         
         # Handle entering/leaving strings.        
         if ((not in_comment) and (c == '"')):
-            if (in_str):
-                r += '"'
+            r += '"'
             in_str = not in_str
             #print "IN_STR: " + str(in_str)
+            continue
 
         # Handle entering/leaving [] expressions.
         if ((not in_comment) and (not in_str)):
@@ -1704,7 +1704,6 @@ def fix_difficult_code(vba_code):
     known_funcs = ["Randomize"]
     for func in known_funcs:
         r = r.replace("\n" + func + ":", "\n" + func)
-
     
     if debug_strip:
         print "HERE: 19"
