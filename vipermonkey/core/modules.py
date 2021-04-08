@@ -41,26 +41,23 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# For Python 2+3 support:
-from __future__ import print_function
-
 __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
 import logging
 
-from pyparsing import Optional, ZeroOrMore, EOL, Forward, Suppress, \
-    OneOrMore, EOS
+from pyparsing import Optional, ZeroOrMore, Forward, Suppress, \
+    OneOrMore
 
-from comments_eol import rem_statement
+from comments_eol import rem_statement, EOL, EOS
 from procedures import function_end, function_start, sub_end, sub_start_line, \
-    function, sub, Function, Sub
+    function, sub, Function, Sub, property_let, PropertyLet
 from statements import simple_statements_line, for_end, for_start, \
-    type_declaration, simple_if_statement_macro, property_let, option_statement, \
+    type_declaration, simple_if_statement_macro, option_statement, \
     External_Function, do_const_assignments, external_function, attribute_statement, \
     Dim_Statement, Global_Var_Statement, Attribute_Statement, If_Statement_Macro, \
-    PropertyLet, simple_call_list, dim_statement, global_variable_declaration, \
+    simple_call_list, dim_statement, global_variable_declaration, \
     tagged_block, block_statement, orphaned_marker
 from function_defn_visitor import function_defn_visitor
 from vba_object import to_python, VBA_Object

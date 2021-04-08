@@ -42,9 +42,6 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# For Python 2+3 support:
-from __future__ import print_function
-
 # ------------------------------------------------------------------------------
 # CHANGELOG:
 # 2015-02-12 v0.01 PL: - first prototype
@@ -106,7 +103,7 @@ import filetype
 import read_ole_fields
 from meta import FakeMeta
 from vba_lines import vba_collapse_long_lines
-from modules import module, vba_line
+from modules import module
 # Make sure we populate the VBA Library:
 import vba_library
 from stubbed_engine import StubbedEngine
@@ -410,10 +407,10 @@ class ViperMonkey(StubbedEngine):
             self.add_compiled_module(m)
 
         except ParseException as err:
-            print('*** PARSING ERROR (1) ***')
-            print(err.line)
-            print(" " * (err.column - 1) + "^")
-            print(err)
+            print '*** PARSING ERROR (1) ***'
+            print err.line
+            print " " * (err.column - 1) + "^"
+            print err
             
     def _get_external_funcs(self):
         """Get a list of external (or VB builtin) functions called in the
