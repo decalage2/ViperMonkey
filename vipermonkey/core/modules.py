@@ -1,3 +1,8 @@
+"""@package modules Parsing and emulation of VBA/VBScript Modules.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Modules
 
@@ -69,9 +74,14 @@ from expressions import expression, expr_const
 class Module(VBA_Object):
 
     def _handle_func_decls(self, tokens):
-        """
-        Look for functions/subs declared anywhere, including inside the body 
-        of other functions/subs.
+        """Look for functions/subs declared anywhere, including inside the
+        body of other functions/subs. The function/sub declarations
+        will be saved in the subs and functions fields of the current
+        Module object.
+
+        @param tokens (list) A list of pyparsing tokens representing a
+        parsed Module.
+
         """
 
         # Look through each parsed item in the module for function/sub
@@ -210,9 +220,13 @@ class Module(VBA_Object):
         return to_python(self.loose_lines, context, indent=indent, statements=True)
     
     def load_context(self, context):
-        """
-        Load functions/subs defined in the module into the given
-        context.
+        """Load functions/subs defined in the module into the given
+        context. The function/sub names will be associated with the
+        function/sub definitions in the context.
+
+        @param context (VBA_Context object) The context in which to
+        load the functions/subs defined in the current module.
+
         """
         
         for name, _sub in self.subs.items():
@@ -289,9 +303,9 @@ empty_line = EOL.suppress()
 pointless_empty_tuple = Suppress('(') + Suppress(')')
 
 class LooseLines(VBA_Object):
-    """
-    A list of Visual Basic statements that don't appear in a Sub or Function.
-    This is mainly appicable to VBScript files.
+    """A list of Visual Basic statements that don't appear in a Sub or
+    Function.  This is mainly appicable to VBScript files.
+
     """
 
     def __init__(self, original_str, location, tokens):
