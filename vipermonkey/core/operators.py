@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: VBA Grammar - Operators
 
@@ -42,15 +41,14 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+#import sys
 import logging
-import sys
 from collections import Iterable
 
-from vba_object import *
-
+from vba_object import coerce_args, eval_args, VBA_Object, coerce_args_to_str, \
+    coerce_to_num, to_python, coerce_to_int
 from logger import log
-from vba_object import coerce_to_num
-from vba_object import to_python
+
 
 def debug_repr(op, args):
     r = "("
@@ -123,7 +121,7 @@ class Sum(VBA_Object):
         
     def __repr__(self):
         return debug_repr("+", self.arg)
-        return ' + '.join(map(repr, self.arg))
+        #return ' + '.join(map(repr, self.arg))
 
 # --- EQV --------------------------------------------------------
 
@@ -246,8 +244,8 @@ class And(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) & int(y), evaluated_args)
-            except:
-                log.error('Impossible to and arguments of different types.')
+            except Exception as e:
+                log.error('Impossible to and arguments of different types. ' + str(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval and: %r" % self.arg)
@@ -284,8 +282,8 @@ class Or(VBA_Object):
             # TODO: Need to handle floats in strings.
             try:
                 return reduce(lambda x, y: int(x) | int(y), evaluated_args)
-            except:
-                log.error('Impossible to or arguments of different types.')
+            except Exception as e:
+                log.error('Impossible to or arguments of different types. ' + str(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval or: %r" % self.arg)
@@ -435,7 +433,7 @@ class Subtraction(VBA_Object):
 
     def __repr__(self):
         return debug_repr("-", self.arg)
-        return ' - '.join(map(repr, self.arg))
+        #return ' - '.join(map(repr, self.arg))
 
 # --- MULTIPLICATION: * OPERATOR ------------------------------------------------
 
@@ -473,7 +471,7 @@ class Multiplication(VBA_Object):
 
     def __repr__(self):
         return debug_repr("*", self.arg)
-        return ' * '.join(map(repr, self.arg))
+        #return ' * '.join(map(repr, self.arg))
 
 # --- EXPONENTIATION: ^ OPERATOR ------------------------------------------------
 
@@ -511,7 +509,7 @@ class Power(VBA_Object):
 
     def __repr__(self):
         return debug_repr("^", self.arg)
-        return ' ^ '.join(map(repr, self.arg))
+        #return ' ^ '.join(map(repr, self.arg))
 
     def to_python(self, context, params=None, indent=0):
         r = reduce(lambda x, y: "pow(coerce_to_num(" + to_python(x, context) + "), coerce_to_num(" + to_python(y, context) + "))", self.arg)
@@ -558,7 +556,7 @@ class Division(VBA_Object):
 
     def __repr__(self):
         return debug_repr("/", self.arg)
-        return ' / '.join(map(repr, self.arg))
+        #return ' / '.join(map(repr, self.arg))
 
 
 class MultiOp(VBA_Object):
@@ -589,11 +587,11 @@ class MultiOp(VBA_Object):
             ret = [to_python(self.arg[0], context, params=params)]
         else:
             ret = ["coerce_to_num(" + to_python(self.arg[0], context, params=params)  + ")"]
-        for operator, arg in zip(self.operators, self.arg[1:]):
-            if (operator == "+"):
+        for op, arg in zip(self.operators, self.arg[1:]):
+            if (op == "+"):
                 ret.append(' {} {!s}'.format("|plus|", to_python(arg, context, params=params)))
             else:
-                ret.append(' {} {!s}'.format(operator, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
+                ret.append(' {} {!s}'.format(op, "coerce_to_num(" + to_python(arg, context, params=params) + ")"))
 
         # Out of the string/numeric expression. Might have actual boolean
         # expressions now.
@@ -623,9 +621,9 @@ class MultiOp(VBA_Object):
         try:
             args = coerce_args(evaluated_args)
             ret = args[0]
-            for operator, arg in zip(self.operators, args[1:]):
+            for op, arg in zip(self.operators, args[1:]):
                 try:
-                    ret = self.operator_map[operator](ret, arg)
+                    ret = self.operator_map[op](ret, arg)
                 except OverflowError:
                     log.error("overflow trying eval: %r" % str(self))
             if set_flag:
@@ -637,8 +635,8 @@ class MultiOp(VBA_Object):
             try:
                 args = map(coerce_to_num, evaluated_args)
                 ret = args[0]
-                for operator, arg in zip(self.operators, args[1:]):
-                    ret = self.operator_map[operator](ret, arg)
+                for op, arg in zip(self.operators, args[1:]):
+                    ret = self.operator_map[op](ret, arg)
                 if set_flag:
                     context.in_bitwise_expression = False
                 return ret
@@ -660,8 +658,8 @@ class MultiOp(VBA_Object):
 
     def __repr__(self):
         ret = [str(self.arg[0])]
-        for operator, arg in zip(self.operators, self.arg[1:]):
-            ret.append(' {} {!s}'.format(operator, arg))
+        for op, arg in zip(self.operators, self.arg[1:]):
+            ret.append(' {} {!s}'.format(op, arg))
         return '({})'.format(''.join(ret))
 
 
@@ -719,7 +717,7 @@ class FloorDivision(VBA_Object):
             
     def __repr__(self):
         return debug_repr("//", self.arg)
-        return ' \\ '.join(map(repr, self.arg))
+        #return ' \\ '.join(map(repr, self.arg))
 
     def to_python(self, context, params=None, indent=0):
         r = ""
@@ -770,7 +768,7 @@ class Concatenation(VBA_Object):
 
     def __repr__(self):
         return debug_repr("&", self.arg)
-        return ' & '.join(map(repr, self.arg))
+        #return ' & '.join(map(repr, self.arg))
 
     def to_python(self, context, params=None, indent=0):
         r = ""
@@ -817,7 +815,7 @@ class Mod(VBA_Object):
 
     def __repr__(self):
         return debug_repr("mod", self.arg)
-        return ' mod '.join(map(repr, self.arg))
+        #return ' mod '.join(map(repr, self.arg))
 
     def to_python(self, context, params=None, indent=0):
         r = ""
