@@ -102,9 +102,12 @@ def _transform_dummy_loop1(loop):
     for run_statement in run_statements:
         loop_repl += run_statement + "\n"
 
-    # Parse and return the loop replacement.
+    # Parse and return the loop replacement, if it works.
     import statements
-    obj = statements.statement_block.parseString(loop_repl, parseAll=True)[0]
+    try:
+        obj = statements.statement_block.parseString(loop_repl, parseAll=True)[0]
+    except:
+        return loop
     return obj
 
 def _transform_wait_loop(loop):

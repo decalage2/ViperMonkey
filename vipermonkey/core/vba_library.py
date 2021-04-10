@@ -64,14 +64,12 @@ from pyparsing import *
 import vb_str
 from vba_context import VBA_LIBRARY
 from vba_object import coerce_to_int
-from vba_object import str_convert
-from vba_object import int_convert
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
 from vba_object import excel_col_letter_to_index
-from vba_object import strip_nonvb_chars
 import expressions
+import excel
 import modules
 import strip_lines
 from vba_object import _eval_python
@@ -84,11 +82,15 @@ from logger import log
 
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 
-def member_access(var, field):
+def member_access(var, field, globals_calling_scope=None):
     """
     Read a field from an object. Used in Python JIT code.
     """
 
+    # Were we given the globals in the calling scope?
+    if (globals_calling_scope is None):
+        globals_calling_scope = {}
+    
     # Reading a field from a dict?
     field = str(field)
     field_l = field.lower()
@@ -116,10 +118,14 @@ def member_access(var, field):
 
     # Punt and just see if we can return the value of a variable
     # with the same name as the field.
+    blah = list(globals().keys())
+    blah.sort()
     if (field in locals()):
         return locals[field]
     elif (field in globals()):
         return globals[field]
+    elif (field in globals_calling_scope):
+        return globals_calling_scope[field]
     else:
         return var
 
@@ -163,7 +169,7 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 0
         xlm = str(params[0])
         context.report_action('XLM Macro Execution', xlm, 'Dynamic XLM Macro Execution', strip_null_bytes=True)
@@ -185,6 +191,48 @@ class GetSaveAsFilename(VbaLibraryFunc):
 
     def return_type(self):
         return "STRING"
+
+class IsObject(VbaLibraryFunc):
+    """
+    IsObject() function (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        # Say everything is an object and see what happens.
+        return True
+
+    def num_args(self):
+        return 1
+
+    def return_type(self):
+        return "BOOLEAN"
+
+class CreateFolder(VbaLibraryFunc):
+    """
+    CreatFolder() method.
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        folder = str(params[0])
+        context.report_action('Create Folder', folder, 'CreateFolder()', strip_null_bytes=True)
+        return 0
+
+    def num_args(self):
+        return 1
+    
+class BuildPath(VbaLibraryFunc):
+    """
+    BuildPath() method
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
+        return str(params[0]) + str(params[1])
     
 class GetSpecialFolder(VbaLibraryFunc):
     """
@@ -370,7 +418,7 @@ class WeekDay(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Get date string.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 1
         date_str = str(params[0]).replace("#", "")
         date_obj = None
@@ -403,6 +451,10 @@ class Format(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        
         # Are we faking a value for this particular format call?
         r = params[0]
         if (len(params) > 1):
@@ -571,7 +623,7 @@ class QBColor(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return 0
         val = int(params[0])
         if ((val < 0) or (val > 15)):
@@ -745,7 +797,7 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
             return len(str(params[0]))
-        val = str_convert(params[0])
+        val = utils.str_convert(params[0])
         if (hasattr(params[0], '__len__')):
 
             # Is this a string?            
@@ -885,10 +937,10 @@ class Mid(VbaLibraryFunc):
         # If start is NULL, NULL is also returned.
         if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
         if not isinstance(s, basestring):
-            s = str(s)
+            s = utils.str_convert(s)
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -917,7 +969,7 @@ class Mid(VbaLibraryFunc):
             return s[start-1:]
         length = 0
         try:
-            length = int_convert(params[2])
+            length = utils.int_convert(params[2])
         except:
             pass
 
@@ -979,7 +1031,7 @@ class Left(VbaLibraryFunc):
         # "If String contains the data value Null, Null is returned."
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -1055,10 +1107,10 @@ class Right(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if (len(params) > 2):
-            params = params[-2:]
         if ((params is None) or (len(params) < 2)):
             return "NULL"
+        if (len(params) > 2):
+            params = params[-2:]
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
@@ -1071,7 +1123,7 @@ class Right(VbaLibraryFunc):
             s = str(s)
         start = 0
         try:
-            start = int_convert(params[1])
+            start = utils.int_convert(params[1])
         except:
             pass
 
@@ -1276,7 +1328,7 @@ class ShellExecute(Shell):
     
     def eval(self, context, params=None):
 
-        if (len(params) < 2):
+        if ((params is None) or (len(params) < 2)):
             return 0
         command = str(params[0])
         args = str(params[1])
@@ -1292,9 +1344,9 @@ class Eval(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Pull out the expression to eval.
-        if (len(params) < 1):
+        if ((params is None) or (len(params) < 1)):
             return 0
-        expr = strip_nonvb_chars(str(params[0]))
+        expr = utils.strip_nonvb_chars(str(params[0]))
 
         # Save original expression.
         orig_expr = expr
@@ -1384,7 +1436,7 @@ class Execute(VbaLibraryFunc):
             return "NULL"
         
         # Save the command.
-        command = strip_nonvb_chars(str(params[0]))
+        command = utils.strip_nonvb_chars(str(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
@@ -1731,7 +1783,7 @@ class StrComp(VbaLibraryFunc):
         method = 0
         if (len(params) >= 3):
             try:
-                method = int_convert(params[2])
+                method = utils.int_convert(params[2])
             except Exception as e:
                 log.error("StrComp: Invalid comparison method. " + str(e))
                 pass
@@ -1780,7 +1832,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = int_convert(eval_arg(params[1], context=context))
+            conv = utils.int_convert(eval_arg(params[1], context=context))
 
         # Do the conversion.
         r = params[0]
@@ -2016,6 +2068,8 @@ class Split(VbaLibraryFunc):
         r = string.split(sep)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Split: return %r" % r)
+        #print "SPLIT!!"
+        #print r
         return r
     
 class Int(VbaLibraryFunc):
@@ -2040,7 +2094,7 @@ class Int(VbaLibraryFunc):
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
             else:
-                r = int_convert(val)
+                r = utils.int_convert(val)
             # -32,768 to 32,767
             if ((r > 32767) or (r < -32768)):
                 # Overflow. Assume On Error Resume Next.
@@ -2117,6 +2171,103 @@ class SetStringValue(VbaLibraryFunc):
         context.report_action("Registry Write", str(params), "Set String Value", strip_null_bytes=True)
         return "NULL"
 
+class GetRef(VbaLibraryFunc):
+    """
+    GetRef() function.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Get the function.
+        obj_name = str(params[0])
+        if (not context.contains(obj_name)):
+            return "NULL"
+        return context.get(obj_name)
+            
+class Filter(VbaLibraryFunc):
+    """
+    The VBA Filter function returns a subset of a supplied string array, based on supplied criteria.
+
+    The syntax of the function is: Filter( SourceArray, Match, [Include], [Compare] )
+
+    The function arguments are:
+
+    SourceArray	-	The original array of Strings, that you want to filter.
+    Match	-	The string that you want to search for, within each element of the supplied SourceArray.
+    [Include]	-	
+    An option boolean argument that specifies whether the returns array should consist of elements that include or do not include the supplied Match String.
+
+    This can have the value True or False, meaning:
+
+    True	-	Only return elements that include the Match String
+    False	-	Only return elements that do not include the Match String
+    If the [Include] argument is omitted, it takes on the default value True.
+
+    [Compare]	-	
+    An optional argument, specifying the type of String comparison to make.
+
+    This can be any of the following values:
+
+    vbBinaryCompare	-	performs a binary comparison (0)
+    vbTextCompare	-	performs a text comparison (1)
+    vbDatabaseCompare	-	performs a database comparison (2)
+    If omitted, the [Compare] argument takes on the default value vbBinaryCompare.
+    """
+    
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            log.warning("Too few arguments to Filter() call. Returning NULL")
+            return "NULL"
+
+        # SourceArray and Match are required.
+        source_array = params[0]
+        match = params[1]
+        if (not isinstance(source_array, list)):
+            log.warning("SourceArray argument to Filter() call not an array. Returning NULL")
+            return "NULL"
+        if (not isinstance(match, str)):
+            log.warning("Match argument to Filter() call not a string. Returning NULL")
+            return "NULL"
+
+        # Include/exclude argument is optional.
+        include = True
+        if (len(params) >=3):
+            include = params[2]
+            if (not isinstance(match, str)):
+                log.warning("Include/exclude argument to Filter() call not a boolean. Returning NULL")
+                return "NULL"
+
+        # Compare argument is optional.
+        compare = 0
+        if (len(params) >=4):
+            compare = params[3]
+            if (not isinstance(compare, int)):
+                log.warning("Compare argument to Filter() call not an int. Returning NULL")
+                return "NULL"
+
+        # Currently only handling vbBinaryCompare.
+        if (compare != 0):
+            log.warning("Only handling Compare == vbBinaryCompare in Filter() call. Returning NULL")
+            return "NULL"
+
+        # Find the items to return.
+        r = []
+        for s in source_array:
+            found_match = (match in s)
+            if (not include):
+                found_match = not found_match
+            if found_match:
+                r.append(s)
+
+        # Done.
+        return r
+            
 class Replace(VbaLibraryFunc):
     """
     Replace() string function.
@@ -2132,15 +2283,21 @@ class Replace(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return ""
         if (len(params) < 3):
             if (len(params) > 0):
                 return params[0]
             else:
                 return ""
         # TODO: Handle start, count, and compare parameters.
-        string = str(params[0])
+        string = params[0]
+        # Handle Excel cells.
+        if (isinstance(string, dict) and ("value" in string)):
+            string = str(string["value"])
         if (string is None):
             string = ''
+        string = str(string)
         pat = str(params[1])
         if ((pat is None) or (pat == '')):
             return string
@@ -2203,7 +2360,7 @@ class SaveToFile(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return ""
 
         # Just return the file name. This is used in
@@ -2259,7 +2416,7 @@ class SaveAs(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) < 2):
+        if ((params is None) or (len(params) < 2)):
             return 0
 
         # Pull out the name of the file to save to and the format
@@ -2316,7 +2473,7 @@ class LoadXML(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (len(params) == 0):
+        if ((params is None) or (len(params) == 0)):
             return ""
 
         # Get the XML.
@@ -2429,7 +2586,12 @@ class InStr(VbaLibraryFunc):
             return None
         if ((not isinstance(s2, list)) and (not isinstance(s2, str))):
             return None
-                
+
+        # Always say we found the substring if the string in which we
+        # are searching is the special wildcard string.
+        if (s1 == "**MATCH ANY**"):
+            return 1
+        
         # TODO: Figure out how VB binary search works. For now just do text search.
         r = None
         if (len(s1) == 0):
@@ -2539,7 +2701,7 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = ''
         try:
-            n = int_convert(num)
+            n = utils.int_convert(num)
             if n == 0:
                 r = 0
             else:
@@ -2560,7 +2722,7 @@ class Sqr(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0]) + 0.0
+            num = utils.int_convert(params[0]) + 0.0
             r = math.sqrt(num)
         except:
             pass
@@ -2578,7 +2740,7 @@ class Abs(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             r = abs(num)
         except:
             pass
@@ -2617,7 +2779,7 @@ class Round(VbaLibraryFunc):
             num = float(params[0])
             sig = 0
             if (len(params) == 2):
-                sig = int_convert(params(1))                
+                sig = utils.int_convert(params(1))                
             r = round(num, sig)
         except:
             pass
@@ -2643,7 +2805,7 @@ class Hex(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             # Number treated as an unsigned int by VBA.
             if (num < 0):
                 num += (1 << 32)
@@ -2871,7 +3033,7 @@ class String(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = int_convert(params[0])
+            num = utils.int_convert(params[0])
             char = params[1]
             r = char * num
         except:
@@ -2950,9 +3112,9 @@ class RGB(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            red = int_convert(params[0])
-            green = int_convert(params[1])
-            blue = int_convert(params[2])
+            red = utils.int_convert(params[0])
+            green = utils.int_convert(params[1])
+            blue = utils.int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
         except:
             pass
@@ -3027,7 +3189,7 @@ class Val(VbaLibraryFunc):
             return r
         
         # Ignore whitespace.
-        tmp = str_convert(params[0]).strip().replace(" ", "")
+        tmp = utils.str_convert(params[0]).strip().replace(" ", "")
 
         # No nulls.
         tmp = tmp.replace("\x00", "")
@@ -3203,7 +3365,7 @@ class Pmt(VbaLibraryFunc):
         try:
             # Pull out the arguments.
             rate = float(params[0])
-            nper = int_convert(params[1]) + 0.0
+            nper = utils.int_convert(params[1]) + 0.0
             pv = float(params[2])
             fv = 0
             if (len(params) >= 4):
@@ -3260,7 +3422,7 @@ class Space(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        n = int_convert(params[0])
+        n = utils.int_convert(params[0])
         r = " " * n
         return r
 
@@ -3945,6 +4107,18 @@ class Run(VbaLibraryFunc):
             log.warning("Application.Run() failed. Cannot find function " + str(func_name) + ".")
             return 0
 
+class Arguments(VbaLibraryFunc):
+    """
+    WScriptShell Arguments field.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+        return "_COMMAND_LINE_ARG_" + str(params[0])
+            
 class Exec(VbaLibraryFunc):
     """
     Application.Exec() function.
@@ -4267,52 +4441,89 @@ class Cells(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         # Sanity check.
-        if (params is None):
-            log.error("Parameters of Cells() call are None.")
-            return self
+        if ((params is None) or (len(params) == 0)):
+            log.error("Parameters of Cells() call are None or empty.")
+            return "NULL"
         
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. No Excel file loaded.")
             return "NULL"
+
+        # Is this actually the Cells field of a Sheet?
+        if ("Sheet" in str(type(params[0]))):
+
+            # Pull out all the cells  in the sheet and return that.
+            return excel.pull_cells_sheet(params[0])
         
-        # Currently only handles Cells(x, y) calls.
-        if (len(params) != 2):
+        # The row and column must always be the 1st 2 arguments.
+        if (len(params) < 2):
             context.increase_general_errors()
-            log.warning("Only 2 argument Cells() calls supported. Returning NULL.")
+            log.warning("Cells() called with < 2 arguments. Returning NULL.")
             return "NULL"
 
+        # The sheet will be the 3rd argument, if given.
+        sheet = None
+        if (len(params) >= 3):
+            sheet = params[2]
+            if (not hasattr(sheet, "cell")):
+                log.warning("3rd Cells() argument is not sheet object. Returning NULL.")
+                return "NULL"
+                
         # Get the indices of the cell.
+
+        # Column.
+        tmp = params[1]
+        if (isinstance(tmp, dict) and ("value" in tmp)):
+            tmp = tmp["value"]
         col = None
         try:
-            col = int(params[1]) - 1
+            col = int(tmp) - 1
         except:
             try:
-                col = excel_col_letter_to_index(params[1])
+                col = excel_col_letter_to_index(tmp)
             except:
                 context.increase_general_errors()
                 log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
                 return "NULL"
+
+        # Row.
+        tmp = params[0]
+        if (isinstance(tmp, dict) and ("value" in tmp)):
+            tmp = tmp["value"]
         row = None
         try:
-            row = int(params[0]) - 1
+            row = int(tmp) - 1
         except:
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
 
-        # First try the sheet with the most cells.
-        # TODO: Figure out the actual sheet to load.
-        sheet = get_largest_sheet(context.loaded_excel)
+        # If we were not given a sheet use the current active sheet (if we know it).
+        if ((sheet is None) and
+            hasattr(context.loaded_excel, "active_sheet_name")):
+            try:
+                sheet_name = context.loaded_excel.active_sheet_name
+                sheet = context.loaded_excel.sheet_by_name(sheet_name)
+            except ValueError as e:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Can't find active sheet. " + str(e))
+                    
+        # Now try the sheet with the most cells if we still need to guess the sheet.
+        if (sheet is None):
+            sheet = get_largest_sheet(context.loaded_excel)
+
+        # Punt if we still have no idea what sheet to work with.
         if (sheet is None):
             return "NULL"
+
         # Return the cell contents.
         cell_val = _read_cell(sheet, row, col)
         if (cell_val is not None):
             return cell_val
         
-        # The largest sheet did not work. Try each sheet until we read a cell.
+        # The largest sheet or given sheet did not work. Try each sheet until we read a cell.
         for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
             
             # Load the current sheet.
@@ -4342,8 +4553,13 @@ class Sheets(VbaLibraryFunc):
         
     def eval(self, context, params=None):
 
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Get sheet Sheets(" + str(params) + ") ...")
+        
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sheets() params are bad. Returning None")
             return None
 
         # Do we have a loaded Excel file?
@@ -4356,23 +4572,26 @@ class Sheets(VbaLibraryFunc):
         sheet_id = str(params[0])
 
         # First try treating this as a sheet name.
-        for sheet_index in range(0, len(context.loaded_excel.sheet_names())):
-            try:
-                curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
-                if (curr_sheet.name == sheet_id):
-                    return curr_sheet
-            except:
-                continue
+        try:
+            curr_sheet = context.loaded_excel.sheet_by_name(str(sheet_id))
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning sheet with name '" + str(sheet_id) + "'")
+            return curr_sheet
+        except Exception as e:
+            pass
 
         # Next see if the sheet ID is an index.
         try:
             sheet_id = int(sheet_id) - 1
-        except:
+        except Exception as e:
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Returning sheet with index " + str(sheet_id))
             return curr_sheet
-        except:
+        except Exception as e:
+            log.warning("Did not find sheet with index " + str(sheet_id))
             return None
 
 class Worksheets(Sheets):
@@ -4413,7 +4632,7 @@ class UsedRange(VbaLibraryFunc):
         sheet = None
         if ((params is not None) and
             (len(params) >= 1) and
-            ("ExcelSheet" in str(type(params[0])))):
+            ("Sheet" in str(type(params[0])))):
             sheet = params[0]
         else:
             sheet = get_largest_sheet(context.loaded_excel)
@@ -4525,11 +4744,6 @@ class Range(VbaLibraryFunc):
             log.warning("Range() called with no parameters.")
             return "NULL"
 
-        #print "RANGE!!"
-        #print "# params: " + str(len(params))
-        for p in params:
-            print type(p)
-        
         # Do we have a loaded Excel file?
         if (context.loaded_excel is None):
 
@@ -4545,10 +4759,8 @@ class Range(VbaLibraryFunc):
         # Were we given an Excel sheet object?
         sheet = None
         for p in params:
-            if isinstance(p, ExcelSheet):
-                #print "GOT RANGE SHEET!!"
+            if ("Sheet" in str(type(p))):
                 sheet = p
-                #print sheet
                 break
             
         # Return a cell dict rather than the cell value?
@@ -4570,7 +4782,10 @@ class Range(VbaLibraryFunc):
             the_cell = params[0]
             if ("value" in the_cell):
                 next_index = the_cell["value"]
-                return self.eval(context, [next_index, return_dict])
+                new_params = [next_index]
+                for p in params[1:]:
+                    new_params.append(p)
+                return self.eval(context, new_params)
 
             # Unexpected. This is not a proper read cell dict.
             log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
@@ -4619,11 +4834,16 @@ class Range(VbaLibraryFunc):
                     val = str(sheet.cell_value(row, col))
             
                 # Return the cell value.
-                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_index) + " = '" + str(val) +"'")
+                sheet_name = ""
+                if (hasattr(sheet, "name")):
+                    sheet_name = sheet.name
+                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_name) + " = '" + str(val) +"'")
                 return val            
 
             except Exception as e:
                 # Try the next sheet.
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Cell read failed. " + str(e))
                 continue
 
         # We did not get the cell.
@@ -4633,6 +4853,7 @@ class Range(VbaLibraryFunc):
             row, col = self._get_row_and_column(params[0])
         except:
             pass
+        #print sheet
         log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "] (2)")
         context.increase_general_errors()
         return "NULL"
@@ -4852,11 +5073,31 @@ class Print(VbaLibraryFunc):
     Debug.Print function.
     """
 
+    def _handle_file_print(self, context, params):
+
+        # Sanity check.
+        if (len(params) != 2):
+            log.warning("Wrong # of arguments for Print " + str(params))
+            return
+
+        # 1st arg should be file ID.
+        fileid = "#" + str(params[0])
+
+        # 2nd arg should be data to write.
+        data = utils.safe_str_convert(params[1])
+
+        # Try writing the file.
+        context.write_file(fileid, data)
+        
     def eval(self, context, params=None):
 
         # Sanity check.
         if (params is None):
             return
+
+        # Print #NN to a file ID?
+        if (len(params) == 2):
+            return self._handle_file_print(context, params)
         
         # Regular Debug.Print() ?
         if (len(params) != 1):
@@ -4890,6 +5131,8 @@ class DeleteFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) > 1):
             context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
         if (len(params) == 1):
@@ -4901,6 +5144,8 @@ class MoveFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) > 1):
             context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
                                   'MoveFile() Call', strip_null_bytes=True)
@@ -4911,6 +5156,8 @@ class URLDownloadToFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) >= 3):
             context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
             context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
@@ -4921,12 +5168,16 @@ class FollowHyperlink(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         if (len(params) >= 1):
             context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
 
 class GetExtensionName(VbaLibraryFunc):
 
     def eval(self, context, params=None):
+        if (params is None):
+            return
         r = ""
         if (len(params) >= 1):
             fname = str(params[0])
@@ -4942,6 +5193,9 @@ class NumPut(VbaLibraryFunc):
 
     def eval(self, context, params=None):
 
+        if (params is None):
+            return
+        
         # Do we need to open the simulated file?
         if ("DOM_NumPut.dat" not in context.open_files):
             context.open_file("DOM_NumPut.dat")
@@ -4992,7 +5246,7 @@ class CreateTextFile(VbaLibraryFunc):
 
         # How about returning the name of the opened file.
         return fname
-
+    
 class Open(CreateTextFile):
     """
     Open() file function. Also Open() HTTP function.
@@ -5005,7 +5259,11 @@ class Open(CreateTextFile):
             return "NULL"
         
         # Is this a HTTP GET?
-        if ((len(params) >= 2) and (str(params[0]).strip() == "GET")):
+        if ((len(params) >= 2) and
+            ((str(params[0]).strip() == "GET") or
+             (str(params[1]).startswith("ftp://")) or
+             (str(params[1]).startswith("http://")) or
+             (str(params[1]).startswith("https://")))):
             url = str(params[1])
             if (url.startswith("tp://")):
                 url = "ht" + url
@@ -5103,6 +5361,14 @@ class InternetGetConnectedState(VbaLibraryFunc):
         # Always connected.
         return True
 
+class DateDiff(VbaLibraryFunc):
+    """
+    Stubbed DateDiff() function.
+    """
+
+    def eval(self, context, params=None):
+        return 15904387438 + (5000 - random.randint(100, 10000))
+    
 class Not(VbaLibraryFunc):
     """
     Boolean Not() called as a function.
@@ -5153,6 +5419,43 @@ class Send(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         return 200
+
+class SetTimeouts(VbaLibraryFunc):
+    """
+    ServerXMLHTTP SetTimeouts() method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        pass
+
+class SetOption(VbaLibraryFunc):
+    """
+    ServerXMLHTTP SetOption() method (stubbed).
+    """
+
+    def eval(self, context, params=None):
+        pass
+    
+class SetRequestHeader(VbaLibraryFunc):
+    """
+    ServerXMLHTTP SetRequestHeader() method.
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 2)):
+            return
+
+        # Field is 1st arg.
+        field = utils.safe_str_convert(params[0])
+
+        # Value is 2nd arg.
+        val = utils.safe_str_convert(params[1])
+
+        # Save the header value.
+        info = "'" + field + "' ==> '" + val + "'"
+        context.report_action('Set HTTP Header', info, "ServerXMLHTTP::SetRequestHeader()")
     
 class WriteProcessMemory(VbaLibraryFunc):
     """
@@ -5243,7 +5546,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Chr, CopyFile, GetFile, Paragraphs, UsedRange, CountA, SpecialCells,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
-               Worksheets, Value):
+               Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
+               Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

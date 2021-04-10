@@ -490,11 +490,14 @@ def fix_skipped_1st_arg1(vba_code):
     # We don't want to replace things like this in string literals. Temporarily
     # pull out the string literals from the line.
 
+    # Ugh. Temporarily replace escaped double quotes.
+    tmp_code = vba_code.replace('""', '__ESCAPED_QUOTES__')
+    
     # Find all the string literals and make up replacement names.
     strings = {}
     in_str = False
     curr_str = None
-    for c in vba_code:
+    for c in tmp_code:
 
         # Start/end of string?
         if (c == '"'):
@@ -521,7 +524,6 @@ def fix_skipped_1st_arg1(vba_code):
             curr_str += c
 
     # Temporarily replace the string literals.
-    tmp_code = vba_code
     for str_name in strings.keys():
         tmp_code = tmp_code.replace(strings[str_name], str_name)
         
@@ -531,6 +533,9 @@ def fix_skipped_1st_arg1(vba_code):
     # Put the string literals.
     for str_name in strings.keys():
         vba_code = vba_code.replace(str_name, strings[str_name])
+
+    # Put the escaped double quotes back.
+    vba_code = vba_code.replace('__ESCAPED_QUOTES__', '""')
         
     # Return the modified code.
     return vba_code
@@ -810,15 +815,23 @@ def fix_unhandled_named_params(vba_code):
             # Do we actually have a named parameter?
             if (got_marker):
 
-                # Is this call part of a With statement?
+                # We don't handle these so comment them out.
                 log.warning("Named parameters are not currently handled. Commenting them out...")
                 line = line[:-1]
                 new_line = None
+
+                # Is this call part of a With statement?
                 if (line.strip().lower().startswith("with ")):
 
                     # Replace the with line with a bogus line and hope for the best.
-                    new_line = "\nwith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
+                    new_line = "\nWith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
 
+                # Part of an If statement?
+                elif (line.strip().lower().startswith("if ")):
+
+                    # Replace the with line with a bogus line and hope for the best.
+                    new_line = "\n' UNHANDLED_NAMED_PARAMS_REPLACEMENT in If.\n'" + line.strip() + "\nIf 1=1 Then\n"                
+                
                 # Comment out entire line.
                 else:
                     new_line = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", line) + "\n"
@@ -1127,13 +1140,19 @@ def break_up_whiles(vba_code):
     vba_code += "\n"
     while ("while" in vba_code_l[pos:]):
 
-        # Pull out the current while line.
+        # Pull out the current while statement.
         start = vba_code_l[pos:].index("while")
         end = vba_code_l[start + pos:].index("\n")
         curr_while = vba_code[start + pos:end + start + pos]
 
-        # We are only doing this for whiles where the predicate is in parens.
-        if (not (curr_while.replace(" ", "").strip().lower()).startswith("while(")):
+        # Pull out the current full line of code.
+        line_start = vba_code_l[:start + pos].rindex("\n")
+        curr_line = vba_code_l[line_start:end + start + pos]
+        
+        # We are only doing this for whiles where the predicate is in parens and
+        # the while is not in a string.
+        if ((not (curr_while.replace(" ", "").strip().lower()).startswith("while(")) or
+            (is_in_string(curr_line, "while"))):
             pos = end + start + pos
             continue
 
@@ -1142,9 +1161,9 @@ def break_up_whiles(vba_code):
 
         # First find the position of the closing paren.
         parens = 0
-        pos = -1
+        curr_pos = -1
         for c in curr_while:
-            pos += 1
+            curr_pos += 1
             if (c == "("):
                 parens += 1
             if (c == ")"):
@@ -1153,10 +1172,10 @@ def break_up_whiles(vba_code):
                     break
 
         # Is there text after the closing paren?        
-        if (len(curr_while[pos+1:].strip()) > 0):
+        if (len(curr_while[curr_pos+1:].strip()) > 0):
 
             # Add a newline after the closing paren.
-            new_while = curr_while[:pos+1] + "\n" + curr_while[pos+1:]
+            new_while = curr_while[:curr_pos+1] + "\n" + curr_while[curr_pos+1:]
             changes[curr_while] = new_while
 
         # Move to next while.
@@ -1182,10 +1201,14 @@ def fix_difficult_code(vba_code):
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
     """
 
+    # Bad characters from olevba.
+    vba_code = vba_code.replace(chr(0x85), "")
+    
     # Targeted fix for some maldocs.
     if debug_strip:
         print "HERE: 1"
         print vba_code
+    vba_code = vba_code.replace("\n" + chr(0x85), "\n")
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = vba_code.replace("msgbox\"", "msgbox \"")
     vba_code = fix_unhandled_array_assigns(vba_code)
@@ -1444,9 +1467,8 @@ def fix_difficult_code(vba_code):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)
 
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'\#', r"'", r"!", r"\+",
-                         r"PAT:[\x7f-\xff]", r"\^", ";",
-                         r"\[", r"\]", "&"]
+    interesting_chars = [r'"', r'#', r"'", r"!", r"+", r"^",
+                         r"PAT:[\x7f-\xff]", ";", r"[", r"]", "&"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -1500,10 +1522,10 @@ def fix_difficult_code(vba_code):
 
         #print "--------"
         #print pos
-        #print c
+        #print "'" + c + "'"
         #print got_interesting
-        #print prev_char
-        #print next_char
+        #print "'" + prev_char + "'"
+        #print "'" + next_char + "'"
         if (not got_interesting):
 
             # We are not. Fast forward to the nearest interesting character.
@@ -1513,6 +1535,7 @@ def fix_difficult_code(vba_code):
             # string.
             curr_interesting_chars = interesting_chars
             if (in_str):
+                #print "IN STRING, only look for closing \""
                 curr_interesting_chars = [r'"']
             if (in_comment):
                 curr_interesting_chars = ["\n"]
@@ -1521,6 +1544,9 @@ def fix_difficult_code(vba_code):
             for interesting_c in curr_interesting_chars:
 
                 # Regex comparison?
+                #print "@@@"
+                #print interesting_c
+                #print vba_code[pos:]
                 index = None
                 if (interesting_c.startswith("PAT:")):
                     interesting_c = interesting_c[len("PAT:"):]
@@ -1543,7 +1569,7 @@ def fix_difficult_code(vba_code):
                 # Process the string starting at the interesting character we found.
                 poss_pos = index + pos
                 #print ">>>>>>>>>>>>>>>>>>"
-                #print interesting_c
+                #print "'" + interesting_c + "'"
                 #print pos
                 #print poss_pos
                 if (poss_pos < next_pos):
@@ -1559,10 +1585,10 @@ def fix_difficult_code(vba_code):
         
         # Handle entering/leaving strings.        
         if ((not in_comment) and (c == '"')):
-            if (in_str):
-                r += '"'
+            r += '"'
             in_str = not in_str
             #print "IN_STR: " + str(in_str)
+            continue
 
         # Handle entering/leaving [] expressions.
         if ((not in_comment) and (not in_str)):
@@ -1624,18 +1650,19 @@ def fix_difficult_code(vba_code):
         if (c == "^"):
             r += " ^ "
             continue
-
-        # Add spaces areound "&" operators.
+        
+        # Add spaces around "&" operators.
         # TODO: This needs more work.
         if (c == "&"):
             r += "&"
             continue
 
         # Need to eliminate bogus =+ assignments.
-        if ((c == "+") and (prev_char == "=")):
-
-            # Skip the '+'.
+        if (c == "+"):
+            if (prev_char != "="):
+                r += " " + c
             continue
+            
 
         # Need to eliminate bogus &; string concatenations.
         if ((c == ";") and (prev_char == "&")):
@@ -1677,7 +1704,6 @@ def fix_difficult_code(vba_code):
     known_funcs = ["Randomize"]
     for func in known_funcs:
         r = r.replace("\n" + func + ":", "\n" + func)
-
     
     if debug_strip:
         print "HERE: 19"
@@ -1741,6 +1767,12 @@ def rename_constants(vba_code):
     if (len(defined_constants) == 0):
         return vba_code
 
+    # Don't wipe out hex strings "&H..." if there is a constant named H.
+    changed = False
+    if ("H" in defined_constants):
+        vba_code = vba_code.replace("&H", "__HEX_STR__")
+        changed = True
+    
     # Replace all non-function call references to the const variables
     # with unique names.
     for const_name in defined_constants:
@@ -1754,6 +1786,10 @@ def rename_constants(vba_code):
         rep_pat = r"Const\s+(" + const_name + r")[\s=]"
         vba_code = re.sub(rep_pat, r"Const \1_CONST ", vba_code)
 
+    # Undo the hex replacement is needed.
+    if changed:
+        vba_code = vba_code.replace("__HEX_STR__", "&H")
+        
     # Done.
     return vba_code
 

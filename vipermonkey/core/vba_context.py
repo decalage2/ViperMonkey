@@ -46,6 +46,11 @@ from hashlib import sha256
 from datetime import datetime
 from logger import log
 import re
+try:
+    # sudo pypy -m pip install rure
+    import rure as re2
+except:
+    import re as re2
 import random
 import string
 import codecs
@@ -303,7 +308,7 @@ class Context(object):
             self.throttle_logging = context.throttle_logging
             self.is_vbscript = context.is_vbscript
             self.doc_vars = context.doc_vars
-            self.types = context.types
+            self.types = dict(context.types)
             self.open_files = context.open_files
             self.file_id_map = context.file_id_map
             self.closed_files = context.closed_files
@@ -634,8 +639,21 @@ class Context(object):
             if (fname in self.file_id_map.keys()):
                 fname = self.file_id_map[fname]
             else:
-                log.error('File {} not open. Cannot write new data.'.format(fname))
-                return False
+
+                # Is this a variable?
+                got_it = False
+                if fname.startswith("#"):
+                    var_name = fname[1:]
+                    if self.contains(var_name):
+                        fname = "#" + str(self.get(var_name))
+                        if (fname in self.file_id_map.keys()):
+                            got_it = True
+                            fname = self.file_id_map[fname]
+                
+                # Punt if we cannot find the open file.
+                if (not got_it):
+                    log.error('File {} not open. Cannot write new data.'.format(fname))
+                    return False
             
         # Are we writing a string?
         if isinstance(data, str):
@@ -776,6 +794,7 @@ class Context(object):
                 log.warning("Filename of dropped file is too long, replacing with " + fname)
 
             # Make the name truely unique.
+            fname = fname.strip()
             self.report_action("Dropped File Hash", file_hash, 'File Name: ' + fname)
             file_path = os.path.join(out_dir, os.path.basename(fname))
             orig_file_path = file_path
@@ -1177,11 +1196,10 @@ class Context(object):
         global num_b64_iocs
         
         # Strip NULLs and unprintable characters from the potential IOC.
-        from vba_object import strip_nonvb_chars
-        value = strip_nonvb_chars(value)
+        value = utils.strip_nonvb_chars(value)
         if (len(re.findall(r"NULL", str(value))) > 20):
             value = str(value).replace("NULL", "")
-        
+
         # Is there a URL in the data?
         got_ioc = False
         URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
@@ -1198,14 +1216,20 @@ class Context(object):
                 log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
-        if (num_b64_iocs < 200):
-            B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-            b64_strs = re.findall(B64_REGEX, value)
-            for curr_value in b64_strs:
-                if ((value not in intermediate_iocs) and (len(curr_value) > 200)):
-                    got_ioc = True
-                    num_b64_iocs += 1
-                    log.info("Found possible intermediate IOC (base64): '" + tmp_value + "'")
+        if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):
+            uni_value = None
+            try:
+                uni_value = value.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+            if (uni_value is not None):
+                B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+                b64_strs = re2.findall(unicode(B64_REGEX), uni_value)
+                for curr_value in b64_strs:
+                    if (len(curr_value) > 100):
+                        got_ioc = True
+                        num_b64_iocs += 1
+                        log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
 
         # Did we find anything?
         if (not got_ioc):
@@ -1326,6 +1350,12 @@ class Context(object):
         # Are we assigning a Property? If so we will call the property handler?
         if (self._handle_property_assignment(name, value)):
             return
+
+        # We might have a vipermonkey simple name expression. Convert to a string
+        # so we can use it.
+        import expressions
+        if (isinstance(name, expressions.SimpleNameExpression)):
+            name = str(name)
         
         # Does the name make sense?
         orig_name = name
@@ -1565,19 +1595,17 @@ class Context(object):
         if (strip_null_bytes):
 
             # Strip bad characters.
-            from vba_object import strip_nonvb_chars
-
-            action = strip_nonvb_chars(action)
-            new_params = strip_nonvb_chars(params)
+            action = utils.strip_nonvb_chars(action)
+            new_params = utils.strip_nonvb_chars(params)
             if (isinstance(params, list)):
                 new_params = []
                 for p in params:
-                    tmp_p = strip_nonvb_chars(p)
+                    tmp_p = utils.strip_nonvb_chars(p)
                     if (len(re.findall(r"NULL", str(tmp_p))) > 20):
                         tmp_p = str(tmp_p).replace("NULL", "")
                     new_params.append(tmp_p)
             params = new_params
-            description = strip_nonvb_chars(description)
+            description = utils.strip_nonvb_chars(description)
 
             # Strip repeated NULLs in the action.
             if (len(re.findall(r"NULL", action)) > 20):

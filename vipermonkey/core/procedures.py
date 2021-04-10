@@ -249,9 +249,9 @@ class Sub(VBA_Object):
             #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("GOTO executed. Go to next loop iteration.")
+                    log.debug("GOTO executed. Control flow handled by GOTO, so skip rest of procedure statements.")
                 break
             
         # Reset variable update scoping.
@@ -645,7 +645,7 @@ class Function(VBA_Object):
             
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break

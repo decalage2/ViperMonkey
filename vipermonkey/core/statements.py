@@ -55,7 +55,6 @@ from expressions import *
 from vba_context import *
 from reserved import *
 from from_unicode_str import *
-from vba_object import int_convert
 from vba_object import to_python
 from vba_object import _eval_python
 from vba_object import _boilerplate_to_python
@@ -399,8 +398,7 @@ class TaggedBlock(VBA_Object):
 
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            #if (isinstance(s, Goto_Statement)):
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -535,6 +533,7 @@ class Dim_Statement(VBA_Object):
             init_val = to_python(self.init_val, context=context)
             
         # Track each declared variable.
+        r = ""
         for var in self.variables:
 
             # Do we know the variable type?
@@ -588,10 +587,10 @@ class Dim_Statement(VBA_Object):
                 
             # Set the initial value of the declared variable.
             var_name = utils.fix_python_overlap(str(var[0]))
-            r = " " * indent + var_name + " = " + str(curr_init_val)
+            r += " " * indent + var_name + " = " + str(curr_init_val) + "\n"
 
-            # Done.
-            return r
+        # Done.
+        return r
     
     def eval(self, context, params=None):
 
@@ -794,11 +793,31 @@ class Let_Statement(VBA_Object):
             return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
 
     def to_python(self, context, params=None, indent=0):        
-        
-        # Regular assignment?
-        r = None        
-        if (self.index is None):
 
+        # Are we updating a global variable?
+        r = ""
+        try:
+
+            # Don't flag funcs as global in Python JIT code.            
+            var_val = context.get(self.name, global_only=True)
+            if ((not (isinstance(var_val, procedures.Function) or
+                     isinstance(var_val, procedures.Sub) or
+                     isinstance(var_val, VbaLibraryFunc))) and
+                (var_val != "__ALREADY_SET__")):
+
+                # It's global and not a func. Treat as global in Python.
+                spaces = " " * indent
+                r += "global " + utils.fix_python_overlap(str(self.name)) + \
+                     "\n" + spaces
+
+        # Not a global.
+        except KeyError:
+            pass
+
+        # Regular assignment?
+        python_var_name = str(self.name)
+        if (self.index is None):
+            
             # Annoying Mid() assignment?
             if ((self.string_op is not None) and
                 ((self.string_op["op"] == "mid") or (self.string_op["op"] == "mid$"))):
@@ -813,25 +832,25 @@ class Let_Statement(VBA_Object):
                 rhs = to_python(self.expression, context)
                 
                 # Modify the string in Python.
-                r = the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
+                r += the_str_var + " = " + the_str_var + "[:" + start + "-1] + " + rhs + " + " + the_str_var + "[(" + start + "-1 + " + size + "):]"
 
             # Handle conversion of strings to byte arrays, if needed.
             elif (context.get_type(self.name) == "Byte Array"):
                 val = "coerce_to_int_list(" + to_python(self.expression, context, params=params) + ")"
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + val
 
             # Handle conversion of byte arrays to strings, if needed.
             elif (context.get_type(self.name) == "String"):
                 val = "coerce_to_str(" + to_python(self.expression, context, params=params) + ")"
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + val
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + val
 
             # Basic assignment.
             else:
-                r = utils.fix_python_overlap(str(self.name)) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
+                r += utils.fix_python_overlap(python_var_name) + " " + str(self.op) + " " + to_python(self.expression, context, params=params)
                 
         # Array assignment?
         else:
-            py_var = utils.fix_python_overlap(str(self.name))
+            py_var = utils.fix_python_overlap(python_var_name)
             if (py_var.startswith(".")):
                 py_var = py_var[1:]
             index = to_python(self.index, context, params=params)
@@ -849,9 +868,9 @@ class Let_Statement(VBA_Object):
                 index_str += i
             index_str = "[" + index_str + "]"
             if (op == "="):
-                r = py_var + " = update_array(" + py_var + ", " + index_str + ", " + val + ")"
+                r += py_var + " = update_array(" + py_var + ", " + index_str + ", " + val + ")"
             else:
-                r = py_var + "[" + index + "] " + op + " " + val
+                r += py_var + "[" + index + "] " + op + " " + val
 
         # Mark this variable as set so it does not get overwritten by
         # future to_python() code generation.
@@ -947,8 +966,8 @@ class Let_Statement(VBA_Object):
                 return False
             the_str = eval_arg(args[0], context)
             the_str_var = args[0]
-            start = int_convert(eval_arg(args[1], context), leave_alone=True)
-            size = int_convert(eval_arg(args[2], context), leave_alone=True)
+            start = utils.int_convert(eval_arg(args[1], context), leave_alone=True)
+            size = utils.int_convert(eval_arg(args[2], context), leave_alone=True)
             
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
@@ -1234,10 +1253,10 @@ class Let_Statement(VBA_Object):
                     value = num
                         
             # Evaluate the index expression(s).
-            index = int_convert(eval_arg(self.index, context=context))
+            index = utils.int_convert(eval_arg(self.index, context=context))
             index1 = None
             if (self.index1 is not None):
-                index1 = int_convert(eval_arg(self.index1, context=context))
+                index1 = utils.int_convert(eval_arg(self.index1, context=context))
                 #log.error('Multidimensional arrays not handled. Setting "%s(%r, %r) = %s" failed.' % (self.name, self.index, self.index1, value))
                 #return
                 
@@ -1454,7 +1473,7 @@ class For_Statement(VBA_Object):
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
-            start = int_convert(start)
+            start = utils.int_convert(start)
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
@@ -1462,7 +1481,7 @@ class For_Statement(VBA_Object):
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
-            end = int_convert(end)
+            end = utils.int_convert(end)
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + str(self.end_value) + "' evaluated to None.")
             return (None, None, None)
@@ -1474,7 +1493,7 @@ class For_Statement(VBA_Object):
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             if (isinstance(step, basestring)):
-                step = int_convert(step)
+                step = utils.int_convert(step)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
@@ -1548,8 +1567,8 @@ class For_Statement(VBA_Object):
             step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
         loop_start += indent_str + loop_var + " = " + str(start) + "\n"
-        loop_start += indent_str + "while (((" + loop_var + " <= " + str(end) + ") and (" + str(step) + " > 0)) or " + \
-                      "((" + loop_var + " >= " + str(end) + ") and (" + str(step) + " < 0))):\n"
+        loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + str(end) + ")) and (" + str(step) + " > 0)) or " + \
+                      "((" + loop_var + " >= coerce_to_int(" + str(end) + ")) and (" + str(step) + " < 0))):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
         loop_start = indent_str + "# Start emulated loop.\n" + loop_start
@@ -1563,9 +1582,9 @@ class For_Statement(VBA_Object):
         # Set up the loop body.
         loop_body = ""
         end_var = str(end)
-        loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100) == " + prog_var + "):\n"
+        loop_body += indent_str + " " * 4 + "if (int(float(" + loop_var + ")/(coerce_to_int(" + end_var + ") if coerce_to_int(" + end_var + ") != 0 else 1)*100) == " + prog_var + "):\n"
         body_escaped = str(self).replace('"', '\\"').replace("\\n", " :: ")
-        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/(" + end_var + " if " + end_var + " != 0 else 1)*100)) + \"% done with loop " + body_escaped + "\")\n"
+        loop_body += indent_str + " " * 8 + "safe_print(str(int(float(" + loop_var + ")/(coerce_to_int(" + end_var + ") if coerce_to_int(" + end_var + ") != 0 else 1)*100)) + \"% done with loop " + body_escaped + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
         body_str = to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
         if (body_str.strip() == '""'):
@@ -1845,6 +1864,7 @@ class For_Statement(VBA_Object):
             return
         
         # evaluate values:
+        self.exited_with_goto = False
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop: evaluating start, end, step')
 
@@ -1898,8 +1918,9 @@ class For_Statement(VBA_Object):
             log.warn("FOR loop: upper loop iteration bound exceeded, setting to %r" % end)
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
+        my_loop_stack_pos = len(context.loop_stack) - 1
 
         # Track the context from the previous loop iteration to see if we have
         # a loop that is just there for obfuscation.
@@ -1974,9 +1995,10 @@ class For_Statement(VBA_Object):
                 s.eval(context=context)
                 
                 # Has 'Exit For' been called?
-                if ((len(context.loop_stack) == 0) or (not context.loop_stack[-1])):
-
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
+                    
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("FOR loop: exited loop with 'Exit For'")
                     done = True
@@ -1994,7 +2016,7 @@ class For_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2033,10 +2055,16 @@ class For_Statement(VBA_Object):
             context.loop_object_stack.pop()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop: end.')
-
+            
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
+
+        # We are parsing Next's as being an integral part of the for loop
+        # (it's really not). This means we are only handling GOTOs within the
+        # loop body, so once we get out of the loop we need to run the statement
+        # after the loop.
+        context.goto_executed = False
         
 # 5.6.16.6 Bound Variable Expressions
 #
@@ -2172,9 +2200,11 @@ class For_Each_Statement(VBA_Object):
             return
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        self.exited_with_goto = False
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
-
+        my_loop_stack_pos = len(context.loop_stack) - 1
+        
         # Get the container of values we are iterating through.
 
         # Might be an expression.
@@ -2216,9 +2246,10 @@ class For_Each_Statement(VBA_Object):
                     s.eval(context=context)
 
                     # Has 'Exit For' been called?
-                    if (not context.loop_stack[-1]):
+                    if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                         # Yes we have. Stop this loop.
+                        self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("FOR EACH loop: exited loop with 'Exit For'")
                         done = True
@@ -2233,7 +2264,7 @@ class For_Each_Statement(VBA_Object):
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
                     #if (isinstance(s, Goto_Statement)):
-                    if (context.goto_executed):
+                    if (context.goto_executed or s.exited_with_goto):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("GOTO executed. Go to next loop iteration.")
                         break
@@ -2648,6 +2679,7 @@ class While_Statement(VBA_Object):
             log.debug('WHILE loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
+        self.exited_with_goto = False
         if (len(self.body) == 0):
 
             # Evaluate the loop guard once in case interesting functions are called in
@@ -2700,9 +2732,10 @@ class While_Statement(VBA_Object):
             return
         
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
-
+        my_loop_stack_pos = len(context.loop_stack) - 1
+        
         # Some loop guards check the readystate value on an object. To simulate this
         # will will just go around the loop a small fixed # of times.
         if (".readyState" in str(self.guard)):
@@ -2768,9 +2801,10 @@ class While_Statement(VBA_Object):
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
-                if (not context.loop_stack[-1]):
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("WHILE loop: exited loop with 'Exit For'")
                     done = True
@@ -2785,7 +2819,7 @@ class While_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -2913,6 +2947,7 @@ class Do_Statement(VBA_Object):
             log.debug('DO loop: start: ' + str(self))
 
         # Do not bother running loops with empty bodies.
+        self.exited_with_goto = True
         if (len(self.body) == 0):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("DO loop: empty body. Skipping.")
@@ -2933,8 +2968,9 @@ class Do_Statement(VBA_Object):
             return
 
         # Track that the current loop is running.
-        context.loop_stack.append(True)
+        context.loop_stack.append(None)
         context.loop_object_stack.append(self)
+        my_loop_stack_pos = len(context.loop_stack) - 1
         
         # Get the initial values of all the variables that appear in the loop guard.
         old_guard_vals = _get_guard_variables(self, context)
@@ -2961,9 +2997,10 @@ class Do_Statement(VBA_Object):
                 s.eval(context=context)
 
                 # Has 'Exit For' been called?
-                if (not context.loop_stack[-1]):
+                if ((my_loop_stack_pos >= len(context.loop_stack)) or context.loop_stack[my_loop_stack_pos]):
 
                     # Yes we have. Stop this loop.
+                    self.exited_with_goto = (context.loop_stack[my_loop_stack_pos] == "GOTO")
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Do loop: exited loop with 'Exit For'")
                     done = True
@@ -2978,7 +3015,7 @@ class Do_Statement(VBA_Object):
                 # Did we just run a GOTO? If so we should not run the
                 # statements after the GOTO.
                 #if (isinstance(s, Goto_Statement)):
-                if (context.goto_executed):
+                if (context.goto_executed or s.exited_with_goto):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("GOTO executed. Go to next loop iteration.")
                     break
@@ -3123,7 +3160,7 @@ class Select_Statement(VBA_Object):
                     # Did we just run a GOTO? If so we should not run the
                     # statements after the GOTO.
                     #if (isinstance(s, Goto_Statement)):
-                    if (context.goto_executed):
+                    if (context.goto_executed or statement.exited_with_goto):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("GOTO executed. Break out of Select.")
                         break
@@ -3253,8 +3290,8 @@ class Case_Clause_Atomic(VBA_Object):
             start = None
             end = None
             try:
-                start = int_convert(eval_arg(self.case_val[0], context))
-                end = int_convert(eval_arg(self.case_val[1], context)) + 1
+                start = utils.int_convert(eval_arg(self.case_val[0], context))
+                end = utils.int_convert(eval_arg(self.case_val[1], context)) + 1
             except:
                 return False                
 
@@ -3842,7 +3879,7 @@ class Call_Statement(VBA_Object):
         
         # It's a method call. Is it one we are handling as a member
         # access expression?
-        memb_funcs = set(["AddItem"])
+        memb_funcs = set(["AddItem", "Append_3"])
         if (short_func_name not in memb_funcs):
             return None
 
@@ -4109,10 +4146,22 @@ call_statement1 = NotAny(known_keywords_statement_start) + \
                            Optional(call_params) + \
                            Suppress(Optional("," + CaselessKeyword("0")) + \
                                     Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
+call_statement2 = NotAny(known_keywords_statement_start) + \
+                  Optional(CaselessKeyword('Call').suppress()) + \
+                  Combine(lex_identifier + OneOrMore(Literal(".") + lex_identifier)).setResultsName('name') + \
+                  Suppress(Optional(NotAny(White()) + '$') + \
+                           Optional(NotAny(White()) + '#') + \
+                           Optional(NotAny(White()) + '@') + \
+                           Optional(NotAny(White()) + '%') + \
+                           Optional(NotAny(White()) + '!')) + \
+                           Optional(call_params) + \
+                           Suppress(Optional("," + CaselessKeyword("0")) + \
+                                    Optional("," + (CaselessKeyword("true") | CaselessKeyword("false"))))
 call_statement0.setParseAction(Call_Statement)
 call_statement1.setParseAction(Call_Statement)
+call_statement2.setParseAction(Call_Statement)
 
-call_statement = (call_statement1 ^ call_statement0)
+call_statement = (call_statement1 ^ call_statement0 ^ call_statement2)
 
 # --- EXIT FOR statement ----------------------------------------------------------
 
@@ -4135,7 +4184,7 @@ class Exit_For_Statement(VBA_Object):
         # Update the loop stack to indicate that the current loop should exit.
         if (len(context.loop_stack) > 0):
             context.loop_stack.pop()
-        context.loop_stack.append(False)
+        context.loop_stack.append("EXIT_FOR")
 
 class Exit_While_Statement(Exit_For_Statement):
     def __repr__(self):
@@ -4405,7 +4454,7 @@ class With_Statement(VBA_Object):
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             #if (isinstance(s, Goto_Statement)):
-            if (context.goto_executed):
+            if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
@@ -4487,7 +4536,7 @@ class Goto_Statement(VBA_Object):
             if (jump_loop is None):
 
                 # Mark all the loops as exited.
-                context.loop_stack = [False] * len(context.loop_stack)
+                context.loop_stack = ["GOTO"] * len(context.loop_stack)
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Jumped out of all loops.")
                     log.debug(context.loop_stack)
@@ -4498,7 +4547,7 @@ class Goto_Statement(VBA_Object):
                 # Exit from all the nested loops up to the one we jumped to.
                 tmp_stack = context.loop_stack
                 context.loop_stack = context.loop_stack[:pos+1]
-                context.loop_stack.extend([False] * (len(tmp_stack) - (pos + 1)))
+                context.loop_stack.extend(["GOTO"] * (len(tmp_stack) - (pos + 1)))
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Jumped out of some loops.")
                     log.debug(context.loop_stack)
@@ -4719,7 +4768,8 @@ class Print_Statement(VBA_Object):
         data = eval_arg(self.value, context=context)
 
         context.write_file(file_id, data)
-        #context.write_file(file_id, '\r\n')
+        if (isinstance(data, str)):
+            context.write_file(file_id, '\r\n')
 
 
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \

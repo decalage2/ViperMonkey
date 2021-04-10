@@ -49,7 +49,6 @@ from collections import Iterable
 from vba_object import *
 
 from logger import log
-from vba_object import int_convert
 from vba_object import coerce_to_num
 from vba_object import to_python
 

@@ -1595,6 +1595,76 @@ class VbaConstants(object):
         self.globals["xlPrintErrorsDisplayed".lower()] = 0
         self.globals["xlPrintErrorsNA".lower()] = 3
 
+        # MsoColorType enumeration (Office)
+        #
+        # Specifies the color type.
+        #
+        # Color Management System color type.
+        self.globals["msoColorTypeCMS".lower()] = 4
+        # Color is determined by values of cyan, magenta, yellow, and black.
+        self.globals["msoColorTypeCMYK".lower()] = 3
+        # Not supported.
+        self.globals["msoColorTypeInk".lower()] = 5
+        # Not supported.
+        self.globals["msoColorTypeMixed".lower()] = -2
+        # Color is determined by values of red, green, and blue.
+        self.globals["msoColorTypeRGB".lower()] = 1
+        # Color is defined by an application-specific scheme.
+        self.globals["msoColorTypeScheme".lower()] = 2
+
+        # MsoTextUnderlineType enumeration (Office)
+        #
+        # Indicates the type of underline for text.
+        #
+        # Specifies no underline.
+        self.globals["msoNoUnderline".lower()] = 0
+        # Specifies a dash underline.
+        self.globals["msoUnderlineDashHeavyLine".lower()] = 8
+        # Specifies a dash line underline.
+        self.globals["msoUnderlineDashLine".lower()] = 7
+        # Specifies a long heavy line underline.
+        self.globals["msoUnderlineDashLongHeavyLine".lower()] = 10
+        # Specifies a dashed long line underline.
+        self.globals["msoUnderlineDashLongLine".lower()] = 9
+        # Specifies a dot dash heavy line underline.
+        self.globals["msoUnderlineDotDashHeavyLine".lower()] = 12
+        # Specifies a dot dash line underline.
+        self.globals["msoUnderlineDotDashLine".lower()] = 11
+        # Specifies a dot dot dash heavy line underline.
+        self.globals["msoUnderlineDotDotDashHeavyLine".lower()] = 14
+        # Specifies a dot dot dash line underline.
+        self.globals["msoUnderlineDotDotDashLine".lower()] = 13
+        # Specifies a dotted heavy line underline.
+        self.globals["msoUnderlineDottedHeavyLine".lower()] = 6
+        # Specifies a dotted line underline.
+        self.globals["msoUnderlineDottedLine".lower()] = 5
+        # Specifies a double line underline.
+        self.globals["msoUnderlineDoubleLine".lower()] = 3
+        # Specifies a heavy line underline.
+        self.globals["msoUnderlineHeavyLine".lower()] = 4
+        # Specifies a mixed of underline types.
+        self.globals["msoUnderlineMixed".lower()] = -2
+        # Specifies a single line underline.
+        self.globals["msoUnderlineSingleLine".lower()] = 2
+        # Specifies a wavy double line underline.
+        self.globals["msoUnderlineWavyDoubleLine".lower()] = 17
+        # Specifies a wavy heavy line underline.
+        self.globals["msoUnderlineWavyHeavyLine".lower()] = 16
+        # Specifies a wavy line underline.
+        self.globals["msoUnderlineWavyLine".lower()] = 15
+        # Specifies underlining words.
+        self.globals["msoUnderlineWords".lower()] = 1
+        
+        # MsoContactCardAddressType Enum        
+        self.globals["msoContactCardAddressTypeIM".lower()] = 3
+        self.globals["msoContactCardAddressTypeOutlook".lower()] = 1
+        self.globals["msoContactCardAddressTypeSMTP".lower()] = 2
+        self.globals["msoContactCardAddressTypeUnknown".lower()] = 0
+
+        # MsoContactCardStyle Enum
+        self.globals["msoContactCardFull".lower()] = 1
+        self.globals["msoContactCardHover".lower()] = 0
+        
         # msoTextCaps Enum
         self.globals["msoAllCaps".lower()] = 2
         self.globals["msoCapsMixed".lower()] = -2
@@ -4822,7 +4892,7 @@ class VbaConstants(object):
         self.globals["Application.Caption".lower()] = "**MATCH ANY**"
         self.globals["Application.System.Version".lower()] = "**MATCH ANY**"
         self.globals["BackStyle".lower()] = "**MATCH ANY**"
-        self.globals["responseText".lower()] = ""
+        self.globals["responseText".lower()] = "**MATCH ANY**"
         self.globals["NumberOfLogicalProcessors".lower()] = 4
         self.globals[".NumberOfLogicalProcessors".lower()] = 4
         self.globals["ActiveWorkbook.Name".lower()] = "**MATCH ANY**"
@@ -7149,6 +7219,52 @@ class VbaConstants(object):
         self.globals["xlYMDFormat".lower()] = 5
         self.globals["xlZero".lower()] = 2
 
+        # MsoAnimationType Enum
+        #
+        # This object, member, or enumeration is deprecated and is not intended to be used in your code.
+        self.globals["msoAnimationAppear".lower()] = 32	
+        self.globals["msoAnimationBeginSpeaking".lower()] = 4	
+        self.globals["msoAnimationCharacterSuccessMajor".lower()] = 6	
+        self.globals["msoAnimationCheckingSomething".lower()] = 103	
+        self.globals["msoAnimationDisappear".lower()] = 31	
+        self.globals["msoAnimationEmptyTrash".lower()] = 116	
+        self.globals["msoAnimationGestureDown".lower()] = 113	
+        self.globals["msoAnimationGestureLeft".lower()] = 114	
+        self.globals["msoAnimationGestureRight".lower()] = 19	
+        self.globals["msoAnimationGestureUp".lower()] = 115	
+        self.globals["msoAnimationGetArtsy".lower()] = 100	
+        self.globals["msoAnimationGetAttentionMajor".lower()] = 11	
+        self.globals["msoAnimationGetAttentionMinor".lower()] = 12	
+        self.globals["msoAnimationGetTechy".lower()] = 101	
+        self.globals["msoAnimationGetWizardy".lower()] = 102	
+        self.globals["msoAnimationGoodbye".lower()] = 3	
+        self.globals["msoAnimationGreeting".lower()] = 2	
+        self.globals["msoAnimationIdle".lower()] = 1	
+        self.globals["msoAnimationListensToComputer".lower()] = 26	
+        self.globals["msoAnimationLookDown".lower()] = 104	
+        self.globals["msoAnimationLookDownLeft".lower()] = 105	
+        self.globals["msoAnimationLookDownRight".lower()] = 106	
+        self.globals["msoAnimationLookLeft".lower()] = 107	
+        self.globals["msoAnimationLookRight".lower()] = 108	
+        self.globals["msoAnimationLookUp".lower()] = 109	
+        self.globals["msoAnimationLookUpLeft".lower()] = 110	
+        self.globals["msoAnimationLookUpRight".lower()] = 111	
+        self.globals["msoAnimationPrinting".lower()] = 18	
+        self.globals["msoAnimationRestPose".lower()] = 5	
+        self.globals["msoAnimationSaving".lower()] = 112	
+        self.globals["msoAnimationSearching".lower()] = 13	
+        self.globals["msoAnimationSendingMail".lower()] = 25	
+        self.globals["msoAnimationThinking".lower()] = 24	
+        self.globals["msoAnimationWorkingAtSomething".lower()] = 23	
+        self.globals["msoAnimationWritingNotingSomething".lower()] = 22	
+
+        # MsoAutoSize Enum
+        #
+        # Determines the type of automatic sizing allowed.        
+        self.globals["msoAutoSizeNone".lower()] = 0	
+        self.globals["msoAutoSizeShapeToFitText".lower()] = 1	
+        self.globals["msoAutoSizeTextToFitShape".lower()] = 2	
+        
         # WdSaveFormat enumeration (Word)
         self.globals["wdFormatDocument".lower()] = 0
         self.globals["wdFormatDOSText".lower()] = 4
