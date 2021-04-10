@@ -16,6 +16,7 @@ and vbashell from any directory.
 
 # 2016-12-14 v0.04 PL: - replaced scripts by entry points (issue #17)
 # 2018-08-17 v0.07 PL: - added required dependency unidecode
+# 2021-04-10 v1.0.3 PL: - changed oletools version to >=0.56.1
 
 #--- TODO ---------------------------------------------------------------------
 
@@ -48,11 +49,9 @@ setup(
         "Office files (Word, Excel, PowerPoint, Publisher, etc)."),
     long_description=open("README.md").read(),
     install_requires=[
-        # TODO: oletools 0.54.2 requires cryptography, which is not compatible with PyPy (oletools issue #473)
-        # => on PyPy, pin to oletools 0.54.1:
-        'oletools==0.54.1; platform_python_implementation=="PyPy"',
-        # => Otherwise, use the latest oletools:
-        'oletools; platform_python_implementation!="PyPy"',
+        # oletools from 0.54.2 to 0.56 required cryptography, incompatible with PyPy. oletools 0.56.1+ does not require it anymore.
+        # Moreover, oletools 0.56.1+ does not trigger antivirus false positives anymore
+        'oletools >= 0.56.1',
         "olefile",
         "prettytable",
         "colorlog",
