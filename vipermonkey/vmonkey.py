@@ -96,7 +96,7 @@ from logging import FileHandler
 # 2018-08-17 v0.07 KS: - lots of bug fixes and additions by Kirk Sayre (PR #34)
 #                  PL: - added ASCII art banner
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 #------------------------------------------------------------------------------
 # TODO:
