@@ -1,3 +1,9 @@
+"""@package expressions Parsing and emulation of VBS/VBScript
+operators.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Operators
 
@@ -51,6 +57,16 @@ from logger import log
 
 
 def debug_repr(op, args):
+    """Represent an operator applied to a list of arguments as a string
+    (ex. debug_repr("+", [1,2,3]) == "1 + 2 + 3").
+
+    @param op (str) The operator.
+
+    @param args (list) List of arguments.
+
+    @return (str) The operator application as a string.
+
+    """
     r = "("
     first = True
     for arg in args:
@@ -64,8 +80,8 @@ def debug_repr(op, args):
 # --- SUM: + OPERATOR --------------------------------------------------------
 
 class Sum(VBA_Object):
-    """
-    VBA Sum using the operator +
+    """Emulation of VBA/VBScript Sum using the operator +
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -126,8 +142,8 @@ class Sum(VBA_Object):
 # --- EQV --------------------------------------------------------
 
 class Eqv(VBA_Object):
-    """
-    VBA Eqv operator.
+    """Emualtion of VBA/VBScript Eqv operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -159,8 +175,8 @@ class Eqv(VBA_Object):
 # --- XOR --------------------------------------------------------
 
 class Xor(VBA_Object):
-    """
-    VBA Xor operator.
+    """Emulate VBA/VBScript Xor operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -209,8 +225,8 @@ class Xor(VBA_Object):
 # --- AND --------------------------------------------------------
 
 class And(VBA_Object):
-    """
-    VBA And operator.
+    """Emulate VBA/VBScript And operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -257,8 +273,8 @@ class And(VBA_Object):
 # --- OR --------------------------------------------------------
 
 class Or(VBA_Object):
-    """
-    VBA Or operator.
+    """Emulate VBA/VBScript Or operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -305,8 +321,8 @@ class Or(VBA_Object):
 # --- NOT --------------------------------------------------------
 
 class Not(VBA_Object):
-    """
-    VBA binary Not operator.
+    """Emulate VBA/VBScript binary Not operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -344,8 +360,8 @@ class Not(VBA_Object):
 # --- Negation --------------------------------------------------------
 
 class Neg(VBA_Object):
-    """
-    VBA binary Not operator.
+    """Emulate VBA/VBScript binary Not operator.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -383,8 +399,8 @@ class Neg(VBA_Object):
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
 class Subtraction(VBA_Object):
-    """
-    VBA Subtraction using the binary operator -
+    """Emulate VBA/VBScript Subtraction using the binary operator -.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -438,8 +454,8 @@ class Subtraction(VBA_Object):
 # --- MULTIPLICATION: * OPERATOR ------------------------------------------------
 
 class Multiplication(VBA_Object):
-    """
-    VBA Multiplication using the binary operator *
+    """Emulate VBA/VBScript Multiplication using the binary operator *.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -476,8 +492,8 @@ class Multiplication(VBA_Object):
 # --- EXPONENTIATION: ^ OPERATOR ------------------------------------------------
 
 class Power(VBA_Object):
-    """
-    VBA exponentiation using the binary operator ^
+    """Emulate VBA/VBScript exponentiation using the binary operator ^
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -518,8 +534,8 @@ class Power(VBA_Object):
 # --- DIVISION: / OPERATOR ------------------------------------------------
 
 class Division(VBA_Object):
-    """
-    VBA Division using the binary operator /
+    """Emulate VBA/VBScript Division using the binary operator /.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -560,8 +576,9 @@ class Division(VBA_Object):
 
 
 class MultiOp(VBA_Object):
-    """
-    Defines multiple operators that work within the same level of order or operations.
+    """Defines emulation for multiple operators that work within the same
+    level of order or operations ((+, -), (*, /), etc).
+
     """
     operator_map = {}
 
@@ -664,15 +681,16 @@ class MultiOp(VBA_Object):
 
 
 class MultiDiv(MultiOp):
-    """
-    VBA Multiplication/Division (used for performance)
+    """Emulate VBA/VBScript Multiplication/Division (used for
+    performance).
+
     """
     operator_map = {'*': operator.mul, '/': operator.truediv}
 
 
 class AddSub(MultiOp):
-    """
-    VBA Addition/Subtraction (used for performance)
+    """Emulate VBA/VBScript Addition/Subtraction (used for performance).
+
     """
     operator_map = {'+': operator.add, '-': operator.sub}
 
@@ -680,8 +698,8 @@ class AddSub(MultiOp):
 # --- FLOOR DIVISION: \ OPERATOR ------------------------------------------------
 
 class FloorDivision(VBA_Object):
-    """
-    VBA Floor Division using the binary operator \
+    """Emulate VBA/VBScript Floor Division using the binary operator \.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -732,8 +750,8 @@ class FloorDivision(VBA_Object):
 # --- CONCATENATION: & OPERATOR ----------------------------------------------
 
 class Concatenation(VBA_Object):
-    """
-    VBA String concatenation using the operator &
+    """Emulate VBA/VBScript String concatenation using the operator &.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -783,8 +801,8 @@ class Concatenation(VBA_Object):
 # --- MOD OPERATOR -----------------------------------------------------------
 
 class Mod(VBA_Object):
-    """
-    VBA Modulo using the operator 'Mod'
+    """Emulate VBA/VBScript Modulo using the operator 'Mod'.
+
     """
 
     def __init__(self, original_str, location, tokens):
