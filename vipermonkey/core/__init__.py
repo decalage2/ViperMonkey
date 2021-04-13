@@ -193,6 +193,11 @@ def pull_b64_excel_sheets(workbook):
     if (workbook is None):
         return set()
 
+    # Track potential base64 encoded PE files spread out over
+    # multiple cells.
+    pe_blobs = []
+    curr_pe_blob = None
+    
     # Look through each cell.
     all_cells = excel.pull_cells_workbook(workbook)
     r = set()
@@ -208,11 +213,35 @@ def pull_b64_excel_sheets(workbook):
         if (len(value) == 0):
             continue
 
-        # Look for base64 in the cell value.
+        # Is this the start of a PE file?
+        if (value.startswith("TVqQ") and (len(value) > 100)):
+
+            # Are we already tracking a PE file?
+            if (curr_pe_blob is not None):
+                pe_blobs.append(curr_pe_blob)
+
+            # Start a new PE blob.
+            curr_pe_blob = value
+        
+        # Look for strict base64 strings in the cell value.
         base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
         for b64 in re.findall(base64_pat_strict, value):
-            r.add(b64.strip())
+            b64 = b64.strip()
+            r.add(b64)
 
+        # Look for loose, possibly broken up, base64 values.
+        if (curr_pe_blob is not None):
+            base64_pat_loose = r"[A-Za-z0-9\+/=]{40,}"
+            for b64 in re.findall(base64_pat_loose, value):
+                b64 = b64.strip()
+                curr_pe_blob += b64
+
+    # Save the last base64 encode PE blob.
+    if (curr_pe_blob is not None):
+        pe_blobs.append(curr_pe_blob)
+    for pe_blob in pe_blobs:
+        r.add(pe_blob)
+                
     # Return any base64 found in cells.
     return r
 

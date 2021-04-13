@@ -1199,7 +1199,7 @@ class Context(object):
         value = utils.strip_nonvb_chars(value)
         if (len(re.findall(r"NULL", str(value))) > 20):
             value = str(value).replace("NULL", "")
-        
+
         # Is there a URL in the data?
         got_ioc = False
         URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
@@ -1226,7 +1226,7 @@ class Context(object):
                 B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
                 b64_strs = re2.findall(unicode(B64_REGEX), uni_value)
                 for curr_value in b64_strs:
-                    if (len(curr_value) > 200):
+                    if (len(curr_value) > 100):
                         got_ioc = True
                         num_b64_iocs += 1
                         log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
