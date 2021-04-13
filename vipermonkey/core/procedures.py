@@ -41,19 +41,27 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+#import sys
 import logging
-import sys
 
-from vba_context import *
-from statements import *
-from identifiers import *
+from pyparsing import CaselessKeyword, Group, Optional, Suppress, \
+    ZeroOrMore, Literal
+
+from vba_context import Context
+from statements import extend_statement_grammar, public_private, simple_statements_line, \
+    bogus_simple_for_each_statement, do_const_assignments, Do_Statement, While_Statement, \
+    For_Each_Statement, For_Statement, FollowedBy, Combine, params_list_paren, bad_next_statement, \
+    bad_if_statement, statements_line, function_type2
+from identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
+    type_suffix
+from comments_eol import EOS, comment_single_quote, rem_statement
+from vba_lines import line_terminator
 import utils
 
 from logger import log
-from tagged_block_finder_visitor import *
-from vba_object import to_python
-from vba_object import _get_var_vals
-from vba_object import _check_for_iocs
+from tagged_block_finder_visitor import tagged_block_finder_visitor
+from vba_object import to_python, coerce_to_string, _get_var_vals, _check_for_iocs, \
+    VBA_Object, eval_arg
 
 # --- SUB --------------------------------------------------------------------
 
@@ -90,7 +98,7 @@ class Sub(VBA_Object):
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
             global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
 
@@ -126,7 +134,7 @@ class Sub(VBA_Object):
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
         r += "\n"
         
@@ -176,6 +184,7 @@ class Sub(VBA_Object):
         if ((params is not None) and (len(params) == len(self.params))):
 
             # TODO: handle named parameters
+            # pylint: disable=consider-using-enumerate
             for i in range(len(params)):
 
                 # Set the parameter value.
@@ -219,7 +228,7 @@ class Sub(VBA_Object):
         do_const_assignments(self.statements, context)
         
         # Set the parameter values in the current context.
-        for param_name in call_info.keys():
+        for param_name in call_info:
             context.set(param_name, call_info[param_name], force_local=True)
 
         # Variable updates can go in the local scope.
@@ -270,7 +279,7 @@ class Sub(VBA_Object):
                     cmd.eval(context=context)
 
         # Save the values of the ByRef parameters.
-        for byref_param in self.byref_params.keys():
+        for byref_param in self.byref_params:
             self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
         # Done with call. Pop this call off the call stack.
@@ -294,10 +303,12 @@ class Sub(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Returning from sub " + str(self))
 
+        return "NULL"
+            
+
 # 5.3.1.1 Procedure Scope
 #
 # MS-GRAMMAR: procedure-scope = ["global" / "public" / "private" / "friend"]
-
 procedure_scope = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')
                            | CaselessKeyword('Global') | CaselessKeyword('Friend')).suppress()
 
@@ -370,14 +381,15 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 #       [procedure-body EOS]
 #       [end-label] "end" "property" procedure-tail
 
-sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
-            + Optional(params_list_paren) + EOS.suppress()
+sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + \
+            CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') + Optional(params_list_paren) + EOS.suppress()
 sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress() | \
           bogus_simple_for_each_statement
 simple_sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function'))).suppress()
-sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + \
+                                            (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
 multiline_sub = (sub_start + \
                  Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                  Optional(bad_if_statement('bogus_if')) + \
@@ -405,10 +417,7 @@ sub_start_line.setParseAction(Sub)
 # TODO: Function should inherit from Sub, or use only one class for both
 
 def is_loop_statement(s):
-    return (isinstance(s, For_Statement) or
-            isinstance(s, For_Each_Statement) or
-            isinstance(s, While_Statement) or
-            isinstance(s, Do_Statement))
+    return isinstance(s, (Do_Statement, For_Each_Statement, For_Statement, While_Statement))
 
 class Function(VBA_Object):
 
@@ -426,7 +435,7 @@ class Function(VBA_Object):
         self.statements = tokens.statements
         try:
             len(self.statements)
-        except:
+        except TypeError:
             self.statements = [self.statements]
         self.return_type = tokens.return_type
         self.vars = {}
@@ -452,7 +461,7 @@ class Function(VBA_Object):
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
             global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
         
@@ -487,7 +496,7 @@ class Function(VBA_Object):
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
         r += "\n"
             
@@ -609,7 +618,7 @@ class Function(VBA_Object):
         do_const_assignments(self.statements, context)
         
         # Set the parameter values in the current context.
-        for param_name in call_info.keys():
+        for param_name in call_info:
             param_val, param_type = call_info[param_name]
             context.set(param_name, param_val, var_type=param_type, force_local=True)
         
@@ -675,7 +684,7 @@ class Function(VBA_Object):
         try:
 
             # Save the values of the ByRef parameters.
-            for byref_param in self.byref_params.keys():
+            for byref_param in self.byref_params:
                 if (context.contains(byref_param[0].lower())):
                     self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
@@ -732,6 +741,7 @@ class Function(VBA_Object):
             # these funcion values.
             return ''
 
+
 # TODO 5.3.1.4 Function Type Declarations
 function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
                  CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
@@ -784,7 +794,7 @@ class PropertyLet(Sub):
         self.statements = tokens.statements
         try:
             len(self.statements)
-        except:
+        except TypeError:
             self.statements = [self.statements]
         # Get a dict mapping labeled blocks of code to labels.
         # This will be used to handle GOTO statements when emulating.
@@ -802,6 +812,7 @@ class PropertyLet(Sub):
 # [ statements ]
 # End Property
 
+
 property_let = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + \
                CaselessKeyword('Property').suppress() + CaselessKeyword('Let').suppress() + \
                lex_identifier('property_name') + params_list_paren + \
@@ -811,5 +822,3 @@ property_let.setParseAction(PropertyLet)
 
 # Ugh. Handle cyclic import problem.
 extend_statement_grammar()
-
-
