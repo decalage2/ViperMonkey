@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package procedures Parsing and Emulation of VBA/VBScript Functions
+and Subs.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Procedures
 
@@ -66,7 +71,10 @@ from vba_object import to_python, coerce_to_string, _get_var_vals, _check_for_io
 # --- SUB --------------------------------------------------------------------
 
 class Sub(VBA_Object):
+    """Emulate a VBA/VBScript Sub (subroutine).
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name
@@ -417,10 +425,22 @@ sub_start_line.setParseAction(Sub)
 # TODO: Function should inherit from Sub, or use only one class for both
 
 def is_loop_statement(s):
+    """Check to see if the given VBA_Object is a looping construct
+    (While, For, etc.).
+
+    @param s (VBA_Object object) The thing to check to see if it is a
+    loop statement.
+
+    @return (boolean) True if it is a loop, False if not.
+
+    """
     return isinstance(s, (Do_Statement, For_Each_Statement, For_Statement, While_Statement))
 
 class Function(VBA_Object):
+    """Emulate a VBA/VBScript Function.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Function, self).__init__(original_str, location, tokens)
         self.return_type = None
@@ -782,7 +802,10 @@ function_start_line.setParseAction(Function)
 # Evaluating a property let handler looks like calling a Sub, so inherit from Sub to get the
 # eval() method.
 class PropertyLet(Sub):
+    """Emulate a VBA/VBScript 'Property Let...' statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(PropertyLet, self).__init__(original_str, location, tokens)
         self.name = tokens.property_name
