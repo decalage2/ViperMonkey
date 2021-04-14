@@ -1,4 +1,5 @@
-"""@package expressions VBA Grammar - Expressions
+"""@package expressions Parsing and emulation of VBA/VBScript
+expressions.
 
 """
 

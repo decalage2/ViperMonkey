@@ -1,3 +1,8 @@
+"""@package reserved VBA/VBScript reserved keywords.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Reserved Keywords
 
@@ -46,10 +51,13 @@ from pyparsing import CaselessKeyword, Group, Word, ZeroOrMore, alphas, \
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
 def caselessKeywordsList(keywords):
-    """
-    build a pyparsing parser from a list of caseless keywords
+    """Build a pyparsing parser from a list of caseless keywords
 
-    :param keywords: tuple or list of keyword names (strings)
+    @param keywords (list) Tuple or list of keyword names (strings).
+
+    @reurn PyParsing parser object for recongizing the given
+    keywords.
+
     """
     # start with the first keyword:
     p = CaselessKeyword(keywords[0])
