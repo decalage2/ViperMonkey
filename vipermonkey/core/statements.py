@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: VBA Grammar - Statements
 
@@ -50,22 +49,33 @@ __version__ = '0.08'
 
 import logging
 
-from comments_eol import *
-from expressions import *
-from vba_context import *
-from reserved import *
-from from_unicode_str import *
-from vba_object import to_python
-from vba_object import _eval_python
-from vba_object import _boilerplate_to_python
-from vba_object import _updated_vars_to_python
-from vba_object import _loop_vars_to_python
-from vba_object import _get_var_vals
+from pyparsing import CaselessKeyword, Combine, delimitedList, FollowedBy, \
+    Forward, Group, LineStart, Literal, NotAny, OneOrMore, Optional, \
+    ParseException, ParseResults, Regex, Suppress, White, ZeroOrMore, \
+    CharsNotIn
+
+from identifiers import identifier, lex_identifier, TODO_identifier_or_object_attrib, \
+    TODO_identifier_or_object_attrib_loose, enum_val_id, unrestricted_name, \
+    reserved_type_identifier, typed_name
+from literals import integer, quoted_string, literal, decimal_literal, \
+    quoted_string_keep_quotes
+from comments_eol import rem_statement, EOS
+from expressions import any_expression, boolean_expression, BoolExpr, expression, \
+    file_pointer, function_call, Function_Call, member_access_expression, \
+    MemberAccessExpression, simple_name_expression, SimpleNameExpression, \
+    file_pointer_loose, expr_list, expr_const, expr_list_strict, \
+    function_call_limited
+from vba_context import Context, is_procedure
+from reserved import reserved_complex_type_identifier
+from from_unicode_str import from_unicode_str
+from vba_object import to_python, coerce_to_int, eval_arg, _eval_python, \
+    _boilerplate_to_python, _updated_vars_to_python, _loop_vars_to_python, \
+    _get_var_vals, eval_args, VbaLibraryFunc, VBA_Object
 import procedures
-from let_statement_visitor import *
-from var_in_expr_visitor import *
-from lhs_var_visitor import *
-from function_call_visitor import *
+from let_statement_visitor import let_statement_visitor
+from var_in_expr_visitor import var_in_expr_visitor
+from lhs_var_visitor import lhs_var_visitor
+from function_call_visitor import function_call_visitor
 import vb_str
 import loop_transform
 from utils import safe_print
@@ -458,7 +468,7 @@ class Dim_Statement(VBA_Object):
         for f in tokens:
             if (str(f).lower() == "const"):
                 self.decl_type = str(f)
-            if (isinstance(f, pyparsing.ParseResults)):
+            if (isinstance(f, ParseResults)):
                 var_info.append(f)
         tokens = var_info
         
@@ -3474,7 +3484,7 @@ class If_Statement(VBA_Object):
             if (isinstance(piece["body"], VBA_Object)):
                 self._children.append(piece["body"])
             if ((isinstance(piece["body"], list)) or
-                (isinstance(piece["body"], pyparsing.ParseResults))):
+                (isinstance(piece["body"], ParseResults))):
                 for i in piece["body"]:
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
@@ -3487,7 +3497,7 @@ class If_Statement(VBA_Object):
             if (isinstance(piece["guard"], VBA_Object)):
                 self._children.append(piece["guard"])
             if ((isinstance(piece["guard"], list)) or
-                (isinstance(piece["guard"], pyparsing.ParseResults))):
+                (isinstance(piece["guard"], ParseResults))):
                 for i in piece["guard"]:
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
