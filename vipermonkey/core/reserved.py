@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: VBA Grammar - Reserved Keywords
 
@@ -41,10 +40,8 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from pyparsing import *
-
-from logger import log
-from identifiers import *
+from pyparsing import CaselessKeyword, Group, Word, ZeroOrMore, alphas, \
+    alphanums
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
@@ -60,6 +57,7 @@ def caselessKeywordsList(keywords):
     for kw in keywords[1:]:
         p |= CaselessKeyword(kw)
     return p
+
 
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # A <Statement-keyword> is a <reserved-identifier> that is the first syntactic item of a statement or
@@ -155,4 +153,3 @@ future_reserved = caselessKeywordsList(("CDecl", "Decimal", "DefDec"))
 reserved_identifier = statement_keyword | marker_keyword | operator_identifier \
                       | special_form | reserved_name | literal_identifier | rem_keyword \
                       | reserved_for_implementation_use | future_reserved
-
