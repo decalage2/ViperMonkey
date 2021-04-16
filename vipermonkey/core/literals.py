@@ -48,6 +48,11 @@ __version__ = '0.02'
 import logging
 import re
 
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
 from pyparsing import QuotedString, Regex
 
 from logger import log

@@ -4,6 +4,11 @@
 Parsing of VB comments and end of line markers.
 """
 
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
 import logging
 from pyparsing import Literal, SkipTo, Combine, Suppress, Optional, CaselessKeyword, OneOrMore
 from vba_lines import line_terminator

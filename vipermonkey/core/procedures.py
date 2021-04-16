@@ -49,6 +49,11 @@ __version__ = '0.02'
 #import sys
 import logging
 
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
 from pyparsing import CaselessKeyword, Group, Optional, Suppress, \
     ZeroOrMore, Literal
 
@@ -65,7 +70,7 @@ import utils
 
 from logger import log
 from tagged_block_finder_visitor import tagged_block_finder_visitor
-from vba_object import to_python, coerce_to_string, _get_var_vals, _check_for_iocs, \
+from vba_object import to_python, coerce_to_str, _get_var_vals, _check_for_iocs, \
     VBA_Object, eval_arg
 
 # --- SUB --------------------------------------------------------------------
@@ -717,7 +722,7 @@ class Function(VBA_Object):
 
             # Convert the return value to a String if needed.
             if ((self.return_type == "String") and (not isinstance(return_value, str))):
-                return_value = coerce_to_string(return_value)
+                return_value = coerce_to_str(return_value)
 
             # Handle array accesses of the results of 0 parameter functions if needed.
             if (array_indices is not None):

@@ -43,7 +43,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import visitor
-import procedures
+import statements
 
 class function_import_visitor(visitor):
     """Collect the names and aliases of all functions imported from DLLs.
@@ -60,7 +60,7 @@ class function_import_visitor(visitor):
         if (item in self.visited):
             return False
         self.visited.add(item)
-        if (isinstance(item, procedures.External_Function)):
+        if (isinstance(item, statements.External_Function)):
             self.funcs[str(item.name)] = str(item.alias_name)
             self.names.add(str(item.alias_name))
             self.aliases.add(str(item.name))

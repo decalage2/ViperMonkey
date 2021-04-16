@@ -37,7 +37,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import *
-from statements import *
+#from statements import *
 
 class var_in_expr_visitor(visitor):
     """

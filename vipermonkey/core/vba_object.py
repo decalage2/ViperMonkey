@@ -65,14 +65,14 @@ import sys
 from datetime import datetime
 import pyparsing
 
-import expressions
-from var_in_expr_visitor import *
-from function_call_visitor import *
-from lhs_var_visitor import *
+#import expressions
+from var_in_expr_visitor import var_in_expr_visitor
+from function_call_visitor import function_call_visitor
+from lhs_var_visitor import lhs_var_visitor
 from utils import safe_print
 import utils
-from let_statement_visitor import *
-from vba_context import *
+from let_statement_visitor import let_statement_visitor
+#from vba_context import *
 import excel
 
 max_emulation_time = None
@@ -372,6 +372,7 @@ def _read_from_object_text(arg, context):
     #
     # Make sure not to pull out Shapes() references that appear as arguments to function
     # calls.
+    import expressions
     if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
@@ -457,6 +458,7 @@ def contains_excel(arg):
         return True
     
     # Got a function call?
+    import expressions
     if (not isinstance(arg, expressions.Function_Call)):
         return False
 
@@ -578,6 +580,7 @@ def _get_local_func_type(expr, context):
     """
 
     # Sanity check.
+    import expressions
     if (not isinstance(expr, expressions.Function_Call)):
         return None
 
@@ -611,6 +614,7 @@ def _infer_type_of_expression(expr, context):
         return expr.return_type()
 
     # Call of function?
+    import expressions
     if (isinstance(expr, expressions.Function_Call)):
 
         # Call of builtin function?
@@ -649,6 +653,7 @@ def _infer_type_of_expression(expr, context):
     
     # Harder case. This could be an int or a str (or some other numeric type, but
     # we're not handling that).
+    import expressions
     if (isinstance(expr, operators.AddSub) or
         isinstance(expr, expressions.BoolExpr) or
         isinstance(expr, expressions.BoolExprItem)):
