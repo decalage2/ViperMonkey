@@ -1077,7 +1077,106 @@ class Let_Statement(VBA_Object):
         except ParseException:
             pass
         return None
-    
+
+    def _convert_str_to_byte_array(self, value, context):
+        """
+        """
+
+        # Handle conversion of strings to byte arrays, if needed.
+        orig_value = value
+        if (not ((context.get_type(self.name) == "Byte Array") and
+                 (isinstance(value, str)))):
+            return (value, value == orig_value)
+
+        # Do we have an actual value to assign?
+        if (value != "NULL"):
+
+            # Base64 decoded raw data should not be padded with 0 between each
+            # byte. Try to figure out if this is raw data.
+            bad_byte_count = 0
+            for c in value:
+                if (not isprint(c)):
+                    bad_byte_count += 1
+            is_raw_data = ((len(value) > 0) and (((bad_byte_count + 0.0)/len(value)) > .2))
+                    
+            # Generate the byte array for the string.
+            tmp = []
+            for c in value:
+
+                # Append the byte value of the character.
+                tmp.append(ord(c))
+
+                # Append padding 0 bytes for wide char strings.
+                #
+                # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
+                # or not (no padding).
+                if ((not isinstance(value, from_unicode_str)) and (not is_raw_data)):
+                    tmp.append(0)
+
+            # Got the byte array.
+            value = tmp
+            return (value, value == orig_value)
+
+        # We are dealing with an unsassigned variable. Don't update
+        # the array.
+        return (None, True)
+
+    def _convert_byte_array_to_str(self, value, context):
+        """
+        """
+        # Handle conversion of byte arrays to strings, if needed.
+        orig_value = value
+        if (not ((context.get_type(self.name) == "String") and
+                 (isinstance(value, list)))):
+            return (value, value == orig_value)
+            
+        # Do we have a list of integers?
+        rhs_type = context.get_type(str(self.expression))
+        all_ints = True
+        for i in value:
+            if (not isinstance(i, int)):
+                all_ints = False
+                break
+        if (all_ints):
+            try:
+                tmp = ""
+                pos = 0
+                # TODO: Only handles ASCII strings.
+                step = 2
+                if ((rhs_type == "Byte Array") or
+                    (rhs_type == "Byte")):
+                    step = 1
+                while (pos < len(value)):
+                    # Skip null bytes.
+                    c = value[pos]
+                    if (c == 0):
+                        pos += step
+                        continue
+
+                    # Append the byte converted to a character.
+                    tmp += chr(c)
+                    pos += step
+                value = tmp
+            except ValueError:
+                pass
+
+        # Do we have a list of characters?
+        all_chars = True
+        for i in value:
+            if ((i is not None) and
+                ((not isinstance(i, str)) or (len(i) > 1))):
+                all_chars = False
+                break
+        if (all_chars):
+            tmp = ""
+            for i in value:
+                if (i is not None):
+                    tmp += i
+            value = tmp        
+
+        # Done.
+        return (value, value == orig_value)
+            
     def eval(self, context, params=None):
 
         # pylint.
@@ -1100,7 +1199,6 @@ class Let_Statement(VBA_Object):
         # evaluate value of right operand:
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('try eval expression: %s' % self.expression)
-        rhs_type = context.get_type(str(self.expression))
         value = eval_arg(self.expression, context=context)
         if (context.have_error()):
             log.warn('Short circuiting assignment %s due to thrown VB error.' % str(self))
@@ -1151,95 +1249,21 @@ class Let_Statement(VBA_Object):
         if (self.index is None):
 
             # Handle conversion of strings to byte arrays, if needed.
-            if ((context.get_type(self.name) == "Byte Array") and
-                (isinstance(value, str))):
-
-                # Do we have an actual value to assign?
-                if (value != "NULL"):
-
-                    # Base64 decoded raw data should not be padded with 0 between each
-                    # byte. Try to figure out if this is raw data.
-                    bad_byte_count = 0
-                    for c in value:
-                        if (not isprint(c)):
-                            bad_byte_count += 1
-                    is_raw_data = ((len(value) > 0) and (((bad_byte_count + 0.0)/len(value)) > .2))
-                    
-                    # Generate the byte array for the string.
-                    tmp = []
-                    pos = 0
-                    for c in value:
-
-                        # Append the byte value of the character.
-                        tmp.append(ord(c))
-
-                        # Append padding 0 bytes for wide char strings.
-                        #
-                        # TODO: Figure out how VBA figures out if this is a wide string (0 padding added)
-                        # or not (no padding).
-                        if ((not isinstance(value, from_unicode_str)) and (not is_raw_data)):
-                            tmp.append(0)
-
-                    # Got the byte array.
-                    value = tmp
-
-                # We are dealing with an unsassigned variable. Don't update
-                # the array.
-                else:
-                    return
+            value, changed = self._convert_str_to_byte_array(value, context)
+            if (value is None):
+                return
                     
             # Handle conversion of byte arrays to strings, if needed.
-            elif ((context.get_type(self.name) == "String") and
-                  (isinstance(value, list))):
-
-                # Do we have a list of integers?
-                all_ints = True
-                for i in value:
-                    if (not isinstance(i, int)):
-                        all_ints = False
-                        break
-                if (all_ints):
-                    try:
-                        tmp = ""
-                        pos = 0
-                        # TODO: Only handles ASCII strings.
-                        step = 2
-                        if ((rhs_type == "Byte Array") or
-                            (rhs_type == "Byte")):
-                            step = 1
-                        while (pos < len(value)):
-
-                            # Skip null bytes.
-                            c = value[pos]
-                            if (c == 0):
-                                pos += step
-                                continue
-
-                            # Append the byte converted to a character.
-                            tmp += chr(c)
-                            pos += step
-                        value = tmp
-                    except ValueError:
-                        pass
-
-                # Do we have a list of characters?
-                all_chars = True
-                for i in value:
-                    if ((i is not None) and
-                        ((not isinstance(i, str)) or (len(i) > 1))):
-                        all_chars = False
-                        break
-                if (all_chars):
-                    tmp = ""
-                    for i in value:
-                        if (i is not None):
-                            tmp += i
-                    value = tmp
+            if (not changed):
+                value, changed = self._convert_byte_array_to_str(value, context)
+                if (value is None):
+                    return
 
             # Handle conversion of strings to int, if needed.
-            elif (((context.get_type(self.name) == "Integer") or
-                   (context.get_type(self.name) == "Long")) and
-                  (isinstance(value, str))):
+            if ((not changed) and
+                (((context.get_type(self.name) == "Integer") or
+                  (context.get_type(self.name) == "Long")) and
+                 (isinstance(value, str)))):
                 try:
                     if (value == "NULL"):
                         value = 0
@@ -4216,6 +4240,7 @@ class Call_Statement(VBA_Object):
 
         # Should never get here.
         return None
+
 
 # 5.4.2.1 Call Statement
 # a call statement is similar to a function call, except it is a statement on its own, not part of an expression
