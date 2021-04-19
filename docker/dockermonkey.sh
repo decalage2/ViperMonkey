@@ -5,6 +5,8 @@ if [[ $1 == "-h" || $# -eq 0 ]]; then
    echo "FILE is the VBA/VBScript file to analyze."
    echo "If JSON_FILE is given JSON analysis results will be saved in JSON_FILE."
    echo "If '-i ENTRY' is given emulation will start with VBA/VBScript function ENTRY."
+   echo ""
+   echo "Give the --upgrade option to download the latest docker image."
    exit
 fi
    
@@ -30,10 +32,23 @@ if [[ $(docker ps -f status=running -f ancestor=haroldogden/vipermonkey -l | tai
         echo "[+] Other ViperMonkey containers are running!"
 fi
 
-echo "[*] Pulling and starting container..."
-docker pull haroldogden/vipermonkey:latest
+if [ $1 == "--upgrade" ]; then
+    echo "[*] Pulling container..."
+    docker pull haroldogden/vipermonkey:latest
+    echo "[+] Done. You now have the latest docker image."
+    exit
+fi
+
+echo "[*] Checking for local ViperMonkey docker image..."
+docker image inspect haroldogden/vipermonkey:latest > /dev/null
+if [ $? -ne 0 ]; then
+    echo "[*] Pulling container..."
+    docker pull haroldogden/vipermonkey:latest
+fi
+echo "[*] Starting container..."
 docker_id=$(docker run --rm -d -t haroldogden/vipermonkey:latest)
 
+    
 echo "[*] Attempting to copy file $1 into container ID $docker_id"
 
 file_basename=$(basename "$1")
