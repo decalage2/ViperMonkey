@@ -4408,9 +4408,7 @@ def _read_cell(sheet, row, col):
     try:
         raw_cell = sheet.cell(row, col)
         r = str(raw_cell).replace("text:", "")
-        if (r.startswith("'") and r.endswith("'")):
-            r = r[1:-1]
-        if (r.startswith('u')):
+        if (r.startswith("u'")):
             r = r[1:]
         if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
             r = r[1:-1]
