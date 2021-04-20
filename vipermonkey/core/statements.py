@@ -1,3 +1,8 @@
+"""@package statements Parsing and emulation of VBA/VBScript
+statements.
+
+"""
+
 # pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Statements
