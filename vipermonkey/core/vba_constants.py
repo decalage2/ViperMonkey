@@ -406,6 +406,27 @@ class VbaConstants(object):
         self.globals["wdFormattingFromPrompt".lower()] = 2
         # Copy source formatting from the current selection.
         self.globals["wdFormattingFromSelected".lower()] = 1
+
+        # MsoArrowheadLength Enum
+        #
+        # Specifies the length of the arrowhead at the end of a line.
+
+        # Medium.
+        self.globals["msoArrowheadLengthMedium".lower()] = 2	
+        # Return value only; indicates a combination of the other states in the specified shape range.
+        self.globals["msoArrowheadLengthMixed".lower()] = -2	
+        # Long.
+        self.globals["msoArrowheadLong".lower()] = 3	
+        # Short
+        self.globals["msoArrowheadShort".lower()] = 1	
+
+        # MsoBalloonType Enum
+        #
+        # This object, member, or enumeration is deprecated and is not intended to be used in your code.
+
+        self.globals["msoBalloonTypeBullets".lower()] = 1	
+        self.globals["msoBalloonTypeButtons".lower()] = 0	
+        self.globals["msoBalloonTypeNumbers".lower()] = 2	
         
         # WdLigatures enumeration (Word)
         #   
