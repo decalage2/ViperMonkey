@@ -2536,9 +2536,13 @@ class Join(VbaLibraryFunc):
             sep = ""
         r = ""
         if (isinstance(strings, list)):
+            first = True
             for s in strings:
+                if (not first):
+                    r += sep
+                first = False
                 tmp_s = utils.safe_str_convert(s)
-                r += tmp_s + sep
+                r += tmp_s
         else:
             r = str(strings)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4582,6 +4586,8 @@ class Sheets(VbaLibraryFunc):
         try:
             sheet_id = int(sheet_id) - 1
         except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cannot convert sheet ID '" + str(sheet_id) + "' to int")
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
@@ -4736,7 +4742,7 @@ class Range(VbaLibraryFunc):
         # TODO: Need to track the index of each cell for full
         # emulation of a range. Probably need a Range object
         # implementation.
-        
+
         # Sanity check.
         if (params is None):
             log.warning("Range() called with no parameters.")
