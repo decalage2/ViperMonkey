@@ -1342,7 +1342,7 @@ class Context(object):
             no_conversion=False,
             case_insensitive=True,
             no_overwrite=False):
-
+        
         # Special case. Are we setting a formula in an Excel cell?
         if (self._set_excel_formula(name, value)):
             return

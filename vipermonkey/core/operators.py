@@ -388,7 +388,9 @@ class Neg(VBA_Object):
             val = self.arg
             if (isinstance(val, VBA_Object)):
                 val = val.eval(context)
-            return (- int(val))
+            if (not isinstance(val, float)):
+                val = int(val)
+            return (- val)
         except Exception as e:
             log.error("Cannot compute negation of " + str(self.arg) + ". " + str(e))
             return "NULL"

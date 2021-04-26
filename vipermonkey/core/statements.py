@@ -846,6 +846,7 @@ class Let_Statement(VBA_Object):
             # Don't flag funcs as global in Python JIT code.            
             var_val = context.get(self.name, global_only=True)
             if ((not isinstance(var_val, (VbaLibraryFunc, procedures.Function, procedures.Sub))) and
+                (var_val != "__FUNC_ARG__") and
                 (var_val != "__ALREADY_SET__")):
                 
                 # It's global and not a func. Treat as global in Python.
