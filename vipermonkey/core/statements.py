@@ -98,8 +98,13 @@ from curses_ascii import isprint
 import hashlib
 
 def is_simple_statement(s):
-    """
-    Check to see if the given VBAObject is a simple_statement.
+    """Check to see if the given VBAObject is a simple (not compound)
+    statement.
+    
+    @param s (VBA_Object object) The VBA Object to check.
+
+    @return (boolean) True if it is a simple statement, False if not.
+
     """
     return isinstance(s, (Dim_Statement,
                           Exit_For_Statement,
@@ -119,8 +124,9 @@ def is_simple_statement(s):
 # --- UNKNOWN STATEMENT ------------------------------------------------------
 
 class UnknownStatement(VBA_Object):
-    """
-    Base class for all VBA statements
+    """Base class for all VBA statement objects (used to emulate
+    VBA/VBScript statements).
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -259,8 +265,8 @@ function_type = CaselessKeyword("as") + type_expression + Optional(array_designa
 # --- PARAMETERS ----------------------------------------------------------
 
 class Parameter(VBA_Object):
-    """
-    VBA parameter with name and type, e.g. 'abc as string'
+    """VBA parameter with name and type, e.g. 'abc as string'
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -395,8 +401,8 @@ statement_label_list = delimitedList(statement_label, delim=',')
 # GOTO statements.
 
 class TaggedBlock(VBA_Object):
-    """
-    A label and the block of statements associated with the label.
+    """A label and the block of statements associated with the label.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -464,8 +470,15 @@ tagged_block <<= label_statement('label') + Suppress(EOS) + statement_block('blo
 tagged_block.setParseAction(TaggedBlock)
 
 def do_const_assignments(code_block, context):
-    """
-    Perform all of the const variable declarations in a given code block.
+    """Perform all of the const variable declarations in a given code
+    block (used during emulation). This sets the values of all named
+    constants assigned in the given code block.
+
+    @param code_block (list) A list of statements.
+    
+    @param context (Context object) The context in which to save
+    the constant assignments.
+
     """
 
     # Make sure we can iterate.
@@ -481,8 +494,8 @@ def do_const_assignments(code_block, context):
 # --- DIM statement ----------------------------------------------------------
 
 class Dim_Statement(VBA_Object):
-    """
-    Dim statement
+    """Emulate a Dim statement.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -787,6 +800,9 @@ dim_statement.setParseAction(Dim_Statement)
 
 # TODO: Support multiple variables set (e.g. 'name = "bob", age = 20\n')
 class Global_Var_Statement(Dim_Statement):
+    """A global variable definition statement.
+
+    """    
     pass
 
 
@@ -800,7 +816,10 @@ global_variable_declaration.setParseAction(Global_Var_Statement)
 # --- LET STATEMENT --------------------------------------------------------------
 
 class Let_Statement(VBA_Object):
+    """A Let variable assignment statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Let_Statement, self).__init__(original_str, location, tokens)
 
@@ -931,7 +950,18 @@ class Let_Statement(VBA_Object):
         return r
         
     def _handle_change_callback(self, var_name, context):
+        """Handle calling the change callback handler function for a
+        variable. This will emulate the change callback handler
+        function if the given variable has a callback handler. It will
+        do nothing if the variable does not have a callback handler.
 
+        @param var_name (str) The name of the assigned variable.
+
+        @param context (Context object) The context containing the
+        callback handler definitions.
+
+        """
+        
         # Get the variable name, minus any embedded context.
         var_name = str(var_name)
         if ("." in var_name):
@@ -968,9 +998,20 @@ class Let_Statement(VBA_Object):
             pass
 
     def _make_let_statement(self, the_str_var, mod_str):
-        """
-        Make a Let_Statement object to assign the results of a Mid() assignment to the
-        proper variable. This handles assigning to items in an array if needed.
+        """Make a Let_Statement object to assign the results of a Mid()
+        assignment to the proper variable. This handles assigning to
+        items in an array if needed.
+
+        @param the_str_var (VBA_Object object) The variable containing
+        the string value being modified with the Mid() assignment.
+
+        @param mod_str (VBA_Object object) The new value for the string.
+
+        @return (VBA_Object object) A Let statement assigning the
+        string variable to the new value. Actually looks like a
+        regular 'foo = bar' assignment rather than a weird 'Mid(...) =
+        bar' statement.
+
         """
 
         # Make an empty Let statement.
@@ -997,8 +1038,18 @@ class Let_Statement(VBA_Object):
         return tmp_let
         
     def _handle_string_mod(self, context, rhs):
-        """
-        Handle assignments like Mid(a_string, start_pos, len) = "..."
+        """Handle assignments like Mid(a_string, start_pos, len) = "..."
+
+        @param context (Context object) The context in which to save
+        the string variable modification.
+
+        @param rhs (VBA_Object object) The already evalulated
+        (emulated) value on the right hand side of the assignment
+        statement.
+
+        @return (boolean) True if this is a Mid() string modification
+        and the context has been updated, False if not.
+
         """
 
         # Are we modifying a string?
@@ -1060,7 +1111,19 @@ class Let_Statement(VBA_Object):
         return False
 
     def _handle_autoincrement(self, lhs, rhs):
+        """Handle '+=' and '-=' assignment statements.
 
+        @param lhs (VBA_Object object) The left hand side of the
+        assignment (already evaluated).
+        
+        @param rhs (VBA_Object object) The right hand side of the
+        assignment (already evaluated).
+
+        @return (??) The result of adding/subtracting the given RHS
+        and LHS.
+
+        """
+        
         # Add/subtract the rhs from the lhs.
         r = "NULL"
         try:
@@ -1074,7 +1137,17 @@ class Let_Statement(VBA_Object):
         return r
 
     def _handle_lhs_call(self, context):
+        """Handle resolving the LHS where the LHS of the assignment is
+        actually a function call, not a variable.
 
+        @param context (Context object) The context in which to save
+        the results of the assignment.
+
+        @return (VBA_Object object) The LHS parsed as a function call
+        if the LHS is a function call, None if it is not.
+
+        """
+        
         # See if the LHS is actually a valid function call.
         if (self.index is None):
             return None
@@ -1090,7 +1163,19 @@ class Let_Statement(VBA_Object):
         return None
 
     def _convert_str_to_byte_array(self, value, context):
-        """
+        """Convert a string value to a VB byte array.
+
+        @param value (??) Should be a str for this method to do
+        something.
+
+        @param (Context object) The context containing variable types
+        (used to figure out whether the string should be converted to
+        a byte array).
+
+        @return (tuple) A 2 element tuple where the 1st element is the
+        converted (or not) value and the 2nd element is a flag
+        indicating if the value was actually converted.
+
         """
 
         # Handle conversion of strings to byte arrays, if needed.
@@ -1133,8 +1218,21 @@ class Let_Statement(VBA_Object):
         return (None, True)
 
     def _convert_byte_array_to_str(self, value, context):
+        """Convert a VB byte array to a string value.
+
+        @param value (??) Should be a list for this method to do
+        something.
+
+        @param (Context object) The context containing variable types
+        (used to figure out whether the string should be converted to
+        a string).
+
+        @return (tuple) A 2 element tuple where the 1st element is the
+        converted (or not) value and the 2nd element is a flag
+        indicating if the value was actually converted.
+
         """
-        """
+                
         # Handle conversion of byte arrays to strings, if needed.
         orig_value = value
         if (not ((context.get_type(self.name) == "String") and
@@ -1493,6 +1591,10 @@ lset_statement.setParseAction(LSet_Statement)
 # --- PROPERTY ASSIGNMENT STATEMENT --------------------------------------------------------------
 
 class Prop_Assign_Statement(VBA_Object):
+    """A Property assignment statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Prop_Assign_Statement, self).__init__(original_str, location, tokens)
         self.prop = tokens.prop
@@ -1535,7 +1637,10 @@ prop_assign_statement.setParseAction(Prop_Assign_Statement)
 # --- FOR statement -----------------------------------------------------------
 
 class For_Statement(VBA_Object):
+    """A For loop statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(For_Statement, self).__init__(original_str, location, tokens)
         self.is_loop = True
@@ -1556,7 +1661,18 @@ class For_Statement(VBA_Object):
                                               self.start_value, self.end_value, self.step_value)
 
     def _get_loop_indices(self, context):
+        """Get the start index, end index, and step for the loop.
 
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (tuple) A 3 element tuple where the 1st element is the
+        start index value, the 2nd element is the end index value, and
+        the 3rd element is the loop step. (None, None, None) is
+        returned on error.
+
+        """
+        
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
@@ -1594,8 +1710,17 @@ class For_Statement(VBA_Object):
         return (start, end, step)
         
     def _get_loop_indices_python(self, context):
-        """
-        Get the start index, end index, and step of the loop as Python code.
+        """Get the start index, end index, and step of the loop as Python
+        code. 
+
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (tuple) A 3 element tuple where the 1st element is the
+        start index value in Python, the 2nd element is the end index
+        value in Python, and the 3rd element is the loop step in
+        Python.
+
         """
 
         # Get the start index.
@@ -1620,10 +1745,21 @@ class For_Statement(VBA_Object):
         return (start, end, step)
     
     def to_python(self, context, params=None, indent=0):
-        """
-        Convert this loop to Python code.
+        """Convert this loop to Python code.
 
-        This modifies the given context!!
+        @warning This modifies the given context!!
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param params (list) Any parameters provided to the object.
+        
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current object with it's emulation
+        implemented as Python code.
         """
 
         # Get the loop variable.
