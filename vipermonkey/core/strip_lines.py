@@ -68,12 +68,13 @@ https://github.com/decalage2/ViperMonkey
 # - add VBS support (two modes?)
 
 import logging
-import sys
+#import sys
 import re
 try:
     # sudo pypy -m pip install rure
     import rure as re2
-except:
+except ImportError:
+    # pylint: disable=reimported
     import re as re2
 from logger import log
 import vba_context
@@ -103,12 +104,13 @@ def is_useless_dim(line):
     # Does the variable name collide with a builtin VBA function name? If so,
     # keep the Dim statement.
     line = line.lower()
-    for builtin in vba_context.VBA_LIBRARY.keys():
+    for builtin in vba_context.VBA_LIBRARY:
         if (builtin in line):
             r = False
 
     # Done.
     return r
+
 
 aggressive_strip = False
 def is_interesting_call(line, external_funcs, local_funcs):
@@ -256,7 +258,6 @@ def hide_weird_calls(vba_code):
     Hide weird calls like 'foo.bar (1,2), cat, dog'. These are hard to parse.
     """
 
-    # coalitionist.advisementblackandwhite.amygdules (albarellos.bunyip(24796, krummhorns_Daphnia)), "corrupters blender chair disbandments Rheinland", instantaneousnessrestoratives
     # Do we have these weird calls?
     uni_vba_code = None
     try:
@@ -412,6 +413,7 @@ def fix_unbalanced_quotes(vba_code):
         print r
     return r
 
+
 MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){3,})(.+)"
 def fix_multiple_assignments(line):
 
@@ -524,14 +526,14 @@ def fix_skipped_1st_arg1(vba_code):
             curr_str += c
 
     # Temporarily replace the string literals.
-    for str_name in strings.keys():
+    for str_name in strings:
         tmp_code = tmp_code.replace(strings[str_name], str_name)
         
     # Replace the skipped 1st arguments in calls.
     vba_code = re.sub(r"([0-9a-zA-Z_\.]+)\(\s*,", r"\1(SKIPPED_ARG,", tmp_code)
 
     # Put the string literals.
-    for str_name in strings.keys():
+    for str_name in strings:
         vba_code = vba_code.replace(str_name, strings[str_name])
 
     # Put the escaped double quotes back.
@@ -585,7 +587,7 @@ def fix_skipped_1st_arg2(vba_code):
 
     # Temporarily replace the string literals.
     tmp_code = vba_code
-    for str_name in strings.keys():
+    for str_name in strings:
         tmp_code = tmp_code.replace(strings[str_name], str_name)
     #print "HERE: 1"
     #print tmp_code
@@ -629,7 +631,7 @@ def fix_skipped_1st_arg2(vba_code):
             curr_paren += c
 
     # Replace the paren exprs.
-    for paren_name in parens.keys():
+    for paren_name in parens:
         tmp_code = tmp_code.replace(parens[paren_name], paren_name)
     #print "HERE: 2"
     #print tmp_code
@@ -638,9 +640,9 @@ def fix_skipped_1st_arg2(vba_code):
     vba_code = re.sub(r"\n\s*([0-9a-zA-Z_\.]+)\s*,", r"\n\1 SKIPPED_ARG,", tmp_code)
 
     # Put the string literals and paren exprs back.
-    for paren_name in parens.keys():
+    for paren_name in parens:
         vba_code = vba_code.replace(paren_name, parens[paren_name])
-    for str_name in strings.keys():
+    for str_name in strings:
         vba_code = vba_code.replace(str_name, strings[str_name])
         
     # Return the modified code.
@@ -758,17 +760,17 @@ def fix_bad_var_names(vba_code):
     # Skip this until fixed.
     return vba_code
     
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
-    pat = "(\w)&\s*((?:[\+\-/\*=n,\)\n&]|[Mm]od|[Aa]nd|[Oo]r|[Xx]or|[Ee]qv))"
-    if (re2.search(unicode(pat), uni_vba_code) is not None):
-        vba_code = re.sub(pat, r"\1 \2", vba_code) + "\n"
-    return vba_code
+    #uni_vba_code = None
+    #try:
+    #    uni_vba_code = vba_code.decode("utf-8")
+    #except UnicodeDecodeError:
+    #    # Punt.
+    #    return vba_code
+    #
+    #pat = "(\w)&\s*((?:[\+\-/\*=n,\)\n&]|[Mm]od|[Aa]nd|[Oo]r|[Xx]or|[Ee]qv))"
+    #if (re2.search(unicode(pat), uni_vba_code) is not None):
+    #    vba_code = re.sub(pat, r"\1 \2", vba_code) + "\n"
+    #return vba_code
 
 def fix_unhandled_named_params(vba_code):
     """
@@ -1013,7 +1015,6 @@ def convert_colons_to_linefeeds(vba_code):
         # Do we have any blocks of text coming up that we should not change?
         # Find the 1st marker in the string.
         marker_pos1 = len(vba_code)
-        use_start_marker = None
         use_end_marker = None
         found_marker = False
         for marker, end_marker, not_marker in marker_chars:
@@ -1034,7 +1035,6 @@ def convert_colons_to_linefeeds(vba_code):
                     found_marker = True
                     marker_pos1 = curr_marker_pos1
                     use_end_marker = end_marker
-                    use_start_marker = marker
 
         # Did we find a marker?
         if (found_marker):
@@ -1338,9 +1338,6 @@ def fix_difficult_code(vba_code):
     # Modify MultiByteToWideChar() calls so ViperMonkey can emulate them.
     # Orig: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue(0), UBound(baValue) + 1, StrPtr(sValue), Len(sValue))
     # Desired: lSize = MultiByteToWideChar(CP_UTF8, 0, baValue, UBound(baValue) + 1, StrPtr("&sValue"), Len(sValue))
-    #if ("MultiByteToWideChar" in vba_code):
-    #    mbyte_pat = r"(MultiByteToWideChar\(\s*[^,]+,\s*[^,]+,\s+)([A-Za-z0-9_]+)\(\s*[^\)]+\s*\)(,\s*[^,]+,\s*StrPtr\(\s*)([^\)]+)(\s*\),\s*[^\)]+\))"
-    #    vba_code = re.sub(mbyte_pat, r'\1\2\3"&\4"\5', vba_code)
     #
     # We are now handling the 'baValue(0)' part in expressions.Function_Call.__init__()
     # Now just do a general replace for StrPtr()
@@ -1474,7 +1471,6 @@ def fix_difficult_code(vba_code):
     in_str = False
     in_comment = False
     in_date = False    
-    in_square_bracket = False
     num_square_brackets = 0
     prev_char = ""
     next_char = ""
@@ -1596,7 +1592,6 @@ def fix_difficult_code(vba_code):
                 num_square_brackets += 1
             if (c == ']'):
                 num_square_brackets -= 1
-            in_square_bracket = (num_square_brackets > 0)
             
         # Handle entering/leaving date constants.
         if ((not in_comment) and (not in_str) and (c == '#')):
@@ -1734,6 +1729,7 @@ def strip_comments(vba_code):
         
     # Return stripped code.
     return r
+
 
 defined_constants = set()
 def find_defined_constants(vba_code):
@@ -2155,6 +2151,7 @@ def strip_difficult_tuple_lines(vba_code):
         r += line + "\n"
     return r
         
+
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """
@@ -2397,7 +2394,7 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
-    for var in assigns.keys():
+    for var in assigns:
         # Keep assignments to variables in other streams since we cannot
         # tell based on the current stream whether the assignment is used.
         refs[var] = ("." in var)
@@ -2410,23 +2407,18 @@ def strip_useless_code(vba_code, local_funcs):
             continue
         
         # Mark all the variables that MIGHT be referenced on this line.
-        for var in assigns.keys():
+        for var in assigns:
             
             # Skip variable references on the lines where the current variable was assigned.
             if (line_num in assigns[var]):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
+                    log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + \
+                              "'. Don't count as reference. " + " Line # = " + str(line_num))
                 continue
 
             # Could the current variable be used on this line?
             if (var.lower() in line.lower()):
 
-                # If we are aggressively stripping don't pay attention to debug.print.
-                #if (aggressive_strip and (line.lower().strip().startswith("debug.print "))):
-                #    if (log.getEffectiveLevel() == logging.DEBUG):
-                #        log.debug("STRIP: Var '" + str(var) + "' printed in '" + line + "'. Don't count as reference. " + " Line # = " + str(line_num))
-                #    continue
-                
                 # Maybe. Count this as a reference.
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
@@ -2434,13 +2426,13 @@ def strip_useless_code(vba_code, local_funcs):
 
     # Keep assignments that have change callbacks.
     for change_var in change_callbacks:
-        for var in assigns.keys():
+        for var in assigns:
             refs[var] = ((change_var in var) or (var in change_var) or refs[var])
                 
     # Figure out what assignments to strip and keep.
     comment_lines = set()
     keep_lines = set()
-    for var in refs.keys():
+    for var in refs:
         if (not refs[var]):
             for num in assigns[var]:
                 comment_lines.add(num)
@@ -2460,17 +2452,10 @@ def strip_useless_code(vba_code, local_funcs):
     r = ""
     line_num = 0
     if_count = 0
-    in_func = False
     for line in vba_code.split("\n"):
 
         # Strip line numbers from starts of lines.
-        line = strip_line_nums(line)
-        
-        # Are we in a function?
-        if (("End Sub" in line) or ("End Function" in line)):
-            in_func = False
-        elif (("Sub " in line) or ("Function " in line)):
-            in_func = True
+        line = strip_line_nums(line)        
         
         # Keep track of if starts so we can match up end ifs.
         line_num += 1
