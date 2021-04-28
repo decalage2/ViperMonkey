@@ -174,7 +174,10 @@ unknown_statement.setParseAction(UnknownStatement)
 # 4.2 Modules
 
 class Attribute_Statement(VBA_Object):
+    """Emulate a VB Attribute statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -209,6 +212,10 @@ attribute_statement.setParseAction(Attribute_Statement)
 # --- OPTION statement ----------------------------------------------------------
 
 class Option_Statement(VBA_Object):
+    """Emulate a VB Option statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Option_Statement, self).__init__(original_str, location, tokens)
         self.name = tokens.name
@@ -1514,6 +1521,10 @@ class Let_Statement(VBA_Object):
 # --- LSET STATEMENT --------------------------------------------------------------
 
 class LSet_Statement(Let_Statement):
+    """Emulate a LSet statement.
+
+    """
+    
     # TODO: Extend eval() method to do the left string alignment of LSet.
     # See https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/lset-statement
     pass
@@ -1827,7 +1838,24 @@ class For_Statement(VBA_Object):
         return python_code
 
     def _handle_medium_loop(self, context, params, end, step):
+        """Do short circuited emulation of loops used purely for obfuscation
+        that just do the same # repeated assignment.
 
+        @param context (Context object) The current program state.
+
+        @param params (??) Parameters passed to the eval() method of
+        this loop object.
+        
+        @param end (int) The upper bound of the loop indices.
+
+        @param step (int) The step with with to increment the loop
+        counter.
+
+        @return (boolean) True if this method has handled emulation of
+        the loop, False if not.
+
+        """
+        
         # Handle loops used purely for obfuscation that just do the same
         # repeated assignment.
         #
@@ -1888,7 +1916,25 @@ class For_Statement(VBA_Object):
         return True
                 
     def _handle_simple_loop(self, context, start, end, step):
+        """Do short circuited emulation of loops used purely for obfuscation
+        that just increment/decrement the loop counter.
 
+        @param context (Context object) The current program state.
+
+        @param params (??) Parameters passed to the eval() method of
+        this loop object.
+        
+        @param end (int) The upper bound of the loop indices.
+
+        @param step (int) The step with with to increment the loop
+        counter.
+
+        @return (tuple) A 2 element tuple where the 1st element is the
+        loop index variable (str) and the 2nd element is the final
+        value of the loop index variable (int).
+
+        """
+        
         # Handle simple loops used purely for obfuscation.
         #
         # For vPHpqvZhLlFhzUmTfwXoRrfZRjfRu = 1 To 833127186
@@ -2035,9 +2081,18 @@ class For_Statement(VBA_Object):
         return r
 
     def _no_state_change(self, prev_context, context):
-        """
-        Return True if the loop body only contains atomic statements (no ifs, selects, etc.) and
-        the previous program state (minus the loop variable) is equal to the current program state.
+        """Check to see if there is any meaningful difference between 2 given
+        program states.
+
+        @param prev_context (Context object) The previous program state.
+
+        @param context (Context object) The current program state.
+
+        @return (boolean) True if the loop body only contains atomic
+        statements (no ifs, selects, etc.) and the previous program
+        state (minus the loop variable) is equal to the current
+        program state.
+
         """
 
         # Sanity check.
@@ -2341,7 +2396,10 @@ for_end = CaselessKeyword("Next").suppress() + Optional(lex_identifier) + Suppre
 # --- FOR EACH statement -----------------------------------------------------------
 
 class For_Each_Statement(VBA_Object):
+    """Emulate a VB For-Each loop.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(For_Each_Statement, self).__init__(original_str, location, tokens)
         self.is_loop = True
@@ -2356,10 +2414,21 @@ class For_Each_Statement(VBA_Object):
         return 'For Each %r In %r ...' % (self.item, self.container)
 
     def to_python(self, context, params=None, indent=0):
-        """
-        Convert this loop to Python code.
+        """Convert this loop to Python code.
 
-        This modifies the given context!!
+        @warning This modifies the given context!!
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param params (list) Any parameters provided to the object.
+        
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current object with it's emulation
+        implemented as Python code.
         """
 
         # Get the loop variable.
@@ -2534,9 +2603,16 @@ bogus_simple_for_each_statement.setParseAction(For_Each_Statement)
 # --- WHILE statement -----------------------------------------------------------
 
 def _get_guard_variables(loop_obj, context):
-    """
-    Pull out the variables that appear in the guard expression and their
-    values in the context. Return as a dict.
+    """Pull out the variables that appear in the guard expression of a
+    while loop and their values in the context. Return as a dict.
+
+    @param loop_obj (While_Statement or Do_Statement object) The loop
+    for which to get the guard expression variable information.
+
+    @param context (Context object) The current program state.
+
+    @return (dict) A map from guard variable names to current values.
+
     """
 
     # Sanity check.
@@ -2560,7 +2636,10 @@ def _get_guard_variables(loop_obj, context):
     return r
 
 class While_Statement(VBA_Object):
+    """Emulate a VB While loop.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
         self.is_loop = True
@@ -2578,8 +2657,21 @@ class While_Statement(VBA_Object):
         return r
 
     def to_python(self, context, params=None, indent=0):
-        """
-        Convert this loop to Python code.
+        """Convert this loop to Python code.
+
+        @warning This modifies the given context!!
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param params (list) Any parameters provided to the object.
+        
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current object with it's emulation
+        implemented as Python code.
         """
 
         # Boilerplate used by the Python.
@@ -2632,6 +2724,22 @@ class While_Statement(VBA_Object):
         return python_code
         
     def _eval_guard(self, curr_counter, final_val, comp_op):
+        """Evaluate the guard expression of a loop. This works for guard
+        expressions that are simple comparison expressions.
+
+        @param curr_counter (int) The current value of the loop index.
+
+        @param final_val (int) The upper/lower bound for the loop index.
+
+        @param comp_op (str) The operator to use to compare the
+        current value of the loop index with the upper/lower
+        bound. Valid values are "<=", "<", ">=", or "==".
+
+        @return (boolean) True if the loop guard expression is true,
+        False if not.
+
+        """
+        
         if (comp_op == "<="):
             return (curr_counter <= final_val)
         if (comp_op == "<"):
@@ -2646,6 +2754,15 @@ class While_Statement(VBA_Object):
         return False
         
     def _handle_simple_loop(self, context):
+        """Do short circuited emulation of loops used purely for obfuscation
+        that just increment/decrement the loop counter.
+
+        @param context (Context object) The current program state.
+        
+        @return (boolean) True if this method has emulated the loop,
+        False if not.
+
+        """
 
         # Handle simple loops used purely for obfuscation.
         #
@@ -2807,8 +2924,13 @@ class While_Statement(VBA_Object):
         return True
 
     def _has_local_calls(self, context):
-        """
-        See if the current loop body makes any local function calls.
+        """See if the current loop body makes any local function calls.
+
+        @param context (Context object) The current program state.
+
+        @return (boolean) True if the loop body calls local functions,
+        False if not.
+
         """
 
         # Already computed?
@@ -2840,10 +2962,17 @@ class While_Statement(VBA_Object):
         return False
             
     def _no_state_change(self, prev_context, context):
-        """
-        Return True if the loop body contains no calls and the previous
-        program state (minus the guard variables) is equal to the
-        current program state.
+        """Check to see if there is any meaningful difference between 2 given
+        program states.
+
+        @param prev_context (Context object) The previous program state.
+
+        @param context (Context object) The current program state.
+
+        @return (boolean) True if the loop body contains no calls and
+        the previous program state (minus the guard variables) is
+        equal to the current program state.
+
         """
 
         # Sanity check.
@@ -2872,10 +3001,13 @@ class While_Statement(VBA_Object):
         return r
 
     def _has_constant_loop_guard(self):
-        """
-        Check to see if the loop guard is a literal expression that always evaluates True or False.
-        Return True or False if it does.
-        Return None if it does not.
+        """Check to see if the loop guard is a literal expression that always
+        evaluates True or False.
+
+        @return (boolean) Return True or False if the loop guard
+        always evaluates to True or False.  Return None if it does
+        not.
+
         """
 
         # If the guard contains variables it may not be infinite.
@@ -3092,6 +3224,10 @@ simple_while_statement.setParseAction(While_Statement)
 # --- DO statement -----------------------------------------------------------
 
 class Do_Statement(VBA_Object):
+    """Emulate a VB Do-While loop.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Do_Statement, self).__init__(original_str, location, tokens)
         self.is_loop = True
@@ -3292,6 +3428,10 @@ simple_do_statement.setParseAction(Do_Statement)
 # --- SELECT statement -----------------------------------------------------------
 
 class Select_Statement(VBA_Object):
+    """Emulate a VB Select statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Select_Statement, self).__init__(original_str, location, tokens)
         self.select_val = tokens.select_val
@@ -3404,6 +3544,10 @@ class Select_Statement(VBA_Object):
                 break
 
 class Select_Clause(VBA_Object):
+    """Emulate a clause of a Select statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
         self.select_val = tokens.select_val
@@ -3437,6 +3581,10 @@ class Select_Clause(VBA_Object):
         return self.select_val
 
 class Case_Clause_Atomic(VBA_Object):
+    """Emulate simple clause of a case in a Select statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Case_Clause_Atomic, self).__init__(original_str, location, tokens)
 
@@ -3506,8 +3654,15 @@ class Case_Clause_Atomic(VBA_Object):
         return r
         
     def eval(self, context, params=None):
-        """
-        Evaluate the guard of this case against the given value.
+        """Evaluate the guard of this case against the given value.
+
+        @param context (Context object) Context for the evaluation
+        (local and global variables). State updates will be reflected
+        in the given context.
+
+        @param params (list) Any parameters provided to the object.
+
+        @return (any) The result of evaluating the guard.
         """
 
         # Exit if an exit function statement was previously called.
@@ -3569,7 +3724,10 @@ class Case_Clause_Atomic(VBA_Object):
         return (test_str == expected_str)
 
 class Case_Clause(VBA_Object):
+    """Emulate a clause of a case in a Select statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Case_Clause, self).__init__(original_str, location, tokens)
         self.clauses = []
@@ -3608,9 +3766,6 @@ class Case_Clause(VBA_Object):
         return r
         
     def eval(self, context, params=None):
-        """
-        Evaluate the guard of this case against the given value.
-        """
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
@@ -3624,6 +3779,10 @@ class Case_Clause(VBA_Object):
         return False
     
 class Select_Case(VBA_Object):
+    """Emulate a case in a Select statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Select_Case, self).__init__(original_str, location, tokens)
         self.case_val = tokens.case_val
@@ -3678,7 +3837,10 @@ simple_select_statement.setParseAction(Select_Statement)
 # --- IF-THEN-ELSE statement ----------------------------------------------------------
 
 class If_Statement(VBA_Object):
+    """Emulate a VB If statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
@@ -3713,8 +3875,11 @@ class If_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def get_children(self):
-        """
-        Return the child VBA objects of the current object.
+        """Return the child VBA objects of the current object.
+
+        @return (list) A list of the children (VBA_Object) of this
+        object.
+
         """
 
         if (self._children is not None):
@@ -3933,7 +4098,10 @@ simple_if_statement.setParseAction(If_Statement)
 # --- IF-THEN-ELSE statement, macro version ----------------------------------------------------------
 
 class If_Statement_Macro(If_Statement):
+    """Emulate a VB If macro statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(If_Statement_Macro, self).__init__(original_str, location, tokens)
         self.external_functions = {}
@@ -3981,7 +4149,10 @@ simple_if_statement_macro.setParseAction(If_Statement_Macro)
 # --- CALL statement ----------------------------------------------------------
 
 class Call_Statement(VBA_Object):
+    """Emulate a VB Call statement.
 
+    """
+    
     # List of interesting functions to log calls to.
     log_funcs = ["CreateProcessA", "CreateProcessW", "CreateProcess", ".run", "CreateObject",
                  "Open", ".Open", "GetObject", "Create", ".Create", "Environ",
@@ -4023,7 +4194,20 @@ class Call_Statement(VBA_Object):
         return 'Call_Statement: %s(%r)' % (self.name, self.params)
 
     def _to_python_handle_with_calls(self, context, indent):
+        """Convert a method call of an object specified with a With statement
+        to Python code.
 
+        @param context (Context object) The current program state.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current object with it's emulation
+        implemented as Python code if this is a with object method
+        call. None will be returned if it is not.
+
+        """
+        
         # Is this a call like '.WriteText "foo"'?
         func_name = str(self.name).strip()
         if (not func_name.startswith(".")):
@@ -4047,9 +4231,6 @@ class Call_Statement(VBA_Object):
         return r
     
     def to_python(self, context, params=None, indent=0):
-        """
-        Convert this call to Python code.
-        """
 
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
@@ -4133,11 +4314,16 @@ class Call_Statement(VBA_Object):
         return r
 
     def _handle_as_member_access(self, context):
-        """
-        Certain object method calls need to be handled as member access
-        expressions. Given parsing limitations some of these are parsed
-        as regular calls, so convert those to member access expressions
-        here
+        """Certain object method calls need to be handled as member access
+        expressions. Given parsing limitations some of these are
+        parsed as regular calls, so convert those to member access
+        expressions here
+
+        @param context (Context object) The current program state.
+
+        @return (MemeberAccessExpression object) The call converted to
+        a member access expressionm if possible, None if not.
+
         """
 
         # Is this a method call?
@@ -4180,7 +4366,15 @@ class Call_Statement(VBA_Object):
             return None
         
     def _handle_with_calls(self, context):
+        """Emulate a method call of an object specified with a With statement.
 
+        @param context (Context object) The current program state.
+
+        @return (str) The result of emulating this call if this is a
+        with object method call. None will be returned if it is not.
+
+        """
+        
         # Can we handle this call as a member access expression?
         as_member_access = self._handle_as_member_access(context)
         if (as_member_access is not None):
@@ -4447,6 +4641,10 @@ call_statement = (call_statement1 ^ call_statement0 ^ call_statement2)
 # --- EXIT FOR statement ----------------------------------------------------------
 
 class Exit_For_Statement(VBA_Object):
+    """Emulate a Exit For statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Exit_For_Statement, self).__init__(original_str, location, tokens)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4477,6 +4675,10 @@ class Exit_For_Statement(VBA_Object):
         context.loop_stack.append("EXIT_FOR")
 
 class Exit_While_Statement(Exit_For_Statement):
+    """Emulate a VB Exit While statement.
+
+    """
+    
     def __repr__(self):
         return 'Exit Do'
 
@@ -4495,6 +4697,10 @@ exit_loop_statement = exit_for_statement | exit_while_statement
 # --- EXIT FUNCTION statement ----------------------------------------------------------
 
 class Exit_Function_Statement(VBA_Object):
+    """Emulate a VB Exit Function statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Exit_Function_Statement, self).__init__(original_str, location, tokens)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4531,6 +4737,10 @@ exit_func_statement.setParseAction(Exit_Function_Statement)
 # --- REDIM statement ----------------------------------------------------------
 
 class Redim_Statement(VBA_Object):
+    """Emulate a VB ReDim statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
         self.item = str(tokens.item)
@@ -4684,7 +4894,10 @@ redim_statement.setParseAction(Redim_Statement)
 # --- WITH statement ----------------------------------------------------------
 
 class With_Statement(VBA_Object):
+    """Emulate a With statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(With_Statement, self).__init__(original_str, location, tokens)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4805,6 +5018,10 @@ with_statement.setParseAction(With_Statement)
 # --- GOTO statement ----------------------------------------------------------
 
 class Goto_Statement(VBA_Object):
+    """Emulate a VB Goto statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Goto_Statement, self).__init__(original_str, location, tokens)
         self.label = tokens.label
@@ -4889,6 +5106,10 @@ goto_statement.setParseAction(Goto_Statement)
 # --- GOTO LABEL statement ----------------------------------------------------------
 
 class Label_Statement(VBA_Object):
+    """Emulate a VB Label statement (labeled block used for Goto).
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Label_Statement, self).__init__(original_str, location, tokens)
         self.label = tokens.label
@@ -4915,6 +5136,10 @@ label_statement.setParseAction(Label_Statement)
 # --- ON ERROR STATEMENT -------------------------------------------------------------
 
 class On_Error_Statement(VBA_Object):
+    """Emulate a VB On Error statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(On_Error_Statement, self).__init__(original_str, location, tokens)
         self.tokens = tokens
@@ -4973,6 +5198,10 @@ resume_statement = CaselessKeyword('Resume') + Optional(lex_identifier)
 # --- FILE OPEN -------------------------------------------------------------
 
 class File_Open(VBA_Object):
+    """Emulate a VB Open statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(File_Open, self).__init__(original_str, location, tokens)
         self.file_name = tokens.file_name
@@ -5073,6 +5302,10 @@ file_open_statement.setParseAction(File_Open)
 # --- PRINT -------------------------------------------------------------
 
 class Print_Statement(VBA_Object):
+    """Emulate a VB Print statement.
+
+    """
+
     def __init__(self, original_str, location, tokens):
         super(Print_Statement, self).__init__(original_str, location, tokens)
         self.file_id = tokens.file_id
@@ -5192,13 +5425,25 @@ statements_line_no_eos <<= (
 # --- EXTERNAL FUNCTION ------------------------------------------------------
 
 class External_Function(VBA_Object):
-    """
-    External Function from a DLL
+    """Emulate calling an external Function from a DLL.
+
     """
 
     file_count = 0
     def _createfile(self, params, context):
+        """Set up tracking of a newly opened file in the program state
+        object.
 
+        @param params (list) The parameters passed to the called function.
+        
+        @param context (Context object) The program state. This tracks
+        open/closed files and their contents.
+
+        @return (str) The name of the new file if one was "opened",
+        None if not.
+
+        """
+        
         # Get a name for the file.
         fname = None
         if ((params[0] is not None) and (len(params[0]) > 0)):
@@ -5214,7 +5459,17 @@ class External_Function(VBA_Object):
         return fname
 
     def _writefile(self, params, context):
+        """Simulate writing a file in the program state object.
 
+        @param params (list) The parameters passed to the called function.
+        
+        @param context (Context object) The program state. This tracks
+        open/closed files and their contents.
+
+        @return (int) 0 (success) if the file was "written", 1 if not.
+
+        """
+        
         # Simulate the write.
         file_id = params[0]
 
@@ -5232,7 +5487,17 @@ class External_Function(VBA_Object):
         return 0
 
     def _closehandle(self, params, context):
+        """Simulate closing a file in the program state object.
 
+        @param params (list) The parameters passed to the called function.
+        
+        @param context (Context object) The program state. This tracks
+        open/closed files and their contents.
+
+        @return (int) 0 (success) is always returned.
+
+        """
+        
         # Simulate the file close.
         file_id = params[0]
         context.close_file(file_id)
@@ -5370,8 +5635,8 @@ external_function.setParseAction(External_Function)
 # --- TRY/CATCH STATEMENT ------------------------------------------------------
 
 class TryCatch(VBA_Object):
-    """
-    Try/Catch exception handling statement.
+    """Emulate a VB Try/Catch exception handling statement.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -5417,8 +5682,8 @@ try_catch.setParseAction(TryCatch)
 # --- NAME nnn AS yyy statement ----------------------------------------------------------
 
 class NameStatement(VBA_Object):
-    """
-    File renaming Name statement.
+    """Emulate a VB file renaming Name statement.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -5450,6 +5715,10 @@ name_statement.setParseAction(NameStatement)
 # --- STOP statement ----------------------------------------------------------
 
 class Stop_Statement(VBA_Object):
+    """Emulate a VB Stop statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Stop_Statement, self).__init__(original_str, location, tokens)
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -5469,6 +5738,10 @@ stop_statement.setParseAction(Stop_Statement)
 # --- LINE INPUT statement ----------------------------------------------------------
 
 class Line_Input_Statement(VBA_Object):
+    """Emulate a VB Line Input statement.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Line_Input_Statement, self).__init__(original_str, location, tokens)
         self.file_id = tokens.file_id
@@ -5497,6 +5770,15 @@ line_input_statement.setParseAction(Line_Input_Statement)
 # --- Large block of simple function calls. ----------------------------------------------------------
 
 def quick_parse_simple_call(tokens):
+    """Quickly parse a block of simple function calls.
+
+    @param tokens (PyParsing token list) The basic parsed items in the
+    block of simple function calls.
+
+    @return (list) A list of Call_Statement objects.
+
+    """
+    
     text = str(tokens[0]).strip()
     r = []
     for i in text.split("\n"):
@@ -5561,6 +5843,10 @@ simple_call_list.setParseAction(quick_parse_simple_call)
 # --- Orphaned Statement Closing Markers ----------------------------------------------------------
 
 class Orphaned_Marker(VBA_Object):
+    """Handle a floating, unused end statement block marker.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Orphaned_Marker, self).__init__(original_str, location, tokens)
         log.warning("Orphaned statement marker found.")
@@ -5605,7 +5891,10 @@ orphaned_marker.setParseAction(Orphaned_Marker)
 # End Enum
 
 class EnumStatement(VBA_Object):
+    """Emulate a VB Enum statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(EnumStatement, self).__init__(original_str, location, tokens)
         self.name = str(tokens[0])
@@ -5654,7 +5943,10 @@ enum_statement.setParseAction(EnumStatement)
 # procedures.py, so when all of the elements in procedures.py have actually beed defined the
 # statement grammar element can be safely set.
 def extend_statement_grammar():
+    """Nasty hack to get around problems with cyclic imports.
 
+    """
+    
     # statement has to be declared beforehand using Forward(), so here we use
     # the "<<=" operator:
     global statement
