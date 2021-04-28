@@ -7032,7 +7032,7 @@ class VbaConstants(object):
         self.globals["xlThin".lower()] = 2
         self.globals["xlThisMonth".lower()] = 9
         self.globals["xlThisWeek".lower()] = 3
-        self.globals["xlThousandMillions".lower()] = 9
+        self.globals["xlThousandMillions".lower()] = -9
         self.globals["xlThousands".lower()] = 3
         self.globals["xlThousandsSeparator".lower()] = 4
         self.globals["xlThreadModeAutomatic".lower()] = 0
