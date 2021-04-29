@@ -2134,52 +2134,142 @@ def strip_attribute_lines(vba_code):
         r += line + "\n"
     return r
 
-def strip_difficult_tuple_lines(vba_code):
-    """
-    Strip all calls like "foo.bar.baz (1,2)-(3,4),5" from the code.
-    They are awful to parse with PyParsing.
-    """
-    if (vba_code is None):
-        return vba_code
-    r = ""
-    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
-    for line in vba_code.split("\n"):
-        line = line.strip()
-        if (re.search(tuple_pat, line)):
-            log.warning("Difficult member access expression with tuple arg not handled. Stripping '" + line.strip() + "'.")
-            continue
-        r += line + "\n"
-    return r
-        
+def is_assign_line(line, line_num, local_funcs, bool_statements):
+    """Figure out the given line is an assignment line.
 
-external_funcs = []
-def strip_useless_code(vba_code, local_funcs):
-    """
-    Strip statements that have no useful effect from the given VB. The
-    stripped statements are commented out.
+    @param line (str) The line to check.
+
+    @param line_num (int) The line number of the given line.
+
+    @param local_funcs (set) The names of locally defined functions.
+
+    @param bool_statements (set) The names of VB control flow
+    statement keywords, like "If" and "Do".
+
+    @return (boolean) True if the line is an assignment, False if it
+    is not.
+
     """
 
-    # Preprocess the code to make it easier to parse.
-    log.info("Modifying VB code...")
-    vba_code = fix_vba_code(vba_code)
+    if (log.getEffectiveLevel() == logging.DEBUG):
+        log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
+                
+    # Skip starts of while loops.
+    if (line.strip().startswith("While ")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: While loop. Keep it.")
+        return False
 
-    # Wipe out all comments.
-    vba_code = strip_comments(vba_code)
+    # Skip calls to .create()
+    if (".create" in line.strip().lower()):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: .Create() call. Keep it.")
+        return False
 
-    # No hard to parse calls with tuple arguments.
-    vba_code = strip_difficult_tuple_lines(vba_code)
+    # Skip multistatement lines.
+    if (":" in line):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Multi-statement line. Keep it.")
+        return False
+
+    # Skip function definitions.
+    if ((line.strip().lower().startswith("if ")) or
+        (line.strip().lower().startswith("elseif "))):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: If statement. Keep it.")
+        return False
+            
+    # Skip function definitions.
+    if (line.strip().lower().startswith("function ")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Function decl. Keep it.")
+        return False
+
+    # Skip const definitions.
+    if (" const " in line.lower()):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Const decl. Keep it.")
+        return False
+                
+    # Skip lines that end with a continuation character.
+    if (line.strip().endswith("_")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Continuation line. Keep it.")
+        return False
+
+    # Skip lines that are a macro line.
+    if (line.strip().startswith("#")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: macro line. Keep it.")
+        return False
+
+    # Skip function definitions.
+    if (("sub " in line.lower()) or ("function " in line.lower())):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Function definition. Keep it.")
+        return False
+
+    # Skip calls to GetObject() or Shell().
+    if (("GetObject" in line) or ("Shell" in line)):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: GetObject()/Shell() call. Keep it.")
+        return False
+
+    # Skip Loop statements.
+    if ("Loop " in line):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Loop statement. Keep it.")
+        return False
+
+    # Skip While statements.
+    if ("while" in line.lower()):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: While statement. Keep it.")
+        return False
+
+    # Skip Mid() updates of strings.
+    if (line.strip().startswith("Mid")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: Mid() string update. Keep it.")
+        return False
+
+    # Skip calls to various interesting calls.
+    if (is_interesting_call(line, external_funcs, local_funcs)):
+        return False
+            
+    # Skip lines where the '=' is part of a boolean expression.
+    strip_line = line.strip()            
+    skip = False
+    for bool_statement in bool_statements:
+        if (strip_line.startswith(bool_statement + " ")):
+            skip = True
+            break
+    if (skip):
+        return False
+
+    # Skip lines assigning variables in a with block.
+    if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
+        return False
+
+    # Skip lines where the '=' might be in a string.
+    if ('"' in line):
+        eq_index = -1
+        if ("=" in line):
+            eq_index = line.index("=")
+        qu_index1 = -1
+        if ('"' in line):
+            qu_index1 =  line.index('"')
+        qu_index2 = -1
+        if ('"' in line):
+            qu_index2 =  line.rindex('"')
+        if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
+            return False
+
+    # Might be an assignment line.
+    return True
     
-    # Don't strip lines if Execute() is called since the stripped variables
-    # could be used in the execed code strings.
-    exec_pat = r"execute(?:global)?\s*\("
-    if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
-        r = strip_attribute_lines(vba_code)
-        r = collapse_macro_if_blocks(r)
-        return r
-    
-    # Track data change callback function names.
-    change_callbacks = set()    
-    
+def find_var_assigns(vba_code, change_callbacks, local_funcs):
+
     # Find all assigned variables and track what line the variable was assigned on.
     # Dim statements are counted as assignments.
     assign_re = re2.compile(u"(?:\s*(\w+(?:\([^\)]*\))?(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
@@ -2226,121 +2316,8 @@ def strip_useless_code(vba_code, local_funcs):
         except UnicodeDecodeError:
             uni_tmp_line = tmp_line.decode("latin-1")
         match = assign_re.findall(uni_tmp_line)
-        if (len(match) > 0):
-
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
-                
-            # Skip starts of while loops.
-            if (line.strip().startswith("While ")):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: While loop. Keep it.")
-                continue
-
-            # Skip calls to .create()
-            if (".create" in line.strip().lower()):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: .Create() call. Keep it.")
-                continue
-
-            # Skip multistatement lines.
-            if (":" in line):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Multi-statement line. Keep it.")
-                continue
-
-            # Skip function definitions.
-            if ((line.strip().lower().startswith("if ")) or
-                (line.strip().lower().startswith("elseif "))):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: If statement. Keep it.")
-                continue
-            
-            # Skip function definitions.
-            if (line.strip().lower().startswith("function ")):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Function decl. Keep it.")
-                continue
-
-            # Skip const definitions.
-            if (" const " in line.lower()):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Const decl. Keep it.")
-                continue
-                
-            # Skip lines that end with a continuation character.
-            if (line.strip().endswith("_")):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Continuation line. Keep it.")
-                continue
-
-            # Skip lines that are a macro line.
-            if (line.strip().startswith("#")):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: macro line. Keep it.")
-                continue
-
-            # Skip function definitions.
-            if (("sub " in line.lower()) or ("function " in line.lower())):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Function definition. Keep it.")
-                continue
-
-            # Skip calls to GetObject() or Shell().
-            if (("GetObject" in line) or ("Shell" in line)):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: GetObject()/Shell() call. Keep it.")
-                continue
-
-            # Skip Loop statements.
-            if ("Loop " in line):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Loop statement. Keep it.")
-                continue
-
-            # Skip While statements.
-            if ("while" in line.lower()):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: While statement. Keep it.")
-                continue
-
-            # Skip Mid() updates of strings.
-            if (line.strip().startswith("Mid")):
-                if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Mid() string update. Keep it.")
-                continue
-
-            # Skip calls to various interesting calls.
-            if (is_interesting_call(line, external_funcs, local_funcs)):
-                continue
-            
-            # Skip lines where the '=' is part of a boolean expression.
-            strip_line = line.strip()            
-            skip = False
-            for bool_statement in bool_statements:
-                if (strip_line.startswith(bool_statement + " ")):
-                    skip = True
-                    break
-            if (skip):
-                continue
-
-            # Skip lines assigning variables in a with block.
-            if (strip_line.startswith(".") or (strip_line.lower().startswith("let ."))):
-                continue
-
-            # Skip lines where the '=' might be in a string.
-            if ('"' in line):
-                eq_index = -1
-                if ("=" in line):
-                    eq_index = line.index("=")
-                qu_index1 = -1
-                if ('"' in line):
-                    qu_index1 =  line.index('"')
-                qu_index2 = -1
-                if ('"' in line):
-                    qu_index2 =  line.rindex('"')
-                if ((qu_index1 < eq_index) and (qu_index2 > eq_index)):
-                    continue
+        if ((len(match) > 0) and
+            is_assign_line(line, line_num, local_funcs, bool_statements)):
             
             # Yes, there is an assignment. Save the assigned variable and line #
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -2391,6 +2368,59 @@ def strip_useless_code(vba_code, local_funcs):
                     if (var not in assigns):
                         assigns[var] = set()
                     assigns[var].add(line_num)
+
+    # Done.
+    return assigns
+
+def strip_difficult_tuple_lines(vba_code):
+    """
+    Strip all calls like "foo.bar.baz (1,2)-(3,4),5" from the code.
+    They are awful to parse with PyParsing.
+    """
+    if (vba_code is None):
+        return vba_code
+    r = ""
+    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
+    for line in vba_code.split("\n"):
+        line = line.strip()
+        if (re.search(tuple_pat, line)):
+            log.warning("Difficult member access expression with tuple arg not handled. Stripping '" + line.strip() + "'.")
+            continue
+        r += line + "\n"
+    return r
+        
+
+external_funcs = []
+def strip_useless_code(vba_code, local_funcs):
+    """
+    Strip statements that have no useful effect from the given VB. The
+    stripped statements are commented out.
+    """
+
+    # Preprocess the code to make it easier to parse.
+    log.info("Modifying VB code...")
+    vba_code = fix_vba_code(vba_code)
+
+    # Wipe out all comments.
+    vba_code = strip_comments(vba_code)
+
+    # No hard to parse calls with tuple arguments.
+    vba_code = strip_difficult_tuple_lines(vba_code)
+    
+    # Don't strip lines if Execute() is called since the stripped variables
+    # could be used in the execed code strings.
+    exec_pat = r"execute(?:global)?\s*\("
+    if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
+        r = strip_attribute_lines(vba_code)
+        r = collapse_macro_if_blocks(r)
+        return r
+    
+    # Track data change callback function names.
+    change_callbacks = set()    
+
+    # Find all assigned variables and track what line the variable was assigned on.
+    # Dim statements are counted as assignments.
+    assigns = find_var_assigns(vba_code, change_callbacks, local_funcs)
 
     # Now do a very loose check to see if the assigned variable is referenced anywhere else.
     refs = {}
