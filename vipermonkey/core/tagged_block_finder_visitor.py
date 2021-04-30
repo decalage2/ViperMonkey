@@ -36,8 +36,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from statements import *
+from visitor import visitor
+from statements import TaggedBlock
 
 class tagged_block_finder_visitor(visitor):
     """
