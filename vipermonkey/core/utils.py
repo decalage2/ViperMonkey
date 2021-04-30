@@ -37,6 +37,7 @@ import re
 from curses_ascii import isascii
 from curses_ascii import isprint
 import base64
+import string
 
 import logging
 
@@ -70,7 +71,7 @@ def safe_str_convert(s):
     except UnicodeEncodeError:
         return filter(isprint, s)
 
-class Infix:
+class Infix(object):
     """
     Used to define our own infix operators.
     """
@@ -115,8 +116,8 @@ def safe_plus(x,y):
         y = int_convert(y)
 
     # Easy case first.
-    if ((isinstance(x, int) or isinstance(x, float)) and
-        (isinstance(y, int) or isinstance(y, float))):
+    if (isinstance(x, (float, int)) and
+        isinstance(y, (float, int))):
         return x + y
         
     # Fix data types.
@@ -143,7 +144,9 @@ def safe_plus(x,y):
     # convert things to strings and hope for the best.
     return str(x) + str(y)
 
+
 # Safe plus infix operator. Ugh.
+# pylint: disable=unnecessary-lambda
 plus=Infix(lambda x,y: safe_plus(x, y))
 
 def safe_equals(x,y):
@@ -158,6 +161,7 @@ def safe_equals(x,y):
         y = 0
     
     # Easy case first.
+    # pylint: disable=unidiomatic-typecheck
     if (type(x) == type(y)):
         return x == y
 
@@ -169,7 +173,9 @@ def safe_equals(x,y):
     # Punt. Just convert things to strings and hope for the best.
     return str(x) == str(y)
 
+
 # Safe equals and not equals infix operators. Ugh. Loosely typed languages are terrible.
+# pylint: disable=unnecessary-lambda
 eq=Infix(lambda x,y: safe_equals(x, y))
 neq=Infix(lambda x,y: (not safe_equals(x, y)))
 
@@ -187,12 +193,12 @@ def safe_print(text):
             msg = msg[:100]
         try:
             print(msg)
-        except:
+        except Exception:
             pass
 
     # if our logger has a FileHandler, we need to tee this print to a file as well
     for handler in log.handlers:
-        if type(handler) is FileHandler or type(handler) is CappedFileHandler:
+        if isinstance(handler, (FileHandler, CappedFileHandler)):
             # set the format to be like a print, not a log, then set it back
             handler.setFormatter(logging.Formatter("%(message)s"))
             handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
@@ -235,7 +241,7 @@ def b64_decode(value):
             return conv_val
     
     # Base64 conversion error.
-    except Exception as e:
+    except Exception:
         pass
 
     # No valid base64 decode.
@@ -283,7 +289,7 @@ class vb_RegExp(object):
         r = string
         try:
             r = re.sub(pat, rep, string)
-        except Exception as e:
+        except Exception:
             pass
         return r
 
@@ -335,7 +341,7 @@ def int_convert(arg, leave_alone=False):
         hex_str = "0x" + arg.strip()[2:]
         try:
             return int(hex_str, 16)
-        except:
+        except Exception as e:
             log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
             return 0
             
