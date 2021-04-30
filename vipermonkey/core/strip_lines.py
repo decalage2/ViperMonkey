@@ -1,3 +1,9 @@
+"""@package strip_lines Strip useles lines from Visual Basic code and
+rewrite difficult to parse code chunks.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey - Strip useles lines from Visual Basic code.
 
@@ -84,9 +90,14 @@ from random import randint
 debug_strip = False
 
 def is_useless_dim(line):
-    """
-    See if we can skip this Dim statement and still successfully emulate.
-    We only use Byte type information when emulating.
+    """See if we can skip this Dim statement and still successfully
+    emulate.  We only use Byte type information when emulating.
+
+    @param line (str) The code line to check.
+
+    @return (boolean) True if this is a Dim statement that can be
+    safely skipped, False if not.
+
     """
 
     # Is this dimming a variable with a type we want to save? Also
@@ -114,7 +125,24 @@ def is_useless_dim(line):
 
 aggressive_strip = False
 def is_interesting_call(line, external_funcs, local_funcs):
+    """Check to see if an interesting function is called on the given code
+    line. An interesting function is a function imported from a DLL, a
+    locally defined function, or certain other specific functions that
+    ViperMonkey logs.
 
+    @param line (str) The code line to check.
+
+    @param external_funcs (list) A list of code lines (str) that
+    import functions from DLLs.
+
+    @param local_funcs (set) A set of the names (str) of locally
+    defined functions.
+
+    @return (boolean) True if this line calls an interesting function,
+    False if not.
+
+    """
+    
     # Is this an interesting function call?
     log_funcs = ["CreateProcessA", "CreateProcessW", ".run", "CreateObject",
                  "Open", "CreateMutex", "CreateRemoteThread", "InternetOpen",
@@ -145,8 +173,13 @@ def is_interesting_call(line, external_funcs, local_funcs):
     return False
 
 def is_useless_call(line):
-    """
-    See if the given line contains a useless do-nothing function call.
+    """See if the given line contains a useless do-nothing function call.
+
+    @param line (str) The code line to check.
+
+    @return (boolean) True if this line calls an uninteresting
+    function, False if not.
+
     """
 
     # These are the functions that do nothing if they appear on a line by themselves.
@@ -170,9 +203,15 @@ def is_useless_call(line):
     return False
 
 def collapse_macro_if_blocks(vba_code):
-    """
-    When emulating we only pick a single block from a #if statement. Speed up parsing
-    by picking the largest block and strip out the rest.
+    """When emulating we only pick a single block from a #if
+    statement. Speed up parsing by picking the largest block and strip
+    out the rest.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The given VB code with #if statements removed by
+    collapsing them down to just 1 of the #if cases (the largest).
+
     """
 
     # Pick out the largest #if blocks.
@@ -254,8 +293,13 @@ def collapse_macro_if_blocks(vba_code):
     return r
     
 def hide_weird_calls(vba_code):
-    """
-    Hide weird calls like 'foo.bar (1,2), cat, dog'. These are hard to parse.
+    """Hide weird calls like 'foo.bar (1,2), cat, dog', These are hard to
+    parse.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Do we have these weird calls?
@@ -273,8 +317,13 @@ def hide_weird_calls(vba_code):
     return vba_code
 
 def fix_bad_puts(vba_code):
-    """
-    Change file Put statements like 'Put #foo(1,2,3) ...' to 'Put foo(1,2,3)'.
+    """Change file Put statements like 'Put #foo(1,2,3) ...' to 'Put
+    foo(1,2,3)'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Do we need to do this?
@@ -293,8 +342,12 @@ def fix_bad_puts(vba_code):
     return vba_code
     
 def fix_unbalanced_quotes(vba_code):
-    """
-    Fix lines with missing double quotes.
+    """Fix lines with missing double quotes.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Fix invalid string assignments.
@@ -416,7 +469,16 @@ def fix_unbalanced_quotes(vba_code):
 
 MULT_ASSIGN_RE = r"((?:\w+\s*=\s*){3,})(.+)"
 def fix_multiple_assignments(line):
+    """Break up multiple assignment lines like 'a = b = c = 1' into
+    multiple seperate assignment lines.
 
+    @param line (str) The code line to check/modify.
+
+    @return (str) The given composite assignment line broken up into
+    multiple lines if possible, the original line if not.
+
+    """
+    
     # Skip comments.
     if ("'" in line):
 
@@ -475,8 +537,12 @@ def fix_multiple_assignments(line):
     return r
 
 def fix_skipped_1st_arg1(vba_code):
-    """
-    Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
+    """Replace calls like foo(, 1, ...) with foo(SKIPPED_ARG, 1, ...).
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Skipped this if unneeded.
@@ -543,8 +609,12 @@ def fix_skipped_1st_arg1(vba_code):
     return vba_code
 
 def fix_skipped_1st_arg2(vba_code):
-    """
-    Replace calls like \nfoo, 1, ... with \nfoo SKIPPED_ARG, 1, ... .
+    """Replace calls like \nfoo, 1, ... with \nfoo SKIPPED_ARG, 1, ... .
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Skipped this if unneeded.
@@ -649,8 +719,12 @@ def fix_skipped_1st_arg2(vba_code):
     return vba_code
 
 def fix_bad_next_statements(vba_code):
-    """
-    Change things like "Next x,y" to "Next x\nNext y"
+    """Change things like "Next x,y" to "Next x\nNext y".
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -672,9 +746,13 @@ def fix_bad_next_statements(vba_code):
     return r
 
 def fix_items_ref(vba_code):
-    """
-    Change Scripting.Dictionary.Items() references to 
+    """Change Scripting.Dictionary.Items() references to
     Scripting.Dictionary.Items.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Do we need to do this?
@@ -684,9 +762,13 @@ def fix_items_ref(vba_code):
     return r
 
 def fix_stupid_string_concats(vba_code):
-    """
-    Change garbage string concatentations like 's1 & s2 & + "foo"' to
+    """Change garbage string concatentations like 's1 & s2 & + "foo"' to
     's1 & s2 & "foo"'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Do we need to do this?
@@ -704,8 +786,12 @@ def fix_stupid_string_concats(vba_code):
     return r
 
 def fix_bad_exponents(vba_code):
-    """
-    Change things like '2^2' to '2 ^ 2'. 
+    """Change things like '2^2' to '2 ^ 2'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -752,8 +838,12 @@ def fix_bad_exponents(vba_code):
     return r
 
 def fix_bad_var_names(vba_code):
-    """
-    Change things like a& = b& + 1 to a = b + 1.
+    """Change things like a& = b& + 1 to a = b + 1.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # TODO: Has problems with things like &a* that appear in strings like "foo&+hh".
@@ -773,9 +863,13 @@ def fix_bad_var_names(vba_code):
     #return vba_code
 
 def fix_unhandled_named_params(vba_code):
-    """
-    Currently things like 'foo(a:=1, b:=2)' are not handled.
-    Comment them out.
+    """Currently things like 'foo(a:=1, b:=2)' are not handled, Comment
+    them out.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -844,9 +938,13 @@ def fix_unhandled_named_params(vba_code):
     return vba_code
 
 def fix_unhandled_array_assigns(vba_code):
-    """
-    Currently things like 'foo(1, 2, 3) = 1' are not handled.
-    Comment them out.
+    """Currently things like 'foo(1, 2, 3) = 1' are not handled, Comment
+    them out.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -864,9 +962,13 @@ def fix_unhandled_array_assigns(vba_code):
     return vba_code
 
 def fix_unhandled_event_statements(vba_code):
-    """
-    Currently things like 'Event ...' are not handled.
-    Comment them out.
+    """Currently things like 'Event ...' are not handled, Comment them
+    out.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -883,9 +985,13 @@ def fix_unhandled_event_statements(vba_code):
     return vba_code
 
 def fix_unhandled_raiseevent_statements(vba_code):
-    """
-    Currently things like 'RaiseEvent ...' are not handled.
-    Comment them out.
+    """Currently things like 'RaiseEvent ...' are not handled, Comment
+    them out.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     uni_vba_code = None
@@ -902,8 +1008,14 @@ def fix_unhandled_raiseevent_statements(vba_code):
     return vba_code
 
 def hide_string_content(s):
-    """
-    Replace contents of string literals with '____'.
+    """Hide string contents by replacing contents of string literals with
+    '____'.
+
+    @param s (str) The code in which to hide the contents of string
+    literals.
+
+    @return (str) The given code with string literal contents hidden.
+
     """
     if (not isinstance(s, str)):
         return s
@@ -929,8 +1041,15 @@ def hide_string_content(s):
     return r
 
 def is_in_string(line, s):
-    """
-    Check to see if s appears in a quoted string in line.
+    """Check to see if s appears in a quoted string in line.
+
+    @param line (str) The code line to check.
+
+    @param s (str) The string literal value to look for.
+
+    @return (boolean) True if s appears as a string literal value in
+    the given code line, False if not.
+
     """
 
     # Simple case, there is not a quoted string in line.
@@ -969,7 +1088,15 @@ def is_in_string(line, s):
     return False
 
 def hide_colons_in_ifs(vba_code):
+    """Replace ':' that appear in single line VB If statements with
+    '__COLON__'.
 
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
+    """
+    
     # Find single line If statements and hide their colons. We can parse
     # these so leave them alone.
     if ("If " not in vba_code):
@@ -991,9 +1118,13 @@ def hide_colons_in_ifs(vba_code):
     return r
 
 def convert_colons_to_linefeeds(vba_code):
-    """
-    Convert things like 'a=1:b=2' to 'a=1\n:b=2'
-    Also change things like 'a&"ff"' to 'a & "ff"'
+    """Convert things like 'a=1:b=2' to 'a=1\n:b=2'; Also change things
+    like 'a&"ff"' to 'a & "ff"'
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Skip if not needed.
@@ -1113,9 +1244,13 @@ def convert_colons_to_linefeeds(vba_code):
     return r
 
 def fix_varptr_calls(vba_code):
-    """
-    Change calls like VarPtr(foo(0)) to VarPtr(foo) so we can report on the
-    whole byte array.
+    """Change calls like VarPtr(foo(0)) to VarPtr(foo) so we can report
+    on the whole byte array.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Do we have any VarPtr() calls?
@@ -1125,8 +1260,12 @@ def fix_varptr_calls(vba_code):
     return vba_code
 
 def break_up_whiles(vba_code):
-    """
-    Break up while statements like 'While(a>b)c = c+1'.
+    """Break up while statements like 'While(a>b)c = c+1'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Can we skip this?
@@ -1190,7 +1329,13 @@ def break_up_whiles(vba_code):
     return r
 
 def fix_array_accesses(vba_code):
-    """
+    """Replace long chained array accesses with short ones. For example,
+    replace 'a(1)(2)(3)(4)' with 'a(1)'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Not handling array accesses more than 2 deep.
@@ -1210,7 +1355,13 @@ def fix_array_accesses(vba_code):
     return vba_code
 
 def fix_weird_copyhere(vba_code):
-    """
+    """Rewrite things like 'CreateObject(foo).Namespace(bar).CopyHere
+    baz, fubar' and 'foo.Run(bar) & baz, fubar'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Not handling this weird CopyHere() call.
@@ -1257,7 +1408,12 @@ def fix_weird_copyhere(vba_code):
     return vba_code
 
 def fix_comments_after_else(vba_code):
-    """
+    """Get rid of comments at the ends of ElseIf code lines.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
@@ -1280,7 +1436,13 @@ def fix_comments_after_else(vba_code):
     return vba_code
 
 def break_out_labels(vba_code):
-    """
+    """Break out labels like 'foo: a = 1' onto their own line of code
+    ('foo:\na = 1').
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Break out labels that are not on their own line.
@@ -1305,7 +1467,14 @@ def break_out_labels(vba_code):
     return vba_code
 
 def hide_strings(vba_code):
-    """
+    """Hide various code strings by rewriting them. This rewrites any VB
+    keyword with a '#' to something there the '#' is replaced with
+    '__HASH'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
@@ -1333,7 +1502,13 @@ def hide_strings(vba_code):
     return vba_code
 
 def fix_weird_single_line_ifs(vba_code):
-    """
+    """Rewrite odd single line If statements like 'If utc_NegativeOffset
+    Then: utc_Offset = -utc_Offset'.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Rewrite some weird single line if statements.
@@ -1356,7 +1531,17 @@ def fix_weird_single_line_ifs(vba_code):
     return vba_code
 
 def hide_colons(vba_code):
-    """
+    """Hide the colons in single line If statements by replacing each
+    single line If statement with "HIDE_THIS_IF_NNN".
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (tuple) A 2 element tuple where the 1st element is the
+    modified VB code (str) and the 2nd element is a map from If
+    replacement strings "HIDE_THIS_IF_NNN" to the original If
+    statement. The map is used to undo the hiding of the If statements
+    later.
+
     """
 
     # Replace the ':' in single line if statements so they don't get broken up.
@@ -1370,7 +1555,6 @@ def hide_colons(vba_code):
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
         log.warning("Converting VB code to unicode failed.")
-    #pat = r"(?i)^(?:Print)\s*If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s+Else.{1,100})?\n"
     pat = r"(?i)\n\s*If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s*Else.{1,100})?\n"
     single_line_ifs = []
     if (re2.search(unicode(pat), uni_vba_code) is not None):
@@ -1391,7 +1575,13 @@ def hide_colons(vba_code):
     return vba_code, single_line_ifs
 
 def replace_rem_comments(vba_code):
-    """
+    """Standardize the comment keyword used from various Rem flavors to
+    "'".
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Replace 'Rem fff' style comments with "' fff" comments.
@@ -1406,7 +1596,12 @@ def replace_rem_comments(vba_code):
     return vba_code
 
 def fix_elseif_lines(vba_code):
-    """
+    """Break up single line ElseIf statements onto multiple lines.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Fix some elseif lines if needed.
@@ -1424,7 +1619,13 @@ def fix_elseif_lines(vba_code):
     return vba_code
 
 def replace_bad_chars(vba_code):
-    """
+    """Replace/modify certain hard to parse characters (unless the
+    character constructs appear in a string).
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Characters that change how we modify the code.
@@ -1641,15 +1842,19 @@ def replace_bad_chars(vba_code):
     return r
             
 def fix_difficult_code(vba_code):
-    """
-    Replace characters whose ordinal value is > 128 with dNNN, where NNN
-    is the ordinal value.
+    """Replace characters whose ordinal value is > 128 with dNNN, where
+    NNN is the ordinal value.
 
     Also change things like "a!b!c" to "a.b.c".
 
     Also break up multiple statements seperated with '::' or ':' onto different lines.
 
     Also change assignments like "a =+ 1 + 2" to "a = 1 + 2".
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Bad characters from olevba.
@@ -1808,8 +2013,12 @@ def fix_difficult_code(vba_code):
     return r
 
 def strip_comments(vba_code):
-    """
-    Strip comment lines from the VBA code.
+    """Strip comment lines from the VBA code.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Sanity check.
@@ -1834,8 +2043,13 @@ def strip_comments(vba_code):
 
 defined_constants = set()
 def find_defined_constants(vba_code):
-    """
-    Get the names of all the defined constants in the given VB code.
+    """Get the names of all the defined constants in the given VB code.
+
+    @note The global variable defined_constants will be updated with
+    the names of the defined contants.
+
+    @param vba_code (str) The VB code to check.
+
     """
 
     # Only do this if needed.
@@ -1850,9 +2064,13 @@ def find_defined_constants(vba_code):
     defined_constants.update(const_names)
     
 def rename_constants(vba_code):
-    """
-    Make sure constants have unique names to avoid overlap with function
-    names.
+    """Make sure constants have unique names to avoid overlap with
+    function names.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Only do this if needed.
@@ -1891,7 +2109,12 @@ def rename_constants(vba_code):
     return vba_code
 
 def delete_bracket_constructs(vba_code):
-    """
+    """We don't handle constructs like ([a1]), so remove them.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # We don't handle ([a1]) constructs for now. Delete them.
@@ -1933,8 +2156,12 @@ def delete_bracket_constructs(vba_code):
     return vba_code
         
 def fix_vba_code(vba_code):
-    """
-    Fix up some substrings that ViperMonkey has problems parsing.
+    """Fix up some substrings that ViperMonkey has problems parsing.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     # Strip comment lines from the code.
@@ -2186,9 +2413,13 @@ def fix_vba_code(vba_code):
     return r
 
 def replace_constant_int_inline(vba_code):
-    """
-    Replace constant integer definitions inline, but leave the definition
-    behind in case the regex fails.
+    """Replace constant integer definitions inline in the given code, but
+    leave the definition behind in case the regex fails.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
 
     const_pattern = re.compile("(?i)const +([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
@@ -2205,8 +2436,12 @@ def replace_constant_int_inline(vba_code):
     return(vba_code)
 
 def strip_line_nums(line):
-    """
-    Strip line numbers from the start of a line.
+    """Strip line numbers from the start of a line.
+
+    @param line (str) The code line to check/modify.
+
+    @return (str) The given line with initial line number removed.
+
     """
 
     # Find the end of a number at the start of the line, if there is one.
@@ -2222,8 +2457,12 @@ def strip_line_nums(line):
     return line[pos:]
 
 def strip_attribute_lines(vba_code):
-    """
-    Strip all Attribute statements from the code.
+    """Strip all Attribute statements from the code.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
     if (vba_code is None):
         return vba_code
@@ -2236,7 +2475,7 @@ def strip_attribute_lines(vba_code):
     return r
 
 def is_assign_line(line, line_num, local_funcs, bool_statements):
-    """Figure out the given line is an assignment line.
+    """Figure out if the given line is an assignment line.
 
     @param line (str) The line to check.
 
@@ -2370,7 +2609,22 @@ def is_assign_line(line, line_num, local_funcs, bool_statements):
     return True
     
 def find_var_assigns(vba_code, change_callbacks, local_funcs):
+    """Find all assigned variables and track what line the variable was
+    assigned on.
 
+    @param vba_code (str) The code to scan for assignments.
+
+    @param change_callbacks (set) The names of variable update
+    callback handler functions. This parameter will be modified (names
+    added).
+
+    @param local_funcs (set) The names of local functions.
+
+    @return (dict) A map from variable names (str) to the lines where
+    the variable is assigned (set of int).
+
+    """
+    
     # Find all assigned variables and track what line the variable was assigned on.
     # Dim statements are counted as assignments.
     assign_re = re2.compile(u"(?:\s*(\w+(?:\([^\)]*\))?(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
@@ -2474,9 +2728,13 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
     return assigns
 
 def strip_difficult_tuple_lines(vba_code):
-    """
-    Strip all calls like "foo.bar.baz (1,2)-(3,4),5" from the code.
+    """Strip all calls like "foo.bar.baz (1,2)-(3,4),5" from the code.
     They are awful to parse with PyParsing.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
     """
     if (vba_code is None):
         return vba_code
@@ -2493,9 +2751,17 @@ def strip_difficult_tuple_lines(vba_code):
 
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
-    """
-    Strip statements that have no useful effect from the given VB. The
-    stripped statements are commented out.
+    """(Main Top Level Function) Strip statements that have no useful
+    effect from the given VB and fix hard to parse code
+    constructs. The stripped statements are commented out.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @param local_funcs (set) A set of the names (str) of locally
+    defined functions.
+
+    @return (str) The modified VB code.
+
     """
 
     # Preprocess the code to make it easier to parse.
