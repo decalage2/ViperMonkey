@@ -1128,7 +1128,31 @@ class Context(object):
             raise KeyError('Library function %r not found' % name)
 
     def __get(self, name, case_insensitive=True, local_only=False, global_only=False):
+        """Lowest level method for getting the value of a tracked
+        variable.
 
+        @see _get
+        @see get
+
+        @param name (str) The name of the variable.
+        
+        @param case_insensitive (boolean) If True try both the given
+        name and all lowercase version of the name, if False just try
+        the given name.
+        
+        @param local_only (boolean) If True only look for local
+        variables with the given name, If False also look for global
+        variables with the name.
+
+        @param global_only (boolean) If True only look for global
+        variables with the given name, If False also look for local
+        variables with the name.
+
+        @return (any) The value of the named variable if found.
+        
+        @throws KeyError Thrown if the named variable is not found.
+
+        """        
         if (not isinstance(name, basestring)):
             raise KeyError('Object %r not found' % name)
 
@@ -1194,6 +1218,34 @@ class Context(object):
             # TODO: raise a custom VBA exception?
 
     def _get(self, name, search_wildcard=True, case_insensitive=True, local_only=False, global_only=False):
+        """Second lowest level method for getting the value of a tracked
+        variable.
+
+        @see __get
+        @see get
+
+        @param name (str) The name of the variable.
+        
+        @param search_wildcard (boolean) If True try some variations
+        of the given named variable if not found.
+
+        @param case_insensitive (boolean) If True try both the given
+        name and all lowercase version of the name, if False just try
+        the given name.
+        
+        @param local_only (boolean) If True only look for local
+        variables with the given name, If False also look for global
+        variables with the name.
+
+        @param global_only (boolean) If True only look for global
+        variables with the given name, If False also look for local
+        variables with the name.
+
+        @return (any) The value of the named variable if found.
+        
+        @throws KeyError Thrown if the named variable is not found.
+
+        """
         
         # See if this is an aliased reference to an objects .Text field.
         name = utils.safe_str_convert(name)
@@ -1305,8 +1357,19 @@ class Context(object):
                           global_only=global_only)
 
     def _get_all_metadata(self, name):
-        """
-        Return all items in something like ActiveDocument.BuiltInDocumentProperties.
+        """Return all items in ActiveDocument.BuiltInDocumentProperties or
+        ThisDocument.BuiltInDocumentProperties. For each metadata item
+        FOO a FOO.Name and FOO.Value synthetic variable will be added
+        to the context.
+
+        @param name (str) The document metadata property field name.
+
+        @return (list) On success return a list of names of synthetic
+        variables representing all of the metadata fields in
+        ActiveDocument.BuiltInDocumentProperties or
+        ThisDocument.BuiltInDocumentProperties. Return None on
+        failure.
+
         """
 
         # Reading all properties?
@@ -1342,7 +1405,34 @@ class Context(object):
         return meta_names
     
     def get(self, name, search_wildcard=True, local_only=False, global_only=False):
+        """Top level method for getting the value of a tracked variable.
 
+        @see __get
+        @see _get
+
+        @param name (str) The name of the variable.
+        
+        @param search_wildcard (boolean) If True try some variations
+        of the given named variable if not found.
+
+        @param case_insensitive (boolean) If True try both the given
+        name and all lowercase version of the name, if False just try
+        the given name.
+        
+        @param local_only (boolean) If True only look for local
+        variables with the given name, If False also look for global
+        variables with the name.
+
+        @param global_only (boolean) If True only look for global
+        variables with the given name, If False also look for local
+        variables with the name.
+
+        @return (any) The value of the named variable if found.
+        
+        @throws KeyError Thrown if the named variable is not found.
+
+        """
+        
         # Sanity check.
         if ((name is None) or
             (isinstance(name, str) and (len(name.strip()) == 0))):
@@ -1393,6 +1483,17 @@ class Context(object):
         return r
             
     def contains(self, name, local=False):
+        """See if the context contains the given variable.
+
+        @param name (str) The name of the variable to look for.
+
+        @param local (boolean) If True only look for the named
+        variables in the local variables.
+
+        @return (boolean) True if the named variable is in the
+        context, False if not.
+
+        """
         if (local):
             return (utils.safe_str_convert(name).lower() in self.locals)
         try:
@@ -1402,13 +1503,41 @@ class Context(object):
             return False
 
     def contains_user_defined(self, name):
+        """See if the context contains the given variable (must strictly be a
+        variable or function, not a document variable or some other
+        variable like thing with a name tracked by the context).
+
+        @param name (str) The name of the variable to look for.
+
+        @return (boolean) True if the named variable is in the
+        context, False if not.
+
+        """
         return ((name in self.locals) or (name in self.globals))
 
     def set_type(self, var, typ):
+        """Set the type of a variable (Integer, String, etc.).
+
+        @see get_type
+
+        @param var (str) The name of the variable.
+
+        @param typ (str) The type of the variable.
+
+        """
         var = var.lower()
         self.types[var] = typ
         
     def get_type(self, var):
+        """Get the type of a variable.
+
+        @param var (str) The name of the variable.
+
+        @return (str) The type of the variable if found.
+        
+        @throws KeyError This is thrown if the variable is not found.
+
+        """
         if (not isinstance(var, basestring)):
             return None
         var = var.lower()
@@ -1417,6 +1546,17 @@ class Context(object):
         return self.types[var]
 
     def get_doc_var(self, var, search_wildcard=True):
+        """Get a VBA document variable value.
+
+        @param var (str) The name of the variable.
+
+        @param search_wildcard (boolean) If True try some variations
+        of the given named variable if not found.
+        
+        @return (str?) If found return the value of the named document
+        variable, if not found return None.
+
+        """
         if (not isinstance(var, basestring)):
             return None
 
@@ -1488,8 +1628,13 @@ class Context(object):
         return r
 
     def save_intermediate_iocs(self, value):
-        """
-        Save variable values that appear to contain base64 encoded or URL IOCs.
+        """Save extracted IOCs from variable values that appear to contain
+        base64 encoded or URL IOCs. Base64 and URL substrings are
+        extracted from the given value and saved in the context as
+        intermediate IOCs.
+
+        @param value (str) The value to check for intermediate IOCs.
+
         """
 
         global num_b64_iocs
@@ -1549,10 +1694,19 @@ class Context(object):
             intermediate_iocs.remove(old_ioc)
 
     def _set_excel_formula(self, name, value):
-        """
-        Handle setting an Excel cell to a formula.
+        """Handle setting an Excel cell to a formula.
 
         Sheets('dd').Cells('d, dd').FormulaLocal = ...
+
+        @param name (str) The variable name. If it is something like
+        "Sheets('dd').Cells('d, dd').FormulaLocal" the cell formula
+        value will be saved in the context as an action.
+        
+        @param value (str) The potential cell formula value.
+
+        @return (boolean) True if this is setting an Excel cell
+        formula, False if not.
+
         """
 
         # Sanity check.
@@ -1607,8 +1761,18 @@ class Context(object):
         return True
 
     def _handle_property_assignment(self, name, value):
-        """
-        If this is a property asignment, call the property handler.
+        """If this is a property asignment, call the property
+        handler.
+
+        @param name (str) The name of the potential property.
+        
+        @param value (??) The value to which the potential property is
+        being set. If this is a property with a handler the value will
+        be passed as the argument to the property handler.
+
+        @return (boolean) True if this is a property assignment, False
+        if not.
+
         """
 
         import procedures
@@ -1638,6 +1802,35 @@ class Context(object):
             no_conversion=False,
             case_insensitive=True,
             no_overwrite=False):
+        """Set a variable value.
+
+        @param name (str) The variable name.
+
+        @param value (??) The variable value.
+        
+        @param var_type (str) The type (Integer, String, etc.) of the
+        variable.
+        
+        @param do_with_prefix (boolean) If True and a With prefix is
+        tracked in the context, prepend the With prefix to the given
+        variable name before setting the value.
+        
+        @param force_local (boolean) If True always save the given
+        variable as a local variable.
+
+        @param force_global (boolean) If True always save the given
+        variable as a global variable.
+
+        @param no_conversion (boolean) If True do not attempt to
+        convert the given value based on the type of the variable.
+
+        @param case_insensitive (boolean) If True save the variable
+        twice, once with the given name and once as all lowercase.
+
+        @param no_overwrite (boolean) If True to not overwrite
+        existing values of the variable.
+
+        """
         
         # Special case. Are we setting a formula in an Excel cell?
         if (self._set_excel_formula(name, value)):
@@ -1863,6 +2056,17 @@ class Context(object):
                 pass
             
     def _strip_null_bytes(self, item):
+        """Strip null (0x00) bytes from strings. This works on strings
+        or lists of strings. If a list is given nulls will be stripped
+        from all strings in the list.
+
+        @param item (str or list) The thing from which to strip
+        nulls.
+
+        @return (str or list) The item with nulls stripped from
+        strings.
+
+        """
         r = item
         if (isinstance(item, str)):
             r = item.replace("\x00", "")
@@ -1876,7 +2080,21 @@ class Context(object):
         return r
                     
     def report_action(self, action, params=None, description=None, strip_null_bytes=False):
+        """Save information about an interesting action.
 
+        @param action (str) The action to save in the context.
+        
+        @param params (list or str) Any parameter values for the
+        action. 
+
+        @param description (str) A human readable description of the
+        action.
+
+        @param strip_null_bytes (boolean) If True strip null bytes
+        (0x00) from all strings in the action.
+
+        """
+        
         # Strip out bad characters if needed.
         if (strip_null_bytes):
 
