@@ -49,15 +49,25 @@ __version__ = '0.08'
 import random
 
 def is_constant(name):
-    """
-    Check to see if there is a VBA constant with the given name.
+    """Check to see if there is a VBA constant with the given name.
+
+    @param name (str) The name to check.
+
+    @return (boolean) True if the given name names a VBA enum
+    constant, False if not.
+
     """
     name = str(name).lower()
     return (name in all_vba_constants.globals)
 
 def get_constant(name):
-    """
-    Use this to get the value of a VBA constant.
+    """Use this to get the value of a VBA constant.
+
+    @param name (str) The name of the VBA enum constant to get.
+
+    @return (int) The enum value if the given name names a VBA enum
+    constant, None if not.
+
     """
     name = str(name).lower()
     if is_constant(name):
@@ -65,8 +75,14 @@ def get_constant(name):
     return None
 
 def get_type(name):
-    """
-    Get the data type for a VBA constant if known.
+    """Get the data type for a VBA constant if known.
+
+    @param name (str) The name of the VBA enum constant for which to
+    get the data type..
+
+    @return (str) The enum data type (Integer, String, etc.) if the
+    given name names a VBA enum constant, None if not.
+
     """
     name = str(name).lower()
     if (name in all_vba_constants.types):
@@ -7855,5 +7871,5 @@ class VbaConstants(object):
             self.globals[ glbl ] = value
 
 
-####### Global VBA Constant Repository 
+## Global VBA Constant Repository 
 all_vba_constants = VbaConstants()
