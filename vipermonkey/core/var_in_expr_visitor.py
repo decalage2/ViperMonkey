@@ -1,5 +1,12 @@
+"""@package var_in_expr_visitor Visitor for collecting the names of
+variables referenced in expressions in a VBA object.
+
 """
-ViperMonkey: Visitor for collecting the names declared variables.
+
+# pylint: disable=pointless-string-statement
+"""
+ViperMonkey: Visitor for collecting the names of variables
+referenced in expressions.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -9,6 +16,7 @@ License: BSD, see source code or documentation
 
 Project Repository:
 https://github.com/decalage2/ViperMonkey
+
 """
 
 # === LICENSE ==================================================================
@@ -36,12 +44,13 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-#from statements import *
+from visitor import visitor
 
 class var_in_expr_visitor(visitor):
-    """
-    Get the names of all variables that appear in an expression.
+    """Get the names of all variables that appear in an expression. The
+    discovered variables are saved in the self.variables (set) field
+    of the visitor.
+
     """
 
     def __init__(self, context=None):
@@ -51,10 +60,7 @@ class var_in_expr_visitor(visitor):
     
     def visit(self, item):
         from expressions import SimpleNameExpression
-        from expressions import Function_Call
         from expressions import MemberAccessExpression
-        from vba_object import VbaLibraryFunc
-        from vba_object import VBA_Object
 
         # Already looked at this?
         if (item in self.visited):
@@ -71,7 +77,7 @@ class var_in_expr_visitor(visitor):
             # Is this an array or function?
             if (hasattr(item, "name") and (self.context.contains(item.name))):
                 ref = self.context.get(item.name)
-                if (isinstance(ref, list) or isinstance(ref, str)):
+                if isinstance(ref, (list, str)):
                     self.variables.add(str(item.name))
 
         # Member access expression used as a variable?

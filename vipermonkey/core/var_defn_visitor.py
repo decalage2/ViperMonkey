@@ -1,3 +1,9 @@
+"""@package var_defn_visitor Visitor for collecting the names of
+declared variables in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting the names declared variables.
 
@@ -40,8 +46,9 @@ from visitor import visitor
 from statements import Dim_Statement, Let_Statement
 
 class var_defn_visitor(visitor):
-    """
-    Collect the names of all declared variables.
+    """Collect the names of all declared variables. The collected names
+    are saved in the self.variables (set) field of the visitor.
+
     """
 
     def __init__(self):
