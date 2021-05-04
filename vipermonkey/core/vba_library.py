@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 ViperMonkey: VBA Library
 
@@ -396,7 +394,7 @@ class URLDownloadToFile(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 3)):
-            return
+            return 0
         context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
         context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
         return 1
@@ -2558,6 +2556,8 @@ class InStr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 2)):
             return "NULL"
 
@@ -2619,6 +2619,8 @@ class CVar(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
 
@@ -2631,14 +2633,16 @@ class IsNumeric(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
 
         arg = str(params[0])
         try:
-            tmp = float(arg)
+            _ = float(arg)
             return True
-        except:
+        except ValueError:
             return False
     
 class InStrRev(VbaLibraryFunc):
@@ -2647,6 +2651,8 @@ class InStrRev(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 2)):
             return "NULL"
 
@@ -2700,18 +2706,21 @@ class Sgn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         num = params[0]
-        r = ''
+        r = "NULL"
         try:
             n = utils.int_convert(num)
             if n == 0:
                 r = 0
             else:
                 r = int(math.copysign(1, n))
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sgn exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sgn: %r returns %r" % (self, r))
         return r
@@ -2722,14 +2731,17 @@ class Sqr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = utils.int_convert(params[0]) + 0.0
             r = math.sqrt(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sqr exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sqr: %r returns %r" % (self, r))
         return r
@@ -2740,14 +2752,17 @@ class Abs(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = utils.int_convert(params[0])
             r = abs(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Abs exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Abs: %r returns %r" % (self, r))
         return r
@@ -2758,14 +2773,17 @@ class Fix(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = float(params[0])
             r = math.floor(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Fix exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Fix: %r returns %r" % (self, r))
         return r
@@ -2776,6 +2794,8 @@ class Round(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
@@ -2785,8 +2805,9 @@ class Round(VbaLibraryFunc):
             if (len(params) == 2):
                 sig = utils.int_convert(params(1))                
             r = round(num, sig)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Round exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Round: %r returns %r" % (self, r))
         return r
@@ -2797,6 +2818,9 @@ class Hour(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return 13
     
 class Hex(VbaLibraryFunc):
@@ -2805,6 +2829,8 @@ class Hex(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
@@ -2819,8 +2845,9 @@ class Hex(VbaLibraryFunc):
                 r = "FF" + r[r.rindex("FF") + len("FF"):]
                 if ((len(r) % 2) != 0):
                     r = "F" + r
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Hex exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Hex: %r returns %r" % (self, r))
         return r
@@ -2831,6 +2858,8 @@ class CByte(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
@@ -2844,7 +2873,8 @@ class CByte(VbaLibraryFunc):
             if (r > 255):
                 r = 255
         except Exception as e:
-            pass 
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("CByte exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CByte: %r returns %r" % (self, r))
         return r
@@ -2855,6 +2885,8 @@ class CLng(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
 
@@ -2880,8 +2912,9 @@ class CLng(VbaLibraryFunc):
             if ((r > 2147483647) or (r < -2147483647)):
                 # Overflow. Assume On Error Resume Next.
                 r = "NULL"
-        except:
-            pass 
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("CLng exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CLng: %r returns %r" % (self, r))
         return r
@@ -2892,11 +2925,15 @@ class CBool(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         val = params[0]
         r = 0
-        if ((val == True) or (val == 1)):
+        # We actually want to explcitly check for True.
+        # pylint: disable=singleton-comparison
+        if ((val is True) or (val == 1)):
             r = 1
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CBool: %r returns %r" % (self, r))
@@ -2908,6 +2945,8 @@ class CDate(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         # TODO: For now this is stubbed out. Handling dates correctly is hard.
@@ -2922,6 +2961,8 @@ class CStr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         val = params[0]
@@ -2939,6 +2980,8 @@ class CSng(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
@@ -2948,8 +2991,9 @@ class CSng(VbaLibraryFunc):
                 tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
             r = float(tmp)
-        except:
-            pass 
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("CSng exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
@@ -2960,14 +3004,17 @@ class Atn(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = float(params[0])
             r = math.atan(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Atn exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Atn: %r returns %r" % (self, r))
         return r
@@ -2978,14 +3025,17 @@ class Tan(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = float(params[0])
             r = math.tan(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Tan exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Tan: %r returns %r" % (self, r))
         return r
@@ -2996,14 +3046,17 @@ class Cos(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = float(params[0])
             r = math.cos(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cos exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Cos: %r returns %r" % (self, r))
         return r
@@ -3014,6 +3067,8 @@ class Log(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = 0.0
@@ -3033,6 +3088,8 @@ class String(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 2)):
             return "NULL"
         r = ''
@@ -3040,8 +3097,9 @@ class String(VbaLibraryFunc):
             num = utils.int_convert(params[0])
             char = params[1]
             r = char * num
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("String exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("String: %r returns %r" % (self, r))
         return r
@@ -3052,13 +3110,11 @@ class Dir(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) == 0)):
             return ""
         pat = str(params[0])
-        attrib = None
-        # TODO: Handle multiple attributes.
-        if (len(params) > 1):
-            attrib = params[1]
 
         # Handle a special case for a maldoc that looks for things
         # not existing in a certain directory.
@@ -3084,6 +3140,7 @@ class Choose(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) < 2)):
@@ -3112,6 +3169,8 @@ class RGB(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 3)):
             return "NULL"
         r = ''
@@ -3120,8 +3179,9 @@ class RGB(VbaLibraryFunc):
             green = utils.int_convert(params[1])
             blue = utils.int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("RGB exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("RGB: %r returns %r" % (self, r))
         return r
@@ -3132,6 +3192,8 @@ class Exp(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = params[0]
@@ -3140,7 +3202,6 @@ class Exp(VbaLibraryFunc):
             r = math.exp(num)
         except Exception as e:
             log.error("Exp(" + str(params[0]) + ") failed. " + str(e))
-            pass
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Exp: %r returns %r" % (self, r))
         return r
@@ -3151,14 +3212,17 @@ class Sin(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         r = ''
         try:
             num = float(params[0])
             r = math.sin(num)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sin exception: " + str(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sin: %r returns %r" % (self, r))
         return r
@@ -3169,6 +3233,8 @@ class Str(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) == 0)):
             return ""
         r = str(params[0])
@@ -3182,6 +3248,8 @@ class Val(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         
@@ -3237,6 +3305,8 @@ class Base64Decode(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         txt = params[0]
@@ -3259,6 +3329,8 @@ class CleanString(VbaLibraryFunc):
     """
 
     def eval(self,context,params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         txt=params[0]
@@ -3362,6 +3434,8 @@ class Pmt(VbaLibraryFunc):
     '               PMT = (-fv - pv) / nper    : if rate == 0
     """
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 3)):
             return "NULL"
 
@@ -3383,8 +3457,9 @@ class Pmt(VbaLibraryFunc):
                 r = ((-fv - pv * pow(1 + rate, nper)) * rate)/((1 + rate * typ) * (pow(1 + rate, nper) - 1))
             else:
                 r = 0
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Pmt exception: " + str(e))
         
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Pmt: %r returns %r" % (self, r))
@@ -3396,8 +3471,14 @@ class Day(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         # This is usually used for gating, so have it match anything.
         return "**MATCH ANY**"
+
+    # Keep this for easy recovery if we want to revisit it.
+    # pylint: disable=pointless-string-statement
     """
         if ((params is None) or (len(params) < 1)):
             return "NULL"
@@ -3426,6 +3507,8 @@ class Space(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         n = utils.int_convert(params[0])
         r = " " * n
         return r
@@ -3439,6 +3522,8 @@ class UCase(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         r = str(params[0]).upper()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("UCase: %r returns %r" % (self, r))
@@ -3453,6 +3538,8 @@ class LCase(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         r = str(params[0]).lower()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("LCase: %r returns %r" % (self, r))
@@ -3467,6 +3554,9 @@ class Randomize(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Randomize(): Stubbed out as NOP")
         return ''
@@ -3477,6 +3567,9 @@ class Rnd(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return random.random()
 
     def num_args(self):
@@ -3549,7 +3642,9 @@ class Environ(VbaLibraryFunc):
         env_vars["ProgramFiles(x86)".lower()] = 'C:\\Program Files (x86)'
         env_vars["ProgramW6432".lower()] = 'C:\\Program Files'
         env_vars["PROMPT".lower()] = '$P$G'
-        env_vars["PSModulePath".lower()] = 'C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules;C:\\Program Files\\Microsoft Message Analyzer\\PowerShell\\'
+        env_vars["PSModulePath".lower()] = 'C:\\Program Files\\WindowsPowerShell\\Modules;' + \
+                                           'C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules;' + \
+                                           'C:\\Program Files\\Microsoft Message Analyzer\\PowerShell\\'
         env_vars["PUBLIC".lower()] = 'C:\\Users\\Public'
         env_vars["SESSIONNAME".lower()] = 'Console'
         env_vars["SystemDrive".lower()] = 'C:'
@@ -3593,6 +3688,8 @@ class DriveExists(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         drive = str(params[0]).lower()
@@ -3609,7 +3706,7 @@ class Navigate(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
-            return "NULL"
+            return
         url = str(params[0])
         if (url.startswith("tp://")):
             url = "ht" + url
@@ -3621,6 +3718,8 @@ class IsNull(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) == 0)):
             return False
         arg = params[0]
@@ -3632,6 +3731,8 @@ class IIf(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 3)):
             return "NULL"
         guard = params[0]
@@ -3639,8 +3740,7 @@ class IIf(VbaLibraryFunc):
         false_part = params[2]
         if (guard):
             return true_part
-        else:
-            return false_part
+        return false_part
 
 class CVErr(VbaLibraryFunc):
     """
@@ -3648,13 +3748,16 @@ class CVErr(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         err = None
         try:
             err = int(params[0])
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("err num str to int exception: " + str(e))
         vals = {2007 : "#DIV/0!",
                 2042 : "#N/A",
                 2029 : "#NAME?",
@@ -3793,7 +3896,7 @@ class Put(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 2)):
-            return "NULL"
+            return
         
         # Get the ID of the file.
         file_id = params[0]
@@ -3828,7 +3931,7 @@ class WriteLine(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
-            return "NULL"
+            return
 
         # Get the data.
         data = params[0]
@@ -3868,7 +3971,7 @@ class WriteText(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
-            return "NULL"
+            return
 
         # Get the data.
         txt = params[0]
@@ -3889,10 +3992,13 @@ class WriteText(VbaLibraryFunc):
         
 class CurDir(VbaLibraryFunc):
     """
-    CurDir() function.
+    CurDir() function (stubbed).
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return "~"
 
     def return_type(self):
@@ -3915,6 +4021,7 @@ class KeyString(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Key string value map.
         key_vals = {
@@ -4117,6 +4224,7 @@ class Arguments(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
@@ -4219,6 +4327,7 @@ class GetParentFolderName(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
@@ -4241,6 +4350,7 @@ class ReadText(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        params = params # pylint
 
         # Doing base64 conversion with a VBA object?
         with_str = str(context.with_prefix).strip()
@@ -4254,10 +4364,10 @@ class ReadText(VbaLibraryFunc):
         # ReadText() if there is only 1 current open file.
         if not context.open_files:
             log.error("Cannot process ReadText(). No open streams.")
-            return
+            return "NULL"
         if len(context.open_files) > 1:
             log.error("Cannot process ReadText(). Too many open streams.")
-            return
+            return "NULL"
 
         # Simulate the read.
 
@@ -4281,6 +4391,8 @@ class CheckSpelling(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
 
         # TODO: Find and use a Python spell checker to check the spelling
         # of the argument.
@@ -4294,6 +4406,8 @@ class Specialfolders(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         return "%" + str(params[0]) + "%"
@@ -4304,6 +4418,8 @@ class IsArray(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         return isinstance(params[0], list)
@@ -4314,6 +4430,8 @@ class Month(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         try:
@@ -4332,10 +4450,12 @@ class Month(VbaLibraryFunc):
             # TODO: Handle other values.
             return 1
 
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Month to int exception: " + str(e))
 
         return 1
+
 
 ticks = 100000
 class GetTickCount(VbaLibraryFunc):
@@ -4344,6 +4464,9 @@ class GetTickCount(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         global ticks
         ticks += random.randint(100, 10000)
         return ticks
@@ -4383,7 +4506,9 @@ class Rows(VbaLibraryFunc):
                 curr_sheet = None
                 try:
                     curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
-                except:
+                except Exception as e:
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Get sheet by index exception: " + str(e))
                     context.increase_general_errors()
                     log.warning("Cannot process Cells() call. No sheets in file.")
                     return "NULL"
@@ -4432,6 +4557,8 @@ def _read_cell(sheet, row, col):
     except Exception as e:
         
         # Failed to read cell.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Failed to read cell exception: " + str(e))
         return None
     
 class Cells(VbaLibraryFunc):
@@ -4482,10 +4609,14 @@ class Cells(VbaLibraryFunc):
         col = None
         try:
             col = int(tmp) - 1
-        except:
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Convert col num str to index exception: " + str(e))
             try:
                 col = excel_col_letter_to_index(tmp)
-            except:
+            except Exception as e:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Convert col letter to index exception: " + str(e))
                 context.increase_general_errors()
                 log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
                 return "NULL"
@@ -4497,7 +4628,9 @@ class Cells(VbaLibraryFunc):
         row = None
         try:
             row = int(tmp) - 1
-        except:
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Convert row to int exception: " + str(e))
             context.increase_general_errors()
             log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
             return "NULL"
@@ -4532,7 +4665,9 @@ class Cells(VbaLibraryFunc):
             sheet = None
             try:
                 sheet = context.loaded_excel.sheet_by_index(sheet_index)
-            except:
+            except Exception as e:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Get sheet by index exception: " + str(e))
                 context.increase_general_errors()
                 log.warning("Cannot process Cells() call. No sheets in file.")
                 return "NULL"
@@ -4580,14 +4715,15 @@ class Sheets(VbaLibraryFunc):
                 log.debug("Returning sheet with name '" + str(sheet_id) + "'")
             return curr_sheet
         except Exception as e:
-            pass
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Get sheet by name exception: " + str(e))
 
         # Next see if the sheet ID is an index.
         try:
             sheet_id = int(sheet_id) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Cannot convert sheet ID '" + str(sheet_id) + "' to int")
+                log.debug("Cannot convert sheet ID '" + str(sheet_id) + "' to int. " + str(e))
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
@@ -4595,6 +4731,8 @@ class Sheets(VbaLibraryFunc):
                 log.debug("Returning sheet with index " + str(sheet_id))
             return curr_sheet
         except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Get sheet with index exception: " + str(e))
             log.warning("Did not find sheet with index " + str(sheet_id))
             return None
 
@@ -4610,6 +4748,7 @@ class Value(VbaLibraryFunc):
     """
         
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
@@ -4717,8 +4856,9 @@ class Range(VbaLibraryFunc):
                         val = sheet.cell_dict(curr_row, curr_col)
                     else:       
                         val = str(sheet.cell_value(curr_row, curr_col))
-                except:
-                    pass
+                except Exception as e:
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("get cell val " + str((curr_row, curr_col)) + " error. " + str(e))
                 if (val is not None):
                     #print "(" + str(curr_row) + ", " + str(curr_col) + ")"
                     #print "'" + str(val) + "'"
@@ -4755,10 +4895,10 @@ class Range(VbaLibraryFunc):
             if len(params) == 2 and isinstance(params[0], int) and isinstance(params[1], int):
                 return context.globals["activedocument.content.text"][params[0]:params[1]]
 
-            else:
-                context.increase_general_errors()
-                log.warning("Cannot process Range() call. No Excel file loaded.")
-                return "NULL"
+            # No Range object in Word sample and no loaded Excel file. Bomb out.
+            context.increase_general_errors()
+            log.warning("Cannot process Range() call. No Excel file loaded.")
+            return "NULL"
 
         # Were we given an Excel sheet object?
         sheet = None
@@ -4769,7 +4909,9 @@ class Range(VbaLibraryFunc):
             
         # Return a cell dict rather than the cell value?
         return_dict = False
-        if ((len(params) >= 2) and (params[1] == True)):
+        # We actually want to explcitly check for True.
+        # pylint: disable=singleton-comparison
+        if ((len(params) >= 2) and (params[1] is True)):
             return_dict = True
             
         # Currently only handles Range(x) calls.
@@ -4807,13 +4949,14 @@ class Range(VbaLibraryFunc):
                 try:
                     sheet = context.loaded_excel.sheet_by_index(sheet_index)
                     sheets.append(sheet)
-                except:
+                except Exception as e:
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("context.loaded_excel.sheet_by_index(" + str(sheet_index) + ") error. " + str(e))
                     context.increase_general_errors()
                     log.warning("Cannot process Range() call. No sheets in file.")
                     return "NULL"
 
         # Try the given sheets until we read a cell.                
-        r = None
         col = None
         for sheet in sheets:
 
@@ -4855,8 +4998,9 @@ class Range(VbaLibraryFunc):
         col = "??"
         try:
             row, col = self._get_row_and_column(params[0])
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("self._get_row_and_column(" + str(params[0]) + ") error. " + str(e))
         #print sheet
         log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "] (2)")
         context.increase_general_errors()
@@ -4868,6 +5012,7 @@ class CountA(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
@@ -4887,6 +5032,7 @@ class SpecialCells(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # 1st arg should be a list of cell values, 2nd arg the type of cell to include.
         if ((params is None) or (len(params) < 2)):
@@ -4895,21 +5041,16 @@ class SpecialCells(VbaLibraryFunc):
 
         # Sometimes the args are swapped. Handle that.
         cells = None
-        cell_type = None
         if (isinstance(params[0], list) and isinstance(params[1], int)):
             cells = params[0]
-            cell_type = params[1]
         if (isinstance(params[1], list) and isinstance(params[0], int)):
             cells = params[1]
-            cell_type = params[0]
         if (cells is None):
             log.warning("Incorrect argument types passed to SpecialCells(). Returning NULL")
             return "NULL"
-        #if (cell_type != 2):
-        #    log.warning("Only handling SpecialCells(xlCellTypeConstants). Returning NULL")
-        #    return "NULL"
             
-        # Currently only handling cell type xlCellTypeConstants.
+        # Currently only handling cell type xlCellTypeConstants. This assumes that is what is
+        # wanted.
         r = []
         for cell in cells:
             cell_value = str(cell)
@@ -4929,6 +5070,7 @@ class RandBetween(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
 
         # Sanity check.
         if ((params is None) or (len(params) < 2)):
@@ -4946,6 +5088,9 @@ class DatePart(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return 3
     
 class Date(VbaLibraryFunc):
@@ -4955,6 +5100,9 @@ class Date(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return date.today()
 
 class DateAdd(VbaLibraryFunc):
@@ -4964,6 +5112,9 @@ class DateAdd(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return date.today()
     
 class Year(VbaLibraryFunc):
@@ -4972,11 +5123,13 @@ class Year(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         t = params[0]
         r = "**MATCH ANY**"
-        if ((isinstance(t, datetime)) or (isinstance(t, date))):
+        if isinstance(t, (date, datetime)):
             r = int(t.year)
         return r
 
@@ -4986,6 +5139,8 @@ class Minute(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         t = params[0]
@@ -5000,6 +5155,8 @@ class Second(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         t = params[0]
@@ -5009,8 +5166,9 @@ class Second(VbaLibraryFunc):
         try:
             d = datetime.strptime(t, '%H:%M:%S')
             r = int(d.second)
-        except:
-            pass
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Second(" + str(params) + ") error. " + str(e))
         return r
 
 class Variable(VbaLibraryFunc):
@@ -5044,6 +5202,8 @@ class CDbl(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         try:
@@ -5101,7 +5261,8 @@ class Print(VbaLibraryFunc):
 
         # Print #NN to a file ID?
         if (len(params) == 2):
-            return self._handle_file_print(context, params)
+            self._handle_file_print(context, params)
+            return
         
         # Regular Debug.Print() ?
         if (len(params) != 1):
@@ -5154,18 +5315,6 @@ class MoveFile(VbaLibraryFunc):
             context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
                                   'MoveFile() Call', strip_null_bytes=True)
 
-class URLDownloadToFile(VbaLibraryFunc):
-    """
-    URLDownloadToFile() external function.
-    """
-
-    def eval(self, context, params=None):
-        if (params is None):
-            return
-        if (len(params) >= 3):
-            context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
-            context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
-
 class FollowHyperlink(VbaLibraryFunc):
     """
     FollowHyperlink() function.
@@ -5180,8 +5329,10 @@ class FollowHyperlink(VbaLibraryFunc):
 class GetExtensionName(VbaLibraryFunc):
 
     def eval(self, context, params=None):
+        context = context # pylint
+
         if (params is None):
-            return
+            return ""
         r = ""
         if (len(params) >= 1):
             fname = str(params[0])
@@ -5208,10 +5359,10 @@ class NumPut(VbaLibraryFunc):
         if (len(params) < 3):
             return
         val = params[0]
-        pos = params[2]
 
         # Write the byte.
         # TODO: Use the position parameter to write the byte to the proper position.
+        #pos = params[2]
         context.write_file("DOM_NumPut.dat", chr(val))
     
 class CreateTextFile(VbaLibraryFunc):
@@ -5260,7 +5411,7 @@ class Open(CreateTextFile):
 
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
-            return "NULL"
+            return
         
         # Is this a HTTP GET?
         if ((len(params) >= 2) and
@@ -5289,6 +5440,9 @@ class Timer(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
         return int(time.mktime(datetime.now().timetuple()))
 
 class Unescape(VbaLibraryFunc):
@@ -5297,7 +5451,8 @@ class Unescape(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-
+        context = context # pylint
+        
         # Get the string to unescape.
         if ((params is None) or (len(params) < 1)):
             return "NULL"
@@ -5361,6 +5516,8 @@ class InternetGetConnectedState(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
 
         # Always connected.
         return True
@@ -5371,6 +5528,9 @@ class DateDiff(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+        
         return 15904387438 + (5000 - random.randint(100, 10000))
     
 class Not(VbaLibraryFunc):
@@ -5379,7 +5539,8 @@ class Not(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-
+        context = context # pylint
+        
         if ((len(params) == 0) or (not isinstance(params[0], bool))):
             log.warning("Cannot compute Not(" + str(params) + ").")
             return "NULL"
@@ -5391,7 +5552,9 @@ class InternetOpenA(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-
+        context = context # pylint
+        params = params # pylint
+        
         # Always succeeds.
         return True
 
@@ -5401,6 +5564,7 @@ class FreeFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        params = params # pylint        
 
         # Return index of next open file.
         v = len(context.open_files) + 1
@@ -5412,6 +5576,8 @@ class CreateElement(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
 
         # Assume that this is something like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
         return "Microsoft.XMLDOM"
@@ -5422,6 +5588,8 @@ class Send(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
         return 200
 
 class SetTimeouts(VbaLibraryFunc):
@@ -5468,8 +5636,11 @@ class WriteProcessMemory(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
-            return "NULL"
-        context.report_action('Write Process Memory', str(params), 'External Function: kernel32.dll / WriteProcessMemory', strip_null_bytes=True)
+            return
+        context.report_action('Write Process Memory',
+                              str(params),
+                              'External Function: kernel32.dll / WriteProcessMemory',
+                              strip_null_bytes=True)
 
         # Track the shellcode bytes.
         if (len(params) < 4):
@@ -5484,7 +5655,7 @@ class Write(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
-            return "NULL"
+            return
 
         # Get the data.
         data = str(params[0])
@@ -5520,6 +5691,8 @@ class Write(VbaLibraryFunc):
 
         context.write_file(file_id, data)
 
+
+# Save classes emulating various VB functions for later lookup.
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
                StrConv, Split, Int, Item, StrReverse, InStr, Replace,
@@ -5610,4 +5783,3 @@ for name, value in (
         ('vbMinimizedNoFocus', 6),
 ):
     VBA_LIBRARY[name.lower()] = value
-
