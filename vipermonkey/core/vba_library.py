@@ -4841,7 +4841,7 @@ class Worksheets(Sheets):
 
 class Value(VbaLibraryFunc):
     """
-    Excel cell  Value() function (actually field).
+    Excel cell Value() function (actually field).
     """
         
     def eval(self, context, params=None):
@@ -5082,6 +5082,8 @@ class Range(VbaLibraryFunc):
                 if (hasattr(sheet, "name")):
                     sheet_name = sheet.name
                 log.info("Read cell (" + range_index + ") from sheet " + str(sheet_name) + " = '" + str(val) +"'")
+
+                # Regular direct read of range of cells.
                 return val            
 
             except Exception as e:

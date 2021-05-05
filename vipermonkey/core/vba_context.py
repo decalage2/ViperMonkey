@@ -254,6 +254,12 @@ class Context(object):
         
         # Track whether emulation actions have been reported.
         self.got_actions = False
+
+        # Track whether a wildcard value has appeared in a boolean expression.
+        self.tested_wildcard = False
+
+        # Whether a wildcard equality check should always match or never match.
+        self.wildcard_match_value = True
         
         # Track all external functions called by the program.
         self.external_funcs = []
@@ -363,6 +369,8 @@ class Context(object):
                 self.globals = dict(context.globals)
             else:
                 self.globals = context.globals
+            self.tested_wildcard = context.tested_wildcard
+            self.wildcard_match_value = context.wildcard_match_value
             self.in_bitwise_expression = context.in_bitwise_expression
             self.last_saved_file = context.last_saved_file
             self.curr_func_name = context.curr_func_name

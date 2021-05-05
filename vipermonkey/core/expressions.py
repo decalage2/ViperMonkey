@@ -2189,7 +2189,20 @@ class MemberAccessExpression(VBA_Object):
 
                     # Return the field value.
                     return tmp_lhs[key.lower()]
+
+        # Value of an Excel cell, not represented as a dict?
+        tmp_str = str(self).lower()
+        if (tmp_str.endswith(".value")):
         
+            # If the variable we are accessing .Value in is in the
+            # context just return the variable value.
+            tmp_var = str(self)[:-len(".value")]
+            if (context.contains(tmp_var)):
+                r = context.get(tmp_var)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Got .Value of " + str(self) + " = " + str(r))
+                return r
+                
         # Easiest case. Do we have this saved as a variable?
         try:
             r = context.get(str(self), search_wildcard=False)
@@ -2199,7 +2212,6 @@ class MemberAccessExpression(VBA_Object):
         except KeyError:
 
             # Are we reading some text from an embedded object?
-            tmp_str = str(self).lower()
             if (tmp_str.endswith(".caption") or
                 tmp_str.endswith(".text") or
                 tmp_str.endswith(".controltiptext")):
@@ -2212,7 +2224,7 @@ class MemberAccessExpression(VBA_Object):
                     return r
                 except KeyError:
                     pass
-
+                
         # Harder case. Resolve any arguments to function calls in the member access expression
         # and try looking that up as a variable.
         expr_list = [self.lhs]
@@ -4226,13 +4238,18 @@ class BoolExprItem(VBA_Object):
             ("**MATCH ANY**" in rhs_str) or
             ("CURRENT_FILE_NAME" in lhs_str) or
             ("CURRENT_FILE_NAME" in rhs_str)):
+
+            # Track that we have evaluated a wildcard expression.
+            context.tested_wildcard = True
+            
+            # Always match or always fail to match.
             if (self.op == "<>"):
                 if (context.in_bitwise_expression):
                     return 0
-                return False
+                return not context.wildcard_match_value
             if (context.in_bitwise_expression):
                 return -1
-            return True
+            return context.wildcard_match_value
 
         # Evaluate the expression.
         r = False
