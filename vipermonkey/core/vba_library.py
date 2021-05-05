@@ -195,24 +195,6 @@ class GetSaveAsFilename(VbaLibraryFunc):
     def return_type(self):
         return "STRING"
 
-class IsObject(VbaLibraryFunc): REMOVE REMOVE!!!!
-    """
-    IsObject() function (stubbed).
-    """
-
-    def eval(self, context, params=None):
-        context = context # pylint
-        params = params # pylint
-
-        # Say everything is an object and see what happens.
-        return True
-
-    def num_args(self):
-        return 1
-
-    def return_type(self):
-        return "BOOLEAN"
-
 class CreateFolder(VbaLibraryFunc):
     """
     CreatFolder() method.
