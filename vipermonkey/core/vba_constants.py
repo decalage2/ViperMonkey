@@ -4899,6 +4899,8 @@ class VbaConstants(object):
         self.globals["TotalPhysicalMemory".lower()] = 2097741824
         self.globals["OSlanguage".lower()] = "**MATCH ANY**"
         self.globals["Err.Number".lower()] = "**MATCH ANY**"
+        self.globals["Err.HelpFile".lower()] = "Some value for Err.HelpFile"
+        self.globals["Err.HelpContext".lower()] = "Some value for Err.HelpContext"
         self.globals["Selection".lower()] = "**SELECTED TEXT IN DOC**"
         self.globals["msoFontAlignTop".lower()] = 1
         self.globals["msoTextBox".lower()] = "**MATCH ANY**"

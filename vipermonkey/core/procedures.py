@@ -143,10 +143,6 @@ class Sub(VBA_Object):
 
         # create a new context for this execution:
         caller_context = context
-        # Looks like local variables from the calling context can be accessed in the called
-        # function, so keep those.
-        #context = Context(context=caller_context, _locals=context.locals)
-        # TODO: Local variable inheritence needs to be investigated more...
         context = Context(context=caller_context)
         context.in_procedure = True
 
@@ -281,6 +277,9 @@ class Sub(VBA_Object):
 
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
+
+        # Same with whether we did any wildcard value tests.
+        caller_context.tested_wildcard = context.tested_wildcard
         
         # Handle subs with no return values.
         try:            
@@ -669,6 +668,9 @@ class Function(VBA_Object):
 
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
+
+        # Same with whether we did any wildcard value tests.
+        caller_context.tested_wildcard = context.tested_wildcard
         
         # TODO: get result from context.locals
         context.exit_func = False

@@ -565,7 +565,7 @@ class ViperMonkey(StubbedEngine):
         r.sort()
         return r
         
-    def trace(self, entrypoint='*auto'):
+    def trace(self, entrypoint='*auto', regular_emulation=True):
 
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
@@ -581,7 +581,7 @@ class ViperMonkey(StubbedEngine):
                           metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
         context.do_jit = self.do_jit
-
+            
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
         is_data = False
@@ -684,21 +684,33 @@ class ViperMonkey(StubbedEngine):
                     all_comments += comment + "/n"
                 self.metadata.comments = all_comments
             
-        # reset the actions list, in case it is called several times
-        self.actions = []
+        # Reset the actions list, in case it is called several times
+        if regular_emulation:
+            self.actions = []
 
+        # Track whether wild card values have been checked in boolean expressions.
+        tested_wildcard = False
+
+        # Set whether wildcard matches will always match or always fail to match.
+        context.wildcard_match_value = regular_emulation
+        
         # Track the external functions called.
         self.external_funcs = self._get_external_funcs()
         context.external_funcs = self.external_funcs
-
+        
         # First emulate any Visual Basic that appears outside of subs/funcs.
+        if (regular_emulation):
+            context.report_action('Start Regular Emulation', '', 'All wildcard matches will match')
+        else:
+            context.report_action('Start Speculative Emulation', '', 'All wildcard matches will fail')
         log.info("Emulating loose statements...")
         done_emulation = False
         for m in self.modules:
             if (m.eval(context=context)):
                 context.dump_all_files(autoclose=True)
                 done_emulation = context.got_actions
-        
+                tested_wildcard = tested_wildcard or context.tested_wildcard
+                
         # Look for hardcoded entry functions.
         for entry_point in self.entry_points:
             entry_point = entry_point.lower()
@@ -713,9 +725,11 @@ class ViperMonkey(StubbedEngine):
                 tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
                 self.globals[entry_point].eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
+
                 # Save whether we got actions from this entry point.
                 context.got_actions = tmp_context.got_actions
                 done_emulation = True
+                tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
 
         # Look for callback functions that can act as entry points.
         for name in self.globals.keys():
@@ -740,7 +754,8 @@ class ViperMonkey(StubbedEngine):
                         tmp_context.dump_all_files(autoclose=True)
                         # Save whether we got actions from this entry point.
                         context.got_actions = tmp_context.got_actions
-
+                        tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+                        
         # Did we find a proper entry point?
         if (not done_emulation):
 
@@ -758,9 +773,21 @@ class ViperMonkey(StubbedEngine):
             for only_sub in zero_arg_subs:
                 sub_name = only_sub.name
                 context.report_action('Found Heuristic Entry Point', str(sub_name), '')
-                only_sub.eval(context=context)
-                context.dump_all_files(autoclose=True)
-                
+                # We will be trying multiple entry points, so make a copy
+                # of the context so we don't accumulate stage changes across
+                # entry points.
+                tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                only_sub.eval(context=tmp_context)
+                tmp_context.dump_all_files(autoclose=True)
+                tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+
+        # If we used some wildcard boolean values in boolean expressions we now have
+        # an opportunity to do some really simple speculative emulation. We just
+        # emulated the behavior where all comparisons to a wild card value match, now
+        # see what the behavior looks like if NONE of the comparisons match.
+        if (tested_wildcard and regular_emulation):
+            self.trace(regular_emulation=False)
+            
     def eval(self, expr):
         """
         Parse and evaluate a single VBA expression
@@ -788,8 +815,8 @@ class ViperMonkey(StubbedEngine):
         t = prettytable.PrettyTable(('Action', 'Parameters', 'Description'))
         t.align = 'l'
         t.max_width['Action'] = 20
-        t.max_width['Parameters'] = 25
-        t.max_width['Description'] = 25
+        t.max_width['Parameters'] = 45
+        t.max_width['Description'] = 35
         for action in self.actions:
             # Cut insanely large results down to size.
             str_action = str(action)
