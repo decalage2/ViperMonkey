@@ -1,3 +1,8 @@
+"""@package vba_lines Parsing VBScript/VBA code lines.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Lines
 
@@ -111,12 +116,14 @@ module_body_lines = Combine(ZeroOrMore(logical_line))  # .setDebug()
 # === FUNCTIONS ==============================================================
 
 def vba_collapse_long_lines(vba_code):
-    """
-    Parse a VBA module code to detect continuation line characters (underscore) and
-    collapse split lines. Continuation line characters are replaced by spaces.
+    """Parse a VBA module code to detect continuation line characters
+    (underscore) and collapse split lines. Continuation line
+    characters are replaced by spaces.
 
-    :param vba_code: str, VBA module code
-    :return: str, VBA module code with long lines collapsed
+    @param vba_code (str) The VBA code to modify.
+
+    @return (str) The given VBA code with long lines collapsed.
+
     """
     # make sure the last line ends with a newline char, otherwise the parser breaks:
     if (vba_code is None):
