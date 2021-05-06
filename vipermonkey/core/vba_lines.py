@@ -50,14 +50,13 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from logger import log
-
 # Important: need to change the default pyparsing whitespace setting, because CRLF
 # is not a whitespace for VBA.
 import pyparsing
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
-from pyparsing import *
+from pyparsing import CharsNotIn, Literal, Optional, ZeroOrMore, Word, Combine, \
+    LineStart, replaceWith
 
 # --- WSC = White Space Character --------------------------------------------
 
@@ -72,8 +71,6 @@ from pyparsing import *
 # => see http://www.fileformat.info/info/unicode/category/Zs/list.htm
 
 # TODO: add unicode WS characters, if unicode is properly supported
-
-ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 # IMPORTANT NOTE: it seems preferable NOT to use pyparsing's LineEnd()/lineEnd,
 #                 but line_terminator instead (defined below)
