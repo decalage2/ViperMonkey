@@ -1,3 +1,9 @@
+"""@package vba_library Emulation of builtin VBScript/VBA functions.
+
+Each function is represented with a class in this package.
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Library
 
@@ -76,8 +82,21 @@ from logger import log
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 
 def member_access(var, field, globals_calling_scope=None):
-    """
-    Read a field from an object. Used in Python JIT code.
+    """Read a field from an object. Used in Python JIT code.
+
+    @param var (any) The variable from which to read a field. If this
+    is a dict the field will be read from the dict.
+
+    @param field (str) The name of the field to read. If var is not a
+    dict a global or local variable with the name of the given field
+    will be returned if it exists.
+    
+    @param global_calling_scope (boolean) If True only look for
+    defined variables in the global scope (no local).
+
+    @return (any) If found the value of the read field will be
+    returned, if not found "NULL" or the value of the var parameter
+    will be returned.
     """
 
     # Were we given the globals in the calling scope?
@@ -127,20 +146,46 @@ def member_access(var, field, globals_calling_scope=None):
 # shellcode variable as what is updated by emulated VBA functions
 # defined in this file.
 def get_raw_shellcode_data():
+    """Read the current shellcode bytes written during emulation.
+
+    @return (dict) A dict mapping shellcode byte addresses (int) to
+    shellcode byte values (int).
+    """
     import vba_context
     return vba_context.shellcode
     
 def run_external_function(func_name, context, params, lib_info):
-    """
-    Fake running an external DLL function with the given parameters.
+    """Fake running an external DLL function with the given
+    parameters. Saves an action of calling the given function in the
+    given context.
+
+    @param func_name (str) The name of the function.
+    
+    @param context (Context object) The current program state. This
+    will be updated.
+    
+    @param params (list) The function call parameters.
+    
+    @param lib_info (str) The name of the DLL from which the function
+    is imported.
     """
     call_str = str(func_name) + "(" + str(params) + ")"
     context.report_action('External Call', call_str, lib_info)
     return 1
     
 def run_function(func_name, context, params):
-    """
-    Run a VBA library function with the given parameters.
+    """Run an emulated VBA library function with the given
+    parameters. Used in Python JIT code.
+
+    @param func_name (str) The name of the function.
+    
+    @param context (Context object) The current program state. This
+    will be updated.
+    
+    @param params (list) The function call parameters.
+    
+    @return (any) On success return the result of emulating the given
+    function call, on failure return None.
     """
 
     # Rename python WScript.Shell.Run() calls.
@@ -159,8 +204,8 @@ def run_function(func_name, context, params):
 var_names = None
 
 class ExecuteExcel4Macro(VbaLibraryFunc):
-    """
-    ExecuteExcel4Macro() dynamic XLM evaluation function.
+    """Emulate ExecuteExcel4Macro() dynamic XLM evaluation function.
+
     """
 
     def eval(self, context, params=None):
@@ -174,8 +219,8 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
         return 1
     
 class GetSaveAsFilename(VbaLibraryFunc):
-    """
-    GetSaveAsFilename() function (stubbed).
+    """Emulate GetSaveAsFilename() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -191,8 +236,8 @@ class GetSaveAsFilename(VbaLibraryFunc):
         return "STRING"
 
 class CreateFolder(VbaLibraryFunc):
-    """
-    CreatFolder() method.
+    """Emulate CreatFolder() method.
+
     """
 
     def eval(self, context, params=None):
@@ -206,8 +251,8 @@ class CreateFolder(VbaLibraryFunc):
         return 1
     
 class BuildPath(VbaLibraryFunc):
-    """
-    BuildPath() method
+    """Emulate BuildPath() method
+
     """
 
     def eval(self, context, params=None):
@@ -219,8 +264,8 @@ class BuildPath(VbaLibraryFunc):
         return str(params[0]) + str(params[1])
     
 class GetSpecialFolder(VbaLibraryFunc):
-    """
-    GetSpecialFolder() function
+    """Emulate GetSpecialFolder() function
+
     """
 
     def eval(self, context, params=None):
@@ -249,8 +294,8 @@ class GetSpecialFolder(VbaLibraryFunc):
         return "STRING"
 
 class GetFolder(VbaLibraryFunc):
-    """
-    GetFolder() function
+    """Emulate GetFolder() function
+
     """
 
     def eval(self, context, params=None):
@@ -266,8 +311,9 @@ class GetFolder(VbaLibraryFunc):
         return "STRING"
     
 class MonthName(VbaLibraryFunc):
-    """
-    MonthName() function. Currently only returns results in Italian.
+    """Emulate MonthName() function. Currently only returns results in
+    Italian.
+
     """
 
     def eval(self, context, params=None):
@@ -291,8 +337,8 @@ class MonthName(VbaLibraryFunc):
         return "STRING"
     
 class MultiByteToWideChar(VbaLibraryFunc):
-    """
-    MultiByteToWideChar() kernel32.dll function. 
+    """Emulate MultiByteToWideChar() kernel32.dll function.
+
     """
 
     def eval(self, context, params=None):
@@ -340,8 +386,8 @@ class MultiByteToWideChar(VbaLibraryFunc):
         return 5
     
 class IsEmpty(VbaLibraryFunc):
-    """
-    IsEmpty() function.
+    """Emulate IsEmpty() function.
+
     """
 
     def eval(self, context, params=None):
@@ -368,8 +414,8 @@ class IsEmpty(VbaLibraryFunc):
         return 1
     
 class LanguageID(VbaLibraryFunc):
-    """
-    Stubbed LanguageID() reference.
+    """Emulate LanguageID() reference (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -383,8 +429,8 @@ class LanguageID(VbaLibraryFunc):
         return 1
     
 class URLDownloadToFile(VbaLibraryFunc):
-    """
-    URLDownloadToFile() external function
+    """Emulate URLDownloadToFile() external function.
+
     """
 
     def eval(self, context, params=None):
@@ -404,8 +450,8 @@ class URLDownloadToFileW(URLDownloadToFile):
     pass
         
 class WeekDay(VbaLibraryFunc):
-    """
-    VBA WeekDay function
+    """Emulate VBA WeekDay function.
+
     """
 
     def eval(self, context, params=None):
@@ -440,8 +486,8 @@ class WeekDay(VbaLibraryFunc):
         return 1
     
 class Format(VbaLibraryFunc):
-    """
-    VBA Format function
+    """Emulate VBA Format function.
+
     """
 
     def eval(self, context, params=None):
@@ -477,8 +523,9 @@ class Format(VbaLibraryFunc):
         return "STRING"
     
 class MsgBox(VbaLibraryFunc):
-    """
-    6.1.2.8.1.13 MsgBox
+    """Emulate MsgBox() function. Stubbed to just track the message
+    box call as an action and always return vbOK.
+
     """
 
     def eval(self, context, params=None):
@@ -489,8 +536,8 @@ class MsgBox(VbaLibraryFunc):
         return 1
     
 class Kill(VbaLibraryFunc):
-    """
-    Kill statement.
+    """Emulate Kill() function.
+
     """
 
     def eval(self, context, params=None):
@@ -505,8 +552,8 @@ class Kill(VbaLibraryFunc):
         return "STRING"
     
 class RmDir(VbaLibraryFunc):
-    """
-    RmDir statement.
+    """Emulate RmDir() function.
+
     """
 
     def eval(self, context, params=None):
@@ -521,9 +568,9 @@ class RmDir(VbaLibraryFunc):
         return "STRING"
 
 class _Chr(VbaLibraryFunc):
-    """
-    Implementation of Chr() and ChrW() used in Python JIT code.
-    This is also used under the covers by lib_functions.Chr.eval().
+    """Implementation of Chr() and ChrW() used in Python JIT code.  This
+    is also used under the covers by lib_functions.Chr.eval().
+
     """
 
     def eval(self, context, params=None):
@@ -588,8 +635,8 @@ class ChrW(_Chr):
     pass
     
 class ChDir(VbaLibraryFunc):
-    """
-    ChDir() function.
+    """Emulate ChDir() function.
+
     """
 
     def eval(self, context, params=None):
@@ -604,8 +651,8 @@ class ChDir(VbaLibraryFunc):
         return "STRING"
     
 class Quit(VbaLibraryFunc):
-    """
-    Wscript.Quit(). Just keeps going.
+    """Emulate Wscript.Quit() (stubbed), just keeps going.
+
     """
 
     def eval(self, context, params=None):
@@ -619,8 +666,8 @@ class Quit(VbaLibraryFunc):
         return 0
     
 class QBColor(VbaLibraryFunc):
-    """
-    QBColor() color lookup function.
+    """Emulate QBColor() color lookup function.
+
     """
 
     def eval(self, context, params=None):
@@ -655,8 +702,8 @@ class QBColor(VbaLibraryFunc):
         return 1
     
 class MakeSureDirectoryPathExists(VbaLibraryFunc):
-    """
-    MakeSureDirectoryPathExists() VB function (stubbed).
+    """Emulate MakeSureDirectoryPathExists() VB function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -669,8 +716,8 @@ class MakeSureDirectoryPathExists(VbaLibraryFunc):
         return 1
     
 class FolderExists(VbaLibraryFunc):
-    """
-    FolderExists() VB function (stubbed).
+    """Emulate FolderExists() VB function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -689,8 +736,8 @@ class FolderExists(VbaLibraryFunc):
         return 1
 
 class GetFile(VbaLibraryFunc):
-    """
-    GetFile() VB method (stubbed).
+    """Emulate GetFile() VB method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -702,8 +749,8 @@ class GetFile(VbaLibraryFunc):
         return 1
 
 class FileLen(VbaLibraryFunc):
-    """
-    FileLen() VB function (stubbed). Always returns -1.
+    """Emulate FileLen() VB function (stubbed). Always returns -1.
+
     """
 
     def eval(self, context, params=None):
@@ -716,8 +763,8 @@ class FileLen(VbaLibraryFunc):
         return 1
     
 class FileCopy(VbaLibraryFunc):
-    """
-    FileCopy() VB function (stubbed).
+    """Emulate FileCopy() VB function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -732,8 +779,8 @@ class CopyFile(FileCopy):
     pass
     
 class CopyHere(VbaLibraryFunc):
-    """
-    CopyHere() VB function (stubbed).
+    """Emulate CopyHere() VB function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -745,8 +792,10 @@ class CopyHere(VbaLibraryFunc):
         return 1
         
 class FileExists(VbaLibraryFunc):
-    """
-    FileExists() VB function (stubbed).
+    """Emulate FileExists() VB function (stubbed). For some files it
+    always says they exist ("cmd.exe", etc.), for the rest it always
+    says they do not exist.
+
     """
 
     def eval(self, context, params=None):
@@ -769,8 +818,8 @@ class FileExists(VbaLibraryFunc):
         return 1
     
 class Switch(VbaLibraryFunc):
-    """
-    Switch() logic flow function.
+    """Emulate Switch() logic flow function.
+
     """
 
     def eval(self, context, params=None):
@@ -799,8 +848,8 @@ class Switch(VbaLibraryFunc):
         return 2
     
 class Len(VbaLibraryFunc):
-    """
-    Len() function.
+    """Emulate Len() function.
+
     """
 
     def eval(self, context, params=None):
@@ -831,8 +880,8 @@ class Len(VbaLibraryFunc):
         return 1
         
 class LenB(VbaLibraryFunc):
-    """
-    LenB() function.
+    """Emulate LenB() function.
+
     """
 
     def eval(self, context, params=None):
@@ -850,8 +899,8 @@ class LenB(VbaLibraryFunc):
         return 1
         
 class Sleep(VbaLibraryFunc):
-    """
-    Stubbed Sleep() function.
+    """Emulate Sleep() function (stubbed). Does nothing.
+    
     """
 
     def eval(self, context, params=None):
@@ -861,8 +910,8 @@ class Sleep(VbaLibraryFunc):
         return 1
     
 class TypeName(VbaLibraryFunc):
-    """
-    TypeName() function.
+    """Emulate TypeName() function.
+
     """
 
     def eval(self, context, params=None):
@@ -895,8 +944,8 @@ class TypeName(VbaLibraryFunc):
         return "STRING"
     
 class VarType(VbaLibraryFunc):
-    """
-    VarType() function.
+    """Emulate VarType() function.
+
     """
 
     def eval(self, context, params=None):
@@ -906,7 +955,7 @@ class VarType(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return 0
 
-        # Return VB type.
+        # Return VB type ID.
         val = params[0]
         if ((val == "NULL") or (val == "")):
             return 0
@@ -926,7 +975,8 @@ class VarType(VbaLibraryFunc):
         return 1
     
 class Mid(VbaLibraryFunc):
-    """Mid / MidB function
+    """Emulate Mid / MidB function
+
     """
 
     def eval(self, context, params=None):
@@ -1020,8 +1070,8 @@ class MidB(Mid):
     pass
 
 class Left(VbaLibraryFunc):
-    """
-    Left function.
+    """Emulate Left() function.
+
     """
 
     def eval(self, context, params=None):
@@ -1075,8 +1125,8 @@ class Left(VbaLibraryFunc):
         return "STRING"
     
 class PrivateProfileString(VbaLibraryFunc):
-    """
-    PrivateProfileString method.
+    """Emulate PrivateProfileString method.
+
     """
 
     def eval(self, context, params=None):
@@ -1092,8 +1142,8 @@ class PrivateProfileString(VbaLibraryFunc):
         return "STRING"
     
 class EOF(VbaLibraryFunc):
-    """
-    Stubbed EOF file method.
+    """Emulate Stubbed EOF() file method.
+
     """
 
     def eval(self, context, params=None):
@@ -1106,8 +1156,8 @@ class EOF(VbaLibraryFunc):
         return 1
     
 class Error(VbaLibraryFunc):
-    """
-    Stubbed Error() method.
+    """Emulate Stubbed Error() method.
+
     """
 
     def eval(self, context, params=None):
@@ -1123,8 +1173,8 @@ class Error(VbaLibraryFunc):
         return "STRING"
     
 class Right(VbaLibraryFunc):
-    """
-    Right function.
+    """Emulate Right() function.
+
     """
 
     def eval(self, context, params=None):
@@ -1177,8 +1227,9 @@ class Right(VbaLibraryFunc):
         return "STRING"
     
 class BuiltInDocumentProperties(VbaLibraryFunc):
-    """
-    Simulate calling ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
+    """Emulate calling
+    ActiveDocument.BuiltInDocumentProperties('PROPERTYNAME')
+
     """
 
     def eval(self, context, params=None):
@@ -1200,8 +1251,8 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
         return "STRING"
     
 class Item(BuiltInDocumentProperties):
-    """
-    Assumes that Item() is only called on BuiltInDocumentProperties.
+    """Assumes that Item() is only called on BuiltInDocumentProperties.
+
     """
 
     def eval(self, context, params=None):
@@ -1251,10 +1302,10 @@ class Item(BuiltInDocumentProperties):
         return super(Item, self).eval(context, params)
 
 class Items(VbaLibraryFunc):
-    """
-    Modified version of Scripting.Dcitionary.Items(). ViperMonkey modifies
-    these calls to take the underlying dict containing the items as the 1st
-    parameter.
+    """Modified version of Scripting.Dictionary.Items() call. ViperMonkey
+    modifies these calls to take the underlying dict containing the
+    items as the 1st parameter.
+
     """
 
     def eval(self, context, params=None):
@@ -1301,8 +1352,8 @@ class Items(VbaLibraryFunc):
         return added_items[index]
     
 class Shell(VbaLibraryFunc):
-    """Function Shell(PathName As Variant, Optional WindowStyle As
-    VbAppWinStyle = vbMinimizedFocus) As Double
+    """Emulate Function Shell(PathName As Variant, Optional WindowStyle
+    As VbAppWinStyle = vbMinimizedFocus) As Double
 
     Runs an executable program and returns a Double representing the
     implementation-defined program's task ID if successful, otherwise
@@ -1347,8 +1398,8 @@ class ExecuteStatement(Shell):
     pass
     
 class ShellExecute(Shell):
-    """
-    shell.application.ShellExecute() function.
+    """Emulate shell.application.ShellExecute() function.
+
     """
     
     def eval(self, context, params=None):
@@ -1362,8 +1413,8 @@ class ShellExecute(Shell):
         return 0
 
 class Eval(VbaLibraryFunc):
-    """
-    VBScript expression Eval() function.
+    """Emulate VBScript expression Eval() function.
+
     """
     
     def eval(self, context, params=None):
@@ -1410,8 +1461,8 @@ class Eval(VbaLibraryFunc):
         return "UNKNOWN"
     
 class Exists(VbaLibraryFunc):
-    """
-    Document or Scripting.Dictionary Exists() method.
+    """Emulate Document or Scripting.Dictionary Exists() method.
+
     """
 
     def eval(self, context, params=None):
@@ -1430,8 +1481,8 @@ class Exists(VbaLibraryFunc):
         return False
 
 class Count(VbaLibraryFunc):
-    """
-    Document or Scripting.Dictionary Count() method.
+    """Emulate Document or Scripting.Dictionary Count() method.
+
     """
 
     def eval(self, context, params=None):
@@ -1450,8 +1501,8 @@ class Count(VbaLibraryFunc):
 
 parse_cache = {}
 class Execute(VbaLibraryFunc):
-    """
-    WScript Execute() function.
+    """Emulate WScript Execute() function.
+
     """
 
     def eval(self, context, params=None):
@@ -1566,26 +1617,27 @@ class Execute(VbaLibraryFunc):
         return r
 
 class ExecuteGlobal(Execute):
-    """
-    WScript ExecuteGlobal() function.
+    """Emulate WScript ExecuteGlobal() function.
+
     """
     pass
 
 class AddCode(Execute):
-    """
-    Visual Basic script control AddCode() method..
+    """Emulate Visual Basic script control AddCode() method.
+
     """
     pass
 
 class AddFromString(Execute):
-    """
-    Office programmatic macro editing method..
+    """Emulate Office programmatic macro editing method.
+
     """
     pass
 
 class IsObject(VbaLibraryFunc):
-    """
-    IsObject() function. Currently stubbed to always return True.
+    """Emulate IsObject() function (stubbed). Currently stubbed to always
+    return True.
+
     """
 
     def eval(self, context, params=None):
@@ -1602,8 +1654,8 @@ class IsObject(VbaLibraryFunc):
         return "BOOLEAN"
     
 class AddItem(VbaLibraryFunc):
-    """
-    ListBox AddItem() VB object method.
+    """Emulate ListBox AddItem() VB object method.
+
     """
 
     def eval(self, context, params=None):
@@ -1621,8 +1673,9 @@ class AddItem(VbaLibraryFunc):
         return r
     
 class Add(VbaLibraryFunc):
-    """
-    Add() VB object method. Currently only adds to Scripting.Dictionary objects is supported.
+    """Emulate Add() VB object method. Currently only add to
+    Scripting.Dictionary objects is supported.
+
     """
 
     def eval(self, context, params=None):
@@ -1654,8 +1707,8 @@ class Add(VbaLibraryFunc):
         return obj
 
 class Array(VbaLibraryFunc):
-    """
-    Create an array.
+    """Emulate creating an array with Array() function.
+
     """
 
     def eval(self, context, params=None):
@@ -1670,8 +1723,8 @@ class Array(VbaLibraryFunc):
         return r
 
 class UBound(VbaLibraryFunc):
-    """
-    UBound() array function.
+    """Emulate UBound() array function.
+
     """
 
     def eval(self, context, params=None):
@@ -1690,8 +1743,8 @@ class UBound(VbaLibraryFunc):
         return r
 
 class LBound(VbaLibraryFunc):
-    """
-    LBound() array function.
+    """Emulate LBound() array function.
+
     """
 
     def eval(self, context, params=None):
@@ -1706,8 +1759,8 @@ class LBound(VbaLibraryFunc):
         return r
 
 class Trim(VbaLibraryFunc):
-    """
-    Trim() string function.
+    """Emulate Trim() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1728,8 +1781,8 @@ class Trim(VbaLibraryFunc):
         return "STRING"
     
 class RTrim(VbaLibraryFunc):
-    """
-    RTrim() string function.
+    """Emulate RTrim() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1750,8 +1803,8 @@ class RTrim(VbaLibraryFunc):
         return "STRING"    
 
 class LTrim(VbaLibraryFunc):
-    """
-    LTrim() string function.
+    """Emulate LTrim() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1772,8 +1825,8 @@ class LTrim(VbaLibraryFunc):
         return "STRING"
 
 class AscW(VbaLibraryFunc):
-    """
-    AscW() character function.
+    """Emulate AscW() character function.
+
     """
 
     def eval(self, context, params=None):
@@ -1800,8 +1853,8 @@ class AscB(AscW):
     pass
 
 class International(VbaLibraryFunc):
-    """
-    application.international() Function.
+    """Emulate application.international() Function.
+
     """
 
     def eval(self, context, params=None):
@@ -1812,8 +1865,8 @@ class International(VbaLibraryFunc):
         return "**MATCH ANY**"
 
 class GetLocale(VbaLibraryFunc):
-    """
-    GetLocale() Function.
+    """Emulate GetLocale() Function.
+
     """
 
     def eval(self, context, params=None):
@@ -1824,8 +1877,8 @@ class GetLocale(VbaLibraryFunc):
         return "**MATCH ANY**"
 
 class StrComp(VbaLibraryFunc):
-    """
-    StrComp() string function.
+    """Emulate StrComp() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1851,8 +1904,8 @@ class StrComp(VbaLibraryFunc):
         return 1
 
 class StrPtr(VbaLibraryFunc):
-    """
-    External StrPtr() string function.
+    """Emulate External StrPtr() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1875,8 +1928,8 @@ class StrPtr(VbaLibraryFunc):
         return "STRING"
     
 class StrConv(VbaLibraryFunc):
-    """
-    StrConv() string function.
+    """Emulate StrConv() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -1944,16 +1997,16 @@ class StrConv(VbaLibraryFunc):
         return "STRING"
     
 class Assert(VbaLibraryFunc):
-    """
-    Assert() debug function. Stubbed.
+    """Emulate Assert() debug function (stubbed). Does nothing.
+
     """
 
     def eval(self, context, params=None):
         pass
 
 class Shapes(VbaLibraryFunc):
-    """
-    Shapes() object reference. Stubbed.
+    """Emulate Shapes() object reference (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -1966,8 +2019,8 @@ class Shapes(VbaLibraryFunc):
         return "Shapes('" + str(params[0]) + "')"
 
 class InlineShapes(VbaLibraryFunc):
-    """
-    InlineShapes() object reference. Stubbed.
+    """Emulate InlineShapes() object reference (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -1980,8 +2033,9 @@ class InlineShapes(VbaLibraryFunc):
         return "InlineShapes('" + str(params[0]) + "')"
 
 class GetCursorPos(VbaLibraryFunc):
-    """
-    Faked GetCursorPos() function. Returns random location.
+    """Emulate GetCursorPos() function (stubbed). Returns random
+    location.
+
     """
 
     def eval(self, context, params=None):
@@ -1997,8 +2051,8 @@ class GetCursorPos(VbaLibraryFunc):
         return 0
 
 class VarPtr(VbaLibraryFunc):
-    """
-    Faked VarPtr() function.
+    """Emulate VarPtr() function (stubbed). Just reports an action.
+
     """
 
     def eval(self, context, params=None):
@@ -2010,10 +2064,10 @@ class VarPtr(VbaLibraryFunc):
         context.report_action("External Call", "VarPtr(" + str(val) + ")", "VarPtr", strip_null_bytes=True)
 
 class RtlMoveMemory(VbaLibraryFunc):
-    """
-    External RtlMoveMemory() function.
-    """
+    """Emulate External RtlMoveMemory() function.
 
+    """
+    Emulate 
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return
@@ -2028,8 +2082,8 @@ class RtlMoveMemory(VbaLibraryFunc):
         vba_context.add_shellcode_data(params[0], params[1], params[2])
         
 class GetByteCount_2(VbaLibraryFunc):
-    """
-    String encoder object method.
+    """Emulate string encoder object method GetByteCount_2().
+
     """
 
     def eval(self, context, params=None):
@@ -2040,8 +2094,8 @@ class GetByteCount_2(VbaLibraryFunc):
         return len(params[0])
 
 class GetBytes_4(VbaLibraryFunc):
-    """
-    String encoder object method.
+    """Emulate string encoder object method GetByteCount_4().
+
     """
 
     def eval(self, context, params=None):
@@ -2055,8 +2109,8 @@ class GetBytes_4(VbaLibraryFunc):
         return r
 
 class TransformFinalBlock(VbaLibraryFunc):
-    """
-    Base64 encoder object method.
+    """Emulate base64 encoder object method TransformFinalBlock().
+
     """
 
     def eval(self, context, params=None):
@@ -2108,8 +2162,8 @@ class TransformFinalBlock(VbaLibraryFunc):
         return "STRING"
     
 class Split(VbaLibraryFunc):
-    """
-    Split() string function.
+    """Emulate Split() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -2142,8 +2196,8 @@ class Split(VbaLibraryFunc):
         return r
     
 class Int(VbaLibraryFunc):
-    """
-    Int() function.
+    """Emulate Int() function.
+
     """
 
     def eval(self, context, params=None):
@@ -2178,14 +2232,14 @@ class Int(VbaLibraryFunc):
             return ''
 
 class CInt(Int):
-    """
-    Same as Int() for our purposes.
+    """Emulate Same as Int() for our purposes.
+
     """
     pass
 
 class Oct(VbaLibraryFunc):
-    """
-    Oct() function.
+    """Emulate Oct() function.
+
     """
 
     def eval(self, context, params=None):
@@ -2206,8 +2260,8 @@ class Oct(VbaLibraryFunc):
             return ''
 
 class StrReverse(VbaLibraryFunc):
-    """
-    StrReverse() string function.
+    """Emulate StrReverse() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -2231,8 +2285,8 @@ class StrReverse(VbaLibraryFunc):
         return "STRING"
     
 class RegWrite(VbaLibraryFunc):
-    """
-    RegWrite() function.
+    """Emulate RegWrite() function. Just track registry write.
+
     """
 
     def eval(self, context, params=None):
@@ -2240,8 +2294,8 @@ class RegWrite(VbaLibraryFunc):
         return "NULL"
 
 class SetStringValue(VbaLibraryFunc):
-    """
-    SetStringValue() function.
+    """Emulate SetStringValue() function. Just track registry write.
+
     """
 
     def eval(self, context, params=None):
@@ -2249,8 +2303,8 @@ class SetStringValue(VbaLibraryFunc):
         return "NULL"
 
 class GetRef(VbaLibraryFunc):
-    """
-    GetRef() function.
+    """Emulate GetRef() function.
+
     """
 
     def eval(self, context, params=None):
@@ -2266,7 +2320,8 @@ class GetRef(VbaLibraryFunc):
         return context.get(obj_name)
             
 class Filter(VbaLibraryFunc):
-    """The VBA Filter function returns a subset of a supplied string array, based on supplied criteria.
+    """Emulate Filter function. The VBA Filter function returns a subset
+    of a supplied string array, based on supplied criteria.
 
     The syntax of the function is: Filter( SourceArray, Match, [Include], [Compare] )
 
@@ -2430,8 +2485,8 @@ class Replace(VbaLibraryFunc):
         return "STRING"
     
 class RunShell(VbaLibraryFunc):
-    """
-    Stubbed WScript.Shell Run() method.
+    """Emulate WScript.Shell Run() method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -2440,8 +2495,8 @@ class RunShell(VbaLibraryFunc):
         context.report_action('Execute Command', str(params[0]), 'WScript.Shell.Run()', strip_null_bytes=True)
     
 class SaveToFile(VbaLibraryFunc):
-    """
-    SaveToFile() ADODB.Stream method.
+    """Emulate SaveToFile() ADODB.Stream method.
+
     """
 
     def eval(self, context, params=None):
@@ -2460,8 +2515,8 @@ class SaveToFile(VbaLibraryFunc):
         return "STRING"    
 
 class Paragraphs(VbaLibraryFunc):
-    """
-    Get a specific paragraph.
+    """Emulate Paragraphs() function. Get a specific paragraph.
+
     """
 
     def eval(self, context, params=None):
@@ -2498,8 +2553,8 @@ class Paragraphs(VbaLibraryFunc):
         return r
     
 class SaveAs(VbaLibraryFunc):
-    """
-    ActiveDocument.SaveAs() method.
+    """Emulate ActiveDocument.SaveAs() method.
+
     """
 
     def eval(self, context, params=None):
@@ -2555,8 +2610,8 @@ class SaveAs2(SaveAs):
     pass
     
 class LoadXML(VbaLibraryFunc):
-    """
-    LoadXML() MSXML2.DOMDocument.3.0 method.
+    """Emulate LoadXML() MSXML2.DOMDocument.3.0 method.
+
     """
 
     def eval(self, context, params=None):
@@ -2591,8 +2646,9 @@ class LoadXML(VbaLibraryFunc):
         return xml
 
 class RegRead(VbaLibraryFunc):
-    """
-    RegRead() function.
+    """Emulate RegRead() function (stubbed). Some registry key values
+    are faked, most are not ("" is returned).
+
     """
 
     def eval(self, context, params=None):
@@ -2611,8 +2667,8 @@ class RegRead(VbaLibraryFunc):
         return ""
     
 class Join(VbaLibraryFunc):
-    """
-    Join() string function.
+    """Emulate Join() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -2645,8 +2701,8 @@ class Join(VbaLibraryFunc):
         return "STRING"
     
 class InStr(VbaLibraryFunc):
-    """
-    InStr() string function.
+    """Emulate InStr() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -2708,8 +2764,8 @@ class InStr(VbaLibraryFunc):
         return r
 
 class CVar(VbaLibraryFunc):
-    """
-    CVar() type conversion function.
+    """Emulate CVar() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -2722,8 +2778,8 @@ class CVar(VbaLibraryFunc):
         return params[0]
 
 class IsNumeric(VbaLibraryFunc):
-    """
-    IsNumeric() function.
+    """Emulate IsNumeric() function.
+
     """
 
     def eval(self, context, params=None):
@@ -2740,8 +2796,8 @@ class IsNumeric(VbaLibraryFunc):
             return False
     
 class InStrRev(VbaLibraryFunc):
-    """
-    InStrRev() string function.
+    """Emulate InStrRev() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -2795,8 +2851,8 @@ class InStrRev(VbaLibraryFunc):
 
     
 class Sgn(VbaLibraryFunc):
-    """
-    Sgn() math function.
+    """Emulate Sgn() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2820,8 +2876,8 @@ class Sgn(VbaLibraryFunc):
         return r
         
 class Sqr(VbaLibraryFunc):
-    """
-    Sqr() math function.
+    """Emulate Sqr() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2841,8 +2897,8 @@ class Sqr(VbaLibraryFunc):
         return r
 
 class Abs(VbaLibraryFunc):
-    """
-    Abs() math function.
+    """Emulate Abs() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2862,8 +2918,8 @@ class Abs(VbaLibraryFunc):
         return r
 
 class Fix(VbaLibraryFunc):
-    """
-    Fix() math function.
+    """Emulate Fix() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2883,8 +2939,8 @@ class Fix(VbaLibraryFunc):
         return r
 
 class Round(VbaLibraryFunc):
-    """
-    Round() math function.
+    """Emulate Round() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2907,8 +2963,8 @@ class Round(VbaLibraryFunc):
         return r
 
 class Hour(VbaLibraryFunc):
-    """
-    Hour() time function (stubbed).
+    """Emulate Hour() time function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -2918,8 +2974,8 @@ class Hour(VbaLibraryFunc):
         return 13
     
 class Hex(VbaLibraryFunc):
-    """
-    Hex() math function.
+    """Emulate Hex() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -2947,8 +3003,8 @@ class Hex(VbaLibraryFunc):
         return r
 
 class CByte(VbaLibraryFunc):
-    """
-    CByte() math function.
+    """Emulate CByte() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3014,8 +3070,8 @@ class CLng(VbaLibraryFunc):
         return r
     
 class CBool(VbaLibraryFunc):
-    """
-    CBool() type conversion function.
+    """Emulate CBool() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -3034,8 +3090,8 @@ class CBool(VbaLibraryFunc):
         return r
 
 class CDate(VbaLibraryFunc):
-    """
-    CDate() type conversion function.
+    """Emulate CDate() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -3050,8 +3106,8 @@ class CDate(VbaLibraryFunc):
         return r
 
 class CStr(VbaLibraryFunc):
-    """
-    CStr() type conversion function.
+    """Emulate CStr() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -3069,8 +3125,8 @@ class CStr(VbaLibraryFunc):
         return "STRING"
     
 class CSng(VbaLibraryFunc):
-    """
-    CSng() type conversion function.
+    """Emulate CSng() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -3093,8 +3149,8 @@ class CSng(VbaLibraryFunc):
         return r
     
 class Atn(VbaLibraryFunc):
-    """
-    Atn() math function.
+    """Emulate Atn() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3114,8 +3170,8 @@ class Atn(VbaLibraryFunc):
         return r
 
 class Tan(VbaLibraryFunc):
-    """
-    Tan() math function.
+    """Emulate Tan() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3135,8 +3191,8 @@ class Tan(VbaLibraryFunc):
         return r
         
 class Cos(VbaLibraryFunc):
-    """
-    Cos() math function.
+    """Emulate Cos() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3156,8 +3212,8 @@ class Cos(VbaLibraryFunc):
         return r
         
 class Log(VbaLibraryFunc):
-    """
-    Log() math function.
+    """Emulate Log() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3177,8 +3233,8 @@ class Log(VbaLibraryFunc):
         return r
     
 class String(VbaLibraryFunc):
-    """
-    String() repeated character string creation function.
+    """Emulate String() repeated character string creation function.
+
     """
 
     def eval(self, context, params=None):
@@ -3199,8 +3255,8 @@ class String(VbaLibraryFunc):
         return r
 
 class Dir(VbaLibraryFunc):
-    """
-    Dir() file/directory finding function.
+    """Emulate Dir() file/directory finding function.
+
     """
 
     def eval(self, context, params=None):
@@ -3229,8 +3285,8 @@ class Dir(VbaLibraryFunc):
         return "STRING"
 
 class Choose(VbaLibraryFunc):
-    """
-    Choose() choice function.
+    """Emulate Choose() choice function.
+
     """
 
     def eval(self, context, params=None):
@@ -3258,8 +3314,8 @@ class Choose(VbaLibraryFunc):
         return params[index]
             
 class RGB(VbaLibraryFunc):
-    """
-    RGB() color function.
+    """Emulate RGB() color function.
+
     """
 
     def eval(self, context, params=None):
@@ -3281,8 +3337,8 @@ class RGB(VbaLibraryFunc):
         return r
 
 class Exp(VbaLibraryFunc):
-    """
-    Exp() math function.
+    """Emulate Exp() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3301,8 +3357,8 @@ class Exp(VbaLibraryFunc):
         return r
             
 class Sin(VbaLibraryFunc):
-    """
-    Sin() math function.
+    """Emulate Sin() math function.
+
     """
 
     def eval(self, context, params=None):
@@ -3322,8 +3378,8 @@ class Sin(VbaLibraryFunc):
         return r
             
 class Str(VbaLibraryFunc):
-    """
-    Str() convert number to string function.
+    """Emulate Str() convert number to string function.
+
     """
 
     def eval(self, context, params=None):
@@ -3337,8 +3393,8 @@ class Str(VbaLibraryFunc):
         return r
 
 class Val(VbaLibraryFunc):
-    """
-    Val() convert string to number function.
+    """Emulate Val() convert string to number function.
+
     """
 
     def eval(self, context, params=None):
@@ -3394,8 +3450,9 @@ class Val(VbaLibraryFunc):
         return r
     
 class Base64Decode(VbaLibraryFunc):
-    """
-    Base64Decode() function used by some malware. Note that this is not part of Visual Basic.
+    """Emulate Base64Decode() function used by some malware (Note that
+    this is not part of Visual Basic).
+
     """
 
     def eval(self, context, params=None):
@@ -3417,9 +3474,10 @@ class Base64DecodeString(Base64Decode):
     pass
     
 class CleanString(VbaLibraryFunc):
-    """
-    CleanString() function removes certain characters from the character stream, or translates them
+    """Emulate CleanString() function that removes certain characters from the
+    character stream, or translates them. See
     https://docs.microsoft.com/en-us/office/vba/api/word.application.cleanstring
+
     """
 
     def eval(self,context,params=None):
@@ -3462,8 +3520,7 @@ class CleanString(VbaLibraryFunc):
         return "STRING"
     
 class Pmt(VbaLibraryFunc):
-    """
-    Pmt() payment computation function.
+    """Emulate Pmt() payment computation function.
 
     Returns a Double specifying the payment for an annuity based on
     periodic, fixed payments and a fixed interest rate.
@@ -3528,6 +3585,7 @@ class Pmt(VbaLibraryFunc):
     '                     (1+rate*type) * ( (1+rate)^nper - 1 )
     '
     '               PMT = (-fv - pv) / nper    : if rate == 0
+
     """
     def eval(self, context, params=None):
         context = context # pylint
@@ -3562,8 +3620,8 @@ class Pmt(VbaLibraryFunc):
         return r
 
 class Day(VbaLibraryFunc):
-    """
-    Day() function. This is currently partially implemented.
+    """Emulate Day() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -3598,8 +3656,8 @@ class Day(VbaLibraryFunc):
     """
 
 class Space(VbaLibraryFunc):
-    """
-    Space() string function.
+    """Emulate Space() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -3613,8 +3671,8 @@ class Space(VbaLibraryFunc):
         return "STRING"
     
 class UCase(VbaLibraryFunc):
-    """
-    UCase() string function.
+    """Emulate UCase() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -3629,8 +3687,8 @@ class UCase(VbaLibraryFunc):
         return "STRING"
     
 class LCase(VbaLibraryFunc):
-    """
-    LCase() string function.
+    """Emulate LCase() string function.
+
     """
 
     def eval(self, context, params=None):
@@ -3645,8 +3703,8 @@ class LCase(VbaLibraryFunc):
         return "STRING"
     
 class Randomize(VbaLibraryFunc):
-    """
-    Randomize RNG function.
+    """Emulate Randomize() RNG function.
+
     """
 
     def eval(self, context, params=None):
@@ -3658,8 +3716,8 @@ class Randomize(VbaLibraryFunc):
         return ''
 
 class Rnd(VbaLibraryFunc):
-    """
-    Rnd() RNG function.
+    """Emulate Rnd() RNG function.
+
     """
 
     def eval(self, context, params=None):
@@ -3672,9 +3730,9 @@ class Rnd(VbaLibraryFunc):
         return 0
 
 class OnTime(VbaLibraryFunc):
-    """
-    Stubbed emulation of Application.OnTime(). Just immediately calls
-    the callback function.
+    """Emulate Application.OnTime() (stubbed). Just immediately calls the
+    callback function.
+
     """
 
     def eval(self, context, params=None):
@@ -3704,8 +3762,9 @@ class OnTime(VbaLibraryFunc):
         return eval_arg(callback, context=context)
     
 class Environ(VbaLibraryFunc):
-    """
-    Environ() function for getting environment variable values.
+    """Emulate Environ() function for getting environment variable
+    values. Has faked values for many environment variables.
+
     """
 
     def eval(self, context, params=None):
@@ -3779,8 +3838,9 @@ class ExpandEnvironmentStrings(Environ):
     pass
     
 class DriveExists(VbaLibraryFunc):
-    """
-    DriveExists() function for checking to see if a drive exists.
+    """Emulate DriveExists() function for checking to see if a drive
+    exists.
+
     """
 
     def eval(self, context, params=None):
@@ -3796,8 +3856,8 @@ class DriveExists(VbaLibraryFunc):
         return r
 
 class Navigate(VbaLibraryFunc):
-    """
-    Navigate() function for loading a URL in a web browser.
+    """Emulate Navigate() function for loading a URL in a web browser.
+
     """
 
     def eval(self, context, params=None):
@@ -3809,8 +3869,8 @@ class Navigate(VbaLibraryFunc):
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
 
 class IsNull(VbaLibraryFunc):
-    """
-    IsNull() function.
+    """Emulate IsNull() function.
+
     """
 
     def eval(self, context, params=None):
@@ -3822,8 +3882,8 @@ class IsNull(VbaLibraryFunc):
         return ((arg is None) or (arg == "NULL") or (arg == 0) or (arg == ""))
 
 class IIf(VbaLibraryFunc):
-    """
-    IIf() if-like function.
+    """Emulate IIf() if-like function.
+
     """
 
     def eval(self, context, params=None):
@@ -3839,8 +3899,8 @@ class IIf(VbaLibraryFunc):
         return false_part
 
 class CVErr(VbaLibraryFunc):
-    """
-    CVErr() Excel error string function.
+    """Emulate CVErr() Excel error string function.
+
     """
 
     def eval(self, context, params=None):
@@ -3866,8 +3926,8 @@ class CVErr(VbaLibraryFunc):
         return ""
 
 class CallByName(VbaLibraryFunc):
-    """
-    CallByName() function.
+    """Emulate CallByName() function.
+
     """
 
     def eval(self, context, params=None):
@@ -3937,8 +3997,8 @@ class CallByName(VbaLibraryFunc):
         return None
 
 class Raise(VbaLibraryFunc):
-    """
-    Raise() exception/error function.
+    """Emulate Raise() exception/error function.
+
     """
 
     def eval(self, context, params=None):
@@ -3946,8 +4006,8 @@ class Raise(VbaLibraryFunc):
         context.set_error(msg)
             
 class Close(VbaLibraryFunc):
-    """
-    File Close statement.
+    """Emulate File Close statement.
+
     """
 
     def eval(self, context, params=None):
@@ -3988,8 +4048,8 @@ class Close(VbaLibraryFunc):
 
 
 class Put(VbaLibraryFunc):
-    """
-    File Put statement.
+    """Emulate File Put statement.
+
     """
 
     def eval(self, context, params=None):
@@ -4013,8 +4073,8 @@ class Put(VbaLibraryFunc):
         context.write_file(file_id, data)
 
 class WriteByte(VbaLibraryFunc):
-    """
-    MemoryStream WriteByte() method.
+    """Emulate MemoryStream WriteByte() method.
+
     """
 
     def eval(self, context, params=None):
@@ -4023,8 +4083,8 @@ class WriteByte(VbaLibraryFunc):
         context.report_action('Write Process Memory', str(params), 'MemoryStream.WriteByte', strip_null_bytes=True)
         
 class WriteLine(VbaLibraryFunc):
-    """
-    File WriteLine() method.
+    """Emulate File WriteLine() method.
+
     """
 
     def eval(self, context, params=None):
@@ -4063,8 +4123,8 @@ class WriteLine(VbaLibraryFunc):
         context.write_file(file_id, b'\n')
 
 class WriteText(VbaLibraryFunc):
-    """
-    File WriteText() method.
+    """Emulate File WriteText() method.
+
     """
 
     def eval(self, context, params=None):
@@ -4089,8 +4149,8 @@ class WriteText(VbaLibraryFunc):
         context.set(var_name, final_txt, force_global=True)
         
 class CurDir(VbaLibraryFunc):
-    """
-    CurDir() function (stubbed).
+    """Emulate CurDir() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4103,8 +4163,8 @@ class CurDir(VbaLibraryFunc):
         return "STRING"
     
 class Unprotect(VbaLibraryFunc):
-    """
-    Stubbed Unprotect() function.
+    """Emulate Unprotect() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4114,8 +4174,8 @@ class Unprotect(VbaLibraryFunc):
         context.report_action('Unprotect()', passwd, 'Try Sheet Unprotect Password', strip_null_bytes=True)
 
 class KeyString(VbaLibraryFunc):
-    """
-    KeyString() function.
+    """Emulate KeyString() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4287,8 +4347,8 @@ class KeyString(VbaLibraryFunc):
         return "STRING"
     
 class Run(VbaLibraryFunc):
-    """
-    Application.Run() function.
+    """Emulate Application.Run() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4317,8 +4377,8 @@ class Run(VbaLibraryFunc):
             return 0
 
 class Arguments(VbaLibraryFunc):
-    """
-    WScriptShell Arguments field.
+    """Emulate WScriptShell Arguments() method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4330,8 +4390,8 @@ class Arguments(VbaLibraryFunc):
         return "_COMMAND_LINE_ARG_" + str(params[0])
             
 class Exec(VbaLibraryFunc):
-    """
-    Application.Exec() function.
+    """Emulate Application.Exec() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4348,8 +4408,8 @@ class Exec(VbaLibraryFunc):
         return 0
 
 class ExecQuery(VbaLibraryFunc):
-    """
-    Application.ExecQuery() function.
+    """Emulate Application.ExecQuery() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4371,8 +4431,8 @@ class ExecQuery(VbaLibraryFunc):
         return ["", ""]
         
 class WinExec(VbaLibraryFunc):
-    """
-    WinExec() function.
+    """Emulate WinExec() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4384,8 +4444,8 @@ class WinExec(VbaLibraryFunc):
         return ''
 
 class CreateShortcut(VbaLibraryFunc):
-    """
-    CreateShortcut() function.
+    """Emulate CreateShortcut() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4395,8 +4455,8 @@ class CreateShortcut(VbaLibraryFunc):
         context.report_action("Shortcut Creation", path, 'Shortcut Created', strip_null_bytes=True)
     
 class CreateObject(VbaLibraryFunc):
-    """
-    CreateObject() function (stubbed).
+    """Emulate CreateObject() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4420,8 +4480,8 @@ class CreateObject(VbaLibraryFunc):
         return str(obj_type)
 
 class GetParentFolderName(VbaLibraryFunc):
-    """
-    GetParentFolderName() method.
+    """Emulate GetParentFolderName() method.
+
     """
 
     def eval(self, context, params=None):
@@ -4443,8 +4503,8 @@ class GetParentFolderName(VbaLibraryFunc):
         return 1
         
 class ReadText(VbaLibraryFunc):
-    """
-    ReadText() stream method (stubbed).
+    """Emulate ReadText() stream method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4484,8 +4544,8 @@ class ReadText(VbaLibraryFunc):
         return "STRING"
 
 class CheckSpelling(VbaLibraryFunc):
-    """
-    Application.CheckSpelling() function. Currently stubbed.
+    """Emulate Application.CheckSpelling() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4499,8 +4559,8 @@ class CheckSpelling(VbaLibraryFunc):
         return True
 
 class Specialfolders(VbaLibraryFunc):
-    """
-    Excel Specialfolders() function. Currently stubbed.
+    """Emulate Excel Specialfolders() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -4511,8 +4571,8 @@ class Specialfolders(VbaLibraryFunc):
         return "%" + str(params[0]) + "%"
 
 class IsArray(VbaLibraryFunc):
-    """
-    IsArray() function.
+    """Emulate IsArray() function.
+
     """
 
     def eval(self, context, params=None):
@@ -4523,8 +4583,8 @@ class IsArray(VbaLibraryFunc):
         return isinstance(params[0], list)
 
 class Month(VbaLibraryFunc):
-    """
-    Excel Month() function. Currently stubbed.
+    """Emulate Excel Month() function. Currently stubbed.
+
     """
 
     def eval(self, context, params=None):
@@ -4557,8 +4617,9 @@ class Month(VbaLibraryFunc):
 
 ticks = 100000
 class GetTickCount(VbaLibraryFunc):
-    """
-    GetTickCount() function. Randomly increments the tick count.
+    """Emulate GetTickCount() function. Randomly increments the tick
+    count.
+
     """
 
     def eval(self, context, params=None):
@@ -4570,9 +4631,10 @@ class GetTickCount(VbaLibraryFunc):
         return ticks
 
 class Rows(VbaLibraryFunc):
-    """
-    This emulates geting the Rows field of an Excel sheet.
-    Currently stubbed out to just return a list of dicts with row numbers.
+    """This emulates geting the Rows field of an Excel sheet.
+    Currently stubbed out to just return a list of dicts with row
+    numbers.
+
     """
 
     def eval(self, context, params=None):
@@ -4630,7 +4692,19 @@ class Rows(VbaLibraryFunc):
         return 0
 
 def _read_cell(sheet, row, col):
+    """
+    Read a cell from an Excel sheet.
+    
+    @param sheet (ExcelSheet object) The sheet from which to read.
 
+    @param row (int) The row index of the cell to read.
+
+    @param col (int) The column index of the cell to read.
+
+    @return (dict) The cell value as a dict of the form { "value" : r,
+    "row" : row + 1, "col" : col + 1 } if found, None if not found.
+    """
+    
     # Read and process the cell.
     try:
         raw_cell = sheet.cell(row, col)
@@ -4660,9 +4734,9 @@ def _read_cell(sheet, row, col):
         return None
     
 class Cells(VbaLibraryFunc):
-    """
-    Excel Cells() function.
-    Currently only handles Cells(x, y) calls.
+    """Emulate Excel Cells() function.  Currently only handles Cells(x,
+    y) calls.
+
     """
 
     def eval(self, context, params=None):
@@ -4782,8 +4856,8 @@ class Cells(VbaLibraryFunc):
         return "NULL"
     
 class Sheets(VbaLibraryFunc):
-    """
-    Excel Sheets() function.
+    """Emulate Excel Sheets() function.
+
     """
         
     def eval(self, context, params=None):
@@ -4835,14 +4909,14 @@ class Sheets(VbaLibraryFunc):
             return None
 
 class Worksheets(Sheets):
-    """
-    Excel Worksheets() function.
+    """Emulate Excel Worksheets() function.
+
     """
     pass
 
 class Value(VbaLibraryFunc):
-    """
-    Excel cell Value() function (actually field).
+    """Emulate Excel cell Value() function (actually field).
+
     """
         
     def eval(self, context, params=None):
@@ -4862,8 +4936,8 @@ class Value(VbaLibraryFunc):
         return r
 
 class UsedRange(VbaLibraryFunc):
-    """
-    Excel UsedRange() function.
+    """Emulate Excel UsedRange() function.
+
     """
         
     def eval(self, context, params=None):
@@ -4889,13 +4963,19 @@ class UsedRange(VbaLibraryFunc):
         return 0
     
 class Range(VbaLibraryFunc):
-    """
-    Excel Range() function.
+    """Emulate Excel Range() function.
+
     """
 
     def _get_row_and_column(self, cell_str):
-        """
-        Get a numeric row and column from a "i93" style Excel cell reference.
+        """Get a numeric row and column from a "i93" style Excel cell
+        reference.
+
+        @param cell_str (str) The cell reference in the "ALPHABETIC
+        COLUMN INTEGER ROW" format.
+        
+        @return (tuple) A 2 element tuple (row, col) where row and col
+        are integers.
         """
 
         # Pull out the cell index.
@@ -4918,8 +4998,18 @@ class Range(VbaLibraryFunc):
         return (row, col)
         
     def _read_cell_list(self, sheet, cell_str, return_dict):
-        """
-        Read multiple cells specified by a "i93:i424" cell string.
+        """Read multiple cells specified by a "i93:i424" cell string.
+
+        @param sheet (ExcelSheet object) The sheet from which to read.
+        
+        @param cell_str The cell range string.
+
+        @param return_dict (boolean) If True represent each cell value
+        as a { "value" : r, "row" : row + 1, "col" : col + 1 } dict,
+        if False just return the original cell values.
+        
+        @return (list) A list of cell values, where the cell value
+        representation is dicttated by the return_dict parameter. 
         """
 
         # Get the start and end cell.
@@ -5107,8 +5197,8 @@ class Range(VbaLibraryFunc):
         return "NULL"
         
 class CountA(VbaLibraryFunc):
-    """
-    Excel CountA() function.
+    """Emulate Excel CountA() function.
+
     """
 
     def eval(self, context, params=None):
@@ -5127,8 +5217,8 @@ class CountA(VbaLibraryFunc):
         return r
 
 class SpecialCells(VbaLibraryFunc):
-    """
-    Excel SpecialCells() method. Not directly used.
+    """Emulate Excel SpecialCells() method. Not directly used.
+
     """
 
     def eval(self, context, params=None):
@@ -5165,8 +5255,8 @@ class SpecialCells(VbaLibraryFunc):
         return r
 
 class RandBetween(VbaLibraryFunc):
-    """
-    Excel RANDBETWEEN() function.
+    """Emulate Excel RANDBETWEEN() function.
+
     """
 
     def eval(self, context, params=None):
@@ -5183,8 +5273,9 @@ class RandBetween(VbaLibraryFunc):
         return 2
 
 class DatePart(VbaLibraryFunc):
-    """
-    DatePart() function. Currently (very) stubbed to just return 3.
+    """Emulate DatePart() function (stubbed). Currently (very) stubbed to
+    just return 3.
+
     """
 
     def eval(self, context, params=None):
@@ -5194,9 +5285,9 @@ class DatePart(VbaLibraryFunc):
         return 3
     
 class Date(VbaLibraryFunc):
-    """
-    Date() function. Currently stubbed to just return the current date as 
-    a Python datetime object.
+    """Emulate Date() function (stubbed). Currently stubbed to just return
+    the current date as a Python datetime object.
+
     """
 
     def eval(self, context, params=None):
@@ -5206,9 +5297,9 @@ class Date(VbaLibraryFunc):
         return date.today()
 
 class DateAdd(VbaLibraryFunc):
-    """
-    DateAdd() function. Currently stubbed to just return the current date as 
-    a Python datetime object.
+    """Emulate DateAdd() function (stubbed). Currently stubbed to just
+    return the current date as a Python datetime object.
+
     """
 
     def eval(self, context, params=None):
@@ -5218,8 +5309,8 @@ class DateAdd(VbaLibraryFunc):
         return date.today()
     
 class Year(VbaLibraryFunc):
-    """
-    Year() function. Currently stubbed.
+    """Emulate Year() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -5234,8 +5325,8 @@ class Year(VbaLibraryFunc):
         return r
 
 class Minute(VbaLibraryFunc):
-    """
-    Minute() function. Currently stubbed.
+    """Emulate Minute() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -5250,8 +5341,8 @@ class Minute(VbaLibraryFunc):
         return r
 
 class Second(VbaLibraryFunc):
-    """
-    Second() function. Currently stubbed.
+    """Emulate Second() function (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -5272,8 +5363,8 @@ class Second(VbaLibraryFunc):
         return r
 
 class Variable(VbaLibraryFunc):
-    """
-    Get document variable.
+    """Get a document variable.
+
     """
 
     def eval(self, context, params=None):
@@ -5297,8 +5388,8 @@ class Variables(Variable):
     pass
     
 class CDbl(VbaLibraryFunc):
-    """
-    CDbl() type conversion function.
+    """Emulate CDbl() type conversion function.
+
     """
 
     def eval(self, context, params=None):
@@ -5322,8 +5413,8 @@ class CDbl(VbaLibraryFunc):
             return 0
 
 class Popup(VbaLibraryFunc):
-    """
-    Popup() function.
+    """Emulate Popup() function.
+
     """
 
     def eval(self, context, params=None):
@@ -5333,12 +5424,20 @@ class Popup(VbaLibraryFunc):
         context.report_action("Popup", str(msg), '')
         
 class Print(VbaLibraryFunc):
-    """
-    Debug.Print function.
+    """Emulate Debug.Print() function.
+
     """
 
     def _handle_file_print(self, context, params):
+        """Emulate printing to a file.
 
+        @param context (Context object) The current program
+        state. This will be updated with the file update.
+
+        @param params (list) The parameters of the file print call.
+
+        """
+        
         # Sanity check.
         if (len(params) != 2):
             log.warning("Wrong # of arguments for Print " + str(params))
@@ -5379,20 +5478,20 @@ class Print(VbaLibraryFunc):
                 context.report_action("Debug Print", data_str, '')
 
 class Debug(Print):
-    """
-    Debug() debugging function.
+    """Emulate Debug() debugging function.
+
     """
     pass
 
 class Echo(Print):
-    """
-    WScript.Echo() debugging function.
+    """Emulate WScript.Echo() debugging function.
+
     """
     pass
 
 class DeleteFile(VbaLibraryFunc):
-    """
-    File delete DeleteFile() call.
+    """Emulate File delete DeleteFile() call.
+
     """
 
     def eval(self, context, params=None):
@@ -5404,8 +5503,8 @@ class DeleteFile(VbaLibraryFunc):
             context.report_action('Delete File', str(params[0]), 'DeleteFile() Call', strip_null_bytes=True)
 
 class MoveFile(VbaLibraryFunc):
-    """
-    File move MoveFile() call.
+    """Emulate File move MoveFile() call.
+
     """
 
     def eval(self, context, params=None):
@@ -5416,8 +5515,8 @@ class MoveFile(VbaLibraryFunc):
                                   'MoveFile() Call', strip_null_bytes=True)
 
 class FollowHyperlink(VbaLibraryFunc):
-    """
-    FollowHyperlink() function.
+    """Emulate FollowHyperlink() function.
+
     """
 
     def eval(self, context, params=None):
@@ -5427,7 +5526,10 @@ class FollowHyperlink(VbaLibraryFunc):
             context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
 
 class GetExtensionName(VbaLibraryFunc):
+    """Emulate GetExtensionName() function.
 
+    """
+    
     def eval(self, context, params=None):
         context = context # pylint
 
@@ -5441,9 +5543,10 @@ class GetExtensionName(VbaLibraryFunc):
         return r
 
 class NumPut(VbaLibraryFunc):
-    """
-    DynamicWrapperX.NumPut() method. This simulates the NumPut() byte writing actions
-    by writing the byte values to a DOM_NumPut.dat file.
+    """Emulate DynamicWrapperX.NumPut() method. This simulates the
+    NumPut() byte writing actions by writing the byte values to a
+    DOM_NumPut.dat file.
+
     """
 
     def eval(self, context, params=None):
@@ -5466,8 +5569,8 @@ class NumPut(VbaLibraryFunc):
         context.write_file("DOM_NumPut.dat", chr(val))
     
 class CreateTextFile(VbaLibraryFunc):
-    """
-    CreateTextFile() method.
+    """Emulate CreateTextFile() method.
+
     """
 
     def eval(self, context, params=None):
@@ -5503,8 +5606,8 @@ class CreateTextFile(VbaLibraryFunc):
         return fname
     
 class Open(CreateTextFile):
-    """
-    Open() file function. Also Open() HTTP function.
+    """Emulate Open() file function. Also Open() HTTP function.
+
     """
 
     def eval(self, context, params=None):
@@ -5529,14 +5632,14 @@ class Open(CreateTextFile):
             super(Open, self).eval(context, params)
 
 class OpenTextFile(CreateTextFile):
-    """
-    OpenTextFile() file function.
+    """Emulate OpenTextFile() file function.
+
     """
     pass
             
 class Timer(VbaLibraryFunc):
-    """
-    Timer() method (stubbed).
+    """Emulate Timer() method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -5546,8 +5649,8 @@ class Timer(VbaLibraryFunc):
         return int(time.mktime(datetime.now().timetuple()))
 
 class Unescape(VbaLibraryFunc):
-    """
-    Unescape() strin unescaping method (stubbed).
+    """Emulate Unescape() string unescaping method (stubbed).
+
     """
 
     def eval(self, context, params=None):
@@ -5611,8 +5714,9 @@ class Unescape(VbaLibraryFunc):
         return "STRING"
     
 class InternetGetConnectedState(VbaLibraryFunc):
-    """
-    InternetGetConnectedState() function from wininet.dll.
+    """Emulate InternetGetConnectedState() function from wininet.dll
+    (stubbed). Always returns True.
+
     """
 
     def eval(self, context, params=None):
@@ -5623,8 +5727,9 @@ class InternetGetConnectedState(VbaLibraryFunc):
         return True
 
 class DateDiff(VbaLibraryFunc):
-    """
-    Stubbed DateDiff() function.
+    """Emulate Stubbed DateDiff() function. Returns a random plausible
+    epoch integer.
+
     """
 
     def eval(self, context, params=None):
@@ -5634,8 +5739,8 @@ class DateDiff(VbaLibraryFunc):
         return 15904387438 + (5000 - random.randint(100, 10000))
     
 class Not(VbaLibraryFunc):
-    """
-    Boolean Not() called as a function.
+    """Emulate Boolean Not() called as a function.
+
     """
 
     def eval(self, context, params=None):
@@ -5647,8 +5752,9 @@ class Not(VbaLibraryFunc):
         return (not params[0])
                 
 class InternetOpenA(VbaLibraryFunc):
-    """
-    InternetOpenA() function from wininet.dll.
+    """Emulate InternetOpenA() function from wininet.dll
+    (stubbed). Always returns True.
+
     """
 
     def eval(self, context, params=None):
@@ -5659,8 +5765,8 @@ class InternetOpenA(VbaLibraryFunc):
         return True
 
 class FreeFile(VbaLibraryFunc):
-    """
-    FreeFile() function.
+    """Emulate FreeFile() function.
+
     """
 
     def eval(self, context, params=None):
@@ -5671,8 +5777,9 @@ class FreeFile(VbaLibraryFunc):
         return v
 
 class CreateElement(VbaLibraryFunc):
-    """
-    Faked emulation of things like 'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+    """Faked emulation of things like
+    'CreateObject("Microsoft.XMLDOM").createElement("tmp")'.
+
     """
 
     def eval(self, context, params=None):
@@ -5683,8 +5790,8 @@ class CreateElement(VbaLibraryFunc):
         return "Microsoft.XMLDOM"
 
 class Send(VbaLibraryFunc):
-    """
-    Faked emulation of HTTP send(). Always returns 200.
+    """Faked emulation of HTTP send(). Always returns 200.
+
     """
 
     def eval(self, context, params=None):
@@ -5693,24 +5800,24 @@ class Send(VbaLibraryFunc):
         return 200
 
 class SetTimeouts(VbaLibraryFunc):
-    """
-    ServerXMLHTTP SetTimeouts() method (stubbed).
+    """Emulate ServerXMLHTTP SetTimeouts() method (stubbed).
+
     """
 
     def eval(self, context, params=None):
         pass
 
 class SetOption(VbaLibraryFunc):
-    """
-    ServerXMLHTTP SetOption() method (stubbed).
+    """Emulate ServerXMLHTTP SetOption() method (stubbed).
+
     """
 
     def eval(self, context, params=None):
         pass
     
 class SetRequestHeader(VbaLibraryFunc):
-    """
-    ServerXMLHTTP SetRequestHeader() method.
+    """Emulate ServerXMLHTTP SetRequestHeader() method.
+
     """
 
     def eval(self, context, params=None):
@@ -5730,8 +5837,8 @@ class SetRequestHeader(VbaLibraryFunc):
         context.report_action('Set HTTP Header', info, "ServerXMLHTTP::SetRequestHeader()")
     
 class WriteProcessMemory(VbaLibraryFunc):
-    """
-    WriteProcessMemory() external method.
+    """Emulate WriteProcessMemory() external method.
+
     """
 
     def eval(self, context, params=None):
@@ -5749,8 +5856,8 @@ class WriteProcessMemory(VbaLibraryFunc):
         vba_context.add_shellcode_data(params[1], params[2], params[3])
         
 class Write(VbaLibraryFunc):
-    """
-    Write() method.
+    """Emulate Write() method.
+
     """
 
     def eval(self, context, params=None):

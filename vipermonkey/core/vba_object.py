@@ -78,20 +78,38 @@ import excel
 max_emulation_time = None
 
 class VbaLibraryFunc(object):
-    """
-    Marker class to tell if a class implements a VBA function.
+    """Marker class to tell if a class emulates a VBA function.
+
     """
 
-    def num_args(self):
+    def eval(self, context, params=None):
+        """Emulate the VBScript/VBA function.
+        
+        @param context (Context object) The current program
+        state. This will be updated.
+
+        @param params (list) The function call parameters.
+
+        @return (any) The result of emulating the function call.
         """
-        Get the # of arguments (minimum) required by the functio.
+        raise ValueError("eval() method not implemented.")
+        
+    def num_args(self):
+        """Get the # of arguments (minimum) required by the function.
+
+        @return (int) The number of required arguments for the
+        emulated function.
+
         """
         log.warning("Using default # args of 1 for " + str(type(self)))
         return 1
 
     def return_type(self):
-        """
-        Get the python type returned from the emulated function ('INTEGER' or 'STRING').
+        """Get the type returned from the emulated function ('INTEGER' or
+        'STRING').
+
+        @return (str) The function return type.
+
         """
         log.warning("Using default return type of 'INTEGER' for " + str(type(self)))
         return "INTEGER"
