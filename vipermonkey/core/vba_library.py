@@ -44,20 +44,15 @@ import logging
 from datetime import datetime
 from datetime import date
 import time
-import array
 import math
-import base64
 import re
-from hashlib import sha256
-import os
 import random
-from from_unicode_str import *
+from from_unicode_str import from_unicode_str
 import decimal
-from curses_ascii import isprint
-import sys
-import traceback
+#import sys
+#import traceback
 
-from pyparsing import *
+from pyparsing import ParseException
 
 import vb_str
 from vba_context import VBA_LIBRARY
@@ -72,7 +67,7 @@ import modules
 import strip_lines
 from vba_object import _eval_python
 import utils
-from excel import *
+from excel import pull_cells_sheet, get_largest_sheet, get_num_rows
 
 from logger import log
 
@@ -1810,7 +1805,9 @@ class International(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-
+        context = context # pylint
+        params = params # pylint
+        
         # Match anything compared to this result.
         return "**MATCH ANY**"
 
@@ -3435,6 +3432,8 @@ class CleanString(VbaLibraryFunc):
             txt = ''
         if isinstance(txt,str):
             a = [c for c in txt]
+            # Looking at elements pos and pos-1, so leave this as for over range().
+            # pylint: disable=consider-using-enumerate
             for i in range(len(a)):
                 c = a[i]
                 if ord(c) == 7:
@@ -3883,6 +3882,8 @@ class CallByName(VbaLibraryFunc):
             args = params[3]
         if (("run" in cmd.lower()) or ("create" in cmd.lower()) or ("wscript.shell" in obj.lower())):
             context.report_action("Run", args, 'Interesting Function Call', strip_null_bytes=True)
+        # Accessing elements at pos and pos+1, so leave this as a for over the range().
+        # pylint: disable=consider-using-enumerate
         for pos in range(0, len(params)):
             if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
                 context.report_action("Run", params[pos + 1], 'Interesting Function Call', strip_null_bytes=True)
