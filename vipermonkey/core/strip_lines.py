@@ -1950,11 +1950,11 @@ def fix_difficult_code(vba_code):
 
     # Rewrite some weird single line if statements.
     # If utc_NegativeOffset Then: utc_Offset = -utc_Offset    
-    vba_code, single_line_ifs = fix_weird_single_line_ifs(vba_code)
+    vba_code = fix_weird_single_line_ifs(vba_code)
 
     # Replace the ':' in single line if statements so they don't get broken up.
     # Replace ':=' so they don't get modified.    
-    vba_code = hide_colons(vba_code)    
+    vba_code, single_line_ifs = hide_colons(vba_code)    
 
     # Replace 'Rem fff' style comments with "' fff" comments.    
     vba_code = replace_rem_comments(vba_code)

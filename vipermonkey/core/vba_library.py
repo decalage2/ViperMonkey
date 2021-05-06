@@ -2067,7 +2067,7 @@ class RtlMoveMemory(VbaLibraryFunc):
     """Emulate External RtlMoveMemory() function.
 
     """
-    Emulate 
+
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return
