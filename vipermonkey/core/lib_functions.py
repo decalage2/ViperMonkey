@@ -120,7 +120,7 @@ class Asc(VBA_Object):
             self.arg = tokens[0]
 
     def to_python(self, context, params=None, indent=0):
-        return "ord(" + to_python(self.arg, context) + ")"
+        return "ord(" + to_python(self.arg, context) + "[0])"
 
     def return_type(self):
         return "INTEGER"

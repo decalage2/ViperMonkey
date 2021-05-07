@@ -983,6 +983,10 @@ def hide_colons_in_ifs(vba_code):
 
         # Hide colons in If line.
         end_pos = vba_code[if_index:].index("\n") + if_index
+        endif_pat = r"End +If"
+        endif_match = re.search(endif_pat, vba_code[if_index:end_pos+1])
+        if (endif_match is not None):
+            end_pos = endif_match.span()[1] + if_index
         r += vba_code[if_index:end_pos+1].replace(":", "__COLON__")
         pos = end_pos
     r += vba_code[pos:]
@@ -1188,7 +1192,61 @@ def break_up_whiles(vba_code):
 
     # Done.
     return r
+
+def fix_class_constructor_calls(vba_code):
+    """
+    Rename Default functions in defined classes to
+    CLASS_NAME_CONSTRUCTOR and replace all (New CLASS_NAME)(...) style
+    calls with CLASS_NAME_CONSTRUCTOR(...).
     
+    @param vba_code (str) The code to modify.
+    
+    @return (str) The modified code.
+    """
+
+    # Pull out each class definition and look for Default function definitions
+    # in each class.
+    class_pat = r"[Cc][Ll][Aa][Ss][Ss].+[Ee][Nn][Dd] +[Cc][Ll][Aa][Ss][Ss]"
+    default_func_info = []
+    for class_str in re.findall(class_pat, vba_code, re.DOTALL):
+
+        # Is there a Default function defined?
+        default_func_pat = r"[Dd][Ee][Ff][Aa][Uu][Ll][Tt] +[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn] +([A-Za-z_0-9]+) *\("
+        default_funcs = re.findall(default_func_pat, class_str)
+        if (len(default_funcs) == 0):
+            continue
+
+        # We have a default function. Hope there is only 1.
+        default_func = default_funcs[0]
+
+        # Pull out the class name.
+        class_name_pat = r"[Cc][Ll][Aa][Ss][Ss] +([A-Za-z_0-9]+)"
+        class_name = re.findall(class_name_pat, class_str)[0]
+
+        # Save the default function name and class name.
+        default_func_info.append((class_name, default_func))
+
+    # Fix up the default function names and calls.
+    r = vba_code
+    for curr_func_info in default_func_info:
+
+        # Get the synthetic constructor name.
+        class_name = curr_func_info[0]
+        func_name = curr_func_info[1]
+        const_name = class_name + "_CONSTRUCTOR"
+
+        # Replace the name in the function definition.
+        default_func_pat = func_name + r" *\("
+        r = re.sub(default_func_pat, const_name + "(", r)
+        
+        # Replace indirect calls to the constructor.
+        # (NEW YURHUJOZT)(
+        call_pat = r"\( *[Nn][Ee][Ww] +" + class_name + r" *\) *\("        
+        r = re.sub(call_pat, const_name + "(", r)
+
+    # Done.
+    return r
+        
 def fix_difficult_code(vba_code):
     """
     Replace characters whose ordinal value is > 128 with dNNN, where NNN
@@ -1212,6 +1270,10 @@ def fix_difficult_code(vba_code):
     vba_code = vba_code.replace("spli.tt.est", "splittest").replace("Mi.d", "Mid")
     vba_code = vba_code.replace("msgbox\"", "msgbox \"")
     vba_code = fix_unhandled_array_assigns(vba_code)
+    if debug_strip:
+        print "HERE: 2.0"
+        print vba_code
+    vba_code = fix_class_constructor_calls(vba_code)
     if debug_strip:
         print "HERE: 2.1"
         print vba_code

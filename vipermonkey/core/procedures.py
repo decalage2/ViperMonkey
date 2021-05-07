@@ -369,9 +369,11 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 #       [procedure-body EOS]
 #       [end-label] "end" "property" procedure-tail
 
-sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
-            + Optional(params_list_paren) + EOS.suppress()
-sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+sub_start = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+            public_private + Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+            CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') + Optional(params_list_paren) + EOS.suppress()
+sub_start_single = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                   public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress() | \
           bogus_simple_for_each_statement
@@ -735,10 +737,14 @@ class Function(VBA_Object):
             return ''
 
 # TODO 5.3.1.4 Function Type Declarations
-function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+function_start = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                 Optional(public_private) + \
+                 Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                  CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                  Optional(params_list_paren) + Optional(function_type2("return_type")) + EOS.suppress()
-function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+function_start_single = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                        Optional(public_private) + \
+                        Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
@@ -798,18 +804,58 @@ class PropertyLet(Sub):
     def __repr__(self):
         return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
-# [ Public | Private | Friend ] [ Static ] Property Letname ( [ arglist ], value )
+# [ Public | Private | Friend ] [ Static ] Property Let name ( [ arglist ], value )
 # [ statements ]
 # [ Exit Property ]
 # [ statements ]
 # End Property
 
-property_let = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + \
+property_let = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               public_private + \
+               Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                CaselessKeyword('Property').suppress() + CaselessKeyword('Let').suppress() + \
                lex_identifier('property_name') + params_list_paren + \
                Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
 property_let.setParseAction(PropertyLet)
+
+# --- PROPERTY GET --------------------------------------------------------------------
+
+# Evaluating a property get handler looks like calling a Function, so inherit from Function to get the
+# eval() method.
+class PropertyGet(Function):
+
+    def __init__(self, original_str, location, tokens):
+        super(PropertyGet, self).__init__(original_str, location, tokens)
+        self.name = tokens.property_name
+        self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
+        self.statements = tokens.statements
+        try:
+            len(self.statements)
+        except:
+            self.statements = [self.statements]
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
+        log.info('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+
+property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               public_private + \
+               Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               CaselessKeyword('Property').suppress() + CaselessKeyword('Get').suppress() + \
+               lex_identifier('property_name') + Optional(params_list_paren) + \
+               Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+               (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
+property_get.setParseAction(PropertyGet)
 
 # Ugh. Handle cyclic import problem.
 extend_statement_grammar()
