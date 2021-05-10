@@ -5359,7 +5359,10 @@ class VbaConstants(object):
         self.globals["wdOrientLandscape".lower()] = 1
         self.globals["wdOrientPortrait".lower()] = 0
         
-        # Misc. 
+        # Misc.
+        self.globals["Application.Tasks.Count".lower()] = 20
+        self.globals["Application.RecentFiles.Count".lower()] = 30
+
         self.globals["ActiveDocument.PageSetup.PageWidth".lower()] = 10
         self.globals["ThisDocument.PageSetup.PageWidth".lower()] = 10
         self.globals["ActiveDocument.PageSetup.Orientation".lower()] = 1

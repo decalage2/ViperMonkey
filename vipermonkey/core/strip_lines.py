@@ -1112,6 +1112,10 @@ def hide_colons_in_ifs(vba_code):
 
         # Hide colons in If line.
         end_pos = vba_code[if_index:].index("\n") + if_index
+        endif_pat = r"End +If"
+        endif_match = re.search(endif_pat, vba_code[if_index:end_pos+1])
+        if (endif_match is not None):
+            end_pos = endif_match.span()[1] + if_index
         r += vba_code[if_index:end_pos+1].replace(":", "__COLON__")
         pos = end_pos
     r += vba_code[pos:]
@@ -1327,32 +1331,6 @@ def break_up_whiles(vba_code):
 
     # Done.
     return r
-
-def fix_array_accesses(vba_code):
-    """Replace long chained array accesses with short ones. For example,
-    replace 'a(1)(2)(3)(4)' with 'a(1)'.
-
-    @param vba_code (str) The VB code to check and modify.
-
-    @return (str) The modified VB code.
-
-    """
-
-    # Not handling array accesses more than 2 deep.
-    uni_vba_code = u""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
-    if debug_strip:
-        print "HERE: 3"
-        print vba_code
-    array_acc_pat = r'(\w+\([\d\w_\+\*/\-"]+\))(?:\([\d\w_\+\*/\-"]+\)){2,50}'
-    if (re2.search(unicode(array_acc_pat), uni_vba_code) is not None):
-        vba_code = re.sub(array_acc_pat, r"\1", vba_code)    
-
-    # Done
-    return vba_code
 
 def fix_weird_copyhere(vba_code):
     """Rewrite things like 'CreateObject(foo).Namespace(bar).CopyHere
@@ -1962,9 +1940,6 @@ def fix_difficult_code(vba_code):
         print "HERE: 2.7"
         print vba_code
     vba_code = fix_varptr_calls(vba_code)
-
-    # Not handling array accesses more than 2 deep.    
-    vba_code = fix_array_accesses(vba_code)
 
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar    

@@ -107,10 +107,10 @@ class Module(VBA_Object):
                         log.debug("saving func decl: %r" % i.name)
                     self.functions[i.name] = i
 
-                # Property Let function to add?
-                elif isinstance(i, PropertyLet):
+                # Property Let or Get function to add?
+                elif isinstance(i, (PropertyLet, PropertyGet)):
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("saving property let decl: %r" % i.name)
+                        log.debug("saving property let/get decl: %r" % i.name)
                     self.props[i.name] = i
         
     def __init__(self, original_str, location, tokens):
@@ -369,6 +369,7 @@ module_code = ZeroOrMore(
     | sub
     | function
     | property_let
+    | property_get    
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
@@ -383,6 +384,7 @@ module = ZeroOrMore(
     | sub
     | function
     | property_let
+    | property_get
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines

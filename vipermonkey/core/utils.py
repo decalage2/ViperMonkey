@@ -116,10 +116,16 @@ def safe_plus(x,y):
         y = y["value"]
     
     # Handle NULLs.
-    if (x == "NULL"):
-        x = 0
     if (y == "NULL"):
         y = 0
+    if (x == "NULL"):
+
+        # Ugh. If x is uninitialized and we are adding a string to it
+        # it looks like maybe VB makes this whole thing a string?
+        if isinstance(y, str):
+            x = ""
+        else:
+            x = 0
 
     # Loosely typed languages are terrible. 1 + "3" == 4 while "1" + 3
     # = "13". The type of the 1st argument drives the dynamic type

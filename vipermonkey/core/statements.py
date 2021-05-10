@@ -5959,6 +5959,7 @@ def extend_statement_grammar():
                   (procedures.simple_function ^ orphaned_marker) | \
                   (procedures.simple_sub ^ orphaned_marker) | \
                   (procedures.property_let ^ orphaned_marker) | \
+                  (procedures.property_get ^ orphaned_marker) | \
                   name_statement | stop_statement | enum_statement
 
     statement_no_orphan <<= try_catch | type_declaration | simple_for_statement | real_simple_for_each_statement | simple_if_statement | \

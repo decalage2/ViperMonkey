@@ -1497,7 +1497,6 @@ class Count(VbaLibraryFunc):
         # Return the # of Added items.
         # Subtract 1 due to "__ADDED_ITEMS__" entry in dict.
         return (len(params[0]) - 1)
-        
 
 parse_cache = {}
 class Execute(VbaLibraryFunc):
@@ -1582,6 +1581,17 @@ class Execute(VbaLibraryFunc):
                 except ParseException:
                     pass
 
+            # Was is parsed?
+            if (obj == None):
+                
+                # Try the original command with ALL code rewriting applied.
+                try:
+                    log.warning("Parsing failed on shortened command. Trying original command with all code rewriting performed...")
+                    command = strip_lines.strip_useless_code(orig_command, set())
+                    obj = modules.module.parseString(command, parseAll=True)[0]
+                except ParseException:
+                    pass
+                
             # Cannot ever parse this. Punt.
             if (obj is None):
                 if (len(orig_command) > 50):

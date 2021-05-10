@@ -850,8 +850,8 @@ def _get_var_vals(item, context, global_only=False):
                     context.set_type(var, "String")
             else:
                 log.warning("Type '" + str(var_type) + "' of var '" + str(var) + "' not handled." + \
-                            " Defaulting initial value to 0.")
-                val = 0
+                            " Defaulting initial value to \"NULL\".")
+                val = "NULL"
 
         # Rename some vars that overlap with python builtins.
         var = utils.fix_python_overlap(var)
@@ -1213,7 +1213,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             return False
         
         # Run the Python code.
-
+        
         # Have we already run this exact loop?
         if (code_python in jit_cache):
             var_updates = jit_cache[code_python]
@@ -1224,11 +1224,20 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
         # No cached results. Run the loop.
         elif (namespace is None):
+
+            # JIT code execution goes not involve emulating VB GOTOs.
+            context.goto_executed = False
+        
             # Magic. For some reason exec'ing in locals() makes the dynamically generated
             # code recognize functions defined in the dynamic code. I don't know why.
             log.info("Evaluating Python JIT code...")
             exec code_python in locals()
         else:
+
+            # JIT code execution goes not involve emulating VB GOTOs.
+            context.goto_executed = False
+
+            # Run the JIT code in the given namespace.
             exec(code_python, namespace)
             var_updates = namespace["var_updates"]
         log.info("Done JIT emulation of '" + code_vba + "...' .")
