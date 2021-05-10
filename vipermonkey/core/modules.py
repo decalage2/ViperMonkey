@@ -57,7 +57,8 @@ from pyparsing import Optional, ZeroOrMore, Forward, Suppress, \
 
 from comments_eol import rem_statement, EOL, EOS
 from procedures import function_end, function_start, sub_end, sub_start_line, \
-    function, sub, Function, Sub, property_let, PropertyLet
+    function, sub, Function, Sub, property_let, PropertyLet, property_get, \
+    PropertyGet
 from statements import simple_statements_line, for_end, for_start, \
     type_declaration, simple_if_statement_macro, option_statement, \
     External_Function, do_const_assignments, external_function, attribute_statement, \
