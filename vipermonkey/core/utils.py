@@ -37,6 +37,7 @@ import re
 from curses_ascii import isascii
 from curses_ascii import isprint
 import base64
+import string
 
 import logging
 
