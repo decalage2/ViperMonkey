@@ -643,7 +643,8 @@ class Function(VBA_Object):
             # after the loop.
             if (is_loop_statement(s)):
                 context.goto_executed = False
-            
+                s.exited_with_goto = False
+                
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed or s.exited_with_goto):
