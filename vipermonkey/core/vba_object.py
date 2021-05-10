@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 ViperMonkey: VBA Grammar - Base class for all VBA objects
 
@@ -72,7 +71,7 @@ from lhs_var_visitor import lhs_var_visitor
 from utils import safe_print
 import utils
 from let_statement_visitor import let_statement_visitor
-#from vba_context import *
+from vba_context import Context
 import excel
 
 max_emulation_time = None
@@ -471,8 +470,7 @@ def contains_excel(arg):
     """
 
     # Got actual Excel objects?
-    if (isinstance(arg, excel.ExcelSheet) or
-        isinstance(arg, excel.ExcelBook)):
+    if isinstance(arg, (excel.ExcelBook, excel.ExcelSheet)):
         return True
     
     # Got a function call?
@@ -484,6 +482,7 @@ def contains_excel(arg):
     excel_funcs = set(["usedrange", "sheets", "specialcells"])
     return (str(arg.name).lower() in excel_funcs)
     
+
 constant_expr_cache = {}
 
 def get_cached_value(arg):
@@ -492,8 +491,7 @@ def get_cached_value(arg):
     """
 
     # Don't do any more work if this is already a resolved value.
-    if (isinstance(arg, int) or
-        isinstance(arg, dict)):
+    if isinstance(arg, (dict, int)):
         return arg
 
     # If it is something that may be hard to convert to a string, no cached value.
@@ -553,6 +551,8 @@ def is_constant_math(arg):
     try:
         import rure as local_re
     except ImportError:
+        # Renaming of failed to import rure package.
+        # pylint: disable=reimported
         import re as local_re
 
     # Use a regex to see if this is an all constant expression.
@@ -565,6 +565,7 @@ def is_constant_math(arg):
         arg_str = filter(isprint, arg_str)
         arg_str = unicode(arg_str)
     return (local_re.match(unicode(paren_pat), arg_str) is not None)
+
 
 meta = None
 
@@ -648,19 +649,17 @@ def _infer_type_of_expression(expr, context):
         return r
         
     # Easy cases. These have to be integers.
-    if (isinstance(expr, operators.Xor) or
-        isinstance(expr, operators.And) or
-        isinstance(expr, operators.Or) or
-        isinstance(expr, operators.Not) or
-        isinstance(expr, operators.Neg) or
-        isinstance(expr, operators.Subtraction) or
-        isinstance(expr, operators.Multiplication) or
-        isinstance(expr, operators.Power) or
-        isinstance(expr, operators.Division) or
-        isinstance(expr, operators.MultiDiv) or
-        isinstance(expr, operators.FloorDivision) or
-        isinstance(expr, operators.Mod) or        
-        isinstance(expr, operators.Xor)):
+    if isinstance(expr, (operators.And,
+                         operators.Division,
+                         operators.FloorDivision,
+                         operators.Mod,
+                         operators.MultiDiv,
+                         operators.Multiplication,
+                         operators.Neg, operators.Not,
+                         operators.Or,
+                         operators.Power,
+                         operators.Subtraction,
+                         operators.Xor)):
         #print "POSSIBLE TYPE (3) '" + str(expr) + "' == " + "INTEGER"
         return "INTEGER"
 
@@ -671,10 +670,7 @@ def _infer_type_of_expression(expr, context):
     
     # Harder case. This could be an int or a str (or some other numeric type, but
     # we're not handling that).
-    import expressions
-    if (isinstance(expr, operators.AddSub) or
-        isinstance(expr, expressions.BoolExpr) or
-        isinstance(expr, expressions.BoolExprItem)):
+    if isinstance(expr, (expressions.BoolExpr, expressions.BoolExprItem, operators.AddSub)):
 
         # If we are doing subtraction we need numeric types.
         if ((hasattr(expr, "operators")) and ("-" in expr.operators)):
@@ -798,10 +794,7 @@ def _get_var_vals(item, context, global_only=False):
                 continue
             
             # Function definitions are not valid values.
-            if (isinstance(val, procedures.Function) or
-                isinstance(val, procedures.Sub) or
-                isinstance(val, statements.External_Function) or
-                isinstance(val, VbaLibraryFunc)):
+            if isinstance(val, (VbaLibraryFunc, procedures.Function, procedures.Sub, statements.External_Function)):
 
                 # Don't use the function definition as the value.
                 val = None
@@ -975,8 +968,7 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         r = " " * indent + '"' + the_str + '"'
 
     # List of statements?
-    elif ((isinstance(arg, list) or
-           isinstance(arg, pyparsing.ParseResults)) and statements):
+    elif (isinstance(arg, (list, pyparsing.ParseResults)) and statements):
         r = ""
         indent_str = " " * indent
         for statement in arg:
@@ -1017,6 +1009,8 @@ def _check_for_iocs(loop, context, indent):
     Check the variables modified in a loop to see if they were
     set to interesting IOCs.
     """
+    context = context # pylint
+    
     indent_str = " " * indent
     lhs_visitor = lhs_var_visitor()
     loop.accept(lhs_visitor)
@@ -1143,6 +1137,7 @@ def _called_funcs_to_python(loop, context, indent):
     r = indent_str + "# VBA Local Function Definitions\n" + r
     return r
 
+
 # Cache JIT loop results to avoid emulating the exact same loop
 # multiple times.
 jit_cache = {}
@@ -1151,7 +1146,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     """
     Convert the loop to Python and emulate the loop directly in Python.
     """
-
+    params = params # pylint
+    
     # Are we actually doing this?
     if (not context.do_jit):
         return False
@@ -1315,7 +1311,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
         return obj_text_val
     
     # Not reading from an Excel cell. Try as a VBA object.
-    if ((isinstance(arg, VBA_Object)) or (isinstance(arg, VbaLibraryFunc))):
+    if isinstance(arg, (VBA_Object, VbaLibraryFunc)):
 
         # Handle cases where wscriptshell.run() is being called and there is a local run() function.
         if ((".run(" in str(arg).lower()) and (context.contains("run"))):
@@ -1333,11 +1329,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
         
         # Is this a Shapes() access that still needs to be handled?
         poss_shape_txt = ""
-        if (isinstance(r, VBA_Object) or isinstance(r, str)):
-            try:
-                poss_shape_txt = str(r)
-            except:
-                pass
+        if isinstance(r, (VBA_Object, str)):
+            poss_shape_txt = utils.safe_str_convert(r)
         if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
@@ -1366,12 +1359,11 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     log.debug("eval_arg: Got %r = %r" % (arg, r))
                 if got_constant_math: set_cached_value(arg, r)
                 return r
-            except:
+            except KeyError:
                     
                 # No it is not. Try more complicated cases.
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("eval_arg: Not found as variable name: %r" % arg)
-                pass
             else:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("eval_arg: Do not try as variable name: %r" % arg)
@@ -1396,7 +1388,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 except KeyError:
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("eval_arg: Not found as .text.")
-                    pass
 
             # This is a hack to get values saved in the .rapt.Value field of objects.
             elif (".selecteditem" in arg.lower()):
@@ -1411,7 +1402,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 except KeyError:
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("eval_arg: Not found as .rapt.value.")
-                    pass
 
             # Is this trying to access some VBA form variable?
             elif ("." in arg.lower()):
@@ -1439,7 +1429,6 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     except KeyError:
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("eval_arg: Not found as variable")
-                        pass
 
                     arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
 
@@ -1454,8 +1443,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                     func = context.get(func_name)
                     r = func
                     import procedures
-                    if (isinstance(func, procedures.Function) or
-                        isinstance(func, procedures.Sub) or
+                    if (isinstance(func, (procedures.Function, procedures.Sub)) or
                         ('vipermonkey.core.vba_library.' in str(type(func)))):
                         r = eval_arg(func, context, treat_as_var_name=True)
                         
@@ -1569,7 +1557,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
                         return val
-                    except:
+                    except KeyError:
                         pass
 
 
@@ -1604,8 +1592,10 @@ def eval_args(args, context, treat_as_var_name=False):
     Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
     Return the list of evaluated arguments.
     """
+
+    # Punt if we can't iterate over the args.
     try:
-        iterator = iter(args)
+        _ = iter(args)
     except TypeError:
         return args
 
@@ -1647,7 +1637,7 @@ def update_array(old_array, indices, val):
             # NOTE: Don't do 'old_array.extend([[]] * (index - len(old_array) + 1))' here.
             # The [] added with extend refers to the same list so any modification
             # to 1 sublist shows up in all of them.
-            for i in range(0, (index - len(old_array) + 1)):
+            for _ in range(0, (index - len(old_array) + 1)):
                 old_array.append([])
         if (index1 >= len(old_array[index])):
             old_array[index].extend([0] * (index1 - len(old_array[index]) + 1))
@@ -1693,18 +1683,11 @@ def coerce_to_str(obj, zero_is_null=False):
     
     # Not NULL. We have data.
 
-    # Easy case. Is this already a string?
+    # Easy case. Is this already some sort of a string?
     if (isinstance(obj, basestring)):
 
-        # Try to convert unicode to str.
-        if (isinstance(obj, unicode)):
-            try:
-                return obj.encode('utf-8')
-            except:
-                # Conversion failed. Just leave the unicode string as-is and hope for the best.
-                pass
-            
-        return obj
+        # Convert to a regular str if needed.
+        return utils.safe_str_convert(obj)
     
     # Do we have a list of byte values? If so convert the bytes to chars.
     if (isinstance(obj, list)):
@@ -1717,7 +1700,7 @@ def coerce_to_str(obj, zero_is_null=False):
                 continue
             try:
                 r += chr(c)
-            except:
+            except TypeError, ValueError:
 
                 # Invalid character value. Don't do string
                 # conversion of array.
@@ -1734,11 +1717,8 @@ def coerce_to_str(obj, zero_is_null=False):
         # Return the value as a string.
         return (coerce_to_str(obj["value"]))
         
-    # Not a character byte array. Punt.
-    try:
-        return str(obj)
-    except:
-        return ''
+    # Not a character byte array. Just convert to a string.
+    return utils.safe_str_convert(obj)
 
 def coerce_args_to_str(args):
     """
@@ -1779,7 +1759,7 @@ def coerce_to_int(obj):
             try:
                 obj = float(obj)
                 return int(obj)
-            except:
+            except ValueError:
                 pass
             
         # Hex string?
@@ -1813,7 +1793,7 @@ def coerce_to_num(obj):
         return 0
 
     # Already have float or int?
-    if ((isinstance(obj, float)) or (isinstance(obj, int))):
+    if isinstance(obj, (float, int)):
         return obj
     
     # Do we have a string?
@@ -1830,7 +1810,7 @@ def coerce_to_num(obj):
             try:
                 obj = float(obj)
                 return obj
-            except:
+            except ValueError:
                 pass
 
         # Do we have a null byte string?
