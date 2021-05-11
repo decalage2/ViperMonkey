@@ -5626,16 +5626,28 @@ class Open(CreateTextFile):
         if ((params is None) or (len(params) == 0)):
             return
         
-        # Is this a HTTP GET?
-        if ((len(params) >= 2) and
-            ((str(params[0]).strip() == "GET") or
-             (str(params[1]).startswith("ftp://")) or
-             (str(params[1]).startswith("http://")) or
-             (str(params[1]).startswith("https://")))):
-            url = str(params[1])
-            if (url.startswith("tp://")):
-                url = "ht" + url
-            context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
+        # Is this a HTTP GET or PUT?
+        action = ""
+        if (len(params) >= 2):
+            action = str(params[0]).strip().upper()
+            if ((action == "GET") or
+                (action == "PUT") or
+                (action == "HEAD") or
+                (str(params[1]).startswith("ftp://")) or
+                (str(params[1]).startswith("http://")) or
+                (str(params[1]).startswith("https://"))):
+
+                # Fix up the URL if needed.
+                url = str(params[1])
+                if (url.startswith("tp://")):
+                    url = "ht" + url
+                # Do we just have a domain?
+                domain_pat = r"^[A-Za-z0-9\-_]{1,100}(?:\.[A-Za-z0-9\-_]{1,100}){0,5}\.[A-Za-z0-9\-_]{1,10}$"
+                if (re.search(domain_pat, url) is not None):
+                    url = "http://" + url
+
+                # Report the HTTP action.
+                context.report_action(action, url, 'Interesting Function Call', strip_null_bytes=True)
 
         # It is a regular file open.
         else:
