@@ -1184,7 +1184,7 @@ class Context(object):
         # a system function.
         if ((not global_only) and (name in self.locals)):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Found %r in locals' % name)
+                log.debug('Found %r in locals (%r)' % (name, type(self.locals[name])))
             if is_change_handler: self.has_change_handler[change_name] = True
             self.name_cache[orig_name] = name
             return self.locals[name]
@@ -1192,7 +1192,7 @@ class Context(object):
         # second, in globals:
         elif ((not local_only) and (name in self.globals)):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Found %r in globals' % name)
+                log.debug('Found %r in globals (%r)' % (name, type(self.globals[name])))
             if is_change_handler: self.has_change_handler[change_name] = True
             self.name_cache[orig_name] = name
             return self.globals[name]

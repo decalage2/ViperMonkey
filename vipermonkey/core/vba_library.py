@@ -2533,9 +2533,13 @@ class Paragraphs(VbaLibraryFunc):
 
         # Get the paragraphs.
         paragraphs = None
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Handling Paragraphs(" + str(params) + ") ...")
         try:
             paragraphs = context.get("ActiveDocument.Paragraphs".lower())
         except KeyError:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("No paragraphs loaded.")
             return "NULL"
         
         # Sanity check.
@@ -2546,7 +2550,8 @@ class Paragraphs(VbaLibraryFunc):
         # Get the paragraph index.
         index = None
         try:
-            index = coerce_to_int(params[0])
+            # Looks like this is 1 based indexing in VBA??
+            index = coerce_to_int(params[0]) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Paragraphs() exception: " + str(e))

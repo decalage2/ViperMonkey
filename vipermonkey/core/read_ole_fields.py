@@ -1487,7 +1487,7 @@ def _find_str_with_most_repeats(strs):
 
 def get_ole_text_method_1(vba_code, data, debug=False):
     """Pull OLE object name/value pairs from given OLE data using
-    heuristic 1.
+    heuristic method 1.
 
     @param vba_code (str) The VBA macro code from the Office file.
 
@@ -2525,7 +2525,7 @@ def get_ole_textbox_values(obj, vba_code):
     data = re.sub("Tahoma\w{0,5}", "\x00", data)
 
     # Try a method specific to a certain maldoc campaign first.
-    r = get_ole_text_method_1(vba_code, data)
+    r = get_ole_text_method_1(vba_code, data, debug=debug)
     if (r is not None):
         return r
     
