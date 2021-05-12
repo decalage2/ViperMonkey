@@ -1522,7 +1522,7 @@ class Context(object):
         if (local):
             return (utils.safe_str_convert(name).lower() in self.locals)
         try:
-            self.get(name)
+            self.__get(name)
             return True
         except KeyError:
             return False
