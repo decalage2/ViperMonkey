@@ -4490,7 +4490,7 @@ class Call_Statement(VBA_Object):
             # Pull out the function name if referenced via a module, etc.
             if ("." in func_name):
                 func_name = func_name[func_name.index(".") + 1:]
-            
+                
             # Get the function.
             s = context.get(func_name)
             if (s is None):

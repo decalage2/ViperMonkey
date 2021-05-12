@@ -1357,6 +1357,23 @@ class Context(object):
                     return r
                 except KeyError:
                     pass
+
+            # Maybe this is an object where we failed to save the value associated
+            # with the proper OLE stream. Try just looking for the specific object
+            # minus the stream info.
+            fields = name.split(".")
+            if (len(fields) > 2):
+                new_name = fields[-2] + "." + fields[-1]
+                try:
+                    r = self.__get(utils.safe_str_convert(new_name),
+                                   case_insensitive=case_insensitive,
+                                   local_only=local_only,
+                                   global_only=global_only)
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Found wildcarded field value " + new_name + " = " + utils.safe_str_convert(r))
+                    return r
+                except KeyError:
+                    pass
             
         # See if the variable was initially defined with a trailing '$'.
         return self.__get(utils.safe_str_convert(name) + "$",

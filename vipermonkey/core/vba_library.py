@@ -2515,11 +2515,14 @@ class SaveToFile(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return ""
 
+        # Save that we are saving a file.
+        fname = str(params[0])
+        context.report_action('Write File', fname, 'SaveToFile', strip_null_bytes=True)
+        
         # Just return the file name. This is used in
-        # expressions.MemberAccessExpression._handle_savetofile().
-        r = str(params[0])
-        context.last_saved_file = r
-        return r
+        # expressions.MemberAccessExpression._handle_savetofile().        
+        context.last_saved_file = fname
+        return fname
 
     def return_type(self):
         return "STRING"    
