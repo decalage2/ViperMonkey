@@ -838,11 +838,13 @@ def _get_var_vals(item, context, global_only=False):
             # Variable is not defined. Try to infer the type based on how it is used.
             #print "TOP LOOK TYPE: " + str(var)
             var_type, certain_of_type = _infer_type(var, item, context)
+            #print (var_type, certain_of_type)
             if (var_type == "INTEGER"):
-                val = 0
+                val = "NULL"
                 if certain_of_type:
                     #print "SET TYPE INT"
                     #print var
+                    val = 0
                     context.set_type(var, "Integer")
             elif (var_type == "STRING"):
                 val = ""
