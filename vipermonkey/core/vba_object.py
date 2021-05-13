@@ -115,13 +115,31 @@ class VbaLibraryFunc(object):
         return "INTEGER"
 
 def excel_col_letter_to_index(x): 
+    """Convert letters indicating the Excel column (ex. "AD" in "AD12")
+    to a numeric colum index.
+
+    @param x (str) The Excel alphabetic column.
+    
+    @return (int) The column as a nueric index.
+
+    """
     x = x.upper()
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
 def limits_exceeded(throw_error=False):
-    """
-    Check to see if we are about to exceed the maximum recursion depth. Also check to 
-    see if emulation is taking too long (if needed).
+    """Check to see if we are about to exceed the maximum recursion
+    depth. Also check to see if emulation is taking too long (if
+    needed).
+
+    @param throw_error (boolean) If True throw an exception if the
+    recursion depth or runtime has been exceeded.
+    
+    @return (boolean) True if the recursion depth or runtime has been
+    exceeded, False if not.
+
+    @throws RuntimeError This is thrown if throw_error is True and
+    processing limits have been exceeded.
+
     """
 
     # Check to see if we are approaching the recursion limit.
@@ -145,8 +163,8 @@ def limits_exceeded(throw_error=False):
     return (recursion_exceeded or time_exceeded)
 
 class VBA_Object(object):
-    """
-    Base class for all VBA objects that can be evaluated.
+    """Base class for all VBA objects that can be evaluated.
+
     """
 
     # Upper bound for loop iterations. 0 or less means unlimited.
@@ -304,8 +322,16 @@ class VBA_Object(object):
         raise NotImplementedError("to_python() not implemented in " + str(type(self)))
 
 def _read_from_excel(arg, context):
-    """
-    Try to evaluate an argument by reading from the loaded Excel spreadsheet.
+    """Try to evaluate an argument by reading from the loaded Excel
+    spreadsheet.
+
+    @param arg (VBA_Object object) The argument to evaluate.
+
+    @param context (Context object) The current program state.
+    
+    @return (any) The result of the evaluation on success, None on
+    failure.
+
     """
 
     # Try handling reading value from an Excel spreadsheet cell.
@@ -325,8 +351,16 @@ def _read_from_excel(arg, context):
     return None
 
 def _read_from_object_text(arg, context):
-    """
-    Try to read in a value from the text associated with a object like a Shape.
+    """Try to read in a value from the text associated with a object like
+    a Shape.
+
+    @param arg (VBA_Object object) The argument to evaluate.
+
+    @param context (Context object) The current program state.
+    
+    @return (any) The result of the evaluation on success, None on
+    failure.
+
     """
 
     # Do we have an object text access?
@@ -417,8 +451,13 @@ def _read_from_object_text(arg, context):
     return None
 
 def contains_excel(arg):
-    """
-    See if a given expression contains Excel book or sheet objects.
+    """See if a given expression contains Excel book or sheet objects.
+
+    @param arg (VBA_Object object) The argument to check.
+
+    @return (boolean) True if the given VBA expression contains Excel
+    book or sheet objects, False if not.
+
     """
 
     # Got actual Excel objects?
@@ -438,8 +477,15 @@ def contains_excel(arg):
 constant_expr_cache = {}
 
 def get_cached_value(arg):
-    """
-    Get the cached value of an all constant numeric expression if we have it.
+    """Get the cached value of an all constant numeric expression if we
+    have it.
+
+    @param arg (VBA_Object object) The argument to check.
+
+    @return (int or VBA_Object) The cached value of the all constant
+    numeric expression if it is in the cache, the original given
+    argument if not.
+
     """
 
     # Don't do any more work if this is already a resolved value.
@@ -457,8 +503,14 @@ def get_cached_value(arg):
     return constant_expr_cache[arg_str]
 
 def set_cached_value(arg, val):
-    """
-    Set the cached value of an all constant numeric expression.
+    """Set the cached value of an all constant numeric expression.
+
+    @param arg (VBA_Object object) The unresolved expression to
+    cache. 
+
+    @param val (int, float, complex) The value of the resolved
+    expression.
+
     """
 
     # We should be setting this to a numeric expression
@@ -483,8 +535,14 @@ def set_cached_value(arg, val):
     constant_expr_cache[arg_str] = val
     
 def is_constant_math(arg):
-    """
-    See if a given expression is a simple math expression with all literal numbers.
+    """See if a given expression is a simple math expression with all
+    literal numbers.
+
+    @param arg (VBA_Object object) The expression to check.
+
+    @return (boolean) True if this is a simple math expression with
+    all numeric literals, False if not.
+
     """
 
     # Sanity check. If there are variables in the expression it is not all literals.
@@ -522,8 +580,14 @@ def is_constant_math(arg):
 meta = None
 
 def _boilerplate_to_python(indent):
-    """
-    Get starting boilerplate code for VB to Python JIT code.
+    """Get starting boilerplate code for VB to Python JIT code.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+    
+    @return (str) The boilerplate Python code for the beginning of a
+    Python JIT code block.
+
     """
     indent_str = " " * indent
     boilerplate = indent_str + "import core.vba_library\n"
@@ -545,9 +609,17 @@ def _boilerplate_to_python(indent):
     return boilerplate
 
 def _get_local_func_type(expr, context):
-    """
-    Get the return type of a locally defined funtion given a call
-    to the function.
+    """Get the return type of a locally defined funtion given a call to
+    the function.
+
+    @param expr (VBA_Object object) The call of the function that will
+    be used to infer the function return type.
+
+    @param context (Context object) The current program state.
+    
+    @return (str) The function return type if known, None if not
+    known.
+
     """
 
     # Sanity check.
@@ -568,8 +640,17 @@ def _get_local_func_type(expr, context):
     return None
         
 def _infer_type_of_expression(expr, context):
-    """
-    Try to determine if a given expression is an "INTEGER" or "STRING" expression.
+    """Try to determine if a given expression is an "INTEGER" or "STRING"
+    expression.
+
+    @param expr (VBA_Object object) The expression for which to infer
+    the type.
+    
+    @param context (Context object) The current program state.
+
+    @return (str) The type of the expression if known ("STRING" or
+    "INTEGER"), None if not known.
+
     """
 
     import operators
@@ -643,13 +724,24 @@ def _infer_type_of_expression(expr, context):
     return None
     
 def _infer_type(var, code_chunk, context):
-    """
-    Try to infer the type of an undefined variable based on how it is used ("STRING" or "INTEGER").
+    """Try to infer the type of an undefined variable based on how it is
+    used ("STRING" or "INTEGER").
 
     This is currently purely a heuristic.
 
-    returns a tuple, 1st element is the inferred type ("STRING" or "INTEGER") and the 2nd element 
-    is a flag indicating if we are sure of the type (True) or just guessing (False).
+    @param var (str) The name of the variable for which to infer the
+    type.
+
+    @param code_chunk (VBA_Object object) The chunk of code to scan to
+    infer the type of the variable.
+
+    @param context (Context object) The current program state.
+
+    @return (tuple) A 2 element tuple, 1st element is the inferred
+    type ("STRING" or "INTEGER") and the 2nd element is a flag
+    indicating if we are sure of the type (True) or just guessing
+    (False).
+
     """
 
     # Get all the assignments in the code chunk.
@@ -677,11 +769,19 @@ def _infer_type(var, code_chunk, context):
     return ("INTEGER", False)
 
 def _get_var_vals(item, context, global_only=False):
-    """
-    Get the current values for all of the referenced VBA variables that appear in the 
-    given VBA object.
+    """Get the current values for all of the referenced VBA variables
+    that appear in the given VBA object.
 
-    Returns a dict mapping var names to values.
+    @param item (VBA_Object object) The chunk of code to scan to find
+    referenced variables.
+
+    @param context (Context object) The current program state.
+
+    @param global_only (boolean) If True only return global variables,
+    if False get all variables (local and global).
+    
+    @return (dict) Returns a dict mapping var names to values.
+
     """
 
     import procedures
@@ -847,8 +947,19 @@ def _get_var_vals(item, context, global_only=False):
     return (r, zero_arg_funcs)
 
 def _loop_vars_to_python(loop, context, indent):
-    """
-    Set up initialization of variables used in a loop in Python.
+    """Set up initialization of variables used in a loop in Python.
+
+    @param loop (VBA_Object object) The loop for which to generate
+    Python JIT variable initialization code.
+    
+    @param context (Context object) The current program state.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+
+    @return (str) Python JIT code initializing variables referenced in
+    the given loop.
+
     """
     indent_str = " " * indent
     loop_init = ""
@@ -873,8 +984,23 @@ def _loop_vars_to_python(loop, context, indent):
     return (loop_init, prog_var)
 
 def to_python(arg, context, params=None, indent=0, statements=False):
-    """
-    Call arg.to_python() if arg is a VBAObject, otherwise just return arg as a str.
+    """Call arg.to_python() if arg is a VBAObject, otherwise just return
+    arg as a str.
+
+    @param arg (VBA_Object object) The code for which to generate
+    Python JIT code.
+
+    @param context (Context object) The current program state.
+
+    @param params (list) Any VB params used by the given VBA_Object.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+
+    @param statements (boolean) If True the value given in the arg
+    parameter is a list of VB statements (VBA_Object) to convert to
+    Python, if False arg is just a single item to convert as a unit.
+
     """
         
     # VBA Object?
@@ -959,9 +1085,20 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     return r
 
 def _check_for_iocs(loop, context, indent):
-    """
-    Check the variables modified in a loop to see if they were
-    set to interesting IOCs.
+    """Generate Python JIT code for checking the variables modified in a
+    loop to see if they were set to interesting IOCs.
+
+    @param loop (VBA_Object object) The loop for which to generate
+    Python JIT code.
+
+    @param context (Context object) The current program state.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+
+    @return (str) Python JIT code checking variables modified in the
+    loop for potential IOCs.
+
     """
     context = context # pylint
     
@@ -979,8 +1116,20 @@ def _check_for_iocs(loop, context, indent):
     return ioc_str
 
 def _updated_vars_to_python(loop, context, indent):
-    """
-    Save the variables updated in a loop in Python.
+    """Generate Python JIT code for saving the variables updated in a loop
+    in Python. These updates are saved in the Python var_updates
+    variable.
+
+    @param loop (VBA_Object object) The loop for which to generate
+    Python JIT code.
+
+    @param context (Context object) The current program state.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+
+    @return (str) Python JIT code.
+
     """
     import statements
     
@@ -1017,8 +1166,16 @@ def _updated_vars_to_python(loop, context, indent):
     return save_vals
 
 def _get_all_called_funcs(item, context):
-    """
-    Get all of the local functions called in the given VBA object.
+    """Get all of the local functions called in the given VBA object.
+
+    @param item (VBA_Object item) The code chunk to check for function
+    calls.
+
+    @param context (Context object) The current program state.
+
+    @return (list) List of the function definitions (VBA_Object) of
+    all the functions called in the code chunk.
+
     """
 
     # Get all the functions called in the VBA object.
@@ -1044,8 +1201,19 @@ def _get_all_called_funcs(item, context):
     return local_funcs
 
 def _called_funcs_to_python(loop, context, indent):
-    """
-    Convert all the functions called in the loop to Python.
+    """Convert all the functions called in the given loop to Python JIT
+    code.
+
+    @param loop (VBA_Object object) The loop for which to generate
+    Python JIT code.
+
+    @param context (Context object) The current program state.
+
+    @param indent (int) The number of spaces to indent the generated
+    Python code.
+
+    @return (str) Python JIT code.
+
     """
     
     # Get the definitions for all local functions called directly in the loop.
@@ -1097,8 +1265,24 @@ def _called_funcs_to_python(loop, context, indent):
 jit_cache = {}
 
 def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=None):
-    """
-    Convert the loop to Python and emulate the loop directly in Python.
+    """Convert the given loop to Python and emulate the loop directly in
+    Python.
+
+    @param loop (VBA_Object object) The loop for which to generate
+    Python JIT code.
+
+    @param context (Context object) The current program state.
+
+    @param params (list) Any VB params used by the given loop.
+    
+    @param add_boilerplate (boolean) If True add setup boilerplate
+    code (imports, etc.) to the start of the generated Python JIT
+    code. Don't add boilerplate if False.
+
+    @param namespace (dict) The Python namespace in which to evaluate
+    the generated Python JIT code. If None the locals() namespace will
+    be used.
+
     """
     params = params # pylint
     
@@ -1243,6 +1427,16 @@ def _handle_wscriptshell_run(arg, context, got_constant_math):
     """Handle cases where wscriptshell.run() is being called and there is
     a local run() function.
 
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param got_constant_math (boolean) If True the given arg is an all
+    numeric literal expression, if False it is not.
+    
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
+
     """
 
     # Handle cases where wscriptshell.run() is being called and there is a local run() function.
@@ -1259,6 +1453,16 @@ def _handle_wscriptshell_run(arg, context, got_constant_math):
 
 def _handle_shapes_access(r, arg, context, got_constant_math):
     """Finish handling a partially handled Shapes() access.
+
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param got_constant_math (boolean) If True the given arg is an all
+    numeric literal expression, if False it is not.
+    
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
 
     """
 
@@ -1277,7 +1481,18 @@ def _handle_shapes_access(r, arg, context, got_constant_math):
     return None
 
 def _handle_nodetypedvalue_read(arg, context, got_constant_math):
-    """
+    """Handle reads of the nodeTypedValue field of an object.
+
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param got_constant_math (boolean) If True the given arg is an all
+    numeric literal expression, if False it is not.
+    
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
+
     """
 
     # This is a hack to get values saved in the .text field of objects.
@@ -1305,7 +1520,17 @@ def _handle_nodetypedvalue_read(arg, context, got_constant_math):
     return None                
 
 def _handle_selected_item_read(arg, context, got_constant_math):
-    """
+    """Handle reads of the selectedItem field of an object.
+
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param got_constant_math (boolean) If True the given arg is an all
+    numeric literal expression, if False it is not.
+    
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
     """
 
     # This is a hack to get values saved in the .rapt.Value field of objects.
@@ -1326,7 +1551,19 @@ def _handle_selected_item_read(arg, context, got_constant_math):
     return None
 
 def _handle_form_variable_read(arg, context, got_constant_math):
-    """
+    """Handle reading some VBA form variable (looks like reading a field
+    of an object).
+
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param got_constant_math (boolean) If True the given arg is an all
+    numeric literal expression, if False it is not.
+    
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
+
     """
 
     # Is this trying to access some VBA form variable?
@@ -1490,8 +1727,20 @@ def _handle_form_variable_read(arg, context, got_constant_math):
     return None
 
 def eval_arg(arg, context, treat_as_var_name=False):
-    """
-    evaluate a single argument if it is a VBA_Object, otherwise return its value
+    """Evaluate a single argument if it is a VBA_Object, otherwise return
+    its value.
+
+    @param arg (VBA_Object object) The item being evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param treat_as_var_name (boolean) If True try to look up a
+    variable with the given name, if False try to directly evaluate
+    the given item.
+
+    @return (??) On success the evaluated item is returned, None is
+    returned on error.
+
     """
 
     # pypy seg faults sometimes if the recursion depth is exceeded. Try to
@@ -1610,9 +1859,21 @@ def eval_arg(arg, context, treat_as_var_name=False):
         return arg
 
 def eval_args(args, context, treat_as_var_name=False):
-    """
-    Evaluate a list of arguments if they are VBA_Objects, otherwise return their value as-is.
-    Return the list of evaluated arguments.
+    """Evaluate a list of arguments if they are VBA_Objects, otherwise
+    return their value as-is.  
+
+    @param args (list) The list of items (VBA_Object object) being
+    evaluated.
+
+    @param context (Context object) The current program state.
+    
+    @param treat_as_var_name (boolean) If True try to look up variable
+    with the given names in the args list, if False try to directly
+    evaluate the given items.
+
+    @return (list) Return the list of evaluated arguments on success,
+    the original args on failure.
+
     """
 
     # Punt if we can't iterate over the args.
@@ -1632,8 +1893,18 @@ def eval_args(args, context, treat_as_var_name=False):
     return r
 
 def update_array(old_array, indices, val):
-    """
-    Add an item to a Python list.
+    """Add an item to a Python list. This is called from Python JIT
+    code.
+    
+    @param old_array (list) The Python list to update.
+    
+    @param indices (list) The indices of the array element to
+    add/update.
+
+    @param val (??) The value to write into the array.
+
+    @return (list) The updated array.
+
     """
 
     # Sanity check.
@@ -1669,10 +1940,15 @@ def update_array(old_array, indices, val):
     return old_array
 
 def coerce_to_int_list(obj):
-    """
-    Coerce a constant string VBA object to a list of ASCII codes.
-    :param obj: VBA object
-    :return: list
+    """Coerce a VBA object to a list of ASCII codes. The object is
+    converted to a string and then each character in the string is
+    converted to its ASCII code.
+
+    @param obj (VBA_Object object) The VBA object to convert to ASCII
+    codes.
+
+    @return (list) List of ASCII codes (int).
+
     """
 
     # Already have a list?
@@ -1689,10 +1965,16 @@ def coerce_to_int_list(obj):
     return r
 
 def coerce_to_str(obj, zero_is_null=False):
-    """
-    Coerce a constant VBA object (integer, Null, etc) to a string.
-    :param obj: VBA object
-    :return: string
+    """Coerce a VBA object (integer, Null, etc) to a string.
+
+    @param obj (VBA_Object object) The VBA object to convert to a
+    string.
+
+    @param zero_is_null (boolean) If True treat integer 0 as a zero
+    length string, if False just convert 0 to '0'.
+
+    @return (str) The given VBA object as a string.
+
     """
 
     # in VBA, Null/None is equivalent to an empty string
@@ -1743,19 +2025,26 @@ def coerce_to_str(obj, zero_is_null=False):
     return utils.safe_str_convert(obj)
 
 def coerce_args_to_str(args):
-    """
-    Coerce a list of arguments to strings.
-    Return the list of evaluated arguments.
+    """Coerce a list of arguments to strings.
+
+    @param args (list) The items to convert to strings.
+    
+    @return (list) A list where each given item has been coerced to a
+    string.
+
     """
     # TODO: None should be converted to "", not "None"
     return [coerce_to_str(arg) for arg in args]
     # return map(lambda arg: str(arg), args)
 
 def coerce_to_int(obj):
-    """
-    Coerce a constant VBA object (integer, Null, etc) to a int.
-    :param obj: VBA object
-    :return: int
+    """Coerce a VBA object (integer, Null, etc) to a int.
+
+    @param obj (VBA_Object) The item to coerce to an integer.
+
+    @return (int) The given item as an int. 0 is returned on error (or
+    if the actual converted value is 0).
+
     """
 
     # in VBA, Null/None is equivalent to 0
@@ -1805,10 +2094,15 @@ def coerce_to_int(obj):
         return 0
 
 def coerce_to_num(obj):
-    """
-    Coerce a constant VBA object (integer, Null, etc) to a int or float.
-    :param obj: VBA object
-    :return: int
+    """Coerce a VBA object (integer, Null, etc) to a int or float.
+
+    @param obj (VBA_Object) The item to coerce to a number.
+
+    @return (float, int) The given item as some sort of number. 
+
+    @throws ValueError This is thrown if the given item cannot be
+    converted to a number.
+
     """
     # in VBA, Null/None is equivalent to 0
     if ((obj is None) or (obj == "NULL")):
@@ -1854,18 +2148,27 @@ def coerce_to_num(obj):
     return int(obj)
 
 def coerce_args_to_int(args):
-    """
-    Coerce a list of arguments to ints.
-    Return the list of evaluated arguments.
+    """Coerce a list of arguments to ints.  
+    
+    @param args (list) The items (VBA_Object) to convert to ints.
+    
+    @return (list) The given items converted to ints.
+
     """
     return [coerce_to_int(arg) for arg in args]
 
 def coerce_args(orig_args, preferred_type=None):
-    """
-    Coerce all of the arguments to either str or int based on the most
+    """Coerce all of the arguments to either str or int based on the most
     common arg type.
 
-    preferred_type = Preferred type to coerce things if possible.
+    @param args (list) The items (VBA_Object) to convert to int or
+    str.
+    
+    @param preferred_type (str) Preferred type to coerce things if
+    possible ("str" or "int").
+
+    @return (list) The given items converted to ints.
+
     """
 
     # Sanity check.
