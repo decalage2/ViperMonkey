@@ -1,3 +1,9 @@
+"""@package visitor Define base class for all implementations of the
+visitor pattern.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Class template for visitor classes for the visitor design pattern.
 
