@@ -1,3 +1,8 @@
+"""@package vb_str Representation of VBA extended ASCII strings.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Class for representing VBA strings that contain a mix of ASCII and
 wide character characters.
@@ -49,9 +54,14 @@ except ImportError:
 import utils
     
 def is_wide_str(the_str):
-    """
-    Test to see if the given string is a simple wide char string (every other
-    character is a null byte).
+    """Test to see if the given string is a simple wide char string
+    (every other character is a null byte).
+
+    @param the_str (str) The string to test.
+    
+    @return (boolean) True if this looks like a simple wide character
+    string, False if not.
+
     """
     if (len(the_str) < 2):
         return False
@@ -69,8 +79,12 @@ def is_wide_str(the_str):
     return is_wide
 
 def convert_wide_to_ascii(the_str):
-    """
-    Convert a simple wide string to ASCII.
+    """Convert a simple wide string to ASCII.
+
+    @param the_str (str) The string to convert.
+    
+    @return (str) The converted string.
+
     """
     if (not is_wide_str(the_str)):
         return the_str
@@ -78,8 +92,12 @@ def convert_wide_to_ascii(the_str):
     return the_str[::2]
     
 def is_mixed_wide_ascii_str(the_str):
-    """
-    Test a string to see if it is a mix of wide and ASCII chars.
+    """Test a string to see if a string is a mix of wide and ASCII chars.
+
+    @param the_str (str) The string to check.
+
+    @return (boolean) True if the string is a mized string, False if
+    not.
     """
     uni_str = None
     try:
@@ -98,11 +116,18 @@ single_char_ord_fixes = {
 }
 str_to_ascii_map = None
 def get_ms_ascii_value(the_str):
-    """
-    Get the VBA ASCII value of a given string. This handles VBA using a different
-    extended ASCII character set than everyone else in the world.
+    """Get the VBA ASCII value of a given string. This handles VBA using
+    a different extended ASCII character set than everyone else in the
+    world.
 
-    This handles both retgular Python strings and VbStr objects.
+    This handles both regular Python strings and VbStr objects.
+
+    @param the_str (str) The string for which to get the char code of
+    the 1st 'character' in the string.
+    
+    @return (int) The character code for the 1st 'character' in the
+    string.
+
     """
 
     # Sanity check.
@@ -284,13 +309,13 @@ class VbStr(object):
     }
     
     def __init__(self, orig_str, is_vbscript=False):
-        """
-        Create a new VBA string object.
+        """Create a new VBA string object.
 
-        orig_str - The raw Python string.
-        is_vbscript - VBScript handles mixed ASCII/wide char strings differently than
-        VBA. Set this to True if VBScript is being analyzed, False if VBA is being 
-        analyzed.
+        @param orig_str (str) The raw Python string.
+
+        @param is_vbscript (boolean) VBScript handles mixed ASCII/wide
+        char strings differently than VBA. Set this to True if
+        VBScript is being analyzed, False if VBA is being analyzed.
 
         NOTE: This just handles characters from Microsoft's special extended ASCII set.
 
@@ -388,17 +413,26 @@ class VbStr(object):
         return r
 
     def len(self):
+        """Get the length of the VB string.
+
+        """
         return len(self.vb_str)
 
     def to_python_str(self):
-        """
-        Return the VB string as a raw Python str.
+        """Return the VB string as a raw Python str.
+
         """
         return "".join(self.vb_str)
 
     def get_chunk(self, start, end):
-        """
-        Return a chunk of the string as a vb_string object.
+        """Return a chunk of the string as a vb_string object.
+
+        @param start (int) The start index of the chunk.
+
+        @param ends (int) The end index of the chunk.
+        
+        @return (VbStr object) The specified substring.
+
         """
 
         # Sanity check.
@@ -413,11 +447,22 @@ class VbStr(object):
         return VbStr(self.vb_str[start:end])
 
     def update_chunk(self, start, end, new_str):
-        """
-        Return a new copy of the current string updated with the given chunk
-        replaced with the given string (can be a VbStr or a raw Python string).
+        """Return a new copy of the current string updated with the given
+        chunk replaced with the given string (can be a VbStr or a raw
+        Python string).
 
         The current VB string object is not changed.
+
+        @param start (int) The start index of the chunk.
+
+        @param ends (int) The end index of the chunk.
+
+        @param new_str (VBStr object) The substring to write into the
+        current string.
+        
+        @return (VbStr object) A modified version of the current
+        string. The current string object is not modified.
+
         """
 
         # Sanity check.
