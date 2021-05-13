@@ -91,6 +91,9 @@ def is_mixed_wide_ascii_str(the_str):
         return True
     return False
 
+single_char_ord_fixes = {
+    195 : 197
+}
 str_to_ascii_map = None
 def get_ms_ascii_value(the_str):
     """
@@ -127,8 +130,13 @@ def get_ms_ascii_value(the_str):
     # Look up the MS extended ASCII code.
     if (the_str not in str_to_ascii_map):
 
+        # Ugh. Some of these codes need to be fixed.
+        r = ord(the_str[0])
+        if (r in single_char_ord_fixes):
+            r = single_char_ord_fixes[r]
+        
         # Punt and just return the code for the 1st char in the string.
-        return ord(the_str[0])
+        return r
 
     # MS wide char. Return MS extended ASCII code.
     return str_to_ascii_map[the_str]
@@ -334,14 +342,6 @@ class VbStr(object):
                         tmp_str = str(tmp_str)
                     except UnicodeEncodeError:
                         tmp_str = filter(isprint, tmp_str)
-                    #print tmp_str
-                    #print type(tmp_str)
-                    #print code
-                    #print type(code)
-                    #print pos
-                    #print type(pos)
-                    #print code_str
-                    #print type(code_str)
                     tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + str(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.

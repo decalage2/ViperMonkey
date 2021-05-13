@@ -293,7 +293,9 @@ class ViperMonkey(StubbedEngine):
         else:
             self.is_vbscript = True
             log.info("Emulating a VBScript file.")
-
+        #print "\n\nREMOVE THIS!!\n\n"
+        #self.is_vbscript = False
+            
         # Olevba uses '\n' as EOL, regular VBScript uses '\r\n'.
         if self.is_vbscript:
             vba_library.VBA_LIBRARY['vbCrLf'] = '\r\n'
