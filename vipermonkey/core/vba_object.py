@@ -55,8 +55,6 @@ from logger import log
 import re
 from curses_ascii import isprint
 import traceback
-import string
-import gc
 import hashlib
 
 from inspect import getouterframes, currentframe
@@ -91,6 +89,9 @@ class VbaLibraryFunc(object):
 
         @return (any) The result of emulating the function call.
         """
+        context = context # pylint
+        params = params # pylint
+        
         raise ValueError("eval() method not implemented.")
         
     def num_args(self):
@@ -184,6 +185,9 @@ class VBA_Object(object):
         @return (any) The result of emulating the current object.
 
         """
+        context = context # pylint
+        params = params # pylint
+        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug(self)
         # raise NotImplementedError
@@ -223,8 +227,7 @@ class VBA_Object(object):
         for _, value in self.__dict__.iteritems():
             if (isinstance(value, VBA_Object)):
                 r.append(value)
-            if ((isinstance(value, list)) or
-                (isinstance(value, pyparsing.ParseResults))):
+            if isinstance(value, (list, pyparsing.ParseResults)):
                 for i in value:
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
@@ -317,63 +320,9 @@ def _read_from_excel(arg, context):
             log.debug("Try as Excel cell read...")
 
         return arg.eval(context)
-            
-        # Pull out the sheet name.
-        tmp_arg_str = arg_str.lower()
-        start = tmp_arg_str.index("sheets(") + len("sheets(")
-        end = start + tmp_arg_str[start:].index(")")
-        sheet_name = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
-        
-        # Pull out the cell index.
-        start = None
-        if ("range(" in arg_str.lower()):
-            start = tmp_arg_str.index("range(") + len("range(")
-        else:
-            start = tmp_arg_str.index("cells(") + len("cells(")
-        end = start + tmp_arg_str[start:].index(")")
-        cell_index = arg_str[start:end].strip().replace('"', "").replace("'", "").replace("//", "")
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Sheet name = '" + sheet_name + "', cell index = " + cell_index)
-        
-        try:
-            
-            # Load the sheet.
-            sheet = context.loaded_excel.sheet_by_name(sheet_name)
-            
-            # Pull out the cell column and row.
 
-            # Do we have something like '10, 30'?
-            index_pat = r"(\d+)\s*,\s*(\d+)"
-            if (re.search(index_pat, cell_index) is not None):
-                indices = re.findall(index_pat, cell_index)[0]
-                row = int(indices[0]) - 1
-                col = int(indices[1]) - 1
-
-            # Maybe something like 'A4:B7' ?
-            else:
-                col = ""
-                row = ""
-                for c in cell_index:
-                    if (c.isalpha()):
-                        col += c
-                    else:
-                        row += c
-                    
-                # Convert the row and column to numeric indices for xlrd.
-                row = int(row) - 1
-                col = excel_col_letter_to_index(col)
-            
-            # Pull out the cell value.
-            val = str(sheet.cell_value(row, col))
-            
-            # Return the cell value.
-            log.info("Read cell (" + str(cell_index) + ") from sheet " + str(sheet_name))
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Cell value = '" + str(val) + "'")
-            return val
-        
-        except Exception as e:
-            context.report_general_error("Cannot read cell from Excel spreadsheet. " + str(e))
+    # Not handled.
+    return None
 
 def _read_from_object_text(arg, context):
     """
@@ -463,6 +412,9 @@ def _read_from_object_text(arg, context):
             log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
+
+    # Not handled.
+    return None
 
 def contains_excel(arg):
     """
@@ -1287,6 +1239,256 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     # Done.
     return True
 
+def _handle_wscriptshell_run(arg, context, got_constant_math):
+    """Handle cases where wscriptshell.run() is being called and there is
+    a local run() function.
+
+    """
+
+    # Handle cases where wscriptshell.run() is being called and there is a local run() function.
+    if ((".run(" in str(arg).lower()) and (context.contains("run"))):
+
+        # Resolve the run() call.
+        if ("MemberAccessExpression" in str(type(arg))):
+            arg_evaled = arg.eval(context)
+            if got_constant_math: set_cached_value(arg, arg_evaled)
+            return arg_evaled
+
+    # Not handled.
+    return None
+
+def _handle_shapes_access(r, arg, context, got_constant_math):
+    """Finish handling a partially handled Shapes() access.
+
+    """
+
+    # Is this a Shapes() access that still needs to be handled?
+    poss_shape_txt = ""
+    if isinstance(r, (VBA_Object, str)):
+        poss_shape_txt = utils.safe_str_convert(r)
+    if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
+        r = eval_arg(r, context)
+        if got_constant_math: set_cached_value(arg, r)
+        return r
+
+    # Not handled.
+    return None
+
+def _handle_nodetypedvalue_read(arg, context, got_constant_math):
+    """
+    """
+
+    # This is a hack to get values saved in the .text field of objects.
+    # To do this properly we need to save "FOO.text" as a variable and
+    # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
+    if ("nodetypedvalue" in arg.lower()):
+        try:
+            tmp = arg.lower().replace("nodetypedvalue", "text")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Try to get as " + tmp + "...")
+            val = context.get(tmp)
+    
+            # It looks like maybe this magically does base64 decode? Try that.
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Try base64 decode of '" + str(val) + "'...")
+            val_decode = utils.b64_decode(val)
+            if (val_decode is not None):
+                if got_constant_math: set_cached_value(arg, val_decode)
+                return val_decode
+        except KeyError:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Not found as .text.")    
+
+    # Not handled.
+    return None                
+
+def _handle_selected_item_read(arg, context, got_constant_math):
+    """
+    """
+
+    # This is a hack to get values saved in the .rapt.Value field of objects.
+    if (".selecteditem" in arg.lower()):
+        try:
+            tmp = arg.lower().replace(".selecteditem", ".rapt.value")
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Try to get as " + tmp + "...")
+            val = context.get(tmp)
+            if got_constant_math: set_cached_value(arg, val)
+            return val
+
+        except KeyError:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Not found as .rapt.value.")    
+
+    # Not handled.
+    return None
+
+def _handle_form_variable_read(arg, context, got_constant_math):
+    """
+    """
+
+    # Is this trying to access some VBA form variable?
+    if ("." in arg.lower()):
+
+        # Try easy button first. See if this is just a doc var.
+        doc_var_val = context.get_doc_var(arg)
+        if (doc_var_val is not None):
+            if got_constant_math: set_cached_value(arg, doc_var_val)
+            return doc_var_val
+
+        # Peel off items seperated by a '.', trying them as functions.
+        arg_peeled = arg
+        while ("." in arg_peeled):
+                
+            # Try it as a form variable.
+            curr_var_attempt = arg_peeled.lower()
+            try:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
+                val = context.get(curr_var_attempt)
+                if (val != str(arg)):
+                    if got_constant_math: set_cached_value(arg, val)
+                    return val
+
+            except KeyError:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Not found as variable")
+
+            arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
+
+        # Try it as a function
+        func_name = arg.lower()
+        func_name = func_name[func_name.rindex(".")+1:]
+        try:
+
+            # Lookp and execute the function.
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Try to run as function '" + func_name + "'...")
+            func = context.get(func_name)
+            r = func
+            import procedures
+            if (isinstance(func, (procedures.Function, procedures.Sub)) or
+                ('vipermonkey.core.vba_library.' in str(type(func)))):
+                r = eval_arg(func, context, treat_as_var_name=True)
+                        
+            # Did the function resolve to a value?
+            if (r != func):
+
+                # Yes it did. Return the function result.
+                if got_constant_math: set_cached_value(arg, r)
+                return r
+
+            # The function did to resolve to a value. Return as the
+            # original string.
+            if got_constant_math: set_cached_value(arg, arg)
+            return arg
+
+        except KeyError:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Not found as function")
+
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Failed. Not a function. " + str(e))
+            traceback.print_exc()
+
+        # Are we trying to load some document meta data?
+        tmp = arg.lower().strip()
+        if (tmp.startswith("activedocument.item(")):
+
+            # Try to pull the result from the document meta data.
+            prop = tmp.replace("activedocument.item(", "").replace(")", "").replace("'","").strip()
+
+            # Make sure we read in the metadata.
+            if (meta is None):
+                log.error("BuiltInDocumentProperties: Metadata not read.")
+                return ""
+                
+            # See if we can find the metadata attribute.
+            if (not hasattr(meta, prop.lower())):
+                log.error("BuiltInDocumentProperties: Metadata field '" + prop + "' not found.")
+                return ""
+
+            # We have the attribute. Return it.
+            r = getattr(meta, prop.lower())
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
+            return r
+
+        # Are we trying to load some document data?
+        if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
+            (tmp.startswith("activeworkbook.builtindocumentproperties("))):
+
+            # Try to pull the result from the document data.
+            var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
+            var = var.replace("activeworkbook.builtindocumentproperties(", "")
+            val = context.get_doc_var(var)
+            if (val is not None):
+                return val
+
+            # Try getting from meta data.
+            val = context.read_metadata_item(var)
+            if (val is not None):
+                return val
+                    
+        # Are we loading a document variable?
+        if (tmp.startswith("activedocument.variables(")):
+
+            # ActiveDocument.Variables("ER0SNQAWT").Value
+            # Try to pull the result from the document variables.
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: handle expression as doc var lookup '" + tmp + "'")
+            var = tmp.replace("activedocument.variables(", "").\
+                  replace(")", "").\
+                  replace("'","").\
+                  replace('"',"").\
+                  replace('.value',"").\
+                  replace("(", "").\
+                  strip()
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: look for '" + var + "' as document variable...")
+            val = context.get_doc_var(var)
+            if (val is not None):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: got it as document variable.")
+                return val
+            else:
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: did NOT get it as document variable.")
+
+        # Are we loading a custom document property?
+        if (tmp.startswith("activedocument.customdocumentproperties(")):
+
+            # ActiveDocument.CustomDocumentProperties("l3qDvt3B53wxeXu").Value
+            # Try to pull the result from the custom properties.
+            var = tmp.replace("activedocument.customdocumentproperties(", "").\
+                  replace(")", "").\
+                  replace("'","").\
+                  replace('"',"").\
+                  replace('.value',"").\
+                  replace("(", "").\
+                  strip()
+            val = context.get_doc_var(var)
+            if (val is not None):
+                return val
+                    
+        # As a last resort try reading it as a wildcarded form variable.
+        wild_name = tmp[:tmp.index(".")] + "*"
+        for i in range(0, 11):
+            tmp_name = wild_name + str(i)
+            try:
+                val = context.get(tmp_name)
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
+                return val
+            except KeyError:
+                pass    
+
+    # Not handled.
+    return None
+
 def eval_arg(arg, context, treat_as_var_name=False):
     """
     evaluate a single argument if it is a VBA_Object, otherwise return its value
@@ -1325,13 +1527,9 @@ def eval_arg(arg, context, treat_as_var_name=False):
     if isinstance(arg, (VBA_Object, VbaLibraryFunc)):
 
         # Handle cases where wscriptshell.run() is being called and there is a local run() function.
-        if ((".run(" in str(arg).lower()) and (context.contains("run"))):
-
-            # Resolve the run() call.
-            if ("MemberAccessExpression" in str(type(arg))):
-                arg_evaled = arg.eval(context)
-                if got_constant_math: set_cached_value(arg, arg_evaled)
-                return arg_evaled
+        tmp_r = _handle_wscriptshell_run(arg, context, got_constant_math)
+        if (tmp_r is not None):
+            return tmp_r
 
         # Handle as a regular VBA object.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1339,16 +1537,10 @@ def eval_arg(arg, context, treat_as_var_name=False):
         r = arg.eval(context=context)
         
         # Is this a Shapes() access that still needs to be handled?
-        poss_shape_txt = ""
-        if isinstance(r, (VBA_Object, str)):
-            poss_shape_txt = utils.safe_str_convert(r)
-        if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
-            r = eval_arg(r, context)
-            if got_constant_math: set_cached_value(arg, r)
-            return r
-        
+        tmp_r = _handle_shapes_access(r, arg, context, got_constant_math)
+        if (tmp_r is not None):
+            return tmp_r
+
         # Regular VBA object.
         if got_constant_math: set_cached_value(arg, r)
         return r
@@ -1382,195 +1574,19 @@ def eval_arg(arg, context, treat_as_var_name=False):
             # This is a hack to get values saved in the .text field of objects.
             # To do this properly we need to save "FOO.text" as a variable and
             # return the value of "FOO.text" when getting "FOO.nodeTypedValue".
-            if ("nodetypedvalue" in arg.lower()):
-                try:
-                    tmp = arg.lower().replace("nodetypedvalue", "text")
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Try to get as " + tmp + "...")
-                    val = context.get(tmp)
-    
-                    # It looks like maybe this magically does base64 decode? Try that.
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Try base64 decode of '" + str(val) + "'...")
-                    val_decode = utils.b64_decode(val)
-                    if (val_decode is not None):
-                        if got_constant_math: set_cached_value(arg, val_decode)
-                        return val_decode
-                except KeyError:
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Not found as .text.")
+            tmp_r = _handle_nodetypedvalue_read(arg, context, got_constant_math)
+            if (tmp_r is not None):
+                return tmp_r
 
             # This is a hack to get values saved in the .rapt.Value field of objects.
-            elif (".selecteditem" in arg.lower()):
-                try:
-                    tmp = arg.lower().replace(".selecteditem", ".rapt.value")
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Try to get as " + tmp + "...")
-                    val = context.get(tmp)
-                    if got_constant_math: set_cached_value(arg, val)
-                    return val
-
-                except KeyError:
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Not found as .rapt.value.")
+            tmp_r = _handle_selected_item_read(arg, context, got_constant_math)
+            if (tmp_r is not None):
+                return tmp_r
 
             # Is this trying to access some VBA form variable?
-            elif ("." in arg.lower()):
-
-                # Try easy button first. See if this is just a doc var.
-                doc_var_val = context.get_doc_var(arg)
-                if (doc_var_val is not None):
-                    if got_constant_math: set_cached_value(arg, doc_var_val)
-                    return doc_var_val
-
-                # Peel off items seperated by a '.', trying them as functions.
-                arg_peeled = arg
-                while ("." in arg_peeled):
-                
-                    # Try it as a form variable.
-                    curr_var_attempt = arg_peeled.lower()
-                    try:
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
-                        val = context.get(curr_var_attempt)
-                        if (val != str(arg)):
-                            if got_constant_math: set_cached_value(arg, val)
-                            return val
-
-                    except KeyError:
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Not found as variable")
-
-                    arg_peeled = arg_peeled[arg_peeled.index(".") + 1:]
-
-                # Try it as a function
-                func_name = arg.lower()
-                func_name = func_name[func_name.rindex(".")+1:]
-                try:
-
-                    # Lookp and execute the function.
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Try to run as function '" + func_name + "'...")
-                    func = context.get(func_name)
-                    r = func
-                    import procedures
-                    if (isinstance(func, (procedures.Function, procedures.Sub)) or
-                        ('vipermonkey.core.vba_library.' in str(type(func)))):
-                        r = eval_arg(func, context, treat_as_var_name=True)
-                        
-                    # Did the function resolve to a value?
-                    if (r != func):
-
-                        # Yes it did. Return the function result.
-                        if got_constant_math: set_cached_value(arg, r)
-                        return r
-
-                    # The function did to resolve to a value. Return as the
-                    # original string.
-                    if got_constant_math: set_cached_value(arg, arg)
-                    return arg
-
-                except KeyError:
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Not found as function")
-
-                except Exception as e:
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: Failed. Not a function. " + str(e))
-                    traceback.print_exc()
-
-                # Are we trying to load some document meta data?
-                tmp = arg.lower().strip()
-                if (tmp.startswith("activedocument.item(")):
-
-                    # Try to pull the result from the document meta data.
-                    prop = tmp.replace("activedocument.item(", "").replace(")", "").replace("'","").strip()
-
-                    # Make sure we read in the metadata.
-                    if (meta is None):
-                        log.error("BuiltInDocumentProperties: Metadata not read.")
-                        return ""
-                
-                    # See if we can find the metadata attribute.
-                    if (not hasattr(meta, prop.lower())):
-                        log.error("BuiltInDocumentProperties: Metadata field '" + prop + "' not found.")
-                        return ""
-
-                    # We have the attribute. Return it.
-                    r = getattr(meta, prop.lower())
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("BuiltInDocumentProperties: return %r -> %r" % (prop, r))
-                    return r
-
-                # Are we trying to load some document data?
-                if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
-                    (tmp.startswith("activeworkbook.builtindocumentproperties("))):
-
-                    # Try to pull the result from the document data.
-                    var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
-                    var = var.replace("activeworkbook.builtindocumentproperties(", "")
-                    val = context.get_doc_var(var)
-                    if (val is not None):
-                        return val
-
-                    # Try getting from meta data.
-                    val = context.read_metadata_item(var)
-                    if (val is not None):
-                        return val
-                    
-                # Are we loading a document variable?
-                if (tmp.startswith("activedocument.variables(")):
-
-                    # ActiveDocument.Variables("ER0SNQAWT").Value
-                    # Try to pull the result from the document variables.
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: handle expression as doc var lookup '" + tmp + "'")
-                    var = tmp.replace("activedocument.variables(", "").\
-                          replace(")", "").\
-                          replace("'","").\
-                          replace('"',"").\
-                          replace('.value',"").\
-                          replace("(", "").\
-                          strip()
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("eval_arg: look for '" + var + "' as document variable...")
-                    val = context.get_doc_var(var)
-                    if (val is not None):
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: got it as document variable.")
-                        return val
-                    else:
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: did NOT get it as document variable.")
-
-                # Are we loading a custom document property?
-                if (tmp.startswith("activedocument.customdocumentproperties(")):
-
-                    # ActiveDocument.CustomDocumentProperties("l3qDvt3B53wxeXu").Value
-                    # Try to pull the result from the custom properties.
-                    var = tmp.replace("activedocument.customdocumentproperties(", "").\
-                          replace(")", "").\
-                          replace("'","").\
-                          replace('"',"").\
-                          replace('.value',"").\
-                          replace("(", "").\
-                          strip()
-                    val = context.get_doc_var(var)
-                    if (val is not None):
-                        return val
-                    
-                # As a last resort try reading it as a wildcarded form variable.
-                wild_name = tmp[:tmp.index(".")] + "*"
-                for i in range(0, 11):
-                    tmp_name = wild_name + str(i)
-                    try:
-                        val = context.get(tmp_name)
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("eval_arg: Found '" + tmp + "' as wild card form variable '" + tmp_name + "'")
-                        return val
-                    except KeyError:
-                        pass
-
+            tmp_r = _handle_form_variable_read(arg, context, got_constant_math)
+            if (tmp_r is not None):
+                return tmp_r
 
         # Should this be handled as a variable? Must be a valid var name to do this.
         if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
@@ -1581,17 +1597,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
             return "NULL"
 
         # Are we referring to a form element that we cannot find?
-        if ((str(arg).lower().endswith(".tag")) or
-            (str(arg).lower().endswith(".boundvalue")) or
-            (str(arg).lower().endswith(".column")) or
-            (str(arg).lower().endswith(".caption")) or
-            (str(arg).lower().endswith(".groupname")) or
-            (str(arg).lower().endswith(".seltext")) or
-            (str(arg).lower().endswith(".controltiptext")) or
-            (str(arg).lower().endswith(".passwordchar")) or
-            (str(arg).lower().endswith(".controlsource")) or
-            (str(arg).lower().endswith(".value"))):
-            return ""
+        form_fields = [".tag", ".boundvalue", ".column", ".caption",
+                       ".groupname", ".seltext", ".controltiptext",
+                       ".passwordchar", ".controlsource", ".value"]
+        for form_field in form_fields:
+            if (str(arg).lower().endswith(form_field)):
+                return ""
         
         # The .text hack did not work.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1711,7 +1722,7 @@ def coerce_to_str(obj, zero_is_null=False):
                 continue
             try:
                 r += chr(c)
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
 
                 # Invalid character value. Don't do string
                 # conversion of array.

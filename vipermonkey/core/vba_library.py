@@ -1498,6 +1498,7 @@ class Count(VbaLibraryFunc):
         # Subtract 1 due to "__ADDED_ITEMS__" entry in dict.
         return (len(params[0]) - 1)
 
+
 parse_cache = {}
 class Execute(VbaLibraryFunc):
     """Emulate WScript Execute() function.
@@ -1582,7 +1583,7 @@ class Execute(VbaLibraryFunc):
                     pass
 
             # Was is parsed?
-            if (obj == None):
+            if (obj is None):
                 
                 # Try the original command with ALL code rewriting applied.
                 try:
@@ -5634,13 +5635,12 @@ class Open(CreateTextFile):
         if ((params is None) or (len(params) == 0)):
             return
         
-        # Is this a HTTP GET or PUT?
+        # Is this a HTTP GET or PUT or HEAD?
         action = ""
         if (len(params) >= 2):
             action = str(params[0]).strip().upper()
-            if ((action == "GET") or
-                (action == "PUT") or
-                (action == "HEAD") or
+            http_actions = set(["GET", "PUT", "HEAD"])
+            if ((action in http_actions) or
                 (str(params[1]).startswith("ftp://")) or
                 (str(params[1]).startswith("http://")) or
                 (str(params[1]).startswith("https://"))):
