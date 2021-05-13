@@ -39,14 +39,15 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.08'
 
-import string
-import sys
+from curses_ascii import isprint
 try:
     # sudo pypy -m pip install rure
     import rure as re
-except:
+except ImportError:
     import re
 
+import utils
+    
 def is_wide_str(the_str):
     """
     Test to see if the given string is a simple wide char string (every other
@@ -91,6 +92,7 @@ def is_mixed_wide_ascii_str(the_str):
         return True
     return False
 
+
 single_char_ord_fixes = {
     195 : 197
 }
@@ -111,7 +113,7 @@ def get_ms_ascii_value(the_str):
     global str_to_ascii_map
     if (str_to_ascii_map is None):
         str_to_ascii_map = {}
-        for code in VbStr.ascii_map.keys():
+        for code in VbStr.ascii_map:
             for bts in VbStr.ascii_map[code]:
                 chars = ""
                 for bt in bts:
@@ -304,13 +306,7 @@ class VbStr(object):
             return
 
         # Make sure we have a string.
-        try:
-            orig_str = str(orig_str)
-        except:
-            if (isinstance(orig_str, unicode)):
-                orig_str = ''.join(filter(lambda x:x in string.printable, orig_str))
-            else:
-                raise ValueError("Given value cannot be converted to a string.")
+        orig_str = utils.safe_str_convert(orig_str)
         self.orig_str = orig_str
             
         # If this is VBScript each character will be a single byte (like the Python
@@ -327,7 +323,7 @@ class VbStr(object):
             # Replace the multi-byte wide chars with special strings. We will break these out
             # later.
             tmp_str = orig_str
-            for code in self.ascii_map.keys():
+            for code in self.ascii_map:
                 chars = ""
                 for bts in self.ascii_map[code]:
                     pos = 0
