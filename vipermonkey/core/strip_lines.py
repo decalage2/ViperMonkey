@@ -73,8 +73,9 @@ https://github.com/decalage2/ViperMonkey
 # TODO later:
 # - add VBS support (two modes?)
 
+from curses_ascii import isascii
 import logging
-#import sys
+import sys
 import re
 try:
     # sudo pypy -m pip install rure
@@ -86,8 +87,10 @@ from logger import log
 import vba_context
 from random import randint
 
-debug_strip = True
-#debug_strip = False
+import utils
+
+#debug_strip = True
+debug_strip = False
 
 def is_useless_dim(line):
     """See if we can skip this Dim statement and still successfully
@@ -550,8 +553,14 @@ def fix_skipped_1st_arg1(vba_code):
     try:
         uni_vba_code = vba_code.decode("utf-8")
     except UnicodeDecodeError:
-        # Punt.
-        return vba_code
+
+        # Try stripping offending characters from the string.
+        tmp_code = filter(isascii, vba_code)
+        try:
+            uni_vba_code = tmp_code.decode("utf-8")
+        except UnicodeDecodeError:
+            # Punt.            
+            return vba_code
     if (re2.search(unicode(r".*[0-9a-zA-Z_\.]+\(\s*,.*"), uni_vba_code, re.DOTALL) is None):
         return vba_code
     
