@@ -1762,6 +1762,7 @@ def replace_bad_chars(vba_code):
 
             # Leaving date constant?
             else:
+                r += "#"
                 in_date = False
 
         # Handle entering/leaving comments.
