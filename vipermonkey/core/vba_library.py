@@ -5593,7 +5593,9 @@ class CreateTextFile(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if not params:
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0) or (params[0] == None)):
             return "NULL"
 
         # Get the name of the file being opened.
@@ -5601,7 +5603,9 @@ class CreateTextFile(VbaLibraryFunc):
             fname = context.get(params[0])
         except KeyError:
             fname = str(params[0])
-            
+        if (fname is None):
+            return "NULL"
+        
         # Do we have a numeric file ID?
         file_id = ""
         if (len(params) > 1):

@@ -1911,7 +1911,10 @@ class For_Statement(VBA_Object):
         context.handle_error(params)
 
         # Set the loop index.
-        context.set(self.name, end + step)
+        try:
+            context.set(self.name, end + step)
+        except TypeError:
+            return False
                      
         return True
                 
