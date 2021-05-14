@@ -86,8 +86,8 @@ from logger import log
 import vba_context
 from random import randint
 
-#debug_strip = True
-debug_strip = False
+debug_strip = True
+#debug_strip = False
 
 def is_useless_dim(line):
     """See if we can skip this Dim statement and still successfully
@@ -1798,8 +1798,9 @@ def replace_bad_chars(vba_code):
 
         # Need to eliminate bogus =+ assignments.
         if (c == "+"):
-            if (prev_char != "="):
-                r += " " + c
+            if ((prev_char != "=") and (prev_char != "E")):
+                r += " "
+            r += c
             continue
             
 
