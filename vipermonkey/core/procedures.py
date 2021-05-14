@@ -852,7 +852,8 @@ class PropertyLet(Sub):
 property_let = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                public_private + \
                Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
-               CaselessKeyword('Property').suppress() + CaselessKeyword('Let').suppress() + \
+               CaselessKeyword('Property').suppress() + \
+               (CaselessKeyword('Let').suppress() | CaselessKeyword('Set').suppress()) + \
                lex_identifier('property_name') + params_list_paren + \
                Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
@@ -887,11 +888,6 @@ class PropertyGet(Function):
     def __repr__(self):
         return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
-"""
-Public Property Get Caption() As String
-   Caption = "Titelblatt"
-End Property
-"""
 property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                public_private + \
                Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
