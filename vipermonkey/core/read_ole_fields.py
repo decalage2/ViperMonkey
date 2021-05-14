@@ -2026,25 +2026,24 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
     # is not a font.
     text = ""
     # This is not working quite right.
-    asc_str = None
     if (name_pos + 1 < len(strs)):
         asc_str = strs[name_pos + 1].replace("\x00", "").strip()
-    skip_names = set(["contents", "ObjInfo", "CompObj", None])
-    if (("Calibr" not in asc_str) and
-        ("OCXNAME" not in asc_str) and
-        (asc_str not in skip_names) and
-        (not asc_str.startswith("_DELETED_NAME_")) and
-        (re.match(r"_\d{10}", asc_str) is None)):
-        if debug:
-            print "\nValue: 1"
-            print strs[name_pos + 1]
-                
-        # Only used with large text values?
-        if (len(strs[name_pos + 1]) > 3):
-            text = strs[name_pos + 1]
+        skip_names = set(["contents", "ObjInfo", "CompObj", None])
+        if (("Calibr" not in asc_str) and
+            ("OCXNAME" not in asc_str) and
+            (asc_str not in skip_names) and
+            (not asc_str.startswith("_DELETED_NAME_")) and
+            (re.match(r"_\d{10}", asc_str) is None)):
             if debug:
-                print "\nValue: 2"
+                print "\nValue: 1"
                 print strs[name_pos + 1]
+                
+            # Only used with large text values?
+            if (len(strs[name_pos + 1]) > 3):
+                text = strs[name_pos + 1]
+                if debug:
+                    print "\nValue: 2"
+                    print strs[name_pos + 1]
 
     # Break out the (possible additional) value.
     val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
