@@ -699,7 +699,7 @@ class ViperMonkey(StubbedEngine):
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
                 # entry points.
-                tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
+                tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                 only_sub.eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
