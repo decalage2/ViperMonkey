@@ -61,7 +61,7 @@ from vba_context import Context
 from statements import extend_statement_grammar, public_private, simple_statements_line, \
     bogus_simple_for_each_statement, do_const_assignments, Do_Statement, While_Statement, \
     For_Each_Statement, For_Statement, FollowedBy, Combine, params_list_paren, bad_next_statement, \
-    bad_if_statement, statements_line, function_type2
+    bad_if_statement, statements_line, function_type2, type_expression
 from identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
     type_suffix
 from comments_eol import EOS, comment_single_quote, rem_statement
@@ -887,11 +887,17 @@ class PropertyGet(Function):
     def __repr__(self):
         return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
+"""
+Public Property Get Caption() As String
+   Caption = "Titelblatt"
+End Property
+"""
 property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                public_private + \
                Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                CaselessKeyword('Property').suppress() + CaselessKeyword('Get').suppress() + \
                lex_identifier('property_name') + Optional(params_list_paren) + \
+               Suppress(Optional(CaselessKeyword("As") + type_expression)) + \
                Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
 property_get.setParseAction(PropertyGet)
