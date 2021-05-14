@@ -90,15 +90,49 @@ def _read_sheet_from_csv(filename):
     f.close()
     in_str = False
     tmp = ""
-    for c in data:
+    pos = 0
+    while (pos < len(data)):
+
+        # Need to find the next string literal?
+        if not in_str:
+
+            # Any more strings in the data?
+            if ('"' not in data[pos:]):
+
+                # We are done. Add in the rest of the data
+                # and quit.
+                tmp = "".join((tmp, data[pos:]))
+                break
+            
+            # Got a string. Find the start of the next string.
+            next_pos = data[pos:].index('"') + pos + 1            
+
+            # Add in the unchanged data up until the next string.
+            tmp = "".join((tmp, data[pos:next_pos]))
+
+            # We are now in a string.
+            #print (pos, len(data))
+            pos = next_pos
+            in_str = True
+            continue
+
+        # We are processing characters in a string.
+        c = data[pos]
+        pos += 1
+
+        # Moved out of current string?
         if (c == '"'):
-            in_str = not in_str
-        if (in_str and (c == ',')):
-            tmp += "#A_COMMA!!#"
-        elif (in_str and (c == '\n')):
-            tmp += "#A_NEWLINE!!#"
+            in_str = False
+
+        # Hide characters in string if needed.
+        if (c == ','):
+            tmp = "".join((tmp, "#A_COMMA!!#"))
+        elif (c == '\n'):
+            tmp = "".join((tmp, "#A_NEWLINE!!#"))
         else:
-            tmp += c
+            tmp = "".join((tmp, c))
+
+    # Read individual cells from the modified sheet contents.
     data = tmp
     
     # Read in all the cells. Note that this only works for a single sheet.
