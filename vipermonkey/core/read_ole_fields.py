@@ -1508,6 +1508,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     # Strip some red herring strings from the data.
     if debug1:
         print "\n\nSTART get_ole_text_method_1 !!!!"
+    data = data.replace("\x1f\x22", '"\x00')
     data = re.sub(r"[\x20-\x7e]\x00(?:\xe5|\xd5)", "", data)
     data = data.replace("\x02$", "").\
            replace("\x01@", "").\
@@ -2508,8 +2509,8 @@ def get_ole_textbox_values(obj, vba_code):
             return []
 
     # Set to True to print lots of debugging.
-    #debug = True
-    debug = False
+    debug = True
+    #debug = False
     if debug:
         print "\nExtracting OLE/ActiveX TextBox strings..."
         
