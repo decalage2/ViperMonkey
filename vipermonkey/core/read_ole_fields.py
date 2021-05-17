@@ -2509,8 +2509,8 @@ def get_ole_textbox_values(obj, vba_code):
             return []
 
     # Set to True to print lots of debugging.
-    debug = True
-    #debug = False
+    #debug = True
+    debug = False
     if debug:
         print "\nExtracting OLE/ActiveX TextBox strings..."
         
