@@ -264,10 +264,10 @@ class Sub(VBA_Object):
                 break
             context.clear_error()
 
-            #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (context.goto_executed or s.exited_with_goto):
+            if (context.goto_executed or
+                (hasattr(s, "exited_with_goto") and s.exited_with_goto)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Control flow handled by GOTO, so skip rest of procedure statements.")
                 break
