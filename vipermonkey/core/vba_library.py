@@ -107,6 +107,7 @@ def member_access(var, field, globals_calling_scope=None):
     field = str(field)
     field_l = field.lower()
     if (isinstance(var, dict)):
+
         # Regular member access?
         if (field_l in var):
             return var[field_l]
@@ -126,10 +127,16 @@ def member_access(var, field, globals_calling_scope=None):
         # Can't find field.
         return "NULL"
 
+    # Reading the Text field of some object that is supposed to have a
+    # .Text field?
+    if (field == "Text"):
+
+        # We know that the var is not a dict. Hope that there is a
+        # Pyhton variable that already holds the text value.
+        field = var
+    
     # Punt and just see if we can return the value of a variable
     # with the same name as the field.
-    blah = list(globals().keys())
-    blah.sort()
     if (field in locals()):
         # The globals dict is subscriptable.
         # pylint: disable=unsubscriptable-object
