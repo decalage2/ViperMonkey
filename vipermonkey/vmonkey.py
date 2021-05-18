@@ -608,13 +608,13 @@ def pull_embedded_pe_files(data, out_dir):
         return
 
     # There is an embedded PE. Break them out.
-
+    
     # Get where each PE file starts.
     pe_starts = []
     for match in re.finditer(pe_pat, data):
         pe_starts.append(match.span()[0])
     pe_starts.append(len(data))
-
+    
     # Make the 2nd stage output directory if needed.
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -635,6 +635,7 @@ def pull_embedded_pe_files(data, out_dir):
         f.close()
         pos += 1
         out_index += 1
+        log.info("Wrote embedded PE file to " + curr_name)
 
 def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name):
     """Report analysis results (screen and file) to the user. Results will
