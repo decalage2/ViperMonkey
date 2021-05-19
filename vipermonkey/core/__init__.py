@@ -205,14 +205,14 @@ def pull_b64_excel_sheets(workbook):
             continue
 
         # Is this the start of a PE file?
-        if (value.startswith("TVqQ") and (len(value) > 100)):
+        if (value.strip().startswith("TVqQ") and (len(value) > 100)):
 
             # Are we already tracking a PE file?
             if (curr_pe_blob is not None):
                 pe_blobs.append(curr_pe_blob)
 
             # Start a new PE blob.
-            curr_pe_blob = value
+            curr_pe_blob = ""
         
         # Look for strict base64 strings in the cell value.
         base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
