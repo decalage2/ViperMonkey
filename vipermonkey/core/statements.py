@@ -1189,7 +1189,7 @@ class Let_Statement(VBA_Object):
         orig_value = value
         if (not ((context.get_type(self.name) == "Byte Array") and
                  (isinstance(value, str)))):
-            return (value, value == orig_value)
+            return (value, value != orig_value)
 
         # Do we have an actual value to assign?
         if (value != "NULL"):
@@ -1218,7 +1218,7 @@ class Let_Statement(VBA_Object):
 
             # Got the byte array.
             value = tmp
-            return (value, value == orig_value)
+            return (value, value != orig_value)
 
         # We are dealing with an unsassigned variable. Don't update
         # the array.
@@ -1231,7 +1231,7 @@ class Let_Statement(VBA_Object):
         something.
 
         @param (Context object) The context containing variable types
-        (used to figure out whether the string should be converted to
+        (used to figure out whether the byte array should be converted to
         a string).
 
         @return (tuple) A 2 element tuple where the 1st element is the
@@ -1239,12 +1239,12 @@ class Let_Statement(VBA_Object):
         indicating if the value was actually converted.
 
         """
-                
+
         # Handle conversion of byte arrays to strings, if needed.
         orig_value = value
         if (not ((context.get_type(self.name) == "String") and
                  (isinstance(value, list)))):
-            return (value, value == orig_value)
+            return (value, value != orig_value)
             
         # Do we have a list of integers?
         rhs_type = context.get_type(str(self.expression))
@@ -1291,7 +1291,7 @@ class Let_Statement(VBA_Object):
             value = tmp        
 
         # Done.
-        return (value, value == orig_value)
+        return (value, value != orig_value)
             
     def eval(self, context, params=None):
 
