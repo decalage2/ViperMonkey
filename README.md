@@ -231,11 +231,11 @@ Please see the [API Tutorial](docs/APITutorial.md) for more information.
 Generating Code Documentation:
 ---------------------
 
-The ViperMonkey codebase has been documented with (Doxygen https://www.doxygen.nl/index.html)
+The ViperMonkey codebase has been documented with Doxygen (https://www.doxygen.nl/index.html)
 docstrings. To generate HTML code documentation similar to JavaDoc for ViperMonkey do
 the following:
 
-1. Install (Doxygen https://www.doxygen.nl/index.html).
+1. Install Doxygen.
 2. Change into the vipermonkey/ directory.
 3. Run `doxygen vipermonkey_doc.doxy`.
 4. Open `vipermonkey/vipermonkey_code_documentation/html/index.html` in a web browser.
