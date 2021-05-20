@@ -66,7 +66,8 @@ from statements import simple_statements_line, for_end, for_start, \
     simple_call_list, dim_statement, global_variable_declaration, \
     tagged_block, block_statement, orphaned_marker
 from function_defn_visitor import function_defn_visitor
-from vba_object import to_python, VBA_Object
+from vba_object import VBA_Object
+from python_jit import to_python
 from logger import log
 from expressions import expression, expr_const
 from utils import safe_str_convert

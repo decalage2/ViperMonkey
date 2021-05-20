@@ -52,7 +52,8 @@ import logging
 from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
     CaselessLiteral, Literal, Forward
 
-from vba_object import eval_arg, VBA_Object, to_python
+from vba_object import eval_arg, VBA_Object
+from python_jit import to_python
 import vb_str
 from utils import safe_str_convert
 

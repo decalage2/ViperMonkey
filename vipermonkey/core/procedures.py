@@ -70,8 +70,9 @@ import utils
 from utils import safe_str_convert
 from logger import log
 from tagged_block_finder_visitor import tagged_block_finder_visitor
-from vba_object import to_python, coerce_to_str, _get_var_vals, _check_for_iocs, \
-    VBA_Object, eval_arg
+from vba_object import coerce_to_str, VBA_Object, eval_arg
+from python_jit import to_python, _check_for_iocs
+from python_jit import _get_var_vals
 
 # --- SUB --------------------------------------------------------------------
 

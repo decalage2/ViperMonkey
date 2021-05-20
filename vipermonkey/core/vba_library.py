@@ -66,12 +66,11 @@ from vba_object import coerce_to_int
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
-from vba_object import excel_col_letter_to_index
 import expressions
 import excel
 import modules
 import strip_lines
-from vba_object import _eval_python
+from python_jit import _eval_python
 import utils
 from excel import pull_cells_sheet, get_largest_sheet, get_num_rows
 
@@ -4811,7 +4810,7 @@ class Cells(VbaLibraryFunc):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Convert col num str to index exception: " + utils.safe_str_convert(e))
             try:
-                col = excel_col_letter_to_index(tmp)
+                col = excel.excel_col_letter_to_index(tmp)
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Convert col letter to index exception: " + utils.safe_str_convert(e))
@@ -5018,7 +5017,7 @@ class Range(VbaLibraryFunc):
                     
         # Convert the row and column to numeric indices for xlrd.
         row = int(row) - 1
-        col = excel_col_letter_to_index(col)
+        col = excel.excel_col_letter_to_index(col)
 
         # Done.
         return (row, col)

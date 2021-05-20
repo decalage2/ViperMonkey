@@ -79,9 +79,8 @@ from expressions import any_expression, boolean_expression, BoolExpr, expression
 from vba_context import Context, is_procedure
 from reserved import reserved_complex_type_identifier
 from from_unicode_str import from_unicode_str
-from vba_object import to_python, coerce_to_int, eval_arg, _eval_python, \
-    _updated_vars_to_python, _loop_vars_to_python, eval_args, \
-    VbaLibraryFunc, VBA_Object
+from vba_object import coerce_to_int, eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python
 import procedures
 from var_in_expr_visitor import var_in_expr_visitor
 from function_call_visitor import function_call_visitor

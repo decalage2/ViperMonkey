@@ -52,7 +52,8 @@ import logging
 from collections import Iterable
 
 from vba_object import coerce_args, eval_args, VBA_Object, coerce_args_to_str, \
-    coerce_to_num, to_python, coerce_to_int
+    coerce_to_num, coerce_to_int
+from python_jit import to_python
 from logger import log
 from utils import safe_str_convert
 

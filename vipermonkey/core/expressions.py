@@ -74,8 +74,9 @@ from literals import date_string, decimal_literal, float_literal, literal, \
 from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, \
+from vba_object import eval_arg, eval_args, coerce_to_int, coerce_to_str, \
     VbaLibraryFunc, VBA_Object
+from python_jit import to_python
 import vba_context
 import utils
 from utils import safe_str_convert

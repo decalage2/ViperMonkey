@@ -66,6 +66,18 @@ _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 #debug = True
 debug = False
 
+def excel_col_letter_to_index(x): 
+    """Convert letters indicating the Excel column (ex. "AD" in "AD12")
+    to a numeric colum index.
+
+    @param x (str) The Excel alphabetic column.
+    
+    @return (int) The column as a nueric index.
+
+    """
+    x = x.upper()
+    return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
+
 def _read_sheet_from_csv(filename):
     """Read in an Excel sheet from a CSV file.
 
