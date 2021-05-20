@@ -57,6 +57,7 @@ from pyparsing import QuotedString, Regex
 
 from logger import log
 from vba_object import VBA_Object
+from utils import safe_str_convert
 
 # --- BOOLEAN ------------------------------------------------------------
 
@@ -127,7 +128,7 @@ class String(VBA_Object):
             log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
-        return '"' + str(self.value) + '"'
+        return '"' + safe_str_convert(self.value) + '"'
 
     def eval(self, context, params=None):
         r = self.value
@@ -137,7 +138,7 @@ class String(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         # Escape some characters.
-        r = str(self.value).\
+        r = safe_str_convert(self.value).\
             replace("\\", "\\\\").\
             replace('"', '\\"').\
             replace("\n", "\\n").\

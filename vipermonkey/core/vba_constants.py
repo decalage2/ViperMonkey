@@ -48,6 +48,8 @@ __version__ = '0.08'
 
 import random
 
+from utils import safe_str_convert
+
 def is_constant(name):
     """Check to see if there is a VBA constant with the given name.
 
@@ -57,7 +59,7 @@ def is_constant(name):
     constant, False if not.
 
     """
-    name = str(name).lower()
+    name = safe_str_convert(name).lower()
     return (name in all_vba_constants.globals)
 
 def get_constant(name):
@@ -69,7 +71,7 @@ def get_constant(name):
     constant, None if not.
 
     """
-    name = str(name).lower()
+    name = safe_str_convert(name).lower()
     if is_constant(name):
         return all_vba_constants.globals[name]
     return None
@@ -84,7 +86,7 @@ def get_type(name):
     given name names a VBA enum constant, None if not.
 
     """
-    name = str(name).lower()
+    name = safe_str_convert(name).lower()
     if (name in all_vba_constants.types):
         return all_vba_constants.types[name]
     return None

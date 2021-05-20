@@ -67,7 +67,7 @@ from identifiers import lex_identifier, identifier, TODO_identifier_or_object_at
 from comments_eol import EOS, comment_single_quote, rem_statement
 from vba_lines import line_terminator
 import utils
-
+from utils import safe_str_convert
 from logger import log
 from tagged_block_finder_visitor import tagged_block_finder_visitor
 from vba_object import to_python, coerce_to_str, _get_var_vals, _check_for_iocs, \
@@ -113,7 +113,7 @@ class Sub(VBA_Object):
         indent_str = " " * indent
         for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
-            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+            global_var_init_str += indent_str + safe_str_convert(global_var) + " = " + safe_str_convert(val) + "\n"
 
         # Make a copy of the context so we can mark variables as function
         # arguments.
@@ -122,7 +122,7 @@ class Sub(VBA_Object):
             tmp_context.set(param.name, "__FUNC_ARG__")
 
         # Save the name of the current function so we can handle exit function calls.
-        tmp_context.curr_func_name = str(self.name)
+        tmp_context.curr_func_name = safe_str_convert(self.name)
 
         # Global variable initialization goes first.
         r = global_var_init_str
@@ -137,18 +137,18 @@ class Sub(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r += indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + safe_str_convert(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
         r += indent_str + " " * 4 + "global vm_context\n\n"
         r += indent_str + " " * 4 + "# Function return value.\n"
-        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        r += indent_str + " " * 4 + safe_str_convert(self.name) + " = 0\n\n"
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
         for global_var in global_var_info:
-            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+            r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
         
         # Function body.
@@ -168,7 +168,7 @@ class Sub(VBA_Object):
         context.in_procedure = True
 
         # Save the name of the current function so we can handle exit function calls.
-        context.curr_func_name = str(self.name)
+        context.curr_func_name = safe_str_convert(self.name)
         
         # We are entering the function so reset whether we executed a goto.
         context.goto_executed = False
@@ -206,7 +206,7 @@ class Sub(VBA_Object):
 
                 # Coerce parameters to String if needed.
                 if ((self.params[i].my_type == "String") and (not self.params[i].is_array)):
-                    param_value = str(param_value)
+                    param_value = safe_str_convert(param_value)
                     
                 # Add the parameter value to the local function context.
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -223,7 +223,7 @@ class Sub(VBA_Object):
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
-            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
             #print self
             #print call_info
             #print context.call_stack
@@ -313,7 +313,7 @@ class Sub(VBA_Object):
             context.set(self.name, '')
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Returning from sub " + str(self))
+            log.debug("Returning from sub " + safe_str_convert(self))
 
         return "NULL"
             
@@ -489,7 +489,7 @@ class Function(VBA_Object):
         indent_str = " " * indent
         for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
-            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+            global_var_init_str += indent_str + safe_str_convert(global_var) + " = " + safe_str_convert(val) + "\n"
         
         # Make a copy of the context so we can mark variables as function
         # arguments.
@@ -498,7 +498,7 @@ class Function(VBA_Object):
             tmp_context.set(param.name, "__FUNC_ARG__")
 
         # Save the name of the current function so we can handle exit function calls.
-        tmp_context.curr_func_name = str(self.name)
+        tmp_context.curr_func_name = safe_str_convert(self.name)
 
         # Global variable initialization goes first.
         r = global_var_init_str
@@ -512,18 +512,18 @@ class Function(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r += indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + safe_str_convert(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
         r += indent_str + " " * 4 + "global vm_context\n\n"
         r += indent_str + " " * 4 + "# Function return value.\n"
-        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        r += indent_str + " " * 4 + safe_str_convert(self.name) + " = 0\n\n"
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
         for global_var in global_var_info:
-            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+            r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
             
         # Function body.
@@ -533,7 +533,7 @@ class Function(VBA_Object):
         r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
         
         # Return the function return val.
-        r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"
+        r += "\n" + indent_str + " " * 4 + "return " + safe_str_convert(self.name) + "\n"
 
         # Done.
         return r
@@ -553,7 +553,7 @@ class Function(VBA_Object):
         context.goto_executed = False
 
         # Save the name of the current function so we can handle exit function calls.
-        context.curr_func_name = str(self.name)
+        context.curr_func_name = safe_str_convert(self.name)
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -630,7 +630,7 @@ class Function(VBA_Object):
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
-            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
             #print self
             #print call_info
             #print context.call_stack
@@ -749,12 +749,12 @@ class Function(VBA_Object):
 
                     # Invalid array indices.
                     else:
-                        log.warn("Array indices " + str(array_indices) + " are invalid. " + \
+                        log.warn("Array indices " + safe_str_convert(array_indices) + " are invalid. " + \
                                  "Not doing array access of function return value.")
 
                 # Function does not return array.
                 else:
-                    log.warn(str(self) + " does not return an array. Not doing array access.")
+                    log.warn(safe_str_convert(self) + " does not return an array. Not doing array access.")
                     
             # Copy all the global variables from the function context to the caller
             # context so global updates are tracked.
@@ -762,7 +762,7 @@ class Function(VBA_Object):
                 caller_context.globals[global_var] = context.globals[global_var]
                     
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Returning from func " + str(self))
+                log.debug("Returning from func " + safe_str_convert(self))
             return return_value
 
         except KeyError:

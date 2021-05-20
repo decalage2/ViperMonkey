@@ -54,7 +54,7 @@ from collections import Iterable
 from vba_object import coerce_args, eval_args, VBA_Object, coerce_args_to_str, \
     coerce_to_num, to_python, coerce_to_int
 from logger import log
-
+from utils import safe_str_convert
 
 def debug_repr(op, args):
     """Represent an operator applied to a list of arguments as a string
@@ -73,7 +73,7 @@ def debug_repr(op, args):
         if (not first):
             r += " " + op + " "
         first = False
-        r += str(arg)
+        r += safe_str_convert(arg)
     r += ")"
     return r
 
@@ -102,7 +102,7 @@ class Sum(VBA_Object):
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute sum (1) " + str(self.arg))
+                log.debug("Compute sum (1) " + safe_str_convert(self.arg))
             r = reduce(lambda x, y: x + y, coerce_args(evaluated_args, preferred_type="int"))
             return r
         except (TypeError, ValueError):
@@ -117,8 +117,8 @@ class Sum(VBA_Object):
             except (TypeError, ValueError):
                 # Punt and sum all arguments as strings.
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Compute sum (2) " + str(self.arg))
-                r = reduce(lambda x, y: str(x) + str(y), coerce_args_to_str(evaluated_args))
+                    log.debug("Compute sum (2) " + safe_str_convert(self.arg))
+                r = reduce(lambda x, y: safe_str_convert(x) + safe_str_convert(y), coerce_args_to_str(evaluated_args))
                 return r
         except RuntimeError as e:
             log.error("overflow trying eval sum: %r" % self.arg)
@@ -160,7 +160,7 @@ class Eqv(VBA_Object):
         # return the eqv of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute eqv " + str(self.arg))
+                log.debug("Compute eqv " + safe_str_convert(self.arg))
             return reduce(lambda a, b: (a & b) | ~(a | b), coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             log.error('Impossible to Eqv arguments of different types.')
@@ -195,7 +195,7 @@ class Xor(VBA_Object):
         # return the xor of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute xor " + str(self.arg))
+                log.debug("Compute xor " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x ^ y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -203,7 +203,7 @@ class Xor(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) ^ int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to xor arguments of different types. Arg list = ' + str(self.arg) + ". " + str(e))
+                log.error('Impossible to xor arguments of different types. Arg list = ' + safe_str_convert(self.arg) + ". " + safe_str_convert(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval xor: %r" % self.arg)
@@ -253,7 +253,7 @@ class And(VBA_Object):
         # return the and of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute and " + str(self.arg))
+                log.debug("Compute and " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x & y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -261,7 +261,7 @@ class And(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) & int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to and arguments of different types. ' + str(e))
+                log.error('Impossible to and arguments of different types. ' + safe_str_convert(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval and: %r" % self.arg)
@@ -291,7 +291,7 @@ class Or(VBA_Object):
         # return the and of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute or " + str(self.arg))
+                log.debug("Compute or " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x | y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -299,7 +299,7 @@ class Or(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) | int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to or arguments of different types. ' + str(e))
+                log.error('Impossible to or arguments of different types. ' + safe_str_convert(e))
                 return 0
         except RuntimeError as e:
             log.error("overflow trying eval or: %r" % self.arg)
@@ -341,13 +341,13 @@ class Not(VBA_Object):
         # return the and of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute not " + str(self.arg))
+                log.debug("Compute not " + safe_str_convert(self.arg))
             val = self.arg
             if (isinstance(val, VBA_Object)):
                 val = val.eval(context)
             return (~ int(val))
         except Exception as e:
-            log.error("Cannot compute Not " + str(self.arg) + ". " + str(e))
+            log.error("Cannot compute Not " + safe_str_convert(self.arg) + ". " + safe_str_convert(e))
             return "NULL"
 
     def to_python(self, context, params=None, indent=0):
@@ -355,7 +355,7 @@ class Not(VBA_Object):
         return r
         
     def __repr__(self):
-        return "Not " + str(self.arg)
+        return "Not " + safe_str_convert(self.arg)
 
 # --- Negation --------------------------------------------------------
 
@@ -384,7 +384,7 @@ class Neg(VBA_Object):
         # return the and of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute negate " + str(self.arg))
+                log.debug("Compute negate " + safe_str_convert(self.arg))
             val = self.arg
             if (isinstance(val, VBA_Object)):
                 val = val.eval(context)
@@ -392,11 +392,11 @@ class Neg(VBA_Object):
                 val = int(val)
             return (- val)
         except Exception as e:
-            log.error("Cannot compute negation of " + str(self.arg) + ". " + str(e))
+            log.error("Cannot compute negation of " + safe_str_convert(self.arg) + ". " + safe_str_convert(e))
             return "NULL"
 
     def __repr__(self):
-        return "-" + str(self.arg)
+        return "-" + safe_str_convert(self.arg)
     
 # --- SUBTRACTION: - OPERATOR ------------------------------------------------
 
@@ -421,7 +421,7 @@ class Subtraction(VBA_Object):
         # return the subtraction of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute subract " + str(self.arg))
+                log.debug("Compute subract " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x - y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -443,7 +443,7 @@ class Subtraction(VBA_Object):
 
                 # Do we have something that we can do math on?
                 if (len(orig) != len(l1)):                
-                    log.error('Impossible to subtract arguments of different types. ' + str(e))
+                    log.error('Impossible to subtract arguments of different types. ' + safe_str_convert(e))
                     return 0
 
                 # Try subtracting based on character ordinals.
@@ -476,7 +476,7 @@ class Multiplication(VBA_Object):
         # return the multiplication of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute mult " + str(self.arg))
+                log.debug("Compute mult " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x * y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -484,7 +484,7 @@ class Multiplication(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) * int(y), evaluated_args)
             except Exception as e:
-                log.error('Impossible to multiply arguments of different types. ' + str(e))
+                log.error('Impossible to multiply arguments of different types. ' + safe_str_convert(e))
                 return 0
 
     def __repr__(self):
@@ -514,7 +514,7 @@ class Power(VBA_Object):
         # return the exponentiation of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute pow " + str(self.arg))
+                log.debug("Compute pow " + safe_str_convert(self.arg))
             return reduce(lambda x, y: pow(x, y), coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -522,7 +522,7 @@ class Power(VBA_Object):
             try:
                 return reduce(lambda x, y: pow(int(x), int(y)), evaluated_args)
             except Exception as e:
-                log.error('Impossible to do exponentiation with arguments of different types. ' + str(e))
+                log.error('Impossible to do exponentiation with arguments of different types. ' + safe_str_convert(e))
                 return 0
 
     def __repr__(self):
@@ -556,7 +556,7 @@ class Division(VBA_Object):
         # return the division of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute div " + str(self.arg))
+                log.debug("Compute div " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x / y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -564,8 +564,8 @@ class Division(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) / int(y), evaluated_args)
             except Exception as e:
-                if (str(e).strip() != "division by zero"):
-                    log.error('Impossible to divide arguments of different types. ' + str(e))
+                if (safe_str_convert(e).strip() != "division by zero"):
+                    log.error('Impossible to divide arguments of different types. ' + safe_str_convert(e))
                 # TODO
                 return 0
         except ZeroDivisionError:
@@ -644,7 +644,7 @@ class MultiOp(VBA_Object):
                 try:
                     ret = self.operator_map[op](ret, arg)
                 except OverflowError:
-                    log.error("overflow trying eval: %r" % str(self))
+                    log.error("overflow trying eval: %r" % safe_str_convert(self))
             if set_flag:
                 context.in_bitwise_expression = False
             return ret
@@ -665,7 +665,7 @@ class MultiOp(VBA_Object):
                     context.in_bitwise_expression = False
                 return 'NULL'
             except Exception as e:
-                log.error('Impossible to operate on arguments of different types. ' + str(e))
+                log.error('Impossible to operate on arguments of different types. ' + safe_str_convert(e))
                 if set_flag:
                     context.in_bitwise_expression = False
                 return 0
@@ -676,7 +676,7 @@ class MultiOp(VBA_Object):
             return 'NULL'
 
     def __repr__(self):
-        ret = [str(self.arg[0])]
+        ret = [safe_str_convert(self.arg[0])]
         for op, arg in zip(self.operators, self.arg[1:]):
             ret.append(' {} {!s}'.format(op, arg))
         return '({})'.format(''.join(ret))
@@ -720,7 +720,7 @@ class FloorDivision(VBA_Object):
         # return the floor division of all the arguments:
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute floor div " + str(self.arg))
+                log.debug("Compute floor div " + safe_str_convert(self.arg))
             return reduce(lambda x, y: x // y, coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
@@ -728,12 +728,12 @@ class FloorDivision(VBA_Object):
             try:
                 return reduce(lambda x, y: int(x) // int(y), evaluated_args)
             except Exception as e:
-                if (str(e).strip() != "division by zero"):
-                    log.error('Impossible to divide arguments of different types. ' + str(e))
+                if (safe_str_convert(e).strip() != "division by zero"):
+                    log.error('Impossible to divide arguments of different types. ' + safe_str_convert(e))
                 # TODO
                 return 0
         except ZeroDivisionError as e:
-            context.set_error(str(e))
+            context.set_error(safe_str_convert(e))
             
     def __repr__(self):
         return debug_repr("//", self.arg)
@@ -782,7 +782,7 @@ class Concatenation(VBA_Object):
                 log.debug('Concatenation after eval: %r' % eval_params)
             return ''.join(eval_params)
         except (TypeError, ValueError) as e:
-            log.exception('Impossible to concatenate non-string arguments. ' + str(e))
+            log.exception('Impossible to concatenate non-string arguments. ' + safe_str_convert(e))
             # TODO
             return ''
 
@@ -824,10 +824,10 @@ class Mod(VBA_Object):
         # see https://docs.python.org/2/library/functions.html#reduce
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Compute mod " + str(self.arg))
+                log.debug("Compute mod " + safe_str_convert(self.arg))
             return reduce(lambda x, y: int(x) % int(y), coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError) as e:
-            log.error('Impossible to mod arguments of different types. ' + str(e))
+            log.error('Impossible to mod arguments of different types. ' + safe_str_convert(e))
             return ''
         except ZeroDivisionError:
             log.error('Mod division by zero error.')

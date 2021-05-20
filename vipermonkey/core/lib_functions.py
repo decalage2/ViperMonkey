@@ -54,6 +54,7 @@ from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
 
 from vba_object import eval_arg, VBA_Object, to_python
 import vb_str
+from utils import safe_str_convert
 
 from logger import log
 
@@ -146,11 +147,7 @@ class Asc(VBA_Object):
         c = eval_arg(self.arg, context)
 
         # Don't modify the "**MATCH ANY**" special value.
-        c_str = None
-        try:
-            c_str = str(c).strip()
-        except UnicodeEncodeError:
-            c_str = filter(isprint, c).strip()
+        c_str = safe_str_convert(c).strip()
         if (c_str == "**MATCH ANY**"):
             return c
 

@@ -51,8 +51,8 @@ try:
 except ImportError:
     import re
 
-import utils
-    
+from utils import safe_str_convert
+
 def is_wide_str(the_str):
     """Test to see if the given string is a simple wide char string
     (every other character is a null byte).
@@ -132,7 +132,7 @@ def get_ms_ascii_value(the_str):
 
     # Sanity check.
     if ((not isinstance(the_str, str)) and (not isinstance(the_str, VbStr))):
-        return ValueError("'" + str(the_str) + "' is not a string.")    
+        return ValueError("'" + safe_str_convert(the_str) + "' is not a string.")    
     
     # Initialize the map from wide char strings to MS ascii value if needed.
     global str_to_ascii_map
@@ -331,7 +331,7 @@ class VbStr(object):
             return
 
         # Make sure we have a string.
-        orig_str = utils.safe_str_convert(orig_str)
+        orig_str = safe_str_convert(orig_str)
         self.orig_str = orig_str
             
         # If this is VBScript each character will be a single byte (like the Python
@@ -354,16 +354,9 @@ class VbStr(object):
                     pos = 0
                     for bval in bts:
                         chars += chr(bval)
-                    code_str = None
-                    try:
-                        code_str = str(code)
-                    except UnicodeEncodeError:
-                        code_str = filter(isprint, code)
-                    try:
-                        tmp_str = str(tmp_str)
-                    except UnicodeEncodeError:
-                        tmp_str = filter(isprint, tmp_str)
-                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + str(pos) + "MARK!@#$%%$#@!")
+                    code_str = safe_str_convert(code)
+                    tmp_str = safe_str_convert(tmp_str)
+                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + safe_str_convert(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.
             for val in tmp_str.split("MARK!@#$%"):
@@ -399,7 +392,7 @@ class VbStr(object):
                 r += ":"
             if (len(vb_c) == 1):
                 if (ord(vb_c) == 127):
-                    r += str(hex(ord(vb_c)))
+                    r += safe_str_convert(hex(ord(vb_c)))
                 else:
                     r += vb_c
             else:
@@ -437,11 +430,11 @@ class VbStr(object):
 
         # Sanity check.
         if ((start < 0) or (start > len(self.vb_str))):
-            raise ValueError("start index " + str(start) + " out of bounds.")
+            raise ValueError("start index " + safe_str_convert(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(start) + " out of bounds.")
+            raise ValueError("end index " + safe_str_convert(start) + " out of bounds.")
         if (start > end):
-            raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
+            raise ValueError("start index (" + safe_str_convert(start) + ") > end index (" + safe_str_convert(end) + ").")
 
         # Return the chunk.
         return VbStr(self.vb_str[start:end])
@@ -467,11 +460,11 @@ class VbStr(object):
 
         # Sanity check.
         if ((start < 0) or (start >= len(self.vb_str))):
-            raise ValueError("start index " + str(start) + " out of bounds.")
+            raise ValueError("start index " + safe_str_convert(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(end) + " out of bounds.")
+            raise ValueError("end index " + safe_str_convert(end) + " out of bounds.")
         if (start > end):
-            raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
+            raise ValueError("start index (" + safe_str_convert(start) + ") > end index (" + safe_str_convert(end) + ").")
 
         # Pull out the unchanged prefix and suffix.
         prefix = self.get_chunk(0, start).to_python_str()

@@ -69,6 +69,7 @@ from function_defn_visitor import function_defn_visitor
 from vba_object import to_python, VBA_Object
 from logger import log
 from expressions import expression, expr_const
+from utils import safe_str_convert
 
 # === VBA MODULE AND STATEMENTS ==============================================
 
@@ -196,7 +197,7 @@ class Module(VBA_Object):
         for block in self.loose_lines:
             if isinstance(block, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line const eval of " + str(block))
+                    log.debug("Skip loose line const eval of " + safe_str_convert(block))
                 continue
             if (isinstance(block, LooseLines)):
                 context.global_scope = True
@@ -209,7 +210,7 @@ class Module(VBA_Object):
         for block in self.loose_lines:
             if isinstance(block, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line eval of " + str(block))
+                    log.debug("Skip loose line eval of " + safe_str_convert(block))
                 continue
             context.global_scope = True
             block.eval(context, params)
@@ -253,7 +254,7 @@ class Module(VBA_Object):
             context.set(name, _function)
         for name, _var in self.global_vars.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
             if (isinstance(name, str)):
                 context.set(name, _var)
                 context.set(name, _var, force_global=True)
@@ -335,14 +336,14 @@ class LooseLines(VBA_Object):
         do_const_assignments(self.block, context)
         
         # Emulate the statements in the block.
-        log.info("Emulating " + str(self) + " ...")
+        log.info("Emulating " + safe_str_convert(self) + " ...")
         context.global_scope = True
         for curr_statement in self.block:
 
             # Don't emulate declared functions.
             if isinstance(curr_statement, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line eval of " + str(curr_statement))
+                    log.debug("Skip loose line eval of " + safe_str_convert(curr_statement))
                 continue
             
             # Is this something we can emulate?

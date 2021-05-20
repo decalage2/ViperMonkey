@@ -44,6 +44,7 @@ https://github.com/decalage2/ViperMonkey
 
 from visitor import visitor
 from statements import Dim_Statement, Let_Statement
+from utils import safe_str_convert
 
 class var_defn_visitor(visitor):
     """Collect the names of all declared variables. The collected names
@@ -61,7 +62,7 @@ class var_defn_visitor(visitor):
         self.visited.add(item)        
         if (isinstance(item, Dim_Statement)):
             for name, _, _, _ in item.variables:
-                self.variables.add(str(name))
+                self.variables.add(safe_str_convert(name))
         if (isinstance(item, Let_Statement)):
-            self.variables.add(str(item.name))
+            self.variables.add(safe_str_convert(item.name))
         return True

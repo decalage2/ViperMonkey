@@ -74,6 +74,7 @@ from function_call_visitor import function_call_visitor
 from lhs_var_visitor import lhs_var_visitor
 from utils import safe_print
 import utils
+from utils import safe_str_convert
 from let_statement_visitor import let_statement_visitor
 from vba_context import Context
 import excel
@@ -107,7 +108,7 @@ class VbaLibraryFunc(object):
         emulated function.
 
         """
-        log.warning("Using default # args of 1 for " + str(type(self)))
+        log.warning("Using default # args of 1 for " + safe_str_convert(type(self)))
         return 1
 
     def return_type(self):
@@ -117,7 +118,7 @@ class VbaLibraryFunc(object):
         @return (str) The function return type.
 
         """
-        log.warning("Using default return type of 'INTEGER' for " + str(type(self)))
+        log.warning("Using default return type of 'INTEGER' for " + safe_str_convert(type(self)))
         return "INTEGER"
 
 def excel_col_letter_to_index(x): 
@@ -222,7 +223,7 @@ class VBA_Object(object):
         @return (str) Object as a string.
 
         """
-        raise NotImplementedError("__repr__() not implemented in " + str(type(self)))
+        raise NotImplementedError("__repr__() not implemented in " + safe_str_convert(type(self)))
     
     def full_str(self):
         """Full string representation of the object.
@@ -230,7 +231,7 @@ class VBA_Object(object):
         @return (str) Object as a string.
 
         """
-        return str(self)
+        return safe_str_convert(self)
         
     def get_children(self):
         """Return the child VBA objects of the current object.
@@ -325,7 +326,7 @@ class VBA_Object(object):
         implemented as Python code.
 
         """
-        raise NotImplementedError("to_python() not implemented in " + str(type(self)))
+        raise NotImplementedError("to_python() not implemented in " + safe_str_convert(type(self)))
 
 def _read_from_excel(arg, context):
     """Try to evaluate an argument by reading from the loaded Excel
@@ -342,9 +343,9 @@ def _read_from_excel(arg, context):
 
     # Try handling reading value from an Excel spreadsheet cell.
     # ThisWorkbook.Sheets('YHRPN').Range('J106').Value
-    if ("MemberAccessExpression" not in str(type(arg))):
+    if ("MemberAccessExpression" not in safe_str_convert(type(arg))):
         return None        
-    arg_str = str(arg)
+    arg_str = safe_str_convert(arg)
     if (("sheets(" in arg_str.lower()) and
         (("range(" in arg_str.lower()) or ("cells(" in arg_str.lower()))):
         
@@ -370,7 +371,7 @@ def _read_from_object_text(arg, context):
     """
 
     # Do we have an object text access?
-    arg_str = str(arg)
+    arg_str = safe_str_convert(arg)
     arg_str_low = arg_str.lower().strip()
 
     # Shapes('test33').      TextFrame.TextRange.text
@@ -389,23 +390,23 @@ def _read_from_object_text(arg, context):
         lhs = "Shapes('1')"
         if ("inlineshapes" in arg_str_low):
             lhs = "InlineShapes('1')"
-        if ("MemberAccessExpression" in str(type(arg))):
+        if ("MemberAccessExpression" in safe_str_convert(type(arg))):
 
             # Drop off ActiveDocument prefix.
             lhs = arg.lhs
-            if ((str(lhs) == "ActiveDocument") or (str(lhs) == "ThisDocument")):
+            if ((safe_str_convert(lhs) == "ActiveDocument") or (safe_str_convert(lhs) == "ThisDocument")):
                 lhs = arg.rhs[0]
         
             # Eval the leftmost prefix element of the member access expression first.
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_obj_text: Old member access lhs = " + str(lhs))
+                log.debug("eval_obj_text: Old member access lhs = " + safe_str_convert(lhs))
             if ((hasattr(lhs, "eval")) and
                 (not isinstance(lhs, pyparsing.ParseResults))):
                 lhs = lhs.eval(context)
             else:
 
                 # Look this up as a variable name.
-                var_name = str(lhs)
+                var_name = safe_str_convert(lhs)
                 try:
                     lhs = context.get(var_name)
                 except KeyError:
@@ -416,10 +417,10 @@ def _read_from_object_text(arg, context):
             if ("inlineshapes" in arg_str_low):
                 lhs = "InlineShapes('1')"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_obj_text: Evaled member access lhs = " + str(lhs))
+                log.debug("eval_obj_text: Evaled member access lhs = " + safe_str_convert(lhs))
         
         # Try to get this as a doc var.
-        doc_var_name = str(lhs) + ".TextFrame.TextRange.Text"
+        doc_var_name = safe_str_convert(lhs) + ".TextFrame.TextRange.Text"
         doc_var_name = doc_var_name.replace(".TextFrame.TextFrame", ".TextFrame")
         if (("InlineShapes(" in doc_var_name) and (not doc_var_name.startswith("InlineShapes("))):
             doc_var_name = doc_var_name[doc_var_name.index("InlineShapes("):]
@@ -428,15 +429,15 @@ def _read_from_object_text(arg, context):
               ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("eval_obj_text: Looking for object text " + str(doc_var_name))
+            log.debug("eval_obj_text: Looking for object text " + safe_str_convert(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         if (val is not None):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_obj_text: Found " + str(doc_var_name) + " = " + str(val))
+                log.debug("eval_obj_text: Found " + safe_str_convert(doc_var_name) + " = " + safe_str_convert(val))
             return val
 
         # Not found. Try looking for the object with index 1.
-        lhs_str = str(lhs)
+        lhs_str = safe_str_convert(lhs)
         if ("'" not in lhs_str):
             return None
         new_lhs = lhs_str[:lhs_str.index("'") + 1] + "1" + lhs_str[lhs_str.rindex("'"):]
@@ -449,7 +450,7 @@ def _read_from_object_text(arg, context):
               ("InlineShapes(" not in doc_var_name)):
             doc_var_name = doc_var_name[doc_var_name.index("Shapes("):]
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("eval_arg: Fallback, looking for object text " + str(doc_var_name))
+            log.debug("eval_arg: Fallback, looking for object text " + safe_str_convert(doc_var_name))
         val = context.get_doc_var(doc_var_name.lower())
         return val
 
@@ -477,7 +478,7 @@ def contains_excel(arg):
 
     # Is this an Excel function call?
     excel_funcs = set(["usedrange", "sheets", "specialcells"])
-    return (str(arg.name).lower() in excel_funcs)
+    return (safe_str_convert(arg.name).lower() in excel_funcs)
     
 
 constant_expr_cache = {}
@@ -503,7 +504,7 @@ def get_cached_value(arg):
         return None
 
     # This is not already resolved to an int. See if we computed this before.
-    arg_str = str(arg)
+    arg_str = safe_str_convert(arg)
     if (arg_str not in constant_expr_cache.keys()):
         return None
     return constant_expr_cache[arg_str]
@@ -524,7 +525,7 @@ def set_cached_value(arg, val):
         (not isinstance(val, float)) and
         (not isinstance(val, complex))):
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.warning("Expression '" + str(val) + "' is a " + str(type(val)) + ", not an int. Not caching.")
+            log.warning("Expression '" + safe_str_convert(val) + "' is a " + safe_str_convert(type(val)) + ", not an int. Not caching.")
         return
 
     # Don't cache things that contain Excel sheets or workbooks.
@@ -532,10 +533,10 @@ def set_cached_value(arg, val):
         return
         
     # We have a number. Cache it.
-    arg_str = str(arg)
+    arg_str = safe_str_convert(arg)
     try:
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Cache value of " + arg_str + " = " + str(val))
+            log.debug("Cache value of " + arg_str + " = " + safe_str_convert(val))
     except UnicodeEncodeError:
         pass
     constant_expr_cache[arg_str] = val
@@ -574,7 +575,7 @@ def is_constant_math(arg):
     # Use a regex to see if this is an all constant expression.
     base_pat = "(?:\\s*\\d+(?:\\.\\d+)?\\s*[+\\-\\*/]\\s*)*\\s*\\d+"
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
-    arg_str = str(arg).strip()
+    arg_str = safe_str_convert(arg).strip()
     try:
         arg_str = unicode(arg_str)
     except UnicodeDecodeError:
@@ -668,7 +669,7 @@ def _infer_type_of_expression(expr, context):
 
     # Function with a hard coded type?
     if (hasattr(expr, "return_type")):
-        #print "POSSIBLE TYPE (1) '" + str(expr) + "' == " + str(expr.return_type())
+        #print "POSSIBLE TYPE (1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(expr.return_type())
         return expr.return_type()
 
     # Call of function?
@@ -679,12 +680,12 @@ def _infer_type_of_expression(expr, context):
         if (expr.name.lower() in vba_library.VBA_LIBRARY):
             builtin = vba_library.VBA_LIBRARY[expr.name.lower()]
             if (hasattr(builtin, "return_type")):
-                #print "POSSIBLE TYPE (2.1) '" + str(expr) + "' == " + str(builtin.return_type())
+                #print "POSSIBLE TYPE (2.1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(builtin.return_type())
                 return builtin.return_type()
 
         # Call of locally defined function.
         r = _get_local_func_type(expr, context)
-        #print "POSSIBLE TYPE (2.2) '" + str(expr) + "' == " + str(r)
+        #print "POSSIBLE TYPE (2.2) '" + safe_str_convert(expr) + "' == " + safe_str_convert(r)
         return r
         
     # Easy cases. These have to be integers.
@@ -699,12 +700,12 @@ def _infer_type_of_expression(expr, context):
                          operators.Power,
                          operators.Subtraction,
                          operators.Xor)):
-        #print "POSSIBLE TYPE (3) '" + str(expr) + "' == " + "INTEGER"
+        #print "POSSIBLE TYPE (3) '" + safe_str_convert(expr) + "' == " + "INTEGER"
         return "INTEGER"
 
     # Must be a string.
     if (isinstance(expr, operators.Concatenation)):
-        #print "POSSIBLE TYPE (4) '" + str(expr) + "' == " + "STRING"
+        #print "POSSIBLE TYPE (4) '" + safe_str_convert(expr) + "' == " + "STRING"
         return "STRING"
     
     # Harder case. This could be an int or a str (or some other numeric type, but
@@ -713,7 +714,7 @@ def _infer_type_of_expression(expr, context):
 
         # If we are doing subtraction we need numeric types.
         if ((hasattr(expr, "operators")) and ("-" in expr.operators)):
-            #print "POSSIBLE TYPE (5) '" + str(expr) + "' == " + "INTEGER"
+            #print "POSSIBLE TYPE (5) '" + safe_str_convert(expr) + "' == " + "INTEGER"
             return "INTEGER"
         
         # We have only '+'. Try to figure out the type based on the parts of the expression.
@@ -722,11 +723,11 @@ def _infer_type_of_expression(expr, context):
             child_type = _infer_type_of_expression(child, context)
             if (child_type is not None):
                 r_type = child_type
-                #print "POSSIBLE TYPE (6) '" + str(child) + "' == " + str(r_type)
+                #print "POSSIBLE TYPE (6) '" + safe_str_convert(child) + "' == " + safe_str_convert(r_type)
         return r_type
 
     # Can't figure out the type.
-    #print "POSSIBLE TYPE (7) '" + str(expr) + "' == " + "UNKNOWN!!"
+    #print "POSSIBLE TYPE (7) '" + safe_str_convert(expr) + "' == " + "UNKNOWN!!"
     return None
     
 def _infer_type(var, code_chunk, context):
@@ -766,7 +767,7 @@ def _infer_type(var, code_chunk, context):
             return (poss_type, True)
         
         # Does a VBA function that returns a string appear on the RHS?
-        rhs = str(assign.expression).lower()
+        rhs = safe_str_convert(assign.expression).lower()
         for str_func in str_funcs:
             if (str_func in rhs):
                 return ("STRING", True)
@@ -816,7 +817,7 @@ def _get_var_vals(item, context, global_only=False):
 
     # Handle With variables if needed.
     if (context.with_prefix_raw is not None):
-        var_names.add(str(context.with_prefix_raw))
+        var_names.add(safe_str_convert(context.with_prefix_raw))
     
     # Get a value for each variable.
     r = {}
@@ -870,7 +871,7 @@ def _get_var_vals(item, context, global_only=False):
             # 'inf' is not a valid value.
             val_str = None
             try:
-                val_str = str(val).strip()
+                val_str = safe_str_convert(val).strip()
             except UnicodeEncodeError:
                 val_str = filter(isprint, val).strip()
             if ((val_str == "inf") or
@@ -894,7 +895,7 @@ def _get_var_vals(item, context, global_only=False):
         if (val is None):
 
             # Variable is not defined. Try to infer the type based on how it is used.
-            #print "TOP LOOK TYPE: " + str(var)
+            #print "TOP LOOK TYPE: " + safe_str_convert(var)
             var_type, certain_of_type = _infer_type(var, item, context)
             #print (var_type, certain_of_type)
             if (var_type == "INTEGER"):
@@ -909,7 +910,7 @@ def _get_var_vals(item, context, global_only=False):
                 if certain_of_type:
                     context.set_type(var, "String")
             else:
-                log.warning("Type '" + str(var_type) + "' of var '" + str(var) + "' not handled." + \
+                log.warning("Type '" + safe_str_convert(var_type) + "' of var '" + safe_str_convert(var) + "' not handled." + \
                             " Defaulting initial value to \"NULL\".")
                 val = "NULL"
 
@@ -920,7 +921,7 @@ def _get_var_vals(item, context, global_only=False):
         r[var] = val
 
         # Save the regex pattern if this is a regex object.
-        if (utils.safe_str_convert(val) == "RegExp"):
+        if (safe_str_convert(val) == "RegExp"):
             if (context.contains("RegExp.pattern")):
                 pval = to_python(context.get("RegExp.pattern"), context)
                 if (pval.startswith('"')):
@@ -974,15 +975,15 @@ def _loop_vars_to_python(loop, context, indent):
     sorted_vars.sort()
     for var in sorted_vars:
         val = to_python(init_vals[var], context)
-        var_name = str(var)
+        var_name = safe_str_convert(var)
         if ((not var_name.endswith(".Pattern")) and
             (not var_name.endswith(".Global"))):
             var_name = var_name.replace(".", "")
         loop_init += indent_str + var_name + " = " + val + "\n"
     try:
-        hash_object = hashlib.md5(str(loop).encode())
+        hash_object = hashlib.md5(safe_str_convert(loop).encode())
     except UnicodeDecodeError:
-        hash_object = hashlib.md5(filter(isprint, str(loop)).encode())
+        hash_object = hashlib.md5(filter(isprint, safe_str_convert(loop)).encode())
 
     prog_var = "pct_" + hash_object.hexdigest()
     loop_init += indent_str + prog_var + " = 0\n"
@@ -1012,16 +1013,16 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     # VBA Object?
     r = None
     if (hasattr(arg, "to_python") and
-        ((str(type(arg.to_python)) == "<type 'method'>") or
-         (str(type(arg.to_python)) == "<type 'instancemethod'>"))):
+        ((safe_str_convert(type(arg.to_python)) == "<type 'method'>") or
+         (safe_str_convert(type(arg.to_python)) == "<type 'instancemethod'>"))):
         r = arg.to_python(context, params=params, indent=indent)
 
     # String literal?
     elif (isinstance(arg, str)):
 
         # Escape some characters.
-        the_str = str(arg)
-        the_str = str(the_str).\
+        the_str = safe_str_convert(arg)
+        the_str = safe_str_convert(the_str).\
                   replace("\\", "\\\\").\
                   replace('"', '\\"').\
                   replace("\n", "\\n").\
@@ -1066,10 +1067,10 @@ def to_python(arg, context, params=None, indent=0, statements=False):
                 #print e
                 #traceback.print_exc(file=sys.stdout)
                 #sys.exit(0)
-                return "ERROR! to_python failed! " + str(e)
+                return "ERROR! to_python failed! " + safe_str_convert(e)
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + str(e))\n"
+                r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"
             else:
                 r += indent_str + " " * 4 + "pass\n"
 
@@ -1077,7 +1078,7 @@ def to_python(arg, context, params=None, indent=0, statements=False):
     else:
         arg_str = None
         try:
-            arg_str = str(arg)
+            arg_str = safe_str_convert(arg)
         except UnicodeEncodeError:
             arg_str = filter(isprint, arg)
         r = " " * indent + arg_str
@@ -1145,10 +1146,10 @@ def _updated_vars_to_python(loop, context, indent):
     lhs_var_names = lhs_visitor.variables
     # Handle With variables if needed.
     if (context.with_prefix_raw is not None):
-        lhs_var_names.add(str(context.with_prefix_raw))
+        lhs_var_names.add(safe_str_convert(context.with_prefix_raw))
     # Handle For loop index variables if needed.
     if (isinstance(loop, statements.For_Statement)):
-        lhs_var_names.add(str(loop.name))
+        lhs_var_names.add(safe_str_convert(loop.name))
     var_dict_str = "{"
     first = True
     for var in lhs_var_names:
@@ -1226,7 +1227,7 @@ def _called_funcs_to_python(loop, context, indent):
     local_funcs = _get_all_called_funcs(loop, context)
     local_func_hashes = set()
     for curr_func in local_funcs:
-        curr_func_hash = hashlib.md5(str(curr_func).encode()).hexdigest()
+        curr_func_hash = hashlib.md5(safe_str_convert(curr_func).encode()).hexdigest()
         local_func_hashes.add(curr_func_hash)
         
     # Now get the definitions of all the local functions called by the local
@@ -1237,7 +1238,7 @@ def _called_funcs_to_python(loop, context, indent):
 
         # Get the current function definition to check for calls.
         curr_func = funcs_to_handle.pop()
-        curr_func_hash = hashlib.md5(str(curr_func).encode()).hexdigest()
+        curr_func_hash = hashlib.md5(safe_str_convert(curr_func).encode()).hexdigest()
         
         # Already looked at this one?
         if (curr_func_hash in seen_funcs):
@@ -1249,7 +1250,7 @@ def _called_funcs_to_python(loop, context, indent):
 
         # Save the new functions for processing.
         for new_func in curr_local_funcs:
-            new_func_hash = hashlib.md5(str(new_func).encode()).hexdigest()
+            new_func_hash = hashlib.md5(safe_str_convert(new_func).encode()).hexdigest()
             if (new_func_hash not in local_func_hashes):
                 local_func_hashes.add(new_func_hash)
                 local_funcs.append(new_func)
@@ -1298,11 +1299,11 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     # Emulating full VB programs in Python is difficult, so for now skip loops
     # that Execute() dynamic VB.
-    code_vba = str(loop).replace("\n", "\\n")[:20]
+    code_vba = safe_str_convert(loop).replace("\n", "\\n")[:20]
     log.info("Starting JIT emulation of '" + code_vba + "...' ...")
-    if (("Execute(" in str(loop)) or
-        ("ExecuteGlobal(" in str(loop)) or
-        ("Eval(" in str(loop))):
+    if (("Execute(" in safe_str_convert(loop)) or
+        ("ExecuteGlobal(" in safe_str_convert(loop)) or
+        ("Eval(" in safe_str_convert(loop))):
         log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
         return False
     
@@ -1403,7 +1404,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         vba_context.shellcode = var_updates["__shell_code__"]
 
     except NotImplementedError as e:
-        log.error("Python JIT emulation of loop failed. " + str(e) + ". Using fallback emulation method for loop...")
+        log.error("Python JIT emulation of loop failed. " + safe_str_convert(e) + ". Using fallback emulation method for loop...")
         #safe_print("REMOVE THIS!!")
         #raise e
         return False
@@ -1415,12 +1416,12 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         
         # If we bombed out due to a potential infinite loop we
         # are done.
-        if ("Infinite Loop" in str(e)):
+        if ("Infinite Loop" in safe_str_convert(e)):
             log.warning("Detected infinite loop. Terminating loop.")
             return True
 
         # We had some other error. Emulating the loop in Python failed.
-        log.error("Python JIT emulation of loop failed. " + str(e) + ". Using fallback emulation method for loop...")
+        log.error("Python JIT emulation of loop failed. " + safe_str_convert(e) + ". Using fallback emulation method for loop...")
         if (log.getEffectiveLevel() == logging.DEBUG):
             traceback.print_exc(file=sys.stdout)
             safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
@@ -1446,10 +1447,10 @@ def _handle_wscriptshell_run(arg, context, got_constant_math):
     """
 
     # Handle cases where wscriptshell.run() is being called and there is a local run() function.
-    if ((".run(" in str(arg).lower()) and (context.contains("run"))):
+    if ((".run(" in safe_str_convert(arg).lower()) and (context.contains("run"))):
 
         # Resolve the run() call.
-        if ("MemberAccessExpression" in str(type(arg))):
+        if ("MemberAccessExpression" in safe_str_convert(type(arg))):
             arg_evaled = arg.eval(context)
             if got_constant_math: set_cached_value(arg, arg_evaled)
             return arg_evaled
@@ -1475,10 +1476,10 @@ def _handle_shapes_access(r, arg, context, got_constant_math):
     # Is this a Shapes() access that still needs to be handled?
     poss_shape_txt = ""
     if isinstance(r, (VBA_Object, str)):
-        poss_shape_txt = utils.safe_str_convert(r)
+        poss_shape_txt = safe_str_convert(r)
     if ((poss_shape_txt.startswith("Shapes(")) or (poss_shape_txt.startswith("InlineShapes("))):
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("eval_arg: Handling intermediate Shapes() access for " + str(r))
+            log.debug("eval_arg: Handling intermediate Shapes() access for " + safe_str_convert(r))
         r = eval_arg(r, context)
         if got_constant_math: set_cached_value(arg, r)
         return r
@@ -1513,7 +1514,7 @@ def _handle_nodetypedvalue_read(arg, context, got_constant_math):
     
             # It looks like maybe this magically does base64 decode? Try that.
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Try base64 decode of '" + str(val) + "'...")
+                log.debug("eval_arg: Try base64 decode of '" + safe_str_convert(val) + "'...")
             val_decode = utils.b64_decode(val)
             if (val_decode is not None):
                 if got_constant_math: set_cached_value(arg, val_decode)
@@ -1591,7 +1592,7 @@ def _handle_form_variable_read(arg, context, got_constant_math):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("eval_arg: Try to load as variable " + curr_var_attempt + "...")
                 val = context.get(curr_var_attempt)
-                if (val != str(arg)):
+                if (val != safe_str_convert(arg)):
                     if got_constant_math: set_cached_value(arg, val)
                     return val
 
@@ -1613,7 +1614,7 @@ def _handle_form_variable_read(arg, context, got_constant_math):
             r = func
             import procedures
             if (isinstance(func, (procedures.Function, procedures.Sub)) or
-                ('vipermonkey.core.vba_library.' in str(type(func)))):
+                ('vipermonkey.core.vba_library.' in safe_str_convert(type(func)))):
                 r = eval_arg(func, context, treat_as_var_name=True)
                         
             # Did the function resolve to a value?
@@ -1634,7 +1635,7 @@ def _handle_form_variable_read(arg, context, got_constant_math):
 
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("eval_arg: Failed. Not a function. " + str(e))
+                log.debug("eval_arg: Failed. Not a function. " + safe_str_convert(e))
             traceback.print_exc()
 
         # Are we trying to load some document meta data?
@@ -1720,7 +1721,7 @@ def _handle_form_variable_read(arg, context, got_constant_math):
         # As a last resort try reading it as a wildcarded form variable.
         wild_name = tmp[:tmp.index(".")] + "*"
         for i in range(0, 11):
-            tmp_name = wild_name + str(i)
+            tmp_name = wild_name + safe_str_convert(i)
             try:
                 val = context.get(tmp_name)
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1844,7 +1845,7 @@ def eval_arg(arg, context, treat_as_var_name=False):
                 return tmp_r
 
         # Should this be handled as a variable? Must be a valid var name to do this.
-        if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", str(arg)) is not None)):
+        if (treat_as_var_name and (re.match(r"[a-zA-Z_][\w\d]*", safe_str_convert(arg)) is not None)):
 
             # We did not resolve the variable. Treat it as unitialized.
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1856,12 +1857,12 @@ def eval_arg(arg, context, treat_as_var_name=False):
                        ".groupname", ".seltext", ".controltiptext",
                        ".passwordchar", ".controlsource", ".value"]
         for form_field in form_fields:
-            if (str(arg).lower().endswith(form_field)):
+            if (safe_str_convert(arg).lower().endswith(form_field)):
                 return ""
         
         # The .text hack did not work.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("eval_arg: return " + str(arg))
+            log.debug("eval_arg: return " + safe_str_convert(arg))
         return arg
 
 def eval_args(args, context, treat_as_var_name=False):
@@ -1997,7 +1998,7 @@ def coerce_to_str(obj, zero_is_null=False):
     if (isinstance(obj, basestring)):
 
         # Convert to a regular str if needed.
-        return utils.safe_str_convert(obj)
+        return safe_str_convert(obj)
     
     # Do we have a list of byte values? If so convert the bytes to chars.
     if (isinstance(obj, list)):
@@ -2028,7 +2029,7 @@ def coerce_to_str(obj, zero_is_null=False):
         return (coerce_to_str(obj["value"]))
         
     # Not a character byte array. Just convert to a string.
-    return utils.safe_str_convert(obj)
+    return safe_str_convert(obj)
 
 def coerce_args_to_str(args):
     """Coerce a list of arguments to strings.
@@ -2096,7 +2097,7 @@ def coerce_to_int(obj):
     except ValueError as e:
 
         # Punt and just return NULL.
-        log.error("int conversion failed. Returning NULL. " + str(e))
+        log.error("int conversion failed. Returning NULL. " + safe_str_convert(e))
         return 0
 
 def coerce_to_num(obj):
@@ -2243,7 +2244,7 @@ def coerce_args(orig_args, preferred_type=None):
                 new_args.append(arg)
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Coerce to str " + str(new_args))
+            log.debug("Coerce to str " + safe_str_convert(new_args))
         return coerce_args_to_str(new_args)
 
     else:
@@ -2257,5 +2258,5 @@ def coerce_args(orig_args, preferred_type=None):
                 new_args.append(arg)
                 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Coerce to int " + str(new_args))
+            log.debug("Coerce to int " + safe_str_convert(new_args))
         return coerce_args_to_int(new_args)

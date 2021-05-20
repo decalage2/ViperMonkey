@@ -85,6 +85,7 @@ __version__ = '0.04'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import sys
 import logging
 import string
 import re
@@ -110,6 +111,7 @@ from stubbed_engine import StubbedEngine
 import expressions
 import vba_context
 import excel
+from utils import safe_str_convert
 
 # === FUNCTIONS ==============================================================
 
@@ -159,7 +161,7 @@ def pull_urls_excel_sheets(workbook):
         # Skip empty cells.
         value = None
         try:
-            value = str(cell["value"]).strip()
+            value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
             value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
 
@@ -206,7 +208,7 @@ def pull_b64_excel_sheets(workbook):
         # Skip empty cells.
         value = None
         try:
-            value = str(cell["value"]).strip()
+            value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
             value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
 
@@ -214,14 +216,14 @@ def pull_b64_excel_sheets(workbook):
             continue
 
         # Is this the start of a PE file?
-        if (value.startswith("TVqQ") and (len(value) > 100)):
+        if (value.strip().startswith("TVqQ") and (len(value) > 100)):
 
             # Are we already tracking a PE file?
             if (curr_pe_blob is not None):
                 pe_blobs.append(curr_pe_blob)
 
             # Start a new PE blob.
-            curr_pe_blob = value
+            curr_pe_blob = ""
         
         # Look for strict base64 strings in the cell value.
         base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
@@ -372,7 +374,7 @@ class ViperMonkey(StubbedEngine):
         if (isinstance(dat, dict)):
             new_dat = FakeMeta()
             for field in dat.keys():
-                setattr(new_dat, str(field), dat[field])
+                setattr(new_dat, safe_str_convert(field), dat[field])
         self.metadata = new_dat
         
     def add_compiled_module(self, m):
@@ -390,7 +392,7 @@ class ViperMonkey(StubbedEngine):
                 old_sub = self.globals[name]
                 if (hasattr(old_sub, "statements")):
                     if (len(_sub.statements) < len(old_sub.statements)):
-                        log.warning("Sub " + str(name) + " is already defined. Skipping new definition.")
+                        log.warning("Sub " + safe_str_convert(name) + " is already defined. Skipping new definition.")
                         continue
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing sub "%s" in globals' % name)
@@ -413,7 +415,7 @@ class ViperMonkey(StubbedEngine):
             self.externals[name.lower()] = _function
         for name, _var in m.global_vars.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
             if (isinstance(name, str)):
                 self.globals[name.lower()] = _var
             if (isinstance(name, list)):
@@ -641,7 +643,7 @@ class ViperMonkey(StubbedEngine):
                 log.debug("Trying entry point " + entry_point)
             if ((entry_point in self.globals) and
                 (hasattr(self.globals[entry_point], "eval"))):
-                context.report_action('Found Entry Point', str(entry_point), '')
+                context.report_action('Found Entry Point', safe_str_convert(entry_point), '')
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
                 # entry points.
@@ -661,14 +663,14 @@ class ViperMonkey(StubbedEngine):
             for suffix in self.callback_suffixes:
 
                 # Is this a callback?
-                if (str(name).lower().endswith(suffix.lower())):
+                if (safe_str_convert(name).lower().endswith(suffix.lower())):
 
                     # Is this a function?
                     item = self.globals[name]
                     if isinstance(item, (Function, Sub)):
 
                         # Emulate it.
-                        context.report_action('Found Entry Point', str(name), '')
+                        context.report_action('Found Entry Point', safe_str_convert(name), '')
                         # We will be trying multiple entry points, so make a copy
                         # of the context so we don't accumulate stage changes across
                         # entry points.
@@ -695,7 +697,7 @@ class ViperMonkey(StubbedEngine):
             # Emulate all 0 argument subroutines as potential entry points.
             for only_sub in zero_arg_subs:
                 sub_name = only_sub.name
-                context.report_action('Found Heuristic Entry Point', str(sub_name), '')
+                context.report_action('Found Heuristic Entry Point', safe_str_convert(sub_name), '')
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
                 # entry points.
@@ -747,9 +749,9 @@ class ViperMonkey(StubbedEngine):
         t.max_width['Description'] = 35
         for action in self.actions:
             # Cut insanely large results down to size.
-            str_action = str(action)
+            str_action = safe_str_convert(action)
             if (len(str_action) > 50000):
-                new_params = str(action[1])
+                new_params = safe_str_convert(action[1])
                 if (len(new_params) > 50000):
                     new_params = new_params[:25000] + "... <SNIP> ..." + new_params[-25000:]
                 action = (action[0], new_params, action[2])

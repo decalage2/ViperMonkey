@@ -45,6 +45,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from visitor import visitor
+from utils import safe_str_convert
 
 class var_in_expr_visitor(visitor):
     """Get the names of all variables that appear in an expression. The
@@ -69,16 +70,16 @@ class var_in_expr_visitor(visitor):
 
         # Simple variable?
         if (isinstance(item, SimpleNameExpression)):
-            self.variables.add(str(item.name))
+            self.variables.add(safe_str_convert(item.name))
 
         # Array access?
-        if (("Function_Call" in str(type(item))) and (self.context is not None)):
+        if (("Function_Call" in safe_str_convert(type(item))) and (self.context is not None)):
 
             # Is this an array or function?
             if (hasattr(item, "name") and (self.context.contains(item.name))):
                 ref = self.context.get(item.name)
                 if isinstance(ref, (list, str)):
-                    self.variables.add(str(item.name))
+                    self.variables.add(safe_str_convert(item.name))
 
         # Member access expression used as a variable?
         if (isinstance(item, MemberAccessExpression)):
@@ -86,6 +87,6 @@ class var_in_expr_visitor(visitor):
             if (isinstance(rhs, list)):
                 rhs = rhs[-1]
             if (isinstance(rhs, SimpleNameExpression)):
-                self.variables.add(str(item))
+                self.variables.add(safe_str_convert(item))
                     
         return True

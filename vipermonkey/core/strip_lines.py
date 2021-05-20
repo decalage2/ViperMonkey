@@ -88,6 +88,7 @@ import vba_context
 from random import randint
 
 import utils
+from utils import safe_str_convert
 
 #debug_strip = True
 debug_strip = False
@@ -254,7 +255,7 @@ def collapse_macro_if_blocks(vba_code):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Else if " + strip_line)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Save block " + str(curr_block))
+                log.debug("Save block " + safe_str_convert(curr_block))
 
             # Start a new block.
             curr_block = []
@@ -278,7 +279,7 @@ def collapse_macro_if_blocks(vba_code):
             for block_line in biggest_block:
                 r += block_line + "\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Pick block " + str(biggest_block))
+                log.debug("Pick block " + safe_str_convert(biggest_block))
                 
             # Done processing #if.
             curr_blocks = None
@@ -425,8 +426,8 @@ def fix_unbalanced_quotes(vba_code):
                 pos += 1
                 next_line = lines[pos + 1]
         #print "---"
-        #print str(pos) + ": " + line
-        #print str(pos + 1) + ": " + next_line
+        #print safe_str_convert(pos) + ": " + line
+        #print safe_str_convert(pos + 1) + ": " + next_line
         #print "***"
         if ('"' not in line):
             r += line + "\n"
@@ -588,9 +589,9 @@ def fix_skipped_1st_arg1(vba_code):
             else:
 
                 # Map a temporary name to the current string.
-                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                str_name = "A_STRING_LITERAL_" + safe_str_convert(randint(0, 100000000))
                 while (str_name in strings):
-                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                    str_name = "A_STRING_LITERAL_" + safe_str_convert(randint(0, 100000000))
                 curr_str += c
                 strings[str_name] = curr_str
                 in_str = False
@@ -652,9 +653,9 @@ def fix_skipped_1st_arg2(vba_code):
             else:
 
                 # Map a temporary name to the current string.
-                str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                str_name = "A_STRING_LITERAL_" + safe_str_convert(randint(0, 100000000))
                 while (str_name in strings):
-                    str_name = "A_STRING_LITERAL_" + str(randint(0, 100000000))
+                    str_name = "A_STRING_LITERAL_" + safe_str_convert(randint(0, 100000000))
                 curr_str += c
                 strings[str_name] = curr_str
                 in_str = False
@@ -698,9 +699,9 @@ def fix_skipped_1st_arg2(vba_code):
                 paren_count = 0
                 in_paren = False
                 if (curr_paren is not None):
-                    paren_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                    paren_name = "A_PAREN_EXPR_" + safe_str_convert(randint(0, 100000000))
                     while (paren_name in parens):
-                        str_name = "A_PAREN_EXPR_" + str(randint(0, 100000000))
+                        str_name = "A_PAREN_EXPR_" + safe_str_convert(randint(0, 100000000))
                     curr_paren += c
                     parens[paren_name] = curr_paren
                     curr_paren = None
@@ -1547,7 +1548,7 @@ def hide_colons(vba_code):
     if (re2.search(unicode(pat), uni_vba_code) is not None):
         pos = 0
         for curr_if in re.findall(pat, vba_code):
-            if_name = "HIDE_THIS_IF" + "_" * len(str(pos)) + str(pos)
+            if_name = "HIDE_THIS_IF" + "_" * len(safe_str_convert(pos)) + safe_str_convert(pos)
             pos += 1
             vba_code = vba_code.replace(curr_if, "\n" + if_name + "\n")
             single_line_ifs.append((if_name, curr_if))
@@ -1633,7 +1634,7 @@ def replace_bad_chars(vba_code):
         print vba_code
     while (pos < (len(vba_code) - 1)):
 
-        #print "DONE: " + str((0.0 + pos)/len(vba_code)*100)
+        #print "DONE: " + safe_str_convert((0.0 + pos)/len(vba_code)*100)
         # Are we looking at an interesting character?
         pos += 1
         c = vba_code[pos]
@@ -1735,7 +1736,7 @@ def replace_bad_chars(vba_code):
         if ((not in_comment) and (c == '"')):
             r += '"'
             in_str = not in_str
-            #print "IN_STR: " + str(in_str)
+            #print "IN_STR: " + safe_str_convert(in_str)
             continue
 
         # Handle entering/leaving [] expressions.
@@ -1821,7 +1822,7 @@ def replace_bad_chars(vba_code):
             
         # Non-ASCII character that is not in a string?
         if (ord(c) > 127):
-            r += "d" + str(ord(c))
+            r += "d" + safe_str_convert(ord(c))
 
         # Make sure needed ';' are kept.
         if (c == ";"):
@@ -2475,8 +2476,8 @@ def replace_constant_int_inline(vba_code):
     if len(d_const) > 0:
         log.info("Found constant integer definitions, replacing them.")
     for const in d_const:
-        this_const = re.compile('(?i)(?<=(?:[(), ]))' + str(const) + '(?=(?:[(), ]))(?!\s*=)')
-        vba_code = re.sub(this_const, str(d_const[const]), vba_code)
+        this_const = re.compile('(?i)(?<=(?:[(), ]))' + safe_str_convert(const) + '(?=(?:[(), ]))(?!\s*=)')
+        vba_code = re.sub(this_const, safe_str_convert(d_const[const]), vba_code)
     return(vba_code)
 
 def strip_line_nums(line):
@@ -2536,7 +2537,7 @@ def is_assign_line(line, line_num, local_funcs, bool_statements):
     """
 
     if (log.getEffectiveLevel() == logging.DEBUG):
-        log.debug("SKIP: Assign line: '" + line + "'. Line # = " + str(line_num))
+        log.debug("SKIP: Assign line: '" + line + "'. Line # = " + safe_str_convert(line_num))
                 
     # Skip starts of while loops.
     if (line.strip().startswith("While ")):
@@ -2720,7 +2721,7 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
             
             # Yes, there is an assignment. Save the assigned variable and line #
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("SKIP: Assigned vars = " + str(match) + ". Line # = " + str(line_num))
+                log.debug("SKIP: Assigned vars = " + safe_str_convert(match) + ". Line # = " + safe_str_convert(line_num))
             for m in match:
                 
                 # Look at each matched variable.
@@ -2733,7 +2734,7 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
                         array_var = var[:var.index("(")]
                         expanded_vars.append(array_var)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("SKIP: Assigned vars (1) = " + str(expanded_vars) + ". Line # = " + str(line_num))
+                    log.debug("SKIP: Assigned vars (1) = " + safe_str_convert(expanded_vars) + ". Line # = " + safe_str_convert(line_num))
                 for var in expanded_vars:
 
                     # Skip empty.
@@ -2853,8 +2854,8 @@ def strip_useless_code(vba_code, local_funcs):
             # Skip variable references on the lines where the current variable was assigned.
             if (line_num in assigns[var]):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("STRIP: Var '" + str(var) + "' assigned in line '" + line + \
-                              "'. Don't count as reference. " + " Line # = " + str(line_num))
+                    log.debug("STRIP: Var '" + safe_str_convert(var) + "' assigned in line '" + line + \
+                              "'. Don't count as reference. " + " Line # = " + safe_str_convert(line_num))
                 continue
 
             # Could the current variable be used on this line?
@@ -2862,7 +2863,7 @@ def strip_useless_code(vba_code, local_funcs):
 
                 # Maybe. Count this as a reference.
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("STRIP: Var '" + str(var) + "' referenced in line '" + line + "'. " + " Line # = " + str(line_num))
+                    log.debug("STRIP: Var '" + safe_str_convert(var) + "' referenced in line '" + line + "'. " + " Line # = " + safe_str_convert(line_num))
                 refs[var] = True
 
     # Keep assignments that have change callbacks.

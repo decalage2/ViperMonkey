@@ -56,6 +56,7 @@ import olefile
 
 from logger import log
 import filetype
+from utils import safe_str_convert
 
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
@@ -329,7 +330,7 @@ def get_customxml_text(data):
     for nn in range(1, 6):
 
         # Does customXml/itemNN.xml exist?
-        zip_subfile = 'customXml/item' + str(nn) + ".xml"
+        zip_subfile = 'customXml/item' + safe_str_convert(nn) + ".xml"
         if (zip_subfile not in unzipped_data.namelist()):
             continue
 
@@ -348,7 +349,7 @@ def get_customxml_text(data):
         # Save it.
         # This var name may need to be generalized.
         # customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(1).childnodes('2').text
-        var_name = "customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(" + str(nn) + ").childnodes('2').text"
+        var_name = "customxmlparts('activedocument.customxmlparts.count').selectnodes('//items')(" + safe_str_convert(nn) + ").childnodes('2').text"
         r.append((var_name, txt_val))
 
     # Delete the temporary Office file.
@@ -573,7 +574,7 @@ def _get_field_names(vba_code, debug):
 
         # Add some Page objects to look for.
         for i in range(1, 10):
-            object_names.add("Page" + str(i))
+            object_names.add("Page" + safe_str_convert(i))
 
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)            
@@ -1596,8 +1597,8 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     
     # Is this big enough to be interesting?
     if debug1:
-        print "LEN MAX STR: " + str(len(max_substs))
-        print "MAX REPEATS IN 1 STR: " + str(max_substs.count(repeated_subst))
+        print "LEN MAX STR: " + safe_str_convert(len(max_substs))
+        print "MAX REPEATS IN 1 STR: " + safe_str_convert(max_substs.count(repeated_subst))
         print "REPEATED STR: '" + repeated_subst + "'"
     if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
         if debug1:
@@ -1643,7 +1644,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
             for end_pos in range(0, 3):
                 if debug1:
                     print "CHECK !!!!!!!!!!!!!"
-                    print "chopping off " + str(end_pos)
+                    print "chopping off " + safe_str_convert(end_pos)
                 curr_agg_str = aggregate_str[:-end_pos]
                 for i in range(1, len(repeated_subst) + 1):
                     curr_first_half = repeated_subst[:i]
@@ -1723,17 +1724,17 @@ def get_ole_text_method_1(vba_code, data, debug=False):
 
         # Add some Page objects to look for.
         for i in range(1, 10):
-            object_names.add("Page" + str(i))
+            object_names.add("Page" + safe_str_convert(i))
 
     # How about StoryRanges items?
     if (".StoryRanges" in vba_code):
 
         # Add some StoryRanges objects to look for.
         for i in range(1, 10):
-            object_names.add("StoryRanges.Items('" + str(i) + "')")
-            object_names.add("StoryRanges('" + str(i) + "')")
-            object_names.add("StoryRanges.Items(" + str(i) + ")")
-            object_names.add("StoryRanges(" + str(i) + ")")
+            object_names.add("StoryRanges.Items('" + safe_str_convert(i) + "')")
+            object_names.add("StoryRanges('" + safe_str_convert(i) + "')")
+            object_names.add("StoryRanges.Items(" + safe_str_convert(i) + ")")
+            object_names.add("StoryRanges(" + safe_str_convert(i) + ")")
             
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
@@ -1841,8 +1842,8 @@ def _pull_object_names(vba_code):
 
         # Add some Page objects to look for.
         for i in range(1, 10):
-            object_names.add("Page" + str(i))
-            page_names.add("Page" + str(i))
+            object_names.add("Page" + safe_str_convert(i))
+            page_names.add("Page" + safe_str_convert(i))
 
     # Eliminate any obviously bad names.
     object_names = clean_names(object_names)
@@ -2336,7 +2337,7 @@ def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, d
             tmp.append(dat)
         else:
             if debug:
-                print "\nSkip 1: " + str(dat)
+                print "\nSkip 1: " + safe_str_convert(dat)
         last_val = dat[1].strip()
     r = tmp
 
@@ -2452,7 +2453,7 @@ def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, d
         
     # Fill in missing PageNN variables.
     for i in range(1, 5):
-        curr_name = "Page" + str(i)
+        curr_name = "Page" + safe_str_convert(i)
         if ((curr_name not in page_names) and (page_val != "")):
             r.append((curr_name, page_val))
 
@@ -2517,7 +2518,7 @@ def get_ole_textbox_values(obj, vba_code):
     # Pull out the stream names so we don't treat those as data values.
     stream_names = _get_stream_names(vba_code)
     if debug:
-        print "\nStream Names: " + str(stream_names) + "\n"
+        print "\nStream Names: " + safe_str_convert(stream_names) + "\n"
         
     # Clear out some troublesome byte sequences.
     data = data.replace("R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", "")
@@ -2588,7 +2589,7 @@ def get_ole_textbox_values(obj, vba_code):
         if debug:
             print "\n\n-------------- CHUNK ---------------"
             print chunk
-            print str(strs).replace("\\x00", "").replace("\\xff", "")
+            print safe_str_convert(strs).replace("\\x00", "").replace("\\xff", "")
 
         # Save long strings. Maybe they are the value of a previous variable?
         longest_str = ""
@@ -2700,7 +2701,7 @@ def read_form_strings(vba):
         return r
 
     except Exception as e:
-        log.error("Cannot read form strings. " + str(e))
+        log.error("Cannot read form strings. " + safe_str_convert(e))
         return []
     
 def get_shapes_text_values_xml(fname):
@@ -2791,15 +2792,15 @@ def get_shapes_text_values_xml(fname):
         
         # Access value with .TextFrame.TextRange.Text accessor.
         shape_text = shape_text.replace("&amp;", "&")
-        var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+        var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
         r.append((var, shape_text))
         
         # Access value with .TextFrame.ContainingRange accessor.
-        var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+        var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.ContainingRange"
         r.append((var, shape_text))
 
         # Access value with .AlternativeText accessor.
-        var = "Shapes('" + str(pos) + "').AlternativeText"
+        var = "Shapes('" + safe_str_convert(pos) + "').AlternativeText"
         r.append((var, shape_text))
         
         # Move to next shape.
@@ -2920,7 +2921,7 @@ def _parse_activex_chunk(data):
     if (len(tmp) > 0):
         size_bytes = tmp[0]
         size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
-        #print "size: " + str(size)
+        #print "size: " + safe_str_convert(size)
         if (len(text) > size):
             text = text[:size]
         
@@ -3232,7 +3233,7 @@ def get_shapes_text_values(fname, stream):
         # 0x0D bytes. We will look for that.
         pat = r"\x0d[\x20-\x7e]{100,}\x0d"
         strs = re.findall(pat, data)
-        #print "STREAM: " + str(stream)
+        #print "STREAM: " + safe_str_convert(stream)
         #print data
         #print "^^^^^^^^^^^"
         #print strs
@@ -3244,15 +3245,15 @@ def get_shapes_text_values(fname, stream):
 
             # Access value with .TextFrame.TextRange.Text accessor.
             shape_text = shape_text[1:-1]
-            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
             # Access value with .TextFrame.ContainingRange accessor.
-            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+            var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.ContainingRange"
             r.append((var, shape_text))
 
             # Access value with .AlternativeText accessor.
-            var = "Shapes('" + str(pos) + "').AlternativeText"
+            var = "Shapes('" + safe_str_convert(pos) + "').AlternativeText"
             r.append((var, shape_text))
             
             # Move to next shape.
@@ -3271,15 +3272,15 @@ def get_shapes_text_values(fname, stream):
 
             # Access value with .TextFrame.TextRange.Text accessor.
             shape_text = shape_text[1:-1].replace("\x00", "")
-            var = "Shapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
             # Access value with .TextFrame.ContainingRange accessor.
-            var = "Shapes('" + str(pos) + "').TextFrame.ContainingRange"
+            var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.ContainingRange"
             r.append((var, shape_text))
 
             # Access value with .AlternativeText accessor.
-            var = "Shapes('" + str(pos) + "').AlternativeText"
+            var = "Shapes('" + safe_str_convert(pos) + "').AlternativeText"
             r.append((var, shape_text))
             
             # Move to next shape.
@@ -3288,11 +3289,11 @@ def get_shapes_text_values(fname, stream):
     except Exception as e:
 
         # Report the error.
-        if ("not an OLE2 structured storage file" not in str(e)):
-            log.error("Cannot read associated Shapes text. " + str(e))
+        if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
+            log.error("Cannot read associated Shapes text. " + safe_str_convert(e))
 
         # See if we can read Shapes() info from an XML file.
-        if ("not an OLE2 structured storage file" in str(e)):
+        if ("not an OLE2 structured storage file" in safe_str_convert(e)):
             r = get_shapes_text_values_xml(fname)
 
     return r
@@ -3473,7 +3474,7 @@ def _read_doc_vars_ole(fname):
         return r
             
     except Exception as e:
-        log.error("Cannot read document variables. " + str(e))
+        log.error("Cannot read document variables. " + safe_str_convert(e))
         return []
 
 def _read_doc_vars(data, fname):
@@ -3536,17 +3537,17 @@ def _get_inlineshapes_text_values(data):
 
             # Access value with .TextFrame.TextRange.Text accessor.
             shape_text = shape_text.replace("\x00", "")
-            var = "InlineShapes('" + str(pos) + "').TextFrame.TextRange.Text"
+            var = "InlineShapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
             # Access value with .TextFrame.ContainingRange accessor.
-            var = "InlineShapes('" + str(pos) + "').TextFrame.ContainingRange"
+            var = "InlineShapes('" + safe_str_convert(pos) + "').TextFrame.ContainingRange"
             r.append((var, shape_text))
 
             # Access value with .AlternativeText accessor.
-            var = "InlineShapes('" + str(pos) + "').AlternativeText"
+            var = "InlineShapes('" + safe_str_convert(pos) + "').AlternativeText"
             r.append((var, shape_text))
-            var = "InlineShapes('" + str(pos) + "').AlternativeText$"
+            var = "InlineShapes('" + safe_str_convert(pos) + "').AlternativeText$"
             r.append((var, shape_text))
             
             # Move to next shape.
@@ -3555,10 +3556,10 @@ def _get_inlineshapes_text_values(data):
     except Exception as e:
 
         # Report the error.
-        log.error("Cannot read associated InlineShapes text. " + str(e))
+        log.error("Cannot read associated InlineShapes text. " + safe_str_convert(e))
 
         # See if we can read Shapes() info from an XML file.
-        if ("not an OLE2 structured storage file" in str(e)):
+        if ("not an OLE2 structured storage file" in safe_str_convert(e)):
             r = get_shapes_text_values_xml(data)
 
     return r
@@ -3624,8 +3625,8 @@ def _read_custom_doc_props(fname):
         return r
             
     except Exception as e:
-        if ("not an OLE2 structured storage file" not in str(e)):
-            log.error("Cannot read custom doc properties. " + str(e))
+        if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
+            log.error("Cannot read custom doc properties. " + safe_str_convert(e))
         return []
 
 def _get_embedded_object_values(fname):
@@ -3682,8 +3683,8 @@ def _get_embedded_object_values(fname):
                 r.append(i)
         
     except Exception as e:
-        if ("not an OLE2 structured storage file" not in str(e)):
-            log.error("Cannot read tag/caption from embedded objects. " + str(e))
+        if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
+            log.error("Cannot read tag/caption from embedded objects. " + safe_str_convert(e))
 
     return r
 
@@ -3706,7 +3707,7 @@ def _read_doc_text_libreoffice(data):
     # Pick an unused temporary file name.
     out_dir = None
     while True:
-        out_dir = "/tmp/tmp_word_file_" + str(random.randrange(0, 10000000000))
+        out_dir = "/tmp/tmp_word_file_" + safe_str_convert(random.randrange(0, 10000000000))
         try:
             f = open(out_dir, "r")
             # Already exists.
@@ -3726,7 +3727,7 @@ def _read_doc_text_libreoffice(data):
         output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--text", "-f", out_dir])
     except Exception as e:
-        log.error("Running export_doc_text.py failed. " + str(e))
+        log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -3762,7 +3763,7 @@ def _read_doc_text_libreoffice(data):
         output = subprocess.check_output(["python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--tables", "-f", out_dir])
     except Exception as e:
-        log.error("Running export_doc_text.py failed. " + str(e))
+        log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -3813,7 +3814,7 @@ def _read_doc_text(fname, data=None):
             data = f.read()
             f.close()
         except Exception as e:
-            log.error("Cannot read document text from " + str(fname) + ". " + str(e))
+            log.error("Cannot read document text from " + safe_str_convert(fname) + ". " + safe_str_convert(e))
             return ""
 
     # First try to read the doc text with LibreOffice.
@@ -3892,7 +3893,7 @@ def _read_payload_default_target_frame(data, vm):
     if (def_targ_frame_val is not None):
         vm.globals["DefaultTargetFrame"] = def_targ_frame_val
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Added DefaultTargetFrame = " + str(def_targ_frame_val) + " to globals.")
+            log.debug("Added DefaultTargetFrame = " + safe_str_convert(def_targ_frame_val) + " to globals.")
     
 def _read_payload_form_strings(vba, vm):
     """Read in and save the text values of OLE forms as given by the
@@ -4064,7 +4065,7 @@ def _read_payload_form_vars(vba, vm):
                     # control information to the list for the form.
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Added index VBA form control data " + control_name + \
-                                  "(" + str(len(vm.globals[control_name])) + ") = " + str(control_data))
+                                  "(" + safe_str_convert(len(vm.globals[control_name])) + ") = " + safe_str_convert(control_data))
                     vm.globals[control_name].append(control_data)
                         
                 # Save short form variable names.
@@ -4100,7 +4101,7 @@ def _read_payload_form_vars(vba, vm):
 
         # We are not getting variable names this way. Assign wildcarded names that we can use
         # later to try to heuristically guess form variables.
-        log.warning("Cannot read form strings. " + str(e) + ". Trying fallback method.")
+        log.warning("Cannot read form strings. " + safe_str_convert(e) + ". Trying fallback method.")
         #traceback.print_exc()
         #sys.exit(0)
         try:
@@ -4132,7 +4133,7 @@ def _read_payload_form_vars(vba, vm):
                 if ("/" in global_var_name):
                     global_var_name = global_var_name[:global_var_name.rindex("/")]
                 global_var_name_orig = global_var_name
-                global_var_name += "*" + str(count)
+                global_var_name += "*" + safe_str_convert(count)
                 count += 1
                 vm.globals[global_var_name.lower()] = form_string
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4172,7 +4173,7 @@ def _read_payload_form_vars(vba, vm):
                         if (log.getEffectiveLevel() == logging.DEBUG):
                             log.debug("2. Added VBA form variable %r = %r to globals." % (tmp_name, form_string))
         except Exception as e:
-            log.error("Cannot read form strings. " + str(e) + ". Fallback method failed.")
+            log.error("Cannot read form strings. " + safe_str_convert(e) + ". Fallback method failed.")
 
     
 def _read_payload_embedded_obj_text(data, vm):
@@ -4281,7 +4282,7 @@ def _read_payload_textbox_text(data, vba_code, vm):
                 (tmp_var_name == 'Sections')):
                 tmp_var_val = [var_val, var_val]
             if ((tmp_var_name.lower() in vm.doc_vars) and
-                (len(str(vm.doc_vars[tmp_var_name.lower()])) > len(str(tmp_var_val)))):
+                (len(safe_str_convert(vm.doc_vars[tmp_var_name.lower()])) > len(safe_str_convert(tmp_var_val)))):
                 continue
             vm.doc_vars[tmp_var_name.lower()] = tmp_var_val
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4290,7 +4291,7 @@ def _read_payload_textbox_text(data, vba_code, vm):
         # Handle Pages(NN) and Tabs(NN) references.
         page_pat = r"Page(\d+)"
         if (re.match(page_pat, var_name)):
-            page_index = str(int(re.findall(page_pat, var_name)[0]) - 1)
+            page_index = safe_str_convert(int(re.findall(page_pat, var_name)[0]) - 1)
             page_var_name = "Pages('" + page_index + "')"
             tab_var_name = "Tabs('" + page_index + "')"
             var_name_variants = [page_var_name,
@@ -4396,16 +4397,16 @@ def _read_payload_shape_text(data, vm):
         vm.doc_vars[tmp_name] = var_val
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
-        tmp_name = "shapes('" + str(pos) + "').textframe.textrange.text"
+        tmp_name = "shapes('" + safe_str_convert(pos) + "').textframe.textrange.text"
         vm.doc_vars[tmp_name] = var_val
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA Shape text %r = %r to doc_vars." % (tmp_name, var_val))
-        tmp_name = "me.storyranges('" + str(pos) + "')"
+        tmp_name = "me.storyranges('" + safe_str_convert(pos) + "')"
         vm.doc_vars[tmp_name] = var_val
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA StoryRange text %r = %r to doc_vars." % (tmp_name, var_val))
         # activedocument.shapes('1').alternativetext
-        tmp_name = "ActiveDocument.shapes('" + str(pos) + "').AlternativeText"
+        tmp_name = "ActiveDocument.shapes('" + safe_str_convert(pos) + "').AlternativeText"
         vm.doc_vars[tmp_name] = var_val
         vm.doc_vars[tmp_name.lower()] = var_val
         if (log.getEffectiveLevel() == logging.DEBUG):

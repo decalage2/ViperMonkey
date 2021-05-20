@@ -64,6 +64,7 @@ if _parent_dir not in sys.path:
 
 import procedures
 from visitor import visitor
+from utils import safe_str_convert
 
 class function_defn_visitor(visitor):
     """Collect the names of all locally declared functions.
@@ -82,6 +83,6 @@ class function_defn_visitor(visitor):
         if isinstance(item, (procedures.Function,
                              procedures.PropertyLet,
                              procedures.Sub)):
-            self.funcs.add(str(item.name))
+            self.funcs.add(safe_str_convert(item.name))
             self.func_objects.add(item)
         return True

@@ -104,7 +104,7 @@ def member_access(var, field, globals_calling_scope=None):
         globals_calling_scope = {}
     
     # Reading a field from a dict?
-    field = str(field)
+    field = utils.safe_str_convert(field)
     field_l = field.lower()
     if (isinstance(var, dict)):
 
@@ -176,7 +176,7 @@ def run_external_function(func_name, context, params, lib_info):
     @param lib_info (str) The name of the DLL from which the function
     is imported.
     """
-    call_str = str(func_name) + "(" + str(params) + ")"
+    call_str = utils.safe_str_convert(func_name) + "(" + utils.safe_str_convert(params) + ")"
     context.report_action('External Call', call_str, lib_info)
     return 1
     
@@ -218,7 +218,7 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return 0
-        xlm = str(params[0])
+        xlm = utils.safe_str_convert(params[0])
         context.report_action('XLM Macro Execution', xlm, 'Dynamic XLM Macro Execution', strip_null_bytes=True)
         return 0
 
@@ -250,7 +250,7 @@ class CreateFolder(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
-        folder = str(params[0])
+        folder = utils.safe_str_convert(params[0])
         context.report_action('Create Folder', folder, 'CreateFolder()', strip_null_bytes=True)
         return 0
 
@@ -268,7 +268,7 @@ class BuildPath(VbaLibraryFunc):
         # Sanity check.
         if ((params is None) or (len(params) < 2)):
             return "NULL"
-        return str(params[0]) + str(params[1])
+        return utils.safe_str_convert(params[0]) + utils.safe_str_convert(params[1])
     
 class GetSpecialFolder(VbaLibraryFunc):
     """Emulate GetSpecialFolder() function
@@ -291,7 +291,7 @@ class GetSpecialFolder(VbaLibraryFunc):
             return "UNKNOWN_FOLDER\\"
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("GetSpecialFolder() exception: " + str(e))
+                log.debug("GetSpecialFolder() exception: " + utils.safe_str_convert(e))
             return "UNKNOWN_FOLDER\\"
 
     def num_args(self):
@@ -308,7 +308,7 @@ class GetFolder(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return "UNKNOWN_FOLDER\\"
-        context.report_action('Get Folder', "GetFolder(" + str(params) + ")", '---', strip_null_bytes=True)
+        context.report_action('Get Folder', "GetFolder(" + utils.safe_str_convert(params) + ")", '---', strip_null_bytes=True)
         return params[0]
 
     def num_args(self):
@@ -443,8 +443,8 @@ class URLDownloadToFile(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 3)):
             return 0
-        context.report_action('Download URL', str(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
-        context.report_action('Write File', str(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        context.report_action('Download URL', utils.safe_str_convert(params[1]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
+        context.report_action('Write File', utils.safe_str_convert(params[2]), 'External Function: urlmon.dll / URLDownloadToFile', strip_null_bytes=True)
         return 1
 
     def num_args(self):
@@ -467,7 +467,7 @@ class WeekDay(VbaLibraryFunc):
         # Get date string.
         if ((params is None) or (len(params) == 0)):
             return 1
-        date_str = str(params[0]).replace("#", "")
+        date_str = utils.safe_str_convert(params[0]).replace("#", "")
         date_obj = None
         
         # TODO: Handle more and more date formats.
@@ -478,7 +478,7 @@ class WeekDay(VbaLibraryFunc):
                 date_obj = datetime.strptime(date_str, '%m/%d/%Y')
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("WeekDay() exception: " + str(e))
+                    log.debug("WeekDay() exception: " + utils.safe_str_convert(e))
 
         if (date_obj is not None):
             r = date_obj.weekday()
@@ -507,7 +507,7 @@ class Format(VbaLibraryFunc):
         # Are we faking a value for this particular format call?
         r = params[0]
         if (len(params) > 1):
-            typ = str(params[1])
+            typ = utils.safe_str_convert(params[1])
 
             # Fake up a date if needed.
             # TODO: Currently this fake date is specific to a campaign targeting Italy.
@@ -605,7 +605,7 @@ class _Chr(VbaLibraryFunc):
         try:
             param = coerce_to_int(param)
         except Exception as e:
-            log.error("%r is not a valid chr() value. Returning ''. %r" % (params[0], str(e)))
+            log.error("%r is not a valid chr() value. Returning ''. %r" % (params[0], utils.safe_str_convert(e)))
             return ''
         
         # Figure out whether to create a unicode or ascii character.
@@ -619,10 +619,10 @@ class _Chr(VbaLibraryFunc):
         try:
             r = converter(param)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Chr(" + str(param) + ") = " + r)
+                log.debug("Chr(" + utils.safe_str_convert(param) + ") = " + r)
             return r
         except Exception as e:
-            log.error(str(e))
+            log.error(utils.safe_str_convert(e))
             log.error("%r is not a valid chr() value. Returning ''." % param)
             return ""
 
@@ -736,7 +736,7 @@ class FolderExists(VbaLibraryFunc):
 
         # Is this a directory that is expected to exist?
         expected_dirs = set(["c:\\users", "c:\\programdata"])
-        curr_dir = str(params[0]).lower()
+        curr_dir = utils.safe_str_convert(params[0]).lower()
         return ((curr_dir in expected_dirs) or (curr_dir[:-1] in expected_dirs))
 
     def num_args(self):
@@ -750,7 +750,7 @@ class GetFile(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (params is None):
             return
-        context.report_action('Get File', "GetFile(" + str(params) + ")", '---', strip_null_bytes=True)
+        context.report_action('Get File', "GetFile(" + utils.safe_str_convert(params) + ")", '---', strip_null_bytes=True)
 
     def num_args(self):
         return 1
@@ -763,7 +763,7 @@ class FileLen(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return -1
-        context.report_action('Check File Length', "FileLen(" + str(params) + ")", '---', strip_null_bytes=True)
+        context.report_action('Check File Length', "FileLen(" + utils.safe_str_convert(params) + ")", '---', strip_null_bytes=True)
         return -1
 
     def num_args(self):
@@ -777,7 +777,7 @@ class FileCopy(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 2)):
             return
-        context.report_action('Copy File', "FileCopy(" + str(params) + ")", '---', strip_null_bytes=True)
+        context.report_action('Copy File', "FileCopy(" + utils.safe_str_convert(params) + ")", '---', strip_null_bytes=True)
 
     def num_args(self):
         return 2
@@ -793,7 +793,7 @@ class CopyHere(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return
-        context.report_action('Copy File', "CopyHere(" + str(params) + ")", '---', strip_null_bytes=True)
+        context.report_action('Copy File', "CopyHere(" + utils.safe_str_convert(params) + ")", '---', strip_null_bytes=True)
 
     def num_args(self):
         return 1
@@ -810,7 +810,7 @@ class FileExists(VbaLibraryFunc):
 
         if ((params is None) or (len(params) == 0)):
             return False
-        fname = str(params[0])
+        fname = utils.safe_str_convert(params[0])
         if ("powershell" in fname.lower()):
             return True
         if ("cmd.exe" in fname.lower()):
@@ -861,7 +861,7 @@ class Len(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
-            return len(str(params[0]))
+            return len(utils.safe_str_convert(params[0]))
         val = utils.str_convert(params[0])
         if (hasattr(params[0], '__len__')):
 
@@ -880,7 +880,7 @@ class Len(VbaLibraryFunc):
             else:
                 return len(val)
         else:
-            log.error("Len: " + str(type(params[0])) + " object has no len(). Returning 0.")
+            log.error("Len: " + utils.safe_str_convert(type(params[0])) + " object has no len(). Returning 0.")
             return 0
 
     def num_args(self):
@@ -988,15 +988,15 @@ class Mid(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         if (params is None):
-            log.error("Invalid arguments " + str(params) + " to Mid().")
+            log.error("Invalid arguments " + utils.safe_str_convert(params) + " to Mid().")
             return ""
         if ((len(params) > 0) and (params[0] == "ActiveDocument")):
             params = params[1:]
         if (params is None):
-            log.error("Invalid arguments " + str(params) + " to Mid().")
+            log.error("Invalid arguments " + utils.safe_str_convert(params) + " to Mid().")
             return ""
         if (len(params) not in (2,3)):
-            log.error("Invalid arguments " + str(params) + " to Mid().")
+            log.error("Invalid arguments " + utils.safe_str_convert(params) + " to Mid().")
             return ""
         s = params[0]
         # "If String contains the data value Null, Null is returned."
@@ -1010,7 +1010,7 @@ class Mid(VbaLibraryFunc):
             start = utils.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Mid() exception: " + str(e))
+                log.debug("Mid() exception: " + utils.safe_str_convert(e))
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
         vb_s = None
@@ -1040,7 +1040,7 @@ class Mid(VbaLibraryFunc):
             length = utils.int_convert(params[2])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Mid() exception: " + str(e))
+                log.debug("Mid() exception: " + utils.safe_str_convert(e))
 
         # "If omitted or if there are fewer than Length characters in the text
         # (including the character at start), all characters from the start
@@ -1102,7 +1102,7 @@ class Left(VbaLibraryFunc):
             start = utils.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Left() exception: " + str(e))
+                log.debug("Left() exception: " + utils.safe_str_convert(e))
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
         vb_s = vb_str.VbStr(s, context.is_vbscript)
@@ -1192,19 +1192,19 @@ class Right(VbaLibraryFunc):
         s = params[0]
 
         # Don't modify the "**MATCH ANY**" special value.
-        if (str(s).strip() == "**MATCH ANY**"):
+        if (utils.safe_str_convert(s).strip() == "**MATCH ANY**"):
             return s
         
         # "If String contains the data value Null, Null is returned."
         if s is None: return None
         if not isinstance(s, basestring):
-            s = str(s)
+            s = utils.safe_str_convert(s)
         start = 0
         try:
             start = utils.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Right() exception: " + str(e))
+                log.debug("Right() exception: " + utils.safe_str_convert(e))
 
         # Convert the string to a VbStr to handle mized ASCII/wide char weirdness.
         vb_s = vb_str.VbStr(s, context.is_vbscript)
@@ -1245,7 +1245,7 @@ class BuiltInDocumentProperties(VbaLibraryFunc):
             return "NULL"
 
         # Get the property we are looking for.
-        prop = str(params[0])
+        prop = utils.safe_str_convert(params[0])
         r = context.read_metadata_item(prop)
         if (r == ""):
             r = "NULL"
@@ -1280,7 +1280,7 @@ class Item(BuiltInDocumentProperties):
         
         # Are we reading from a With Scripting.Dictionary?
         elif ((context.with_prefix_raw is not None) and
-              (context.contains(str(context.with_prefix_raw)))):
+              (context.contains(utils.safe_str_convert(context.with_prefix_raw)))):
 
             # Get the item index.
             index = None
@@ -1288,11 +1288,11 @@ class Item(BuiltInDocumentProperties):
                 index = coerce_to_int(params[0])
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Item() exception: " + str(e))
+                    log.debug("Item() exception: " + utils.safe_str_convert(e))
                 return "NULL"
 
             # Is the With variable value a dict?
-            with_dict = context.get(str(context.with_prefix_raw))
+            with_dict = context.get(utils.safe_str_convert(context.with_prefix_raw))
             if (not isinstance(with_dict, dict)):
                 with_dict = None
 
@@ -1333,13 +1333,13 @@ class Items(VbaLibraryFunc):
             
         # Are we reading from a With Scripting.Dictionary?
         elif ((context.with_prefix_raw is not None) and
-              (context.contains(str(context.with_prefix_raw)))):
+              (context.contains(utils.safe_str_convert(context.with_prefix_raw)))):
 
             # Item index is 1st parameter.
             index = coerce_to_int(params[0])
             
             # Is the With variable value a dict?
-            the_map = context.get(str(context.with_prefix_raw))
+            the_map = context.get(utils.safe_str_convert(context.with_prefix_raw))
             if (not isinstance(the_map, dict)):
                 return "NULL"
         else:
@@ -1378,7 +1378,7 @@ class Shell(VbaLibraryFunc):
             params.remove('BuiltInDocumentProperties')
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Shell() exception: " + str(e))
+                log.debug("Shell() exception: " + utils.safe_str_convert(e))
 
         # Get the command to run.
         command = params[0]
@@ -1387,13 +1387,13 @@ class Shell(VbaLibraryFunc):
         if (not isinstance(command, str)):
 
             # No, Shell() will throw an error.
-            msg = "Shell(" + str(command) + ") throws an error."
+            msg = "Shell(" + utils.safe_str_convert(command) + ") throws an error."
             context.set_error(msg)
             return 0
 
         # We have a valid shell command. Track it.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Shell command type: " + str(type(command)))
+            log.debug("Shell command type: " + utils.safe_str_convert(type(command)))
         log.info('Shell(%r)' % command)
         context.report_action('Execute Command', command, 'Shell function', strip_null_bytes=True)
         return 0
@@ -1413,8 +1413,8 @@ class ShellExecute(Shell):
 
         if ((params is None) or (len(params) < 2)):
             return 0
-        command = str(params[0])
-        args = str(params[1])
+        command = utils.safe_str_convert(params[0])
+        args = utils.safe_str_convert(params[1])
         log.info('ShellExecute(%r %r)' % (command, args))
         context.report_action('Execute Command', command + " " + args, 'Shell function', strip_null_bytes=True)
         return 0
@@ -1429,7 +1429,7 @@ class Eval(VbaLibraryFunc):
         # Pull out the expression to eval.
         if ((params is None) or (len(params) < 1)):
             return 0
-        expr = utils.strip_nonvb_chars(str(params[0]))
+        expr = utils.strip_nonvb_chars(utils.safe_str_convert(params[0]))
 
         # Save original expression.
         orig_expr = expr
@@ -1521,7 +1521,7 @@ class Execute(VbaLibraryFunc):
             return "NULL"
         
         # Save the command.
-        command = utils.strip_nonvb_chars(str(params[0]))
+        command = utils.strip_nonvb_chars(utils.safe_str_convert(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
@@ -1753,7 +1753,7 @@ class UBound(VbaLibraryFunc):
         arr = params[0]
         # TODO: Handle multidimensional arrays.
         if ((arr is None) or (not hasattr(arr, '__len__'))):
-            log.error("UBound(" + str(arr) + ") cannot be computed.")
+            log.error("UBound(" + utils.safe_str_convert(arr) + ") cannot be computed.")
             return 0
         r = len(arr) - 1
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1790,7 +1790,7 @@ class Trim(VbaLibraryFunc):
             return ""
 
         # Trim the string.
-        r = str(params[0]).strip()
+        r = utils.safe_str_convert(params[0]).strip()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Trim: return %r" % r)
         return r
@@ -1810,7 +1810,7 @@ class RTrim(VbaLibraryFunc):
             return "NULL"
         r = None
         if (isinstance(params[0], int)):
-            r = str(params[0])
+            r = utils.safe_str_convert(params[0])
         else:
             r = params[0].rstrip()
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1832,7 +1832,7 @@ class LTrim(VbaLibraryFunc):
             return ""
         r = None
         if (isinstance(params[0], int)):
-            r = str(params[0])
+            r = utils.safe_str_convert(params[0])
         else:
             r = params[0].lstrip()
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1858,9 +1858,9 @@ class AscW(VbaLibraryFunc):
         if (isinstance(c, int)):
             r = c
         else:
-            c = str(c)
+            c = utils.safe_str_convert(c)
             if (len(c) > 0):
-                r = ord(str(c)[0])
+                r = ord(utils.safe_str_convert(c)[0])
             else:
                 r = 0
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1911,7 +1911,7 @@ class StrComp(VbaLibraryFunc):
             try:
                 method = utils.int_convert(params[2])
             except Exception as e:
-                log.error("StrComp: Invalid comparison method. " + str(e))
+                log.error("StrComp: Invalid comparison method. " + utils.safe_str_convert(e))
         if (method == 0):
             s1 = s1.lower()
             s2 = s2.lower()
@@ -1933,14 +1933,14 @@ class StrPtr(VbaLibraryFunc):
             return "NULL"
 
         # Do we have a variable name?
-        arg = str(params[0])
+        arg = utils.safe_str_convert(params[0])
         if (arg.startswith("&")):
 
             # Just return the name of the variable being pointed to by the string pointer.
             return arg[1:]
 
         # We don't have a variable, so just turn it into a "pointer".
-        return ("&" + str(params[0]))
+        return ("&" + utils.safe_str_convert(params[0]))
 
     def return_type(self):
         return "STRING"
@@ -1975,7 +1975,7 @@ class StrConv(VbaLibraryFunc):
                     # unless otherwise noted that all strings are unicode. Make sure
                     # that the string is represented as a regular str object so that
                     # it is treated as unicode.
-                    r = str(r)
+                    r = utils.safe_str_convert(r)
 
                 if (conv == 128):
 
@@ -2000,7 +2000,7 @@ class StrConv(VbaLibraryFunc):
                         tmp += chr(i)
                     except Exception as e:
                         if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("StrConv() exception: " + str(e))
+                            log.debug("StrConv() exception: " + utils.safe_str_convert(e))
                 r = tmp
 
             else:
@@ -2034,7 +2034,7 @@ class Shapes(VbaLibraryFunc):
         # vba_object._read_from_object_text()
         if ((params is None) or (len(params) == 0)):
             return ""
-        return "Shapes('" + str(params[0]) + "')"
+        return "Shapes('" + utils.safe_str_convert(params[0]) + "')"
 
 class InlineShapes(VbaLibraryFunc):
     """Emulate InlineShapes() object reference (stubbed).
@@ -2048,7 +2048,7 @@ class InlineShapes(VbaLibraryFunc):
         # vba_object._read_from_object_text()
         if ((params is None) or (len(params) == 0)):
             return ""
-        return "InlineShapes('" + str(params[0]) + "')"
+        return "InlineShapes('" + utils.safe_str_convert(params[0]) + "')"
 
 class GetCursorPos(VbaLibraryFunc):
     """Emulate GetCursorPos() function (stubbed). Returns random
@@ -2063,7 +2063,7 @@ class GetCursorPos(VbaLibraryFunc):
             return 1
 
         # Set the given parameter to a random position.
-        var_name = str(var_names[0])
+        var_name = utils.safe_str_convert(var_names[0])
         context.set(var_name + ".*", random.randint(100, 10000), force_global=True)
         
         return 0
@@ -2079,7 +2079,7 @@ class VarPtr(VbaLibraryFunc):
 
         # Report on the full byte array given to VarPtr().
         val = params[0]
-        context.report_action("External Call", "VarPtr(" + str(val) + ")", "VarPtr", strip_null_bytes=True)
+        context.report_action("External Call", "VarPtr(" + utils.safe_str_convert(val) + ")", "VarPtr", strip_null_bytes=True)
 
 class RtlMoveMemory(VbaLibraryFunc):
     """Emulate External RtlMoveMemory() function.
@@ -2091,7 +2091,7 @@ class RtlMoveMemory(VbaLibraryFunc):
             return
 
         # Report the memory move.
-        context.report_action("External Call", "RtlMoveMemory(" + str(params) + ")", "RtlMoveMemory", strip_null_bytes=True)
+        context.report_action("External Call", "RtlMoveMemory(" + utils.safe_str_convert(params) + ")", "RtlMoveMemory", strip_null_bytes=True)
 
         # Track the shellcode bytes.
         if (len(params) < 3):
@@ -2144,13 +2144,13 @@ class TransformFinalBlock(VbaLibraryFunc):
             start = int(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("TransformFinalBlock() exception 1: " + str(e))
+                log.debug("TransformFinalBlock() exception 1: " + utils.safe_str_convert(e))
         end = len(vals) - 1
         try:
             end = int(params[2])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("TransformFinalBlock() exception 2: " + str(e))
+                log.debug("TransformFinalBlock() exception 2: " + utils.safe_str_convert(e))
         if (end > len(vals) - 1):
             end = len(vals) - 1
         if (start > end):
@@ -2196,7 +2196,7 @@ class Split(VbaLibraryFunc):
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
             (len(params[1]) > 0)):
-            sep = str(params[1])
+            sep = utils.safe_str_convert(params[1])
 
         # Let's assume that splitting on char 0x00 means break
         # up into individual characters.
@@ -2246,7 +2246,7 @@ class Int(VbaLibraryFunc):
                 log.debug("Int: return %r" % r)
             return r
         except Exception as e:
-            log.error("Int(): Invalid call int(%r) [%s]. Returning ''." % (val, str(e)))
+            log.error("Int(): Invalid call int(%r) [%s]. Returning ''." % (val, utils.safe_str_convert(e)))
             return ''
 
 class CInt(Int):
@@ -2273,7 +2273,7 @@ class Oct(VbaLibraryFunc):
             return r
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Oct() exception: " + str(e))
+                log.debug("Oct() exception: " + utils.safe_str_convert(e))
             log.error("Oct(): Invalid call oct(%r). Returning ''." % val)
             return ''
 
@@ -2293,7 +2293,7 @@ class StrReverse(VbaLibraryFunc):
             string = params[0]
             if ((not isinstance(params[0], str)) and
                 (not isinstance(params[0], unicode))):
-                string = str(params[0])
+                string = utils.safe_str_convert(params[0])
         r = string[::-1]
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("StrReverse: return %r" % r)
@@ -2308,7 +2308,7 @@ class RegWrite(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.report_action("Registry Write", str(params), "Registry Write", strip_null_bytes=True)
+        context.report_action("Registry Write", utils.safe_str_convert(params), "Registry Write", strip_null_bytes=True)
         return "NULL"
 
 class SetStringValue(VbaLibraryFunc):
@@ -2317,7 +2317,7 @@ class SetStringValue(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        context.report_action("Registry Write", str(params), "Set String Value", strip_null_bytes=True)
+        context.report_action("Registry Write", utils.safe_str_convert(params), "Set String Value", strip_null_bytes=True)
         return "NULL"
 
 class GetRef(VbaLibraryFunc):
@@ -2332,7 +2332,7 @@ class GetRef(VbaLibraryFunc):
             return "NULL"
 
         # Get the function.
-        obj_name = str(params[0])
+        obj_name = utils.safe_str_convert(params[0])
         if (not context.contains(obj_name)):
             return "NULL"
         return context.get(obj_name)
@@ -2454,14 +2454,14 @@ class Replace(VbaLibraryFunc):
         string = params[0]
         # Handle Excel cells.
         if (isinstance(string, dict) and ("value" in string)):
-            string = str(string["value"])
+            string = utils.safe_str_convert(string["value"])
         if (string is None):
             string = ''
-        string = str(string)
-        pat = str(params[1])
+        string = utils.safe_str_convert(string)
+        pat = utils.safe_str_convert(params[1])
         if ((pat is None) or (pat == '')):
             return string
-        rep = str(params[2])
+        rep = utils.safe_str_convert(params[2])
         if ((rep is None) or (rep == 0) or (rep == "NULL")):
             rep = ''
 
@@ -2487,7 +2487,7 @@ class Replace(VbaLibraryFunc):
                     rep = re.sub(r"\$(\d)", r"\\\1", rep)
                     r = re.sub(pat1, rep, string)
                 except Exception as e:
-                    log.error("Regex replace " + str(params) + " failed. " + str(e))
+                    log.error("Regex replace " + utils.safe_str_convert(params) + " failed. " + utils.safe_str_convert(e))
                     r = string
 
         # Regular string replacement?
@@ -2510,7 +2510,7 @@ class RunShell(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return
-        context.report_action('Execute Command', str(params[0]), 'WScript.Shell.Run()', strip_null_bytes=True)
+        context.report_action('Execute Command', utils.safe_str_convert(params[0]), 'WScript.Shell.Run()', strip_null_bytes=True)
     
 class SaveToFile(VbaLibraryFunc):
     """Emulate SaveToFile() ADODB.Stream method.
@@ -2524,7 +2524,7 @@ class SaveToFile(VbaLibraryFunc):
             return ""
 
         # Save that we are saving a file.
-        fname = str(params[0])
+        fname = utils.safe_str_convert(params[0])
         context.report_action('Write File', fname, 'SaveToFile', strip_null_bytes=True)
         
         # Just return the file name. This is used in
@@ -2545,7 +2545,7 @@ class Paragraphs(VbaLibraryFunc):
         # Get the paragraphs.
         paragraphs = None
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Handling Paragraphs(" + str(params) + ") ...")
+            log.debug("Handling Paragraphs(" + utils.safe_str_convert(params) + ") ...")
         try:
             paragraphs = context.get("ActiveDocument.Paragraphs".lower())
         except KeyError:
@@ -2565,13 +2565,13 @@ class Paragraphs(VbaLibraryFunc):
             index = coerce_to_int(params[0]) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Paragraphs() exception: " + str(e))
+                log.debug("Paragraphs() exception: " + utils.safe_str_convert(e))
             log.error("%r is not a valid index value. Returning NULL." % params[0])
             return "NULL"
 
         # Do we have a paragraph at this index?
         if (index >= len(paragraphs)):
-            log.error("Paragraphs(" + str(index) + ") out of range. Returning NULL.")
+            log.error("Paragraphs(" + utils.safe_str_convert(index) + ") out of range. Returning NULL.")
             return "NULL"
 
         # Return the paragraph.
@@ -2591,7 +2591,7 @@ class SaveAs(VbaLibraryFunc):
 
         # Pull out the name of the file to save to and the format
         # for saving.
-        new_fname = str(params[0])
+        new_fname = utils.safe_str_convert(params[0])
         fmt = params[1]
         for param in params:
             if (isinstance(param, expressions.NamedArgument)):
@@ -2648,7 +2648,7 @@ class LoadXML(VbaLibraryFunc):
             return ""
 
         # Get the XML.
-        xml = str(params[0]).strip()
+        xml = utils.safe_str_convert(params[0]).strip()
 
         # Is this some base64?
         if (xml.startswith("<B64DECODE")):
@@ -2684,7 +2684,7 @@ class RegRead(VbaLibraryFunc):
             return ""
 
         # Fake some registry reads.
-        key = str(params[0])
+        key = utils.safe_str_convert(params[0])
         context.report_action('Read Registry', key, 'RegRead', strip_null_bytes=True)
         if (key == 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\PROCESSOR_ARCHITECTURE'):
             return "x86"
@@ -2705,7 +2705,7 @@ class Join(VbaLibraryFunc):
         strings = params[0]
         sep = " "
         if (len(params) > 1):
-            sep = str(params[1])
+            sep = utils.safe_str_convert(params[1])
         if (sep == "NULL"):
             sep = ""
         r = ""
@@ -2718,7 +2718,7 @@ class Join(VbaLibraryFunc):
                 tmp_s = utils.safe_str_convert(s)
                 r += tmp_s
         else:
-            r = str(strings)
+            r = utils.safe_str_convert(strings)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Join: return %r" % r)
         return r
@@ -2814,7 +2814,7 @@ class IsNumeric(VbaLibraryFunc):
         if ((params is None) or (len(params) < 1)):
             return "NULL"
 
-        arg = str(params[0])
+        arg = utils.safe_str_convert(params[0])
         try:
             _ = float(arg)
             return True
@@ -2850,8 +2850,8 @@ class InStrRev(VbaLibraryFunc):
             s2 = params[2]
 
         # Were we given a search type?
-        s1 = str(s1)
-        s2 = str(s2)
+        s1 = utils.safe_str_convert(s1)
+        s2 = utils.safe_str_convert(s2)
         search_type = 1
         if (isinstance(params[-1], int)):
             search_type = params[-1]
@@ -2896,7 +2896,7 @@ class Sgn(VbaLibraryFunc):
                 r = int(math.copysign(1, n))
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Sgn exception: " + str(e))
+                log.debug("Sgn exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sgn: %r returns %r" % (self, r))
         return r
@@ -2917,7 +2917,7 @@ class Sqr(VbaLibraryFunc):
             r = math.sqrt(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Sqr exception: " + str(e))
+                log.debug("Sqr exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sqr: %r returns %r" % (self, r))
         return r
@@ -2938,7 +2938,7 @@ class Abs(VbaLibraryFunc):
             r = abs(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Abs exception: " + str(e))
+                log.debug("Abs exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Abs: %r returns %r" % (self, r))
         return r
@@ -2959,7 +2959,7 @@ class Fix(VbaLibraryFunc):
             r = math.floor(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Fix exception: " + str(e))
+                log.debug("Fix exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Fix: %r returns %r" % (self, r))
         return r
@@ -2983,7 +2983,7 @@ class Round(VbaLibraryFunc):
             r = round(num, sig)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Round exception: " + str(e))
+                log.debug("Round exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Round: %r returns %r" % (self, r))
         return r
@@ -3023,7 +3023,7 @@ class Hex(VbaLibraryFunc):
                     r = "F" + r
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Hex exception: " + str(e))
+                log.debug("Hex exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Hex: %r returns %r" % (self, r))
         return r
@@ -3040,7 +3040,7 @@ class CByte(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            tmp = str(params[0]).upper()
+            tmp = utils.safe_str_convert(params[0]).upper()
             if (tmp.lower().startswith("&h")):
                 tmp = tmp.lower().replace("&h", "0x")
                 tmp = int(tmp, 16)
@@ -3050,7 +3050,7 @@ class CByte(VbaLibraryFunc):
                 r = 255
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("CByte exception: " + str(e))
+                log.debug("CByte exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CByte: %r returns %r" % (self, r))
         return r
@@ -3090,7 +3090,7 @@ class CLng(VbaLibraryFunc):
                 r = "NULL"
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("CLng exception: " + str(e))
+                log.debug("CLng exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CLng: %r returns %r" % (self, r))
         return r
@@ -3142,7 +3142,7 @@ class CStr(VbaLibraryFunc):
         if ((params is None) or (len(params) < 1)):
             return "NULL"
         val = params[0]
-        r = str(val)
+        r = utils.safe_str_convert(val)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CStr: %r returns %r" % (self, r))
         return r
@@ -3169,7 +3169,7 @@ class CSng(VbaLibraryFunc):
             r = float(tmp)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("CSng exception: " + str(e))
+                log.debug("CSng exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
@@ -3190,7 +3190,7 @@ class Atn(VbaLibraryFunc):
             r = math.atan(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Atn exception: " + str(e))
+                log.debug("Atn exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Atn: %r returns %r" % (self, r))
         return r
@@ -3211,7 +3211,7 @@ class Tan(VbaLibraryFunc):
             r = math.tan(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Tan exception: " + str(e))
+                log.debug("Tan exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Tan: %r returns %r" % (self, r))
         return r
@@ -3232,7 +3232,7 @@ class Cos(VbaLibraryFunc):
             r = math.cos(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Cos exception: " + str(e))
+                log.debug("Cos exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Cos: %r returns %r" % (self, r))
         return r
@@ -3253,7 +3253,7 @@ class Log(VbaLibraryFunc):
             r = math.log(num)
         except ValueError as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.error("Log(" + str(params[0]) + ") failed. " + str(e))
+                log.error("Log(" + utils.safe_str_convert(params[0]) + ") failed. " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Log: %r returns %r" % (self, r))
         return r
@@ -3275,7 +3275,7 @@ class String(VbaLibraryFunc):
             r = char * num
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("String exception: " + str(e))
+                log.debug("String exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("String: %r returns %r" % (self, r))
         return r
@@ -3290,7 +3290,7 @@ class Dir(VbaLibraryFunc):
 
         if ((params is None) or (len(params) == 0)):
             return ""
-        pat = str(params[0])
+        pat = utils.safe_str_convert(params[0])
 
         # Handle a special case for a maldoc that looks for things
         # not existing in a certain directory.
@@ -3328,7 +3328,7 @@ class Choose(VbaLibraryFunc):
         try:
             index = int(params[0])
         except Exception as e:
-            log.warning("Invalid index passed to Choice(). Returning NULL. " + str(e))
+            log.warning("Invalid index passed to Choice(). Returning NULL. " + utils.safe_str_convert(e))
             return "NULL"
 
         # Is the desired value in the choice list?
@@ -3357,7 +3357,7 @@ class RGB(VbaLibraryFunc):
             r = red + (green * 256) + (blue * 65536)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("RGB exception: " + str(e))
+                log.debug("RGB exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("RGB: %r returns %r" % (self, r))
         return r
@@ -3377,7 +3377,7 @@ class Exp(VbaLibraryFunc):
             num = float(params[0])
             r = math.exp(num)
         except Exception as e:
-            log.error("Exp(" + str(params[0]) + ") failed. " + str(e))
+            log.error("Exp(" + utils.safe_str_convert(params[0]) + ") failed. " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Exp: %r returns %r" % (self, r))
         return r
@@ -3398,7 +3398,7 @@ class Sin(VbaLibraryFunc):
             r = math.sin(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Sin exception: " + str(e))
+                log.debug("Sin exception: " + utils.safe_str_convert(e))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Sin: %r returns %r" % (self, r))
         return r
@@ -3413,7 +3413,7 @@ class Str(VbaLibraryFunc):
 
         if ((params is None) or (len(params) == 0)):
             return ""
-        r = str(params[0])
+        r = utils.safe_str_convert(params[0])
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Str: %r returns %r" % (self, r))
         return r
@@ -3639,7 +3639,7 @@ class Pmt(VbaLibraryFunc):
                 r = 0
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Pmt exception: " + str(e))
+                log.debug("Pmt exception: " + utils.safe_str_convert(e))
         
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Pmt: %r returns %r" % (self, r))
@@ -3665,7 +3665,7 @@ class Day(VbaLibraryFunc):
         txt = params[0]
         if ((txt is None) or (txt == "NULL")):
             txt = ''
-        r = str(txt)
+        r = utils.safe_str_convert(txt)
 
         # It looks like this should pull the day out of a date string. See if we can
         # handle a simple date string.
@@ -3704,7 +3704,7 @@ class UCase(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
-        r = str(params[0]).upper()
+        r = utils.safe_str_convert(params[0]).upper()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("UCase: %r returns %r" % (self, r))
         return r
@@ -3720,7 +3720,7 @@ class LCase(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
-        r = str(params[0]).lower()
+        r = utils.safe_str_convert(params[0]).lower()
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("LCase: %r returns %r" % (self, r))
         return r
@@ -3768,7 +3768,7 @@ class OnTime(VbaLibraryFunc):
             return "NULL"
 
         # The name of the callback function should be the 2nd argument.
-        callback_name = str(params[1])
+        callback_name = utils.safe_str_convert(params[1])
 
         # Is this function defined?
         callback = None
@@ -3874,7 +3874,7 @@ class DriveExists(VbaLibraryFunc):
 
         if ((params is None) or (len(params) < 1)):
             return "NULL"
-        drive = str(params[0]).lower()
+        drive = utils.safe_str_convert(params[0]).lower()
         r = False
         # Assume the C: drive is always there.
         if ((drive == 'c') or (drive == 'c:')):
@@ -3889,7 +3889,7 @@ class Navigate(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
             return
-        url = str(params[0])
+        url = utils.safe_str_convert(params[0])
         if (url.startswith("tp://")):
             url = "ht" + url
         context.report_action("GET", url, 'Load in browser', strip_null_bytes=True)
@@ -3939,7 +3939,7 @@ class CVErr(VbaLibraryFunc):
             err = int(params[0])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("err num str to int exception: " + str(e))
+                log.debug("err num str to int exception: " + utils.safe_str_convert(e))
         vals = {2007 : "#DIV/0!",
                 2042 : "#N/A",
                 2029 : "#NAME?",
@@ -3961,8 +3961,8 @@ class CallByName(VbaLibraryFunc):
             return "NULL"
 
         # Report interesting external commands run.
-        cmd = str(params[1])
-        obj = str(params[0])
+        cmd = utils.safe_str_convert(params[1])
+        obj = utils.safe_str_convert(params[0])
         args = ''
         if (len(params) >= 4):
             args = params[3]
@@ -3971,12 +3971,12 @@ class CallByName(VbaLibraryFunc):
         # Accessing elements at pos and pos+1, so leave this as a for over the range().
         # pylint: disable=consider-using-enumerate
         for pos in range(0, len(params)):
-            if ((str(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
+            if ((utils.safe_str_convert(params[pos]).lower() == "wscript") and ((pos + 1) < len(params))):
                 context.report_action("Run", params[pos + 1], 'Interesting Function Call', strip_null_bytes=True)
         # CallByName("['WinHttp.WinHttpRequest.5.1', 'Open', 1, 'GET', 'http://deciodc.org/bin/office1...")
         if ((("Open" in cmd) and ("WinHttpRequest" in obj)) or
-            ((len(params) > 5) and (str(params[3]).lower() == "get"))):
-            url = str(params[4])
+            ((len(params) > 5) and (utils.safe_str_convert(params[3]).lower() == "get"))):
+            url = utils.safe_str_convert(params[4])
             if (url.startswith("tp://")):
                 url = "ht" + url
             context.report_action("GET", url, 'Interesting Function Call', strip_null_bytes=True)
@@ -3986,7 +3986,7 @@ class CallByName(VbaLibraryFunc):
         # CallByName(['shell.application', 'shellexecute', 1, ...
         if (cmd.lower() == "shellexecute"):
             if (len(params) > 4):
-                run_cmd = str(params[3]) + " " + str(params[4])
+                run_cmd = utils.safe_str_convert(params[3]) + " " + utils.safe_str_convert(params[4])
                 context.report_action('Execute Command', run_cmd, 'Shell function', strip_null_bytes=True)
             
         # Are we using this to read text from a GUI element?
@@ -3994,7 +3994,7 @@ class CallByName(VbaLibraryFunc):
 
             # Looks like it. Lets return the text. This is read from a for variable.
             try:
-                return context.get(str(params[0]) + "." + cmd)
+                return context.get(utils.safe_str_convert(params[0]) + "." + cmd)
             except KeyError:
                 pass
 
@@ -4028,7 +4028,7 @@ class Raise(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        msg = "Raise exception " + str(params)
+        msg = "Raise exception " + utils.safe_str_convert(params)
         context.set_error(msg)
             
 class Close(VbaLibraryFunc):
@@ -4050,7 +4050,7 @@ class Close(VbaLibraryFunc):
             try:
                 file_id = context.get(params[0])
             except KeyError:
-                file_id = str(params[0])
+                file_id = utils.safe_str_convert(params[0])
 
         # Close() object method call?
         else:
@@ -4106,7 +4106,7 @@ class WriteByte(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
             return
-        context.report_action('Write Process Memory', str(params), 'MemoryStream.WriteByte', strip_null_bytes=True)
+        context.report_action('Write Process Memory', utils.safe_str_convert(params), 'MemoryStream.WriteByte', strip_null_bytes=True)
         
 class WriteLine(VbaLibraryFunc):
     """Emulate File WriteLine() method.
@@ -4137,7 +4137,7 @@ class WriteLine(VbaLibraryFunc):
         if (len(context.open_files) > 1):
             log.warning("More than 1 file is open. Writing to an arbitrary file.")
             file_id = context.get_interesting_fileid()
-            log.warning("Writing to '" + str(file_id) + "' .")
+            log.warning("Writing to '" + utils.safe_str_convert(file_id) + "' .")
         else:        
 
             # Get the ID of the file.
@@ -4196,7 +4196,7 @@ class Unprotect(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) == 0)):
             return
-        passwd = str(params[0])
+        passwd = utils.safe_str_convert(params[0])
         context.report_action('Unprotect()', passwd, 'Try Sheet Unprotect Password', strip_null_bytes=True)
 
 class KeyString(VbaLibraryFunc):
@@ -4354,7 +4354,7 @@ class KeyString(VbaLibraryFunc):
             if (len(params) >= 2):
                 v2 = int(params[1])
         except Exception as e:
-            log.error("KeyString: Invalid args " + str(params) + ". " + str(e))
+            log.error("KeyString: Invalid args " + utils.safe_str_convert(params) + ". " + utils.safe_str_convert(e))
             return ""
 
         r = ""
@@ -4366,7 +4366,7 @@ class KeyString(VbaLibraryFunc):
                 r += key_vals[v2]
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("KeyString: args = " + str(params) + ", return " + r)
+            log.debug("KeyString: args = " + utils.safe_str_convert(params) + ", return " + r)
         return r
 
     def return_type(self):
@@ -4382,7 +4382,7 @@ class Run(VbaLibraryFunc):
             return 0
 
         # Get the name of the function to call.
-        func_name = str(params[0])
+        func_name = utils.safe_str_convert(params[0])
         
         # Strip the name of the function down if needed.
         if ("." in func_name):
@@ -4399,7 +4399,7 @@ class Run(VbaLibraryFunc):
             s = context.get(func_name)
             return s.eval(context=context, params=call_params)
         except KeyError:
-            log.warning("Application.Run() failed. Cannot find function " + str(func_name) + ".")
+            log.warning("Application.Run() failed. Cannot find function " + utils.safe_str_convert(func_name) + ".")
             return 0
 
 class Arguments(VbaLibraryFunc):
@@ -4413,7 +4413,7 @@ class Arguments(VbaLibraryFunc):
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
             return "NULL"
-        return "_COMMAND_LINE_ARG_" + str(params[0])
+        return "_COMMAND_LINE_ARG_" + utils.safe_str_convert(params[0])
             
 class Exec(VbaLibraryFunc):
     """Emulate Application.Exec() function.
@@ -4427,7 +4427,7 @@ class Exec(VbaLibraryFunc):
             return 1
 
         # Get the command to run.
-        cmd = str(params[0])
+        cmd = utils.safe_str_convert(params[0])
         context.report_action("Execute Command", cmd, 'Shell function', strip_null_bytes=True)
 
         # Say it was successful.
@@ -4443,7 +4443,7 @@ class ExecQuery(VbaLibraryFunc):
             return "NULL"
 
         # Get the query to run.
-        cmd = str(params[0])
+        cmd = utils.safe_str_convert(params[0])
         context.report_action("Execute Query", cmd, 'Query', strip_null_bytes=True)
 
         # Return some data for some queries.
@@ -4503,7 +4503,7 @@ class CreateObject(VbaLibraryFunc):
             
         # Just return a string representation of the name of the object
         # being created.
-        return str(obj_type)
+        return utils.safe_str_convert(obj_type)
 
 class GetParentFolderName(VbaLibraryFunc):
     """Emulate GetParentFolderName() method.
@@ -4518,7 +4518,7 @@ class GetParentFolderName(VbaLibraryFunc):
             return "NULL"
 
         # Pull the parent directory.
-        curr_dir = str(params[0])
+        curr_dir = utils.safe_str_convert(params[0])
         if ("\\" in curr_dir):
             r = curr_dir[:curr_dir.rindex("\\")+1]
         else:
@@ -4537,7 +4537,7 @@ class ReadText(VbaLibraryFunc):
         params = params # pylint
 
         # Doing base64 conversion with a VBA object?
-        with_str = str(context.with_prefix).strip()
+        with_str = utils.safe_str_convert(context.with_prefix).strip()
         if (with_str.endswith("GetDecodedContentStream")):
             var_name = with_str.replace("GetDecodedContentStream", "GetEncodedContentStream") + ".ReadText"
             if (context.contains(var_name)):
@@ -4594,7 +4594,7 @@ class Specialfolders(VbaLibraryFunc):
 
         if ((params is None) or (len(params) < 1)):
             return "NULL"
-        return "%" + str(params[0]) + "%"
+        return "%" + utils.safe_str_convert(params[0]) + "%"
 
 class IsArray(VbaLibraryFunc):
     """Emulate IsArray() function.
@@ -4636,7 +4636,7 @@ class Month(VbaLibraryFunc):
 
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Month to int exception: " + str(e))
+                log.debug("Month to int exception: " + utils.safe_str_convert(e))
 
         return 1
 
@@ -4674,7 +4674,7 @@ class Rows(VbaLibraryFunc):
         # Get the sheet name if given.
         sheet_name = "__NO SHEET NAME__"
         if ((params is not None) and (len(params) > 0)):
-            sheet_name = str(params[0]).strip()
+            sheet_name = utils.safe_str_convert(params[0]).strip()
 
         # Get the sheet from which to pull rows.
         sheet = None
@@ -4694,7 +4694,7 @@ class Rows(VbaLibraryFunc):
                     curr_sheet = context.loaded_excel.sheet_by_index(sheet_index)
                 except Exception as e:
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("Get sheet by index exception: " + str(e))
+                        log.debug("Get sheet by index exception: " + utils.safe_str_convert(e))
                     context.increase_general_errors()
                     log.warning("Cannot process Cells() call. No sheets in file.")
                     return "NULL"
@@ -4734,7 +4734,7 @@ def _read_cell(sheet, row, col):
     # Read and process the cell.
     try:
         raw_cell = sheet.cell(row, col)
-        r = str(raw_cell).replace("text:", "")
+        r = utils.safe_str_convert(raw_cell).replace("text:", "")
         if (r.startswith("u'")):
             r = r[1:]
         if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
@@ -4746,7 +4746,7 @@ def _read_cell(sheet, row, col):
         if (r.startswith("number:")):
             r = r[len("number:"):]
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Excel Read: Cell(" + str(col) + ", " + str(row) + ") = '" + str(r) + "'")
+            log.debug("Excel Read: Cell(" + utils.safe_str_convert(col) + ", " + utils.safe_str_convert(row) + ") = '" + utils.safe_str_convert(r) + "'")
         r = { "value" : r,
               "row" : row + 1,
               "col" : col + 1 }
@@ -4756,7 +4756,7 @@ def _read_cell(sheet, row, col):
         
         # Failed to read cell.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Failed to read cell exception: " + str(e))
+            log.debug("Failed to read cell exception: " + utils.safe_str_convert(e))
         return None
     
 class Cells(VbaLibraryFunc):
@@ -4779,7 +4779,7 @@ class Cells(VbaLibraryFunc):
             return "NULL"
 
         # Is this actually the Cells field of a Sheet?
-        if ("Sheet" in str(type(params[0]))):
+        if ("Sheet" in utils.safe_str_convert(type(params[0]))):
 
             # Pull out all the cells  in the sheet and return that.
             return excel.pull_cells_sheet(params[0])
@@ -4809,14 +4809,14 @@ class Cells(VbaLibraryFunc):
             col = int(tmp) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Convert col num str to index exception: " + str(e))
+                log.debug("Convert col num str to index exception: " + utils.safe_str_convert(e))
             try:
                 col = excel_col_letter_to_index(tmp)
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Convert col letter to index exception: " + str(e))
+                    log.debug("Convert col letter to index exception: " + utils.safe_str_convert(e))
                 context.increase_general_errors()
-                log.warning("Cannot process Cells() call. Column " + str(params[1]) + " invalid.")
+                log.warning("Cannot process Cells() call. Column " + utils.safe_str_convert(params[1]) + " invalid.")
                 return "NULL"
 
         # Row.
@@ -4828,9 +4828,9 @@ class Cells(VbaLibraryFunc):
             row = int(tmp) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Convert row to int exception: " + str(e))
+                log.debug("Convert row to int exception: " + utils.safe_str_convert(e))
             context.increase_general_errors()
-            log.warning("Cannot process Cells() call. Row " + str(params[0]) + " invalid.")
+            log.warning("Cannot process Cells() call. Row " + utils.safe_str_convert(params[0]) + " invalid.")
             return "NULL"
 
         # If we were not given a sheet use the current active sheet (if we know it).
@@ -4841,7 +4841,7 @@ class Cells(VbaLibraryFunc):
                 sheet = context.loaded_excel.sheet_by_name(sheet_name)
             except ValueError as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Can't find active sheet. " + str(e))
+                    log.debug("Can't find active sheet. " + utils.safe_str_convert(e))
                     
         # Now try the sheet with the most cells if we still need to guess the sheet.
         if (sheet is None):
@@ -4865,7 +4865,7 @@ class Cells(VbaLibraryFunc):
                 sheet = context.loaded_excel.sheet_by_index(sheet_index)
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Get sheet by index exception: " + str(e))
+                    log.debug("Get sheet by index exception: " + utils.safe_str_convert(e))
                 context.increase_general_errors()
                 log.warning("Cannot process Cells() call. No sheets in file.")
                 return "NULL"
@@ -4878,7 +4878,7 @@ class Cells(VbaLibraryFunc):
 
         # Can't read the cell.
         context.increase_general_errors()
-        log.warning("Failed to read Cell(" + str(col) + ", " + str(row) + "). (1)")
+        log.warning("Failed to read Cell(" + utils.safe_str_convert(col) + ", " + utils.safe_str_convert(row) + "). (1)")
         return "NULL"
     
 class Sheets(VbaLibraryFunc):
@@ -4889,7 +4889,7 @@ class Sheets(VbaLibraryFunc):
     def eval(self, context, params=None):
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Get sheet Sheets(" + str(params) + ") ...")
+            log.debug("Get sheet Sheets(" + utils.safe_str_convert(params) + ") ...")
         
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
@@ -4904,34 +4904,34 @@ class Sheets(VbaLibraryFunc):
             return "NULL"
         
         # Get the sheet with the given identifier.
-        sheet_id = str(params[0])
+        sheet_id = utils.safe_str_convert(params[0])
 
         # First try treating this as a sheet name.
         try:
-            curr_sheet = context.loaded_excel.sheet_by_name(str(sheet_id))
+            curr_sheet = context.loaded_excel.sheet_by_name(utils.safe_str_convert(sheet_id))
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Returning sheet with name '" + str(sheet_id) + "'")
+                log.debug("Returning sheet with name '" + utils.safe_str_convert(sheet_id) + "'")
             return curr_sheet
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Get sheet by name exception: " + str(e))
+                log.debug("Get sheet by name exception: " + utils.safe_str_convert(e))
 
         # Next see if the sheet ID is an index.
         try:
             sheet_id = int(sheet_id) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Cannot convert sheet ID '" + str(sheet_id) + "' to int. " + str(e))
+                log.debug("Cannot convert sheet ID '" + utils.safe_str_convert(sheet_id) + "' to int. " + utils.safe_str_convert(e))
             return None
         try:
             curr_sheet = context.loaded_excel.sheet_by_index(sheet_id)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Returning sheet with index " + str(sheet_id))
+                log.debug("Returning sheet with index " + utils.safe_str_convert(sheet_id))
             return curr_sheet
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Get sheet with index exception: " + str(e))
-            log.warning("Did not find sheet with index " + str(sheet_id))
+                log.debug("Get sheet with index exception: " + utils.safe_str_convert(e))
+            log.warning("Did not find sheet with index " + utils.safe_str_convert(sheet_id))
             return None
 
 class Worksheets(Sheets):
@@ -4973,7 +4973,7 @@ class UsedRange(VbaLibraryFunc):
         sheet = None
         if ((params is not None) and
             (len(params) >= 1) and
-            ("Sheet" in str(type(params[0])))):
+            ("Sheet" in utils.safe_str_convert(type(params[0])))):
             sheet = params[0]
         else:
             sheet = get_largest_sheet(context.loaded_excel)
@@ -5005,7 +5005,7 @@ class Range(VbaLibraryFunc):
         """
 
         # Pull out the cell index.
-        cell_index = str(cell_str).replace('"', "").replace("'", "")
+        cell_index = utils.safe_str_convert(cell_str).replace('"', "").replace("'", "")
 
         # Pull out the cell column and row.
         col = ""
@@ -5069,13 +5069,13 @@ class Range(VbaLibraryFunc):
                         # Return actual dict, not str.
                         val = sheet.cell_dict(curr_row, curr_col)
                     else:       
-                        val = str(sheet.cell_value(curr_row, curr_col))
+                        val = utils.safe_str_convert(sheet.cell_value(curr_row, curr_col))
                 except Exception as e:
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("get cell val " + str((curr_row, curr_col)) + " error. " + str(e))
+                        log.debug("get cell val " + utils.safe_str_convert((curr_row, curr_col)) + " error. " + utils.safe_str_convert(e))
                 if (val is not None):
-                    #print "(" + str(curr_row) + ", " + str(curr_col) + ")"
-                    #print "'" + str(val) + "'"
+                    #print "(" + utils.safe_str_convert(curr_row) + ", " + utils.safe_str_convert(curr_col) + ")"
+                    #print "'" + utils.safe_str_convert(val) + "'"
                     r.append(val)
                 if (curr_col == end_col):
                     break
@@ -5117,7 +5117,7 @@ class Range(VbaLibraryFunc):
         # Were we given an Excel sheet object?
         sheet = None
         for p in params:
-            if ("Sheet" in str(type(p))):
+            if ("Sheet" in utils.safe_str_convert(type(p))):
                 sheet = p
                 break
             
@@ -5148,7 +5148,7 @@ class Range(VbaLibraryFunc):
                 return self.eval(context, new_params)
 
             # Unexpected. This is not a proper read cell dict.
-            log.warning("Unexpected cell dict " + str(the_cell) + ". Range() returning NULL.")
+            log.warning("Unexpected cell dict " + utils.safe_str_convert(the_cell) + ". Range() returning NULL.")
             return "NULL"
 
         # If we were given a sheet, only look there for the cell. Otherwise
@@ -5165,7 +5165,7 @@ class Range(VbaLibraryFunc):
                     sheets.append(sheet)
                 except Exception as e:
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("context.loaded_excel.sheet_by_index(" + str(sheet_index) + ") error. " + str(e))
+                        log.debug("context.loaded_excel.sheet_by_index(" + utils.safe_str_convert(sheet_index) + ") error. " + utils.safe_str_convert(e))
                     context.increase_general_errors()
                     log.warning("Cannot process Range() call. No sheets in file.")
                     return "NULL"
@@ -5175,7 +5175,7 @@ class Range(VbaLibraryFunc):
         for sheet in sheets:
 
             # Multiple cells?
-            range_index = str(params[0])
+            range_index = utils.safe_str_convert(params[0])
             if (":" in range_index):
                 try:
                     return self._read_cell_list(sheet, range_index, return_dict)
@@ -5192,13 +5192,13 @@ class Range(VbaLibraryFunc):
                     # Return actual dict, not str.
                     val = sheet.cell_dict(row, col)
                 else:
-                    val = str(sheet.cell_value(row, col))
+                    val = utils.safe_str_convert(sheet.cell_value(row, col))
             
                 # Return the cell value.
                 sheet_name = ""
                 if (hasattr(sheet, "name")):
                     sheet_name = sheet.name
-                log.info("Read cell (" + range_index + ") from sheet " + str(sheet_name) + " = '" + str(val) +"'")
+                log.info("Read cell (" + range_index + ") from sheet " + utils.safe_str_convert(sheet_name) + " = '" + utils.safe_str_convert(val) +"'")
 
                 # Regular direct read of range of cells.
                 return val            
@@ -5206,7 +5206,7 @@ class Range(VbaLibraryFunc):
             except Exception as e:
                 # Try the next sheet.
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Cell read failed. " + str(e))
+                    log.debug("Cell read failed. " + utils.safe_str_convert(e))
                 continue
 
         # We did not get the cell.
@@ -5216,9 +5216,9 @@ class Range(VbaLibraryFunc):
             row, col = self._get_row_and_column(params[0])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("self._get_row_and_column(" + str(params[0]) + ") error. " + str(e))
+                log.debug("self._get_row_and_column(" + utils.safe_str_convert(params[0]) + ") error. " + utils.safe_str_convert(e))
         #print sheet
-        log.warning("Failed to read cell (" + str(row) + ", " + str(col) + ") [" + str(params[0]) + "] (2)")
+        log.warning("Failed to read cell (" + utils.safe_str_convert(row) + ", " + utils.safe_str_convert(col) + ") [" + utils.safe_str_convert(params[0]) + "] (2)")
         context.increase_general_errors()
         return "NULL"
         
@@ -5235,7 +5235,7 @@ class CountA(VbaLibraryFunc):
             log.warning("No arguments passed to CountA(). Returning NULL")
             return "NULL"
         if (not isinstance(params[0], list)):
-            log.warning("CountA() needs list argument, not " + str(type(params[0])) + ". Returning NULL")
+            log.warning("CountA() needs list argument, not " + utils.safe_str_convert(type(params[0])) + ". Returning NULL")
             return "NULL"
 
         # Return a count of all the non-empty cells.
@@ -5269,9 +5269,9 @@ class SpecialCells(VbaLibraryFunc):
         # wanted.
         r = []
         for cell in cells:
-            cell_value = str(cell)
+            cell_value = utils.safe_str_convert(cell)
             if (isinstance(cell, dict)):
-                cell_value = str(cell["value"])
+                cell_value = utils.safe_str_convert(cell["value"])
             if (len(cell_value) == 0):
                 continue
             if (not cell_value.startswith("=")):
@@ -5385,7 +5385,7 @@ class Second(VbaLibraryFunc):
             r = int(d.second)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Second(" + str(params) + ") error. " + str(e))
+                log.debug("Second(" + utils.safe_str_convert(params) + ") error. " + utils.safe_str_convert(e))
         return r
 
 class Variable(VbaLibraryFunc):
@@ -5396,7 +5396,7 @@ class Variable(VbaLibraryFunc):
     def eval(self, context, params=None):
         if ((params is None) or (len(params) < 1)):
             return "NULL"
-        var = str(params[0]).strip()
+        var = utils.safe_str_convert(params[0]).strip()
         var = var.replace("activedocument.customdocumentproperties(", "").\
               replace(")", "").\
               replace("'","").\
@@ -5407,7 +5407,7 @@ class Variable(VbaLibraryFunc):
         if (r is None):
             r = ""
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("ActiveDocument.Variable(" + var + ") = " + str(r))
+            log.debug("ActiveDocument.Variable(" + var + ") = " + utils.safe_str_convert(r))
         return r
 
 class Variables(Variable):
@@ -5425,7 +5425,7 @@ class CDbl(VbaLibraryFunc):
             return "NULL"
         try:
             # Handle hex.
-            tmp = str(params[0]).upper()
+            tmp = utils.safe_str_convert(params[0]).upper()
             if (tmp.lower().startswith("&h")):
                 tmp = tmp.replace("&h", "0x")
                 tmp = int(tmp, 16)
@@ -5435,7 +5435,7 @@ class CDbl(VbaLibraryFunc):
             return float(tmp)
 
         except Exception as e:
-            log.error("CDbl(" + str(params[0]) + ") failed. " + str(e))
+            log.error("CDbl(" + utils.safe_str_convert(params[0]) + ") failed. " + utils.safe_str_convert(e))
             return 0
 
 class Popup(VbaLibraryFunc):
@@ -5447,7 +5447,7 @@ class Popup(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return
         msg = params[0]
-        context.report_action("Popup", str(msg), '')
+        context.report_action("Popup", utils.safe_str_convert(msg), '')
         
 class Print(VbaLibraryFunc):
     """Emulate Debug.Print() function.
@@ -5466,11 +5466,11 @@ class Print(VbaLibraryFunc):
         
         # Sanity check.
         if (len(params) != 2):
-            log.warning("Wrong # of arguments for Print " + str(params))
+            log.warning("Wrong # of arguments for Print " + utils.safe_str_convert(params))
             return
 
         # 1st arg should be file ID.
-        fileid = "#" + str(params[0])
+        fileid = "#" + utils.safe_str_convert(params[0])
 
         # 2nd arg should be data to write.
         data = utils.safe_str_convert(params[1])
@@ -5491,7 +5491,7 @@ class Print(VbaLibraryFunc):
         
         # Regular Debug.Print() ?
         if (len(params) != 1):
-            log.warning("Wrong # of arguments for Print " + str(params))
+            log.warning("Wrong # of arguments for Print " + utils.safe_str_convert(params))
             return
 
         # Save writes that look like they are writing URLs.
@@ -5524,9 +5524,9 @@ class DeleteFile(VbaLibraryFunc):
         if (params is None):
             return
         if (len(params) > 1):
-            context.report_action('Delete File', str(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
+            context.report_action('Delete File', utils.safe_str_convert(params[1]), 'DeleteFile() Call', strip_null_bytes=True)
         if (len(params) == 1):
-            context.report_action('Delete File', str(params[0]), 'DeleteFile() Call', strip_null_bytes=True)
+            context.report_action('Delete File', utils.safe_str_convert(params[0]), 'DeleteFile() Call', strip_null_bytes=True)
 
 class MoveFile(VbaLibraryFunc):
     """Emulate File move MoveFile() call.
@@ -5537,7 +5537,7 @@ class MoveFile(VbaLibraryFunc):
         if (params is None):
             return
         if (len(params) > 1):
-            context.report_action('Move File', "MoveFile(" + str(params[0]) + ", " + str(params[1]) + ")",
+            context.report_action('Move File', "MoveFile(" + utils.safe_str_convert(params[0]) + ", " + utils.safe_str_convert(params[1]) + ")",
                                   'MoveFile() Call', strip_null_bytes=True)
 
 class FollowHyperlink(VbaLibraryFunc):
@@ -5549,7 +5549,7 @@ class FollowHyperlink(VbaLibraryFunc):
         if (params is None):
             return
         if (len(params) >= 1):
-            context.report_action('Download URL', str(params[0]), 'FollowHyperLink', strip_null_bytes=True)
+            context.report_action('Download URL', utils.safe_str_convert(params[0]), 'FollowHyperLink', strip_null_bytes=True)
 
 class GetExtensionName(VbaLibraryFunc):
     """Emulate GetExtensionName() function.
@@ -5563,7 +5563,7 @@ class GetExtensionName(VbaLibraryFunc):
             return ""
         r = ""
         if (len(params) >= 1):
-            fname = str(params[0])
+            fname = utils.safe_str_convert(params[0])
             if ("." in fname):
                 r = fname[fname.rindex("."):]
         return r
@@ -5609,7 +5609,7 @@ class CreateTextFile(VbaLibraryFunc):
         try:
             fname = context.get(params[0])
         except KeyError:
-            fname = str(params[0])
+            fname = utils.safe_str_convert(params[0])
         if (fname is None):
             return "NULL"
         
@@ -5649,15 +5649,15 @@ class Open(CreateTextFile):
         # Is this a HTTP GET or PUT or HEAD?
         action = ""
         if (len(params) >= 2):
-            action = str(params[0]).strip().upper()
+            action = utils.safe_str_convert(params[0]).strip().upper()
             http_actions = set(["GET", "PUT", "HEAD"])
             if ((action in http_actions) or
-                (str(params[1]).startswith("ftp://")) or
-                (str(params[1]).startswith("http://")) or
-                (str(params[1]).startswith("https://"))):
+                (utils.safe_str_convert(params[1]).startswith("ftp://")) or
+                (utils.safe_str_convert(params[1]).startswith("http://")) or
+                (utils.safe_str_convert(params[1]).startswith("https://"))):
 
                 # Fix up the URL if needed.
-                url = str(params[1])
+                url = utils.safe_str_convert(params[1])
                 if (url.startswith("tp://")):
                     url = "ht" + url
                 # Do we just have a domain?
@@ -5700,7 +5700,7 @@ class Unescape(VbaLibraryFunc):
         # Get the string to unescape.
         if ((params is None) or (len(params) < 1)):
             return "NULL"
-        s = str(params[0])
+        s = utils.safe_str_convert(params[0])
 
         # It reverses the transformation performed by the Escape
         # method by removing the escape character ("\") from each
@@ -5788,7 +5788,7 @@ class Not(VbaLibraryFunc):
         context = context # pylint
         
         if ((len(params) == 0) or (not isinstance(params[0], bool))):
-            log.warning("Cannot compute Not(" + str(params) + ").")
+            log.warning("Cannot compute Not(" + utils.safe_str_convert(params) + ").")
             return "NULL"
         return (not params[0])
                 
@@ -5886,7 +5886,7 @@ class WriteProcessMemory(VbaLibraryFunc):
         if ((params is None) or (len(params) < 1)):
             return
         context.report_action('Write Process Memory',
-                              str(params),
+                              utils.safe_str_convert(params),
                               'External Function: kernel32.dll / WriteProcessMemory',
                               strip_null_bytes=True)
 
@@ -5906,7 +5906,7 @@ class Write(VbaLibraryFunc):
             return
 
         # Get the data.
-        data = str(params[0])
+        data = utils.safe_str_convert(params[0])
 
         # Save writes that look like they are writing URLs.
         if (("http:" in data) or ("https:" in data)):
@@ -5935,7 +5935,7 @@ class Write(VbaLibraryFunc):
 
         # Get the ID of the file.
         file_id = files[0]
-        log.info("Writing data to " + str(file_id) + " .")
+        log.info("Writing data to " + utils.safe_str_convert(file_id) + " .")
 
         context.write_file(file_id, data)
 

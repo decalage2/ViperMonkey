@@ -21,6 +21,8 @@ import subprocess
 
 from logger import log
 
+from utils import safe_str_convert
+
 class FakeMeta(object):
     """Class used to hold Office file metadata fields and values.
 
@@ -44,12 +46,12 @@ def get_metadata_exif(filename):
     try:
         output = subprocess.check_output(["exiftool", filename])
     except Exception as e:
-        log.error("Cannot read metadata with exiftool. " + str(e))
+        log.error("Cannot read metadata with exiftool. " + safe_str_convert(e))
         return {}
 
     # Sanity check results.
     if (log.getEffectiveLevel() == logging.DEBUG):
-        log.debug("exiftool output: '" + str(output) + "'")
+        log.debug("exiftool output: '" + safe_str_convert(output) + "'")
     if (":" not in output):
         log.warning("Cannot read metadata with exiftool.")
         return {}

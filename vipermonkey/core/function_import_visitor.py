@@ -44,6 +44,7 @@ https://github.com/decalage2/ViperMonkey
 
 from visitor import visitor
 import statements
+from utils import safe_str_convert
 
 class function_import_visitor(visitor):
     """Collect the names and aliases of all functions imported from DLLs.
@@ -61,7 +62,7 @@ class function_import_visitor(visitor):
             return False
         self.visited.add(item)
         if (isinstance(item, statements.External_Function)):
-            self.funcs[str(item.name)] = str(item.alias_name)
-            self.names.add(str(item.alias_name))
-            self.aliases.add(str(item.name))
+            self.funcs[safe_str_convert(item.name)] = safe_str_convert(item.alias_name)
+            self.names.add(safe_str_convert(item.alias_name))
+            self.aliases.add(safe_str_convert(item.name))
         return True
