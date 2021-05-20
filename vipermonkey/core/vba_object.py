@@ -61,22 +61,15 @@ from logger import log
 import re
 from curses_ascii import isprint
 import traceback
-import hashlib
 
 from inspect import getouterframes, currentframe
 import sys
 from datetime import datetime
 import pyparsing
 
-#import expressions
 from var_in_expr_visitor import var_in_expr_visitor
-from function_call_visitor import function_call_visitor
-from lhs_var_visitor import lhs_var_visitor
-from utils import safe_print
-import utils
 from utils import safe_str_convert
-from let_statement_visitor import let_statement_visitor
-from vba_context import Context
+import utils
 import excel
 
 max_emulation_time = None
@@ -697,6 +690,7 @@ def _handle_selected_item_read(arg, context, got_constant_math):
 
     # Not handled.
     return None
+
 
 # Read in Office file metadata.
 meta = None

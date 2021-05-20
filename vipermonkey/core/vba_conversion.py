@@ -38,6 +38,14 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
+import string
+
+import logging
+from logger import log
+
+from utils import safe_str_convert
+
 def int_convert(arg, leave_alone=False):
     """Convert a VBA expression to an int, handling VBA NULL.
 
