@@ -57,7 +57,6 @@ except ImportError:
     from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
-import vba_conversion
 
 def safe_str_convert(s):
     """Convert a string to ASCII without throwing a unicode decode error.
@@ -133,6 +132,7 @@ def safe_plus(x,y):
     # casting (I think) minus variable type information (Dim a as
     # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
+    import vba_conversion
     if (isinstance(x, str)):
         y = vba_conversion.str_convert(y)
     if (isinstance(x, int)):
