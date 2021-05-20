@@ -74,11 +74,11 @@ from literals import date_string, decimal_literal, float_literal, literal, \
 from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg, eval_args, coerce_to_int, coerce_to_str, \
-    VbaLibraryFunc, VBA_Object
+from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
 from python_jit import to_python
 import vba_context
 import utils
+import vba_conversion
 from utils import safe_str_convert
 
 from logger import log
@@ -2259,7 +2259,7 @@ class MemberAccessExpression(VBA_Object):
                     param = int(param)
                 if (isinstance(param, int)):
                     param = "'" + safe_str_convert(param) + "'"
-                func_str += coerce_to_str(param)
+                func_str += vba_conversion.coerce_to_str(param)
             func_str += ")"
             memb_str += func_str
                         
@@ -3445,10 +3445,10 @@ class Function_Call(VBA_Object):
         #    tmp = f[0]
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('Array Access: %r[%r]' % (tmp, safe_str_convert(params)))
-        index = utils.int_convert(params[0])
+        index = vba_conversion.int_convert(params[0])
         index1 = None
         if (len(params) > 1):
-            index1 = utils.int_convert(params[1])
+            index1 = vba_conversion.int_convert(params[1])
         try:
             # Return array access result.
             if (index1 is None):
@@ -3618,7 +3618,7 @@ class Function_Call(VBA_Object):
                 try:
 
                     # Return result.
-                    i = utils.int_convert(params[0])
+                    i = vba_conversion.int_convert(params[0])
                     r = f[i]
                     if (isinstance(f, str)):
                         r = ord(r)
@@ -3927,7 +3927,7 @@ class Function_Call_Array_Access(VBA_Object):
         # Evaluate the value of the function returing the array.
         array_val = eval_arg(self.array, context=context)
         # Evaluate the index to read.
-        array_index = coerce_to_int(eval_arg(self.index, context=context))
+        array_index = vba_conversion.coerce_to_int(eval_arg(self.index, context=context))
 
         # Do we have a list to read from?
         if (not isinstance(array_val, list)):

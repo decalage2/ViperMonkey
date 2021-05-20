@@ -82,11 +82,11 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + "from core.utils import eq\n"
     boilerplate += indent_str + "from core.utils import neq\n"
     boilerplate += indent_str + "import core.utils\n"
-    boilerplate += indent_str + "from core.vba_object import update_array\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_num\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_int\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_str\n"
-    boilerplate += indent_str + "from core.vba_object import coerce_to_int_list\n\n"
+    boilerplate += indent_str + "from core.python_jit import update_array\n"
+    boilerplate += indent_str + "from core.vba_conversion import coerce_to_num\n"
+    boilerplate += indent_str + "from core.vba_conversion import coerce_to_int\n"
+    boilerplate += indent_str + "from core.vba_conversion import coerce_to_str\n"
+    boilerplate += indent_str + "from core.vba_conversion import coerce_to_int_list\n\n"
     boilerplate += indent_str + "try:\n"
     boilerplate += indent_str + " " * 4 + "vm_context\n"
     boilerplate += indent_str + "except (NameError, UnboundLocalError):\n"
@@ -907,3 +907,50 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     # Done.
     return True
+
+def update_array(old_array, indices, val):
+    """Add an item to a Python list. This is called from Python JIT
+    code.
+    
+    @param old_array (list) The Python list to update.
+    
+    @param indices (list) The indices of the array element to
+    add/update.
+
+    @param val (??) The value to write into the array.
+
+    @return (list) The updated array.
+
+    """
+
+    # Sanity check.
+    if (not isinstance(old_array, list)):
+        old_array = []
+
+    # 1-d array?
+    if (len(indices) == 1):
+        
+        # Do we need to extend the length of the list to include the indices?
+        index = int(indices[0])
+        if (index >= len(old_array)):
+            old_array.extend([0] * (index - len(old_array) + 1))
+        old_array[index] = val
+
+    # 2-d array?
+    elif (len(indices) == 2):
+
+        # Do we need to extend the length of the list to include the indices?
+        index = int(indices[0])
+        index1 = int(indices[1])
+        if (index >= len(old_array)):
+            # NOTE: Don't do 'old_array.extend([[]] * (index - len(old_array) + 1))' here.
+            # The [] added with extend refers to the same list so any modification
+            # to 1 sublist shows up in all of them.
+            for _ in range(0, (index - len(old_array) + 1)):
+                old_array.append([])
+        if (index1 >= len(old_array[index])):
+            old_array[index].extend([0] * (index1 - len(old_array[index]) + 1))
+        old_array[index][index1] = val
+        
+    # Done.
+    return old_array

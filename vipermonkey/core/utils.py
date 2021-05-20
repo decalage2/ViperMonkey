@@ -57,6 +57,7 @@ except ImportError:
     from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
+import vba_conversion
 
 def safe_str_convert(s):
     """Convert a string to ASCII without throwing a unicode decode error.
@@ -71,7 +72,7 @@ def safe_str_convert(s):
     if (isinstance(s, dict) and ("value" in s)):
         s = s["value"]
 
-    # Do the actualk string conversion.
+    # Do the actual string conversion.
     try:
         return str(s)
     except UnicodeDecodeError:
@@ -133,9 +134,9 @@ def safe_plus(x,y):
     # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
     if (isinstance(x, str)):
-        y = str_convert(y)
+        y = vba_conversion.str_convert(y)
     if (isinstance(x, int)):
-        y = int_convert(y)
+        y = vba_conversion.int_convert(y)
 
     # Easy case first.
     if (isinstance(x, (float, int)) and
@@ -380,81 +381,6 @@ def get_num_bytes(i):
         return 4
     # Lets go with 8 bytes.
     return 8
-
-def int_convert(arg, leave_alone=False):
-    """Convert a VBA expression to an int, handling VBA NULL.
-
-    @param arg (str, int, or float) The thing to convert to an int.
-
-    @param leave_alone (boolean) If True return the original argument
-    if integer conversion fails, if False return 0 if conversion
-    fails.
-
-    @return (int) The given item converted to an int.
-
-    """
-
-    # Easy case.
-    if (isinstance(arg, int)):
-        return arg
-    
-    # NULLs are 0.
-    if (arg == "NULL"):
-        return 0
-
-    # Empty strings are NULL.
-    if (arg == ""):
-        return "NULL"
-    
-    # Leave the wildcard matching value alone.
-    if (arg == "**MATCH ANY**"):
-        return arg
-
-    # Convert float to int?
-    if (isinstance(arg, float)):
-        arg = int(round(arg))
-
-    # Convert hex to int?
-    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
-        hex_str = "0x" + arg.strip()[2:]
-        try:
-            return int(hex_str, 16)
-        except Exception as e:
-            log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-            
-    arg_str = str(arg)
-    if ("." in arg_str):
-        arg_str = arg_str[:arg_str.index(".")]
-    try:
-        return int(arg_str)
-    except Exception as e:
-        if (not leave_alone):
-            log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
-        return arg_str
-
-def str_convert(arg):
-    """Convert a VBA expression to an str, handling VBA NULL.
-
-    @param arg (any) The thing to convert to a string.
-    
-    @return (str) The thing as a string.
-
-    """
-    if (arg == "NULL"):
-        return ''
-    import excel
-    if (excel.is_cell_dict(arg)):
-        arg = arg["value"]
-    try:
-        return str(arg)
-    except Exception as e:
-        if (isinstance(arg, unicode)):
-            return ''.join(filter(lambda x:x in string.printable, arg))
-        log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
-        return ''
 
 def strip_nonvb_chars(s):
     """Strip invalid VB characters from a string.

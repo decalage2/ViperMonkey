@@ -51,11 +51,11 @@ __version__ = '0.03'
 import logging
 from collections import Iterable
 
-from vba_object import coerce_args, eval_args, VBA_Object, coerce_args_to_str, \
-    coerce_to_num, coerce_to_int
+from vba_object import eval_args, VBA_Object
 from python_jit import to_python
 from logger import log
 from utils import safe_str_convert
+import vba_conversion
 
 def debug_repr(op, args):
     """Represent an operator applied to a list of arguments as a string
@@ -104,7 +104,7 @@ class Sum(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute sum (1) " + safe_str_convert(self.arg))
-            r = reduce(lambda x, y: x + y, coerce_args(evaluated_args, preferred_type="int"))
+            r = reduce(lambda x, y: x + y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
             return r
         except (TypeError, ValueError):
             # NOTE: In VB you are not supposed to be able to add integers and strings.
@@ -119,7 +119,7 @@ class Sum(VBA_Object):
                 # Punt and sum all arguments as strings.
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Compute sum (2) " + safe_str_convert(self.arg))
-                r = reduce(lambda x, y: safe_str_convert(x) + safe_str_convert(y), coerce_args_to_str(evaluated_args))
+                r = reduce(lambda x, y: safe_str_convert(x) + safe_str_convert(y), vba_conversion.coerce_args_to_str(evaluated_args))
                 return r
         except RuntimeError as e:
             log.error("overflow trying eval sum: %r" % self.arg)
@@ -162,7 +162,7 @@ class Eqv(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute eqv " + safe_str_convert(self.arg))
-            return reduce(lambda a, b: (a & b) | ~(a | b), coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda a, b: (a & b) | ~(a | b), vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             log.error('Impossible to Eqv arguments of different types.')
             return 0
@@ -197,7 +197,7 @@ class Xor(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute xor " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x ^ y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x ^ y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -255,7 +255,7 @@ class And(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute and " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x & y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x & y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -293,7 +293,7 @@ class Or(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute or " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x | y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x | y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -352,7 +352,7 @@ class Not(VBA_Object):
             return "NULL"
 
     def to_python(self, context, params=None, indent=0):
-        r = "~ (" + "coerce_to_int(" + to_python(self.arg, context) + "))"
+        r = "~ (coerce_to_int(" + to_python(self.arg, context) + "))"
         return r
         
     def __repr__(self):
@@ -423,12 +423,12 @@ class Subtraction(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute subract " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x - y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x - y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
             try:
-                return reduce(lambda x, y: coerce_to_int(x) - coerce_to_int(y), evaluated_args)
+                return reduce(lambda x, y: vba_conversion.coerce_to_int(x) - vba_conversion.coerce_to_int(y), evaluated_args)
             except Exception as e:
 
                 # Are we doing math on character ordinals?
@@ -478,7 +478,7 @@ class Multiplication(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute mult " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x * y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x * y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -516,7 +516,7 @@ class Power(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute pow " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: pow(x, y), coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: pow(x, y), vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -558,7 +558,7 @@ class Division(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute div " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x / y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x / y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -639,7 +639,7 @@ class MultiOp(VBA_Object):
             return "**MATCH ANY**"
 
         try:
-            args = coerce_args(evaluated_args)
+            args = vba_conversion.coerce_args(evaluated_args)
             ret = args[0]
             for op, arg in zip(self.operators, args[1:]):
                 try:
@@ -653,7 +653,7 @@ class MultiOp(VBA_Object):
             # Try converting strings to numbers.
             # TODO: Need to handle floats in strings.
             try:
-                args = map(coerce_to_num, evaluated_args)
+                args = map(vba_conversion.coerce_to_num, evaluated_args)
                 ret = args[0]
                 for op, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[op](ret, arg)
@@ -722,7 +722,7 @@ class FloorDivision(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute floor div " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: x // y, coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: x // y, vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError):
             # Try converting strings to ints.
             # TODO: Need to handle floats in strings.
@@ -778,7 +778,7 @@ class Concatenation(VBA_Object):
             log.debug('Concatenation before eval: %r' % params)
         try:
             eval_params = evaluated_args
-            eval_params = coerce_args_to_str(eval_params)
+            eval_params = vba_conversion.coerce_args_to_str(eval_params)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Concatenation after eval: %r' % eval_params)
             return ''.join(eval_params)
@@ -826,7 +826,7 @@ class Mod(VBA_Object):
         try:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Compute mod " + safe_str_convert(self.arg))
-            return reduce(lambda x, y: int(x) % int(y), coerce_args(evaluated_args, preferred_type="int"))
+            return reduce(lambda x, y: int(x) % int(y), vba_conversion.coerce_args(evaluated_args, preferred_type="int"))
         except (TypeError, ValueError) as e:
             log.error('Impossible to mod arguments of different types. ' + safe_str_convert(e))
             return ''

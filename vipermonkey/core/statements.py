@@ -79,7 +79,7 @@ from expressions import any_expression, boolean_expression, BoolExpr, expression
 from vba_context import Context, is_procedure
 from reserved import reserved_complex_type_identifier
 from from_unicode_str import from_unicode_str
-from vba_object import coerce_to_int, eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
 from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python
 import procedures
 from var_in_expr_visitor import var_in_expr_visitor
@@ -88,6 +88,7 @@ import vb_str
 import loop_transform
 import utils
 from utils import safe_str_convert
+import vba_conversion
 
 import traceback
 from logger import log
@@ -1072,8 +1073,8 @@ class Let_Statement(VBA_Object):
                 return False
             the_str = eval_arg(args[0], context)
             the_str_var = args[0]
-            start = utils.int_convert(eval_arg(args[1], context), leave_alone=True)
-            size = utils.int_convert(eval_arg(args[2], context), leave_alone=True)
+            start = vba_conversion.int_convert(eval_arg(args[1], context), leave_alone=True)
+            size = vba_conversion.int_convert(eval_arg(args[2], context), leave_alone=True)
             
             # Sanity check.
             if ((not isinstance(the_str, str)) and (not isinstance(the_str, list))):
@@ -1435,10 +1436,10 @@ class Let_Statement(VBA_Object):
                     value = num
                         
             # Evaluate the index expression(s).
-            index = utils.int_convert(eval_arg(self.index, context=context))
+            index = vba_conversion.int_convert(eval_arg(self.index, context=context))
             index1 = None
             if (self.index1 is not None):
-                index1 = utils.int_convert(eval_arg(self.index1, context=context))
+                index1 = vba_conversion.int_convert(eval_arg(self.index1, context=context))
                 
             # Is array variable being set already represented as a list?
             # Or a string?
@@ -1687,7 +1688,7 @@ class For_Statement(VBA_Object):
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, basestring)):
-            start = utils.int_convert(start)
+            start = vba_conversion.int_convert(start)
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
@@ -1695,7 +1696,7 @@ class For_Statement(VBA_Object):
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, basestring)):
-            end = utils.int_convert(end)
+            end = vba_conversion.int_convert(end)
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to None.")
             return (None, None, None)
@@ -1707,7 +1708,7 @@ class For_Statement(VBA_Object):
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
             if (isinstance(step, basestring)):
-                step = utils.int_convert(step)
+                step = vba_conversion.int_convert(step)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
@@ -2872,7 +2873,7 @@ class While_Statement(VBA_Object):
             return False
 
         # Now just compute the final loop counter value right here in Python.
-        curr_counter = coerce_to_int(eval_arg(loop_counter, context=context, treat_as_var_name=True))
+        curr_counter = vba_conversion.coerce_to_int(eval_arg(loop_counter, context=context, treat_as_var_name=True))
         final_val = eval_arg(upper_bound, context=context, treat_as_var_name=True)
         try:
             final_val = int(final_val)
@@ -3687,8 +3688,8 @@ class Case_Clause_Atomic(VBA_Object):
             start = None
             end = None
             try:
-                start = utils.int_convert(eval_arg(self.case_val[0], context))
-                end = utils.int_convert(eval_arg(self.case_val[1], context)) + 1
+                start = vba_conversion.int_convert(eval_arg(self.case_val[0], context))
+                end = vba_conversion.int_convert(eval_arg(self.case_val[1], context)) + 1
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Select test range failed. " + safe_str_convert(e))

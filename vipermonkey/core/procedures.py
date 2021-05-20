@@ -70,9 +70,9 @@ import utils
 from utils import safe_str_convert
 from logger import log
 from tagged_block_finder_visitor import tagged_block_finder_visitor
-from vba_object import coerce_to_str, VBA_Object, eval_arg
-from python_jit import to_python, _check_for_iocs
-from python_jit import _get_var_vals
+from vba_object import VBA_Object, eval_arg
+from python_jit import to_python, _check_for_iocs, _get_var_vals
+import vba_conversion
 
 # --- SUB --------------------------------------------------------------------
 
@@ -728,7 +728,7 @@ class Function(VBA_Object):
 
             # Convert the return value to a String if needed.
             if ((self.return_type == "String") and (not isinstance(return_value, str))):
-                return_value = coerce_to_str(return_value)
+                return_value = vba_conversion.coerce_to_str(return_value)
 
             # Handle array accesses of the results of 0 parameter functions if needed.
             if (array_indices is not None):

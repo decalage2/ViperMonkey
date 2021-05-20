@@ -62,7 +62,6 @@ from pyparsing import ParseException
 
 import vb_str
 from vba_context import VBA_LIBRARY
-from vba_object import coerce_to_int
 from vba_object import eval_arg
 from vba_object import VbaLibraryFunc
 from vba_object import VBA_Object
@@ -73,6 +72,7 @@ import strip_lines
 from python_jit import _eval_python
 import utils
 from excel import pull_cells_sheet, get_largest_sheet, get_num_rows
+import vba_conversion
 
 from logger import log
 
@@ -602,7 +602,7 @@ class _Chr(VbaLibraryFunc):
         # => need to parse the string as integer
         # It also looks like floating point numbers are allowed.
         try:
-            param = coerce_to_int(param)
+            param = vba_conversion.coerce_to_int(param)
         except Exception as e:
             log.error("%r is not a valid chr() value. Returning ''. %r" % (params[0], utils.safe_str_convert(e)))
             return ''
@@ -861,7 +861,7 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
             return len(utils.safe_str_convert(params[0]))
-        val = utils.str_convert(params[0])
+        val = vba_conversion.str_convert(params[0])
         if (hasattr(params[0], '__len__')):
 
             # Is this a string?            
@@ -1003,10 +1003,10 @@ class Mid(VbaLibraryFunc):
         # If start is NULL, NULL is also returned.
         if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
         if not isinstance(s, basestring):
-            s = utils.str_convert(s)
+            s = vba_conversion.str_convert(s)
         start = 0
         try:
-            start = utils.int_convert(params[1])
+            start = vba_conversion.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Mid() exception: " + utils.safe_str_convert(e))
@@ -1036,7 +1036,7 @@ class Mid(VbaLibraryFunc):
             return s[start-1:]
         length = 0
         try:
-            length = utils.int_convert(params[2])
+            length = vba_conversion.int_convert(params[2])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Mid() exception: " + utils.safe_str_convert(e))
@@ -1098,7 +1098,7 @@ class Left(VbaLibraryFunc):
         # "If String contains the data value Null, Null is returned."
         start = 0
         try:
-            start = utils.int_convert(params[1])
+            start = vba_conversion.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Left() exception: " + utils.safe_str_convert(e))
@@ -1200,7 +1200,7 @@ class Right(VbaLibraryFunc):
             s = utils.safe_str_convert(s)
         start = 0
         try:
-            start = utils.int_convert(params[1])
+            start = vba_conversion.int_convert(params[1])
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Right() exception: " + utils.safe_str_convert(e))
@@ -1275,7 +1275,7 @@ class Item(BuiltInDocumentProperties):
             # Dict is 1st parameter.        
             with_dict = params[0]
             # Item index is 2nd parameter.
-            index = coerce_to_int(params[1])
+            index = vba_conversion.coerce_to_int(params[1])
         
         # Are we reading from a With Scripting.Dictionary?
         elif ((context.with_prefix_raw is not None) and
@@ -1284,7 +1284,7 @@ class Item(BuiltInDocumentProperties):
             # Get the item index.
             index = None
             try:
-                index = coerce_to_int(params[0])
+                index = vba_conversion.coerce_to_int(params[0])
             except Exception as e:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Item() exception: " + utils.safe_str_convert(e))
@@ -1328,14 +1328,14 @@ class Items(VbaLibraryFunc):
             # Dict is 1st parameter.        
             the_map = params[0]
             # Item index is 2nd parameter.
-            index = coerce_to_int(params[1])
+            index = vba_conversion.coerce_to_int(params[1])
             
         # Are we reading from a With Scripting.Dictionary?
         elif ((context.with_prefix_raw is not None) and
               (context.contains(utils.safe_str_convert(context.with_prefix_raw)))):
 
             # Item index is 1st parameter.
-            index = coerce_to_int(params[0])
+            index = vba_conversion.coerce_to_int(params[0])
             
             # Is the With variable value a dict?
             the_map = context.get(utils.safe_str_convert(context.with_prefix_raw))
@@ -1908,7 +1908,7 @@ class StrComp(VbaLibraryFunc):
         method = 0
         if (len(params) >= 3):
             try:
-                method = utils.int_convert(params[2])
+                method = vba_conversion.int_convert(params[2])
             except Exception as e:
                 log.error("StrComp: Invalid comparison method. " + utils.safe_str_convert(e))
         if (method == 0):
@@ -1958,7 +1958,7 @@ class StrConv(VbaLibraryFunc):
         # Get the conversion type to perform.
         conv = None
         if (len(params) > 1):
-            conv = utils.int_convert(eval_arg(params[1], context=context))
+            conv = vba_conversion.int_convert(eval_arg(params[1], context=context))
 
         # Do the conversion.
         r = params[0]
@@ -2236,7 +2236,7 @@ class Int(VbaLibraryFunc):
             elif (isinstance(val, str) and (("e" in val) or ("E" in val))):
                 r = int(decimal.Decimal(val))
             else:
-                r = utils.int_convert(val)
+                r = vba_conversion.int_convert(val)
             # -32,768 to 32,767
             if ((r > 32767) or (r < -32768)):
                 # Overflow. Assume On Error Resume Next.
@@ -2561,7 +2561,7 @@ class Paragraphs(VbaLibraryFunc):
         index = None
         try:
             # Looks like this is 1 based indexing in VBA??
-            index = coerce_to_int(params[0]) - 1
+            index = vba_conversion.coerce_to_int(params[0]) - 1
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Paragraphs() exception: " + utils.safe_str_convert(e))
@@ -2888,7 +2888,7 @@ class Sgn(VbaLibraryFunc):
         num = params[0]
         r = "NULL"
         try:
-            n = utils.int_convert(num)
+            n = vba_conversion.int_convert(num)
             if n == 0:
                 r = 0
             else:
@@ -2912,7 +2912,7 @@ class Sqr(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = utils.int_convert(params[0]) + 0.0
+            num = vba_conversion.int_convert(params[0]) + 0.0
             r = math.sqrt(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -2933,7 +2933,7 @@ class Abs(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = utils.int_convert(params[0])
+            num = vba_conversion.int_convert(params[0])
             r = abs(num)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -2978,7 +2978,7 @@ class Round(VbaLibraryFunc):
             num = float(params[0])
             sig = 0
             if (len(params) == 2):
-                sig = utils.int_convert(params(1))                
+                sig = vba_conversion.int_convert(params(1))                
             r = round(num, sig)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3010,7 +3010,7 @@ class Hex(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = utils.int_convert(params[0])
+            num = vba_conversion.int_convert(params[0])
             # Number treated as an unsigned int by VBA.
             if (num < 0):
                 num += (1 << 32)
@@ -3269,7 +3269,7 @@ class String(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            num = utils.int_convert(params[0])
+            num = vba_conversion.int_convert(params[0])
             char = params[1]
             r = char * num
         except Exception as e:
@@ -3350,9 +3350,9 @@ class RGB(VbaLibraryFunc):
             return "NULL"
         r = ''
         try:
-            red = utils.int_convert(params[0])
-            green = utils.int_convert(params[1])
-            blue = utils.int_convert(params[2])
+            red = vba_conversion.int_convert(params[0])
+            green = vba_conversion.int_convert(params[1])
+            blue = vba_conversion.int_convert(params[2])
             r = red + (green * 256) + (blue * 65536)
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3436,7 +3436,7 @@ class Val(VbaLibraryFunc):
             return r
         
         # Ignore whitespace.
-        tmp = utils.str_convert(params[0]).strip().replace(" ", "")
+        tmp = vba_conversion.str_convert(params[0]).strip().replace(" ", "")
 
         # No nulls.
         tmp = tmp.replace("\x00", "")
@@ -3622,7 +3622,7 @@ class Pmt(VbaLibraryFunc):
         try:
             # Pull out the arguments.
             rate = float(params[0])
-            nper = utils.int_convert(params[1]) + 0.0
+            nper = vba_conversion.int_convert(params[1]) + 0.0
             pv = float(params[2])
             fv = 0
             if (len(params) >= 4):
@@ -3688,7 +3688,7 @@ class Space(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
-        n = utils.int_convert(params[0])
+        n = vba_conversion.int_convert(params[0])
         r = " " * n
         return r
 
@@ -5290,8 +5290,8 @@ class RandBetween(VbaLibraryFunc):
         # Sanity check.
         if ((params is None) or (len(params) < 2)):
             return "NULL"
-        lower = coerce_to_int(params[0])
-        upper = coerce_to_int(params[1])
+        lower = vba_conversion.coerce_to_int(params[0])
+        upper = vba_conversion.coerce_to_int(params[1])
         return random.randint(lower, upper)
 
     def num_args(self):
