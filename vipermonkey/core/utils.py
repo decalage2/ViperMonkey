@@ -57,7 +57,6 @@ except ImportError:
     from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
-import excel
 
 def safe_str_convert(s):
     """Convert a string to ASCII without throwing a unicode decode error.
@@ -110,6 +109,7 @@ def safe_plus(x,y):
     """
 
     # Handle Excel Cell objects. Grrr.
+    import excel
     if excel.is_cell_dict(x):
         x = x["value"]
     if excel.is_cell_dict(y):
@@ -445,6 +445,7 @@ def str_convert(arg):
     """
     if (arg == "NULL"):
         return ''
+    import excel
     if (excel.is_cell_dict(arg)):
         arg = arg["value"]
     try:

@@ -2258,7 +2258,7 @@ class MemberAccessExpression(VBA_Object):
                     param = int(param)
                 if (isinstance(param, int)):
                     param = "'" + safe_str_convert(param) + "'"
-                func_str += coerce_to_safe_str_convert(param)
+                func_str += coerce_to_str(param)
             func_str += ")"
             memb_str += func_str
                         
