@@ -1,6 +1,7 @@
 #!/usr/bin/env pypy
 
 """@package vmonkey
+
 The ViperMonkey command line and programatic interface. The top level
 function for using ViperMonkey programatically is process_file().
 
@@ -15,6 +16,57 @@ https://github.com/decalage2/ViperMonkey
 """
 
 from __future__ import print_function
+
+# pylint: disable=pointless-string-statement
+"""@mainpage
+
+@section intro Introduction
+
+ViperMonkey is a VBA Emulation engine written in Python, designed to
+analyze and deobfuscate malicious VBA Macros contained in Microsoft
+Office files (Word, Excel, PowerPoint, Publisher, etc), VBScript
+files, and HTA files with VBScript script blocks.
+
+@section workflow Workflow
+
+The high level analysis process implemented by ViperMonkey is as
+follows:
+
+1. Start analysis on sample file FFF.
+   @see process_file()
+2. Dump the VBA macros/VBScript with olevba (https://github.com/decalage2/oletools/wiki/olevba).
+   @see _get_vba_parser().
+3. Parse the extracted VB. The VB parser uses PyParsing (https://pypi.org/project/pyparsing/).
+   @see parse_streams()
+4. Read all Excel cell contents (if needed).
+   @see read_excel_sheets()
+5. Read Word document contents (if needed).
+   @see read_ole_fields._read_doc_text()
+6. Read text from may places payload text can be hidden.
+   @see read_ole_fields.read_payload_hiding_places()
+7. Create a ViperMonkey emulator object.
+   @see core/__init__.py
+8. Call the trace() method of the ViperMonkey emulator object to 
+   start emulation.
+9. Create a context object to track the program state. This will be
+   updated with variable values, file write information, and actions
+   of interest during emulation.
+   @see core/vba_context.py
+10. Call the eval() methods of VBA_Object objects parsed from the
+   VBA/VBScript being emulated. The eval() methods actually emulate
+   the input sample. Check out all objects that inherit from
+   VBA_Object to see all constructs that can be emulated.
+   @see core/vba_object.py
+11. During emulation actions of interest are reported with the
+   core.vba_context.Context.report_action() method.
+12. Intermediate IOCs (URLs and base64 strings) are extracted and
+   tracked during emulation with the core.vba_context.Context.save_intermediate_iocs()
+   method.
+13. Emulation of loops is sped up by doing JIT transpilation of the
+   VBA/VBScript loop to Python.
+   @see core/python_jit.py
+
+"""
 
 # Do this before any other imports to make sure we have an unlimited
 # packrat parsing cache. Do not move or remove this line.
