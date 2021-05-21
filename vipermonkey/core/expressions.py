@@ -1,8 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.expressions Parsing and emulation of
+VBA/VBScript expressions.
 
-"""@package expressions VBA Grammar - Expressions
 """
 
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Expressions
 
@@ -45,16 +46,19 @@ __version__ = '0.03'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-import traceback
+#import traceback
+#import sys
 import logging
 import re
-import sys
 import os
 import array
 from hashlib import sha256
 import string
-import base64
-import unidecode
+
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 from pyparsing import CaselessKeyword, CaselessLiteral, Combine, FollowedBy, Forward, Group, infixNotation, \
     Keyword, Literal, NotAny, oneOf, OneOrMore, opAssoc, Optional, ParseException, Regex, \
@@ -64,23 +68,30 @@ import pyparsing
 from identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
     strict_reserved_keywords, unrestricted_name, enum_val_id, identifier, typed_name, \
     TODO_identifier_or_object_attrib_loose
-#from reserved import *
 from lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
 from literals import date_string, decimal_literal, float_literal, literal, \
     quoted_string_keep_quotes, integer, quoted_string
 from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
 import procedures
-from vba_object import eval_arg, eval_args, to_python, coerce_to_int, coerce_to_str, \
-    VbaLibraryFunc, VBA_Object
+from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from python_jit import to_python
 import vba_context
 import utils
+import vba_conversion
+from utils import safe_str_convert
 
 from logger import log
 
 def _vba_to_python_op(op, is_boolean):
-    """
-    Convert a VBA boolean operator to a Python boolean operator.
+    """Convert a VBA boolean operator to a Python boolean operator or a
+    Python bitwise operator.
+
+    @param op (str) The VBA boolean operator.
+
+    @param is_boolean (boolean) If True return a Python boolean
+    operator, if False return a Python bitwise operator.
+
     """
     op_map = {
         "Not" : "not",
@@ -107,9 +118,9 @@ def _vba_to_python_op(op, is_boolean):
         op_map["OrElse"] = "|"
     return op_map[op]
 
+
 # --- FILE POINTER -------------------------------------------------
 
-#file_pointer = Suppress('#') + (decimal_literal ^ lex_identifier) + NotAny("#")
 file_pointer = Suppress('#') + expression + NotAny("#")
 file_pointer.setParseAction(lambda t: "#" + str(t[0]))
 file_pointer_loose = (decimal_literal ^ lex_identifier)
@@ -119,9 +130,9 @@ file_pointer_loose.setParseAction(lambda t: "#" + str(t[0]))
 
 missed_var_count = {}
 class SimpleNameExpression(VBA_Object):
-    """
-    Identifier referring to a variable within a VBA expression:
-    single identifier with no qualification or argument list
+    """Identifier referring to a variable within a VBA expression: single
+    identifier with no qualification or argument list
+
     """
 
     def __init__(self, original_str, location, tokens, name=None):
@@ -137,7 +148,9 @@ class SimpleNameExpression(VBA_Object):
         return '%s' % self.name
 
     def to_python(self, context, params=None, indent=0):
-
+        params = params # pylint warning
+        indent = indent # pylint warning
+        
         # VB regex object?
         if (self.name == "RegExp"):
             return "core.utils.vb_RegExp()"
@@ -151,7 +164,7 @@ class SimpleNameExpression(VBA_Object):
         # Use original value if possible.
         if (value == "__ALREADY_SET__"):
             try:
-                value = context.get("__ORIG__" + str(self.name))
+                value = context.get("__ORIG__" + safe_str_convert(self.name))
             except KeyError:
                 pass
         
@@ -164,11 +177,11 @@ class SimpleNameExpression(VBA_Object):
 
             # Call the function in python.
             args = "[]"
-            r = "core.vba_library.run_function(\"" + str(self.name) + "\", vm_context, " + args + ")"
+            r = "core.vba_library.run_function(\"" + safe_str_convert(self.name) + "\", vm_context, " + args + ")"
             return r
 
         # Rename some vars that overlap with python builtins.
-        var_name = str(self)
+        var_name = safe_str_convert(self)
         var_name = utils.fix_python_overlap(var_name)
         
         # This could be a call to a 0 argument local function (thanks VB syntax :( ).
@@ -180,7 +193,8 @@ class SimpleNameExpression(VBA_Object):
         return var_name
     
     def eval(self, context, params=None):
-
+        params = params # pylint warning
+        
         import statements
         
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -189,22 +203,21 @@ class SimpleNameExpression(VBA_Object):
             value = context.get(self.name)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('get variable %r = %r' % (self.name, value))
-            if (isinstance(value, procedures.Function) or
-                isinstance(value, procedures.Sub) or
-                isinstance(value, statements.External_Function) or
-                isinstance(value, VbaLibraryFunc)):
+            if isinstance(value, (VbaLibraryFunc,
+                                  procedures.Function,
+                                  procedures.Sub,
+                                  statements.External_Function)):
 
                 # Only evaluate functions with 0 args since we have no
                 # arguments at this point.
                 # TODO: Need to also handle VbaLibraryFunc.
-                if ((isinstance(value, procedures.Function) or
-                     isinstance(value, procedures.Sub)) and
+                if (isinstance(value, (procedures.Function, procedures.Sub)) and
                     (value.min_param_length > 0)):
                     return "NULL"
 
                 # 0 parameter function. Evaluate it.
                 if (not context.throttle_logging):
-                    log.info("calling Function: " + str(value) + "()")
+                    log.info("calling Function: " + safe_str_convert(value) + "()")
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug('evaluating function %r' % value)
                 value = value.eval(context)
@@ -215,7 +228,7 @@ class SimpleNameExpression(VBA_Object):
 
             # Track the # of times we have failed to look up this variable. Stop reporting
             # if there are many failed lookups.
-            var_name = str(self.name)
+            var_name = safe_str_convert(self.name)
             global missed_var_count
             if (var_name not in missed_var_count.keys()):
                 missed_var_count[var_name] = 0
@@ -231,6 +244,7 @@ class SimpleNameExpression(VBA_Object):
 #
 # MS-GRAMMAR: simple-name-expression = name
 
+
 simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + \
                          (TODO_identifier_or_object_attrib('name') | enum_val_id('name'))
 simple_name_expression.setParseAction(SimpleNameExpression)
@@ -245,10 +259,10 @@ placeholder.setParseAction(lambda t: str(t[0]))
 # --- INSTANCE EXPRESSIONS ------------------------------------------------------------
 
 class InstanceExpression(VBA_Object):
-    """
-    An instance expression consists of the keyword "Me".
-    It represents the current instance of the type defined by the
+    """An instance expression consists of the keyword "Me".  It
+    represents the current instance of the type defined by the
     enclosing class module and has this type as its value type.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -292,8 +306,8 @@ instance_expression.setParseAction(InstanceExpression)
 # Examples: varname.attrname, varname(2).attrname, varname .attrname
 
 class MemberAccessExpression(VBA_Object):
-    """
-    Handle member access expressions.
+    """Handle member access expressions like 'foo/bar/baz()'.
+
     """
 
     def __init__(self, original_str, location, tokens, raw_fields=None):
@@ -313,7 +327,7 @@ class MemberAccessExpression(VBA_Object):
             tokens = tokens[0][0]
             self.rhs = tokens[1:]
             self.lhs = tokens.lhs
-            if ((isinstance(self.lhs, list) or isinstance(self.lhs, pyparsing.ParseResults)) and (len(self.lhs) > 0)):
+            if (isinstance(self.lhs, (list, pyparsing.ParseResults)) and (len(self.lhs) > 0)):
                 self.lhs = self.lhs[0]
             self.rhs1 = ""
             if (hasattr(tokens, "rhs1")):
@@ -322,19 +336,31 @@ class MemberAccessExpression(VBA_Object):
                 log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
-        r = str(self.lhs)
+        r = safe_str_convert(self.lhs)
         for t in self.rhs:
-            r += "." + str(t)
+            r += "." + safe_str_convert(t)
         if (len(self.rhs1) > 0):
-            r += "." + str(self.rhs1)
+            r += "." + safe_str_convert(self.rhs1)
         return r
 
     def _to_python_handle_listbox_list(self, context, indent):
-        """
-        Handle List() object method calls like foo.List(bar).
+        """Convert List() object method calls like foo.List(bar) to Python.
         foo is (currently) a ListBox object.
-        """
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current List() method call with it's
+        emulation implemented as Python code if this object is a
+        ListBox object, None if this is not a ListBox object.
+
+        """
+        indent = indent # pylint warning
+        
         # Is this a .List() call?
         func = self.rhs
         if (isinstance(func, list)):
@@ -345,8 +371,8 @@ class MemberAccessExpression(VBA_Object):
             (func.name != "List")):
 
             # Getting entire list?
-            if (str(func) == "List"):
-                return str(self.lhs)
+            if (safe_str_convert(func) == "List"):
+                return safe_str_convert(self.lhs)
 
             # Nothing to do with a listbox.
             return None
@@ -354,36 +380,54 @@ class MemberAccessExpression(VBA_Object):
         # We have a list call. Get the list.
         the_list = self._get_with_prefix_value(context)
         if (the_list is None):
-            the_list = context.get(str(self.lhs))
+            the_list = context.get(safe_str_convert(self.lhs))
             if (the_list == "__ALREADY_SET__"):
-                the_list = context.get("__ORIG__" + str(self.lhs))
+                the_list = context.get("__ORIG__" + safe_str_convert(self.lhs))
         if ((the_list is None) or (not isinstance(the_list, list))):
             return None
 
         # Return Python for reading from the list.
-        r = str(the_list) + "[coerce_to_int(" + to_python(func.params[0], context) + ")]"
+        r = safe_str_convert(the_list) + "[coerce_to_int(" + to_python(func.params[0], context) + ")]"
         return r
         
     def _get_with_prefix_value(self, context):
-        """
-        Get the value of the With prefix. None is returned if there is no
+        """Get the value of the With prefix. None is returned if there is no
         With prefix.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (str) The value of the With prefix variable if there is
+        one, None if there is no With prefix.
+
         """
         with_value = None
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            with_value = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            with_value = context.get(safe_str_convert(context.with_prefix_raw))
             if (with_value == "__ALREADY_SET__"):
 
                 # Try getting the original value.
-                with_value = context.get("__ORIG__" + str(context.with_prefix_raw))
+                with_value = context.get("__ORIG__" + safe_str_convert(context.with_prefix_raw))
 
         return with_value
     
     def _to_python_handle_add(self, context, indent):
-        """
-        Handle Add() object method calls like foo.Add(bar, baz). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Add() object method calls like foo.Add(bar, baz).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The current Add() method call with it's
+        emulation implemented as Python code if this object is a
+        Dictionary object, None if this is not a Dictionary object.
+
         """
 
         # Currently we are only supporting JIT emulation of With blocks
@@ -393,12 +437,12 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Is this a Scripting.Dictionary method call?
-        expr_str = str(self)
+        expr_str = safe_str_convert(self)
         if (".Add(" not in expr_str):
             return None
             
         # Generate python for the dictionary method call.
-        tmp_var = SimpleNameExpression(None, None, None, name=str(context.with_prefix_raw))
+        tmp_var = SimpleNameExpression(None, None, None, name=safe_str_convert(context.with_prefix_raw))
         new_add = Function_Call(None, None, None, old_call=self.rhs[0])
         tmp = [tmp_var]
         for p in new_add.params:
@@ -409,9 +453,14 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _convert_nested_methods_to_func_call(self, context):
-        """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        return (conceptually) baz(3, bar(2, foo(1))).
+        """Given a member access expression like foo(1).bar(2).baz(3) return
+        (conceptually) baz(3, bar(2, foo(1))). Note that the objects
+        are broken out as function arguments in the calls.
+
+        @return (Function_Call object) The member access expression
+        calls converted to nested function calls if possible, None if
+        conversion is not possible.
+
         """
 
         # Sheets(d).UsedRange.SpecialCells(xlCellTypeConstants)
@@ -441,11 +490,11 @@ class MemberAccessExpression(VBA_Object):
             obj_name = None
             curr_func = curr_obj
             if isinstance(curr_obj, SimpleNameExpression):
-                obj_name = str(curr_obj)
+                obj_name = safe_str_convert(curr_obj)
                 curr_func = function_call.parseString(obj_name + "()", parseAll=True)[0]
                 curr_func.params = []
             elif isinstance(curr_obj, Function_Call):
-                obj_name = str(curr_obj.name)
+                obj_name = safe_str_convert(curr_obj.name)
                 curr_func = Function_Call(None, None, None, old_call=curr_obj)
             else:
                 return None
@@ -471,11 +520,23 @@ class MemberAccessExpression(VBA_Object):
         return res_func
         
     def _to_python_nested_methods(self, context, indent):
+        """Given a member access expression like foo(1).bar(2).baz(3) return
+        (conceptually) baz(3, bar(2, foo(1))), but in Python.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The member access expression calls converted to
+        Python nested function calls if possible, None if conversion
+        is not possible.
+
         """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        return (conceptually) baz(3, bar(2, foo(1))), but in Python.
-        """
-            
+        indent = indent # pylint warning
+        
         # Return the nested function calls as Python.
         res_func = self._convert_nested_methods_to_func_call(context)
         if (res_func is None):
@@ -486,13 +547,27 @@ class MemberAccessExpression(VBA_Object):
     def _to_python_handle_regex(self, context, indent):
         """Handle RegEx() object method calls like Replace() and Test().
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param indent (int) The number of spaces of indent to use at
+        the beginning of the generated Python code.
+
+        @return (str) The RegEx method calls converted to Python if
+        possible, None if conversion is not possible.
+
         """
+
+        # pylint.
+        indent = indent
+        
         # Is this a Regex method call?
         if (len(self.rhs) == 0):
             return None
 
         # RegExp operations?
-        raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
+        raw_last_func = safe_str_convert(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
         if (not ((raw_last_func.startswith("Test(")) or
                  (raw_last_func.startswith("Replace(")) or
                  (raw_last_func == "Global") or
@@ -500,11 +575,11 @@ class MemberAccessExpression(VBA_Object):
             return None
             
         # Got a RegEx method call. Use the simulated RegExp object for this.
-        exp_str = str(self)
+        exp_str = safe_str_convert(self)
         call_str = raw_last_func
         if (isinstance(self.rhs[-1], Function_Call)):
             the_call = self.rhs[-1]
-            call_str = str(the_call.name) + "("
+            call_str = safe_str_convert(the_call.name) + "("
             first = True
             for p in the_call.params:
                 if (not first):
@@ -554,7 +629,7 @@ class MemberAccessExpression(VBA_Object):
         if (len(self.rhs) > 0):
 
             # Excel SpecialCells() method call?
-            raw_last_func = str(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
+            raw_last_func = safe_str_convert(self.rhs[-1]).replace("('", "(").replace("')", ")").strip()
             if (raw_last_func.startswith("SpecialCells(")):
 
                 # Make the call with the cell range as the new 1st argument.
@@ -591,11 +666,11 @@ class MemberAccessExpression(VBA_Object):
                     (last_rhs.lower() != "row") and
                     (not last_rhs.lower().startswith("address(")) and
                     (last_rhs.lower() != "col") and
-                    context.contains(str(self))):
+                    context.contains(safe_str_convert(self))):
 
                     # Just reference the synthetic Python variable for this
                     # field.
-                    r = str(self).replace(".", "")
+                    r = safe_str_convert(self).replace(".", "")
                     #print "OUT: 6"
                     #print r
                     return r
@@ -624,33 +699,50 @@ class MemberAccessExpression(VBA_Object):
         return ""
     
     def _handle_indexed_pages_access(self, context):
-        """
-        Handle getting the caption of a Page object referenced via index.
+        """Handle getting the caption of a Page object referenced via
+        index. Handles things like
+        "Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the caption if this is a caption,
+        None if not.
+
         """
 
         # Do we have an indexed page caption reference?
         # Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption
         page_pat = r".+\.Pages\('(\d+)'\)\.Caption"
-        index = re.findall(page_pat, str(self))
+        index = re.findall(page_pat, safe_str_convert(self))
         if (len(index) == 0):
             return None
         index = int(index[0]) + 1
 
         # Try to look up a Page object variable with the desired index.
-        var_name = "Page" + str(index) + ".Caption"
+        var_name = "Page" + safe_str_convert(index) + ".Caption"
         if (context.contains(var_name)):
             return context.get(var_name)
         return None
     
     def _handle_table_cell(self, context):
-        """
-        Handle reading a value from a table cell.
+        """Handle reading a value from a table cell. Handles things like
+        "ActiveDocument.Tables(1).Cell(1, 1).Range".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the table cell if this is a table
+        read, None if not.
+
         """
 
         # Pull out the table index and cell indices.
         # ActiveDocument.Tables(1).Cell(1, 1).Range
         pat = r"\w+\.Tables\(\s*'(\w+)'\s*\)\.Cell\(\s*'(\w+)\s*,\s*(\w+)'\s*\).*"
-        indices = re.findall(pat, str(self))
+        indices = re.findall(pat, safe_str_convert(self))
         if (len(indices) == 0):
             return None
         indices = indices[0]
@@ -674,7 +766,7 @@ class MemberAccessExpression(VBA_Object):
             log.error("Parse error. Cannot evaluate '" + indices[0] + "'")
             return None
         except Exception as e:
-            log.error("Comment index '" + str(indices[0]) + "' not int. " + str(e))
+            log.error("Comment index '" + safe_str_convert(indices[0]) + "' not int. " + safe_str_convert(e))
             return None
         cell_index_row = None
         try:
@@ -694,7 +786,7 @@ class MemberAccessExpression(VBA_Object):
             log.error("Parse error. Cannot evaluate '" + indices[1] + "'")
             return None
         except Exception as e:
-            log.error("Comment index '" + str(indices[1]) + "' not int. " + str(e))
+            log.error("Comment index '" + safe_str_convert(indices[1]) + "' not int. " + safe_str_convert(e))
             return None
         cell_index_col = None
         try:
@@ -714,7 +806,7 @@ class MemberAccessExpression(VBA_Object):
             log.error("Parse error. Cannot evaluate '" + indices[2] + "'")
             return None
         except Exception as e:
-            log.error("Comment index '" + str(indices[2]) + "' not int. " + str(e))
+            log.error("Comment index '" + safe_str_convert(indices[2]) + "' not int. " + safe_str_convert(e))
             return None
 
         # Do we have that cell in a table?
@@ -727,23 +819,31 @@ class MemberAccessExpression(VBA_Object):
         row = table[cell_index_row]
         if (cell_index_col >= len(row)):
             return None
-        cell = str(row[cell_index_col]) + "  "
+        cell = safe_str_convert(row[cell_index_col]) + "  "
         return cell
     
     def _handle_paragraphs(self, context):
-        """
-        Handle references to the .Paragraphs field of the current doc.
+        """Handle references to the .Paragraphs field of the current
+        doc. Handles things like "ActiveDocument.Paragraphs".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the paragraphs field if this is a
+        paragraphs field read, None if not.
+
         """
 
         # Get all paragraphs?
-        if (str(self).lower().endswith(".paragraphs")):
+        if (safe_str_convert(self).lower().endswith(".paragraphs")):
             return context.get("ActiveDocument.Paragraphs".lower())
 
         # Get a single paragraph?
         if (len(self.rhs) == 0):
             return None
         first_rhs = self.rhs[0]
-        if (not str(first_rhs).startswith("Paragraphs('")):
+        if (not safe_str_convert(first_rhs).startswith("Paragraphs('")):
             return None
 
         # Return the single paragraph.
@@ -751,12 +851,20 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_comments(self, context):
-        """
-        Handle references to the .Comments field of the current doc.
+        """Handle references to the .Comments field of the current doc.
+        Handles things like "ActiveDocument.Comments" and "ActiveDocument.Comments(2)"
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the comments field if this is a
+        comments field read, None if not.
+
         """
 
         # Comments reference?
-        me_str = str(self)
+        me_str = safe_str_convert(self)
         if (".comments" not in me_str.lower()):
             return None
 
@@ -790,31 +898,51 @@ class MemberAccessExpression(VBA_Object):
             index = int(index.replace("'", "")) - 1
 
         except ParseException:
-            log.error("Parse error. Cannot evaluate '" + str(ids[0]) + "'")
+            log.error("Parse error. Cannot evaluate '" + safe_str_convert(ids[0]) + "'")
             return None
         except Exception as e:
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Comment index '" + str(ids[0]) + "' not int. " + str(e))
+                log.debug("Comment index '" + safe_str_convert(ids[0]) + "' not int. " + safe_str_convert(e))
             return None
 
         # We have an index. Return the comment.
         comments = context.get("ActiveDocument.Comments".lower())
         if (index >= len(comments)):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Comment index " + str(ids[0]) + " out of range")
+                log.debug("Comment index " + safe_str_convert(ids[0]) + " out of range")
             return None
         return comments[index]
             
-    def _handle_count(self, context, curr_item):
-        """
-        Handle references to the .Count field of the current item.
-        """
-        if ((".count" in str(self).lower()) and (isinstance(curr_item, list))):
-            return len(curr_item)
+    def _handle_count(self, curr_item):
+        """Handle references to the .Count field of the current item. Handles
+        things like "foo.count".
 
-    def _handle_item(self, context, curr_item):
+        @param curr_item (any) The thing we may be getting the count
+        of.
+
+        @return (any) If curr_item is a list and the current
+        expression is a .count reference, return the length of the
+        list (int), otherwise return None.
+
         """
-        Handle accessing a list item.
+        if ((".count" in safe_str_convert(self).lower()) and (isinstance(curr_item, list))):
+            return len(curr_item)
+        return None
+        
+    def _handle_item(self, context, curr_item):
+        """Handle accessing a list item. Handles things like "foo.item(2)".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @param curr_item (any) The thing we may be getting the item()
+        of.
+
+        @return (any) If curr_item is a list and the current
+        expression is a .item() call, return the referenced item,
+        otherwise return None.
+
         """
 
         # Only works for lists.
@@ -822,7 +950,7 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Do we have an Item() call?
-        if (".item(" not in str(self).lower()):
+        if (".item(" not in safe_str_convert(self).lower()):
             return None
 
         # Get the index.
@@ -842,20 +970,37 @@ class MemberAccessExpression(VBA_Object):
         return curr_item[index]
         
     def _handle_oslanguage(self, context):
+        """Handle references to the OSlanguage field. Handles things like
+        "ActiveDocument.OSLanguage".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the oslanguage field if this is a
+        oslanguage field read, None if not.
+
         """
-        Handle references to the OSlanguage field.
-        """
-        if (str(self).lower().endswith(".oslanguage")):
+        if (safe_str_convert(self).lower().endswith(".oslanguage")):
             return context.get("oslanguage")
-    
+        return None
+        
     def _handle_application_run(self, context):
-        """
-        Handle functions called with Application.Run()
+        """Handle functions called with Application.Run(). Handles things like
+        'Application.Run "Book1.xls!MyMacroName"'.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Application.Run
+        if this is a Application.Run, None if not.
+
         """
 
         # Is this an Application.Run() instance?
-        if ((not str(self).startswith("Application.Run(")) and
-            (not str(self).lower().startswith("thisdocument.run("))):
+        if ((not safe_str_convert(self).startswith("Application.Run(")) and
+            (not safe_str_convert(self).lower().startswith("thisdocument.run("))):
             return None
         
         # Pull out the function name and arguments.
@@ -870,7 +1015,7 @@ class MemberAccessExpression(VBA_Object):
 
         # List containing function name + args?
         else:
-            func_name = str(self.rhs[0].params[0])
+            func_name = safe_str_convert(self.rhs[0].params[0])
             func_args = []
             if (len(self.rhs[0].params) > 1):
                 func_args = self.rhs[0].params[1:]
@@ -884,16 +1029,14 @@ class MemberAccessExpression(VBA_Object):
 
             # Drill down through layers of indirection to get the name of the function to run.
             s = func_name
-            while ((isinstance(s, str)) or (isinstance(s, SimpleNameExpression))):
-                s = context.get(str(s))
-                if (isinstance(s, procedures.Function) or
-                    isinstance(s, procedures.Sub) or
-                    isinstance(s, VbaLibraryFunc)):
+            while isinstance(s, (SimpleNameExpression, str)):
+                s = context.get(safe_str_convert(s))
+                if isinstance(s, (VbaLibraryFunc, procedures.Function, procedures.Sub)):
                     s = s.eval(context=context, params=func_args)
                     r = s
 
             # Report actions if interesting.
-            if ((str(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
+            if ((safe_str_convert(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
                 context.report_action('Execute Command', r, 'ThisDocument.Run', strip_null_bytes=True)
             return r
         
@@ -903,12 +1046,21 @@ class MemberAccessExpression(VBA_Object):
             return None
 
     def _handle_set_clipboard(self, context):
-        """
-        Handle calls like objHTML.ParentWindow.clipboardData.setData(...).
+        """Handle calls like
+        objHTML.ParentWindow.clipboardData.setData(...). Will set the
+        clipboard contents in the given context.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (boolean) True if this is a clipboard setData() call,
+        None if not.
+
         """
 
         # Is this a setData() instance?
-        if (".setdata(" not in str(self).lower()):
+        if (".setdata(" not in safe_str_convert(self).lower()):
             return None
         
         # Pull out the clipboard text.
@@ -919,7 +1071,7 @@ class MemberAccessExpression(VBA_Object):
         if (len(func.params) < 2):
             return None
         val = func.params[1]
-        val = str(eval_arg(val, context))
+        val = safe_str_convert(eval_arg(val, context))
 
         # Set the clipboard value in a synthetic variable.
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -928,12 +1080,19 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_get_clipboard(self, context):
-        """
-        Handle calls like objHTML.ParentWindow.clipboardData.getData(...).
+        """Handle calls like objHTML.ParentWindow.clipboardData.getData(...). 
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the clipboard from
+        the context if this is a clipboard read, None if not.
+
         """
 
         # Is this an getData() instance?
-        if (".getdata(" not in str(self).lower()):
+        if (".getdata(" not in safe_str_convert(self).lower()):
             return None
         
         # Retrn the clipboard text if we have it.
@@ -942,15 +1101,26 @@ class MemberAccessExpression(VBA_Object):
         return None
         
     def _handle_docprops_read(self, context):
-        """
-        Handle data reads with ActiveDocument.BuiltInDocumentProperties(...).
+        """Handle data reads with
+        ActiveDocument.BuiltInDocumentProperties(...). Handles things
+        like
+        'ActiveDocument.BuiltInDocumentProperties(wdPropertyWords)'.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the
+        BuiltInDocumentProperties read if this is a
+        BuiltInDocumentProperties read, None if not.
+
         """
 
         # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
         # ThisDocument.BuiltInDocumentProperties('Manager').Value
         # Is this an ActiveDocument.BuiltInDocumentProperties() instance?
-        if ((not str(self).startswith("ActiveDocument.BuiltInDocumentProperties(")) and
-            (not str(self).startswith("ThisDocument.BuiltInDocumentProperties("))):
+        if ((not safe_str_convert(self).startswith("ActiveDocument.BuiltInDocumentProperties(")) and
+            (not safe_str_convert(self).startswith("ThisDocument.BuiltInDocumentProperties("))):
             return None
 
         # Pull out the name of the property to read.
@@ -967,14 +1137,22 @@ class MemberAccessExpression(VBA_Object):
         return context.read_metadata_item(field_name)
 
     def _handle_control_read(self, context):
-        """
-        Handle data reads with StreamName.Controls(...).Value.
+        """Handle data reads with StreamName.Controls(...).Value. Handles
+        things like "banrcboyjdipc.Controls(1).Value".
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Controls() value
+        read if this is a Controls() value read, None if not.
+
         """
 
         # Something like banrcboyjdipc.Controls(1).Value ?
         pat = r".+\.Controls\(\s*'([^']+)'\s*\)(?:\.Value)?"
-        my_text = str(self)
-        if (re.match(pat, str(self)) is None):
+        my_text = safe_str_convert(self)
+        if (re.match(pat, safe_str_convert(self)) is None):
             return None
 
         # Pull out the Controls text value list.
@@ -1003,10 +1181,12 @@ class MemberAccessExpression(VBA_Object):
                 index = index.eval(context)
             index = int(index)
 
-        except ParseException:
-            log.error("Parse error. Cannot evaluate '" + index + "'")
+        except ParseException as e:
+            log.error("Parse error. Cannot evaluate '" + index + "'. " + safe_str_convert(e))
             return None
-        except:
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("(1) Index problems. " + safe_str_convert(e))
             return None
 
         # Return the control text value.
@@ -1014,9 +1194,18 @@ class MemberAccessExpression(VBA_Object):
             return list_vals[index]
         return None
 
-    def _handle_docvars_read(self, context):
-        """
-        Handle data reads from a document variable.
+    def handle_docvars_read(self, context):
+        """Handle data reads from a document variable. Handles things like
+        'ActiveDocument.Variables("Value1")'. Also handles more
+        general reads.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of the emulating the Variables() value
+        read if this is a Variables() value read, None if not.
+
         """
 
         # Try an actual doc var read first.
@@ -1032,7 +1221,7 @@ class MemberAccessExpression(VBA_Object):
         
         # Are we referencing an item by index?
         # zQGGrrccT('0').Caption
-        if (("(" in str(self.lhs)) and
+        if (("(" in safe_str_convert(self.lhs)) and
             (isinstance(self.lhs, Function_Call)) and
             (val is not None) and
             (isinstance(val, list))):
@@ -1046,22 +1235,27 @@ class MemberAccessExpression(VBA_Object):
                     val = val[index]
 
         # Are we referencing a field?
-        rhs = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
+        rhs = safe_str_convert(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
         if ((isinstance(val, dict)) and (rhs in val)):
             val = val[rhs]
 
-        # Filter out function calls, these are not document variable reads.
-        if (isinstance(val, procedures.Function) or
-            isinstance(val, procedures.Sub) or
-            isinstance(val, VbaLibraryFunc)):
+        # Filter out function calls, these are not document variable reads.        
+        if isinstance(val, (VbaLibraryFunc, procedures.Function, procedures.Sub)):
             return None
             
         # Return the value.
         return val
 
     def _handle_text_file_read(self, context):
-        """
-        Handle OpenTextFile(...).ReadAll() calls.
+        """Handle OpenTextFile(...).ReadAll() calls.
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @return (any) The value of emulating the text file read if
+        this is a text file read, None if not.
+
         """
 
         # Do we have a text file read?
@@ -1075,7 +1269,7 @@ class MemberAccessExpression(VBA_Object):
         read_call = self.rhs[-2]
         if (not isinstance(read_call, Function_Call)):
             return None
-        read_file = str(eval_arg(read_call.params[0], context))
+        read_file = safe_str_convert(eval_arg(read_call.params[0], context))
 
         # TODO: Should we be actually reading files from the system?
         # Read the file contents.
@@ -1098,21 +1292,30 @@ class MemberAccessExpression(VBA_Object):
                 return r
             except Exception as e:
                 
-                log.error("ReadAll('" + read_file + "') failed. " + str(e))
+                log.error("ReadAll('" + read_file + "') failed. " + safe_str_convert(e))
                 return None
 
     def _handle_docvar_value(self, lhs, rhs):
-        """
-        Handle reading .Name and .Value fields from doc vars.
+        """Handle reading .Name and .Value fields from document variables.
+
+        @param lhs (tuple) A 2 element tuple representing the doc var
+        (name, value).
+
+        @param rhs (str) "Name" (get doc var name) or "Value" (get doc
+        var value).
+
+        @return (any) The doc var name or value if proper values for
+        lhs and rhs were given, None if not.
+
         """
         
         # Pull out proper RHS.
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
-        rhs = str(rhs).strip()
+        rhs = safe_str_convert(rhs).strip()
             
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_docvar_value(): lhs = " + str(lhs) + ", rhs = '" + str(rhs) + "'")
+            log.debug("_handle_docvar_value(): lhs = " + safe_str_convert(lhs) + ", rhs = '" + safe_str_convert(rhs) + "'")
             
         # Do we have a tuple representing a doc var?
         if (not isinstance(lhs, tuple)):
@@ -1127,39 +1330,60 @@ class MemberAccessExpression(VBA_Object):
         # Getting .Name?
         if (rhs == "Name"):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("_handle_docvar_value(): return name = '" + str(lhs[0]) + "'")
+                log.debug("_handle_docvar_value(): return name = '" + safe_str_convert(lhs[0]) + "'")
             return lhs[0]
 
         # Getting .Value?
         if (rhs == "Value"):
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("_handle_docvar_value(): return value = '" + str(lhs[1]) + "'")
+                log.debug("_handle_docvar_value(): return value = '" + safe_str_convert(lhs[1]) + "'")
             return lhs[1]
 
         # Don't know what we are getting.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_docvar_value(): not getting name or value of '" + str(self) + "'")
+            log.debug("_handle_docvar_value(): not getting name or value of '" + safe_str_convert(self) + "'")
         return None
 
     def _handle_file_close(self, context, lhs, rhs):
-        """
-        Handle close of file object foo like foo.Close().
+        """Handle close of file object foo like foo.Close().
+
+        @param context (Context object) Context for emulation (local
+        and global variables). Current program state will be read from
+        the context.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of closing a file if this is a file
+        close, None if not.
+
         """
 
         # Pull out proper RHS.
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
-        if (str(rhs) != "Close"):
+        if (safe_str_convert(rhs) != "Close"):
             return None
         from vba_library import Close
         file_close = Close()
             
         # File closed.
-        return file_close.eval(context, [str(lhs)])
+        return file_close.eval(context, [safe_str_convert(lhs)])
     
     def _handle_replace(self, context, lhs, rhs):
-        """
-        Handle string replaces of the form foo.Replace(bar, baz). foo is a RegExp object.
+        """Handle string replaces of the form foo.Replace(bar, baz). foo is a
+        RegExp object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of doing the string replace if this is
+        a RegEx object replace() method call, None if not.
+
         """
 
         # Sanity check.
@@ -1169,11 +1393,11 @@ class MemberAccessExpression(VBA_Object):
             return None
         if (rhs.name != "Replace"):
             return None
-        if (not str(lhs).lower().endswith("regexp")):
+        if (not safe_str_convert(lhs).lower().endswith("regexp")):
             return None
 
         # Do we have a pattern for the RegExp?
-        pat_name = str(self.lhs) + ".pattern"
+        pat_name = safe_str_convert(self.lhs) + ".pattern"
         if (not context.contains(pat_name)):
             pat_name = ".pattern"
             if (not context.contains(pat_name)):
@@ -1194,9 +1418,17 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_add(self, context, lhs, rhs):
-        """
-        Handle Add() object method calls like foo.Add(bar, baz). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Add() object method calls like foo.Add(bar, baz).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of adding an element if this is a
+        Dictionary Add() method call, None if not.
+
         """
 
         # Get the LHS as a dict if possible.
@@ -1204,18 +1436,20 @@ class MemberAccessExpression(VBA_Object):
             lhs.startswith("{") and
             lhs.endswith("}")):
             try:
+                # Checked to see if it is a dict.
+                # pylint: disable=eval-used
                 lhs = eval(lhs)
             except SyntaxError:
                 pass
 
         # Get the Dictionary if it is a With variable.
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            lhs = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            lhs = context.get(safe_str_convert(context.with_prefix_raw))
             
         # Sanity check.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_add(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+            log.debug("_handle_add(): lhs = " + safe_str_convert(lhs) + ", rhs = " + safe_str_convert(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         if (not isinstance(rhs, Function_Call)):
@@ -1233,24 +1467,32 @@ class MemberAccessExpression(VBA_Object):
             tmp.append(p)
         new_add.params = tmp
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Add() func = " + str(new_add))
+            log.debug("Add() func = " + safe_str_convert(new_add))
         
         # Evaluate the dictionary add.
         new_dict = new_add.eval(context)
 
         # Update the dict variable.
         if (context.with_prefix_raw is not None):
-            context.set(str(context.with_prefix_raw), new_dict, do_with_prefix=False)
-        if (context.contains(str(self.lhs))):
-            context.set(str(self.lhs), new_dict, do_with_prefix=False)
+            context.set(safe_str_convert(context.with_prefix_raw), new_dict, do_with_prefix=False)
+        if (context.contains(safe_str_convert(self.lhs))):
+            context.set(safe_str_convert(self.lhs), new_dict, do_with_prefix=False)
 
         # Done with the Add().
         return new_dict
 
     def _handle_listbox_list(self, context, lhs, rhs):
-        """
-        Handle List() object method calls like foo.List(bar).
-        foo is (currently) a ListBox object.
+        """Handle List() object method calls like foo.List(bar).  foo is
+        (currently) a ListBox object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of listing the items in a ListBox if
+        this is a ListBox List() method call, None if not.
+
         """
 
         # Get the LHS as a list if possible.
@@ -1258,18 +1500,20 @@ class MemberAccessExpression(VBA_Object):
             lhs.startswith("[") and
             lhs.endswith("]")):
             try:
+                # Checked to see if it is a list.
+                # pylint: disable=eval-used
                 lhs = eval(lhs)
             except SyntaxError:
                 pass
 
         # Get the list if it is a With variable.
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            lhs = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            lhs = context.get(safe_str_convert(context.with_prefix_raw))
             
         # Sanity check.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_listbox_list(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+            log.debug("_handle_listbox_list(): lhs = " + safe_str_convert(lhs) + ", rhs = " + safe_str_convert(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         # Accessing a List element?
@@ -1277,8 +1521,8 @@ class MemberAccessExpression(VBA_Object):
             (rhs.name != "List")):
 
             # Getting entire list?
-            lhs_str = str(self.lhs)
-            if ((str(rhs) == "List") and (context.contains(lhs_str))):                
+            lhs_str = safe_str_convert(self.lhs)
+            if ((safe_str_convert(rhs) == "List") and (context.contains(lhs_str))):                
                 return context.get(lhs_str)
 
             # Nothing to do with a listbox.
@@ -1297,9 +1541,17 @@ class MemberAccessExpression(VBA_Object):
         return lhs[index]
     
     def _handle_listbox_additem(self, context, lhs, rhs):
-        """
-        Handle AddItem() object method calls like foo.AddItem(bar).
-        foo is (currently) a ListBox object.
+        """Handle AddItem() object method calls like foo.AddItem(bar).  foo
+        is (currently) a ListBox object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of adding an item to a ListBox if this
+        is a ListBox AddItem() method call, None if not.
+
         """
 
         # Get the LHS as a list if possible.
@@ -1307,18 +1559,20 @@ class MemberAccessExpression(VBA_Object):
             lhs.startswith("[") and
             lhs.endswith("]")):
             try:
+                # Checked to see if it is a list.
+                # pylint: disable=eval-used
                 lhs = eval(lhs)
             except SyntaxError:
                 pass
 
         # Get the list if it is a With variable.
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            lhs = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            lhs = context.get(safe_str_convert(context.with_prefix_raw))
             
         # Sanity check.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_listbox_additem(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+            log.debug("_handle_listbox_additem(): lhs = " + safe_str_convert(lhs) + ", rhs = " + safe_str_convert(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         #print "ADDITEM!!"
@@ -1347,7 +1601,7 @@ class MemberAccessExpression(VBA_Object):
             tmp.append(p)
         new_add.params = tmp
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("AddItem() func = " + str(new_add))
+            log.debug("AddItem() func = " + safe_str_convert(new_add))
         
         # Evaluate the list add.
         #print "EVAL!!"
@@ -1356,17 +1610,26 @@ class MemberAccessExpression(VBA_Object):
 
         # Update the list variable.
         if (context.with_prefix_raw is not None):
-            context.set(str(context.with_prefix_raw), new_list, do_with_prefix=False)
-        context.set(str(self.lhs), new_list, do_with_prefix=False, force_global=True)
+            context.set(safe_str_convert(context.with_prefix_raw), new_list, do_with_prefix=False)
+        context.set(safe_str_convert(self.lhs), new_list, do_with_prefix=False, force_global=True)
 
         # Done with the AddItem().
         #print "OUT: ADD 4"
         return new_list
 
     def _handle_exists(self, context, lhs, rhs):
-        """
-        Handle Exists() object method calls like foo.Exists(bar). 
-        foo is (currently) a Scripting.Dictionary object.
+        """Handle Exists() object method calls like foo.Exists(bar).  foo is
+        (currently) a Scripting.Dictionary object.
+
+        @param lhs (VBA_Object object) The LHS of the member access expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of checking if a key exists in a
+        Dictionary object if this is a Dictionary Exists() method
+        call, None if not.
+
         """
 
         # Get the LHS as a dict if possible.
@@ -1374,18 +1637,20 @@ class MemberAccessExpression(VBA_Object):
             lhs.startswith("{") and
             lhs.endswith("}")):
             try:
+                # This has been checked to see if it is a dict.
+                # pylint: disable=eval-used
                 lhs = eval(lhs)
             except SyntaxError:
                 pass
 
         # Get the Dictionary if it is a With variable.
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            lhs = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            lhs = context.get(safe_str_convert(context.with_prefix_raw))
             
         # Sanity check.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_exists(): lhs = " + str(lhs) + ", rhs = " + str(rhs))
+            log.debug("_handle_exists(): lhs = " + safe_str_convert(lhs) + ", rhs = " + safe_str_convert(rhs))
         if ((isinstance(rhs, list)) and (len(rhs) > 0)):
             rhs = rhs[0]
         if (not isinstance(rhs, Function_Call)):
@@ -1402,28 +1667,45 @@ class MemberAccessExpression(VBA_Object):
             tmp.append(p)
         new_exists.params = tmp
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Exists() func = " + str(new_exists))
+            log.debug("Exists() func = " + safe_str_convert(new_exists))
         
         # Evaluate the dictionary exists.
         r = new_exists.eval(context)
         return r
 
     def _handle_adodb_writes(self, lhs_orig, lhs, rhs, context):
-        """
-        Handle expressions like "foo.Write(...)" where foo = "ADODB.Stream".
+        """Handle expressions like "foo.Write(...)" where foo =
+        "ADODB.Stream".
+
+        @param lhs_orig (VBA_Object object) The original unevaluated
+        LHS of the member access expression.
+
+        @param lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @param rhs (list) The items N2...NN in the member access
+        expression N1.N2...NN.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The value of doing the ADODB write if this is a
+        ADODB.Stream.Write() method call, None if not.
+
         """
 
         # Is this a .Write() call?
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_adodb_writes(): lhs_orig = " + str(lhs_orig) + ", lhs = " + str(lhs) + ", rhs = " + str(rhs))
-        rhs_str = str(rhs).strip()
+            log.debug("_handle_adodb_writes(): lhs_orig = " + safe_str_convert(lhs_orig) + ", lhs = " + safe_str_convert(lhs) + ", rhs = " + safe_str_convert(rhs))
+        rhs_str = safe_str_convert(rhs).strip()
         if (("write(" not in rhs_str.lower()) and ("writetext(" not in rhs_str.lower())):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Not a Write() call.")
             return False
         
         # Is this a Write() being called on an ADODB.Stream object?
-        lhs_str = str(lhs)
+        lhs_str = safe_str_convert(lhs)
         if ((lhs_str.lower() != "ADODB.Stream".lower()) and
             (not lhs_str.lower().startswith("cdo.message."))):
 
@@ -1437,10 +1719,10 @@ class MemberAccessExpression(VBA_Object):
 
             # Look for ADODB.Stream in a variable from a subfield.
             for field in self.rhs[:-1]:
-                lhs_orig += "." + str(field)
+                lhs_orig += "." + safe_str_convert(field)
 
             # Are we referencing a stream contained in a variable?        
-            if (str(eval_arg(lhs_orig, context)) == str(lhs_orig)):
+            if (safe_str_convert(eval_arg(lhs_orig, context)) == safe_str_convert(lhs_orig)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Done (2).")
                 return False
@@ -1448,13 +1730,10 @@ class MemberAccessExpression(VBA_Object):
         # Pull out the text to write to the text stream.
         txt = None
         rhs_val = eval_arg(rhs.params[0], context)
-        try:
-            txt = str(rhs_val)
-        except UnicodeEncodeError:
-            txt = ''.join(filter(lambda x:x in string.printable, rhs_val))
+        txt = safe_str_convert(rhs_val)
 
         # This may be doing a base64 conversion. Handle that.
-        if (".GetEncodedContentStream.WriteText(" in str(self)):
+        if (".GetEncodedContentStream.WriteText(" in safe_str_convert(self)):
 
             # See if the content type is base64.
             type_name = lhs_str[:lhs_str.index("GetEncodedContentStream")] + "ContentTransferEncoding"
@@ -1474,7 +1753,7 @@ class MemberAccessExpression(VBA_Object):
         # We are appending the written data to whatever is already there.
 
         # Save based on the variable name.
-        var_name = str(lhs_orig) + ".ReadText"
+        var_name = safe_str_convert(lhs_orig) + ".ReadText"
         if (not context.contains(var_name)):
             context.set(var_name, "", force_global=True)
         final_txt = context.get(var_name) + txt
@@ -1490,18 +1769,19 @@ class MemberAccessExpression(VBA_Object):
         # We handled the write.
         return True
 
-    def _handle_excel_read(self, context, rhs):
-        """
-        Handle Excel reads like worksheets.cells(1,2).
-        """
-
-        # Evaluate the Cells() call.
-        #r = eval_arg(rhs, context)
-        return None
-
     def _handle_0_arg_call(self, context, rhs=None):
-        """
-        Handle calls to 0 argument functions.
+        """Handle calls to 0 argument functions.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param rhs (any) The rightmost item NN in the member access
+        expression N1.N2...NN.
+
+        @return (any) The value of emulating the 0 argument function
+        call if this is a 0 argument function call, None if not.
+
         """
 
         # Get the last item in the member access, if needed.
@@ -1513,9 +1793,9 @@ class MemberAccessExpression(VBA_Object):
         
         # Got possible function name?
         if (((not isinstance(rhs, str)) and (not isinstance(rhs, SimpleNameExpression))) or
-            (not context.contains(str(rhs)))):
+            (not context.contains(safe_str_convert(rhs)))):
             return None
-        func = context.get(str(rhs))
+        func = context.get(safe_str_convert(rhs))
         if ((not isinstance(func, procedures.Sub)) and
             (not isinstance(func, procedures.Function)) and
             (not isinstance(func, VbaLibraryFunc))):
@@ -1535,17 +1815,29 @@ class MemberAccessExpression(VBA_Object):
             log.debug('evaluating function %r' % func)
         r = func.eval(context)
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('evaluated function %r = %r' % (str(func), r))
+            log.debug('evaluated function %r = %r' % (safe_str_convert(func), r))
         return r
 
     def _handle_loadxml(self, context, load_xml_result):
-        """
-        Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is 
-        specifically targeting BASE64 XML elements used for base64 decoding.
+        """Handle things like kXMeYOrbWn.LoadXML(VuvMyknuKxHFAK). This is
+        specifically targeting BASE64 XML elements used for base64
+        decoding. The context will be updated with synthetic variables
+        representing the loaded value.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param load_xml_result (str) The XML or base64 being loaded
+        into the object on the LHS of the member access expression.
+
+        @return (boolean) True if this is a LoadXML() method call,
+        False if not.
+
         """
 
         # Is this a call to LoadXML()?
-        memb_str = str(self)
+        memb_str = safe_str_convert(self)
         if (".LoadXML(" not in memb_str):
             return False
 
@@ -1564,14 +1856,24 @@ class MemberAccessExpression(VBA_Object):
         return True
 
     def _handle_savetofile(self, context, filename):
-        """
-        Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+        """Handle things like TvfSKqpfj.SaveToFile oFyFLFCozNUyE, 2.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param filename (str) The name of the file in which data is
+        being saved.
+
+        @return (boolean) True if this is a SaveToFile() method call,
+        False if not.
+
         """
 
         # Is this a call to SaveToFile()?
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("_handle_savetofile(): filename = " + str(filename) + ", self = " + str(self))
-        memb_str = str(self)
+            log.debug("_handle_savetofile(): filename = " + safe_str_convert(filename) + ", self = " + safe_str_convert(self))
+        memb_str = safe_str_convert(self)
         if (".savetofile(" not in memb_str.lower()):
             return False
 
@@ -1587,7 +1889,7 @@ class MemberAccessExpression(VBA_Object):
                 log.debug("var_name '" + var_name + "' not found.")
 
         # If we did not get it from .ReadText try it from .Text
-        if (val == None):
+        if (val is None):
             var_name = memb_str[:memb_str.lower().index(".savetofile")] + ".text"
             # Microsoft.XMLDOM.CreateObject('Adodb.Stream').SaveToFile(...
             if ("CreateObject(" in var_name):
@@ -1637,29 +1939,42 @@ class MemberAccessExpression(VBA_Object):
             context.set(var_name, "")
             
         except Exception as e:
-            log.error("Writing " + fname + " failed. " + str(e))
+            log.error("Writing " + fname + " failed. " + safe_str_convert(e))
             return False
         
         # Done.
         return True
 
     def _handle_path_access(self):
+        """See if this is accessing the Path field of a file/folder object.
+
+        @return (str) A fake path if this is a .path field access,
+        None if not.
+
         """
-        See if this is accessing the Path field of a file/folder object.
-        """
-        tmp = str(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
+        tmp = safe_str_convert(self.rhs).lower().replace("'", "").replace("[", "").replace("]", "")
         if (tmp == "path"):
 
             # Fake a path.
             return "C:\\Users\\admin\\"
 
+        # No path.
+        return None
+        
     def _handle_indexed_form_access(self, context):
-        """
-        See if this is accessing a control in a form by index.
+        """See if this is accessing a control in a form by index.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The text value for the form if this is an
+        indexed form access, None if not.
+
         """
 
         # ex. form1.Controls('0').ControlTipText
-        self_str = str(self)
+        self_str = safe_str_convert(self)
         if (".Controls(" not in self_str):
             return None
 
@@ -1692,10 +2007,12 @@ class MemberAccessExpression(VBA_Object):
                 index = index.eval(context)
             index = int(index)
 
-        except ParseException:
-            log.error("Parse error. Cannot evaluate '" + index + "'")
+        except ParseException as e:
+            log.error("Parse error. Cannot evaluate '" + index + "'. " + safe_str_convert(e))
             return None
-        except:
+        except Exception as e:
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("(2) Index problems. " + safe_str_convert(e))
             return None
 
         # Is the control index in bounds?
@@ -1706,30 +2023,41 @@ class MemberAccessExpression(VBA_Object):
         control_val = control_vals[index]
         if ((not isinstance(self.rhs, list)) or (len(self.rhs) < 2)):
             return None
-        field = str(self.rhs[1]).lower()
+        field = safe_str_convert(self.rhs[1]).lower()
         if (field not in control_val):
             return None
         r = control_val[field]
         return r
 
     def _handle_regex_execute(self, context, tmp_lhs):
-        """
-        Handle application of a RegEx object to a string via the RegEx object's Execute() method.
+        """Handle application of a RegEx object to a string via the RegEx
+        object's Execute() method.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (list) The results of doing the regex string search if
+        this is a Regex Execute() method call, None if not.
+
         """
 
         # Is this dealing with a RegEx object?
-        if (str(tmp_lhs).lower() != "vbscript.regexp"):
+        if (not safe_str_convert(tmp_lhs).lower().endswith("regexp")):
             return None
 
         # Are we calling the Execute() method?
-        if (".Execute(" not in str(self)):
+        if (".Execute(" not in safe_str_convert(self)):
             return None
 
         # We are doing a regex execute. Pull out the regex pattern and string
         # to which to apply the regex.
 
         # Get pattern.
-        pat_var = str(self.lhs).lower() + ".pattern"
+        pat_var = safe_str_convert(self.lhs).lower() + ".pattern"
         pat = None
         try:
             pat = context.get(pat_var)
@@ -1755,11 +2083,91 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # Find all the regex matches in the string.
-        r = re.findall(pat, mod_str)
+        r = None
+        try:
+            r = re.findall(pat, mod_str)
+        except Exception as e:
+            log.error("Regex.Execute() failed. " + safe_str_convert(e))
         return r
+
+    def _handle_regex_test(self, context, tmp_lhs):
+        """Handle application of a RegEx object to a string via the RegEx
+        object's Test() method.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (boolean) The results of doing the regex string test if
+        this is a Regex Test() method call, None if not.
+
+        """
+
+        # Is this dealing with a RegEx object?
+        if (not safe_str_convert(tmp_lhs).lower().endswith("regexp")):
+            return None
+
+        # Are we calling the Test() method?
+        if (".Test(" not in safe_str_convert(self)):
+            return None
+
+        # We are doing a regex execute. Pull out the regex pattern and string
+        # to which to apply the regex.
+
+        # Get pattern.
+        pat_var = safe_str_convert(self.lhs).lower() + ".pattern"
+        pat = None
+        try:
+            pat = context.get(pat_var)
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Get string.
+        tmp_rhs = self.rhs
+        if (isinstance(tmp_rhs, list) and (len(tmp_rhs) > 0)):
+            tmp_rhs = tmp_rhs[0]
+        if ((not isinstance(tmp_rhs, Function_Call)) or
+            (tmp_rhs.name != "Test")):
+            return None
+        mod_str = tmp_rhs.params[0]
+        try:
+            str_val = context.get(mod_str)
+            mod_str = str_val
+        except KeyError:
+
+            # Don't have a pattern.
+            return None
+
+        # Return whether the regex matches.
+        r = None
+        try:
+            r = re.search(safe_str_convert(pat), safe_str_convert(mod_str))
+        except Exception as e:
+            log.error("Regex.Test() failed. " + safe_str_convert(e))
+            return None
+        return (r is not None)
         
     def _read_member_expression_as_var(self, context, tmp_lhs):
+        """See if we can read a variable with the same name as the member
+        access expression.
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (list) The value of the variable with a name like the
+        member access expression if found in the context, None if not.
+
+        """
+        
         # Reading a field from a dict?
         #print "CHECK DICT"
         #print tmp_lhs
@@ -1767,7 +2175,7 @@ class MemberAccessExpression(VBA_Object):
         if (isinstance(tmp_lhs, dict)):
 
             # Do we have the needed field?
-            key = str(self.rhs).replace("[", "").replace("]", "").replace("'", "")
+            key = safe_str_convert(self.rhs).replace("[", "").replace("]", "").replace("'", "")
             if (key.lower() in tmp_lhs.keys()):
 
                 # Return the field value.
@@ -1782,23 +2190,23 @@ class MemberAccessExpression(VBA_Object):
                     return tmp_lhs[key.lower()]
 
         # Value of an Excel cell, not represented as a dict?
-        tmp_str = str(self).lower()
+        tmp_str = safe_str_convert(self).lower()
         if (tmp_str.endswith(".value")):
         
             # If the variable we are accessing .Value in is in the
             # context just return the variable value.
-            tmp_var = str(self)[:-len(".value")]
+            tmp_var = safe_str_convert(self)[:-len(".value")]
             if (context.contains(tmp_var)):
                 r = context.get(tmp_var)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Got .Value of " + str(self) + " = " + str(r))
+                    log.debug("Got .Value of " + safe_str_convert(self) + " = " + safe_str_convert(r))
                 return r
                 
         # Easiest case. Do we have this saved as a variable?
         try:
-            r = context.get(str(self), search_wildcard=False)
+            r = context.get(safe_str_convert(self), search_wildcard=False)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+                log.debug("Member access " + safe_str_convert(self) + " stored as variable = " + safe_str_convert(r))
             return r
         except KeyError:
 
@@ -1809,9 +2217,9 @@ class MemberAccessExpression(VBA_Object):
 
                 # See if a wildcard search can find it.
                 try:
-                    r = context.get(str(self), search_wildcard=True)
+                    r = context.get(safe_str_convert(self), search_wildcard=True)
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("Member access " + str(self) + " stored as wildcarded variable = " + str(r))
+                        log.debug("Member access " + safe_str_convert(self) + " stored as wildcarded variable = " + safe_str_convert(r))
                     return r
                 except KeyError:
                     pass
@@ -1833,7 +2241,7 @@ class MemberAccessExpression(VBA_Object):
                 memb_str += "."
             first = False
             if (not isinstance(expr, Function_Call)):
-                memb_str += str(expr)
+                memb_str += safe_str_convert(expr)
                 continue
 
             # Evaluate the arguments of the function call to use in the member access string
@@ -1841,7 +2249,7 @@ class MemberAccessExpression(VBA_Object):
             evaled_params = eval_args(expr.params, context)
 
             # Add in the func call with the resolved args to the member access string.
-            func_str = str(expr.name) + "("
+            func_str = safe_str_convert(expr.name) + "("
             func_first = True
             for param in evaled_params:
                 if (not func_first):
@@ -1850,8 +2258,8 @@ class MemberAccessExpression(VBA_Object):
                 if (isinstance(param, float)):
                     param = int(param)
                 if (isinstance(param, int)):
-                    param = "'" + str(param) + "'"
-                func_str += coerce_to_str(param)
+                    param = "'" + safe_str_convert(param) + "'"
+                func_str += vba_conversion.coerce_to_str(param)
             func_str += ")"
             memb_str += func_str
                         
@@ -1860,7 +2268,7 @@ class MemberAccessExpression(VBA_Object):
         try:
             r = context.get(memb_str, search_wildcard=False)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+                log.debug("Member access " + safe_str_convert(self) + " stored as variable = " + safe_str_convert(r))
             return r
         except KeyError:
             pass
@@ -1871,7 +2279,7 @@ class MemberAccessExpression(VBA_Object):
             try:
                 r = context.get(tmp_str, search_wildcard=False)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Member access " + str(self) + " stored as variable = " + str(r))
+                    log.debug("Member access " + safe_str_convert(self) + " stored as variable = " + safe_str_convert(r))
                 return r
             except KeyError:
                 pass
@@ -1880,8 +2288,15 @@ class MemberAccessExpression(VBA_Object):
         return None
 
     def _handle_usedrange_call(self, context):
-        """
-        Handle things like ActiveSheet.UsedRange or Sheets(a).UsedRange.
+        """Handle things like ActiveSheet.UsedRange or Sheets(a).UsedRange.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (list) The Excel cells in the used range if this is a
+        UsedRange field access, None if not.
+
         """
 
         # UsedRange call?
@@ -1890,7 +2305,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs1
         else:
             rhs = self.rhs[len(self.rhs) - 1]
-        if (str(rhs) != "UsedRange"):
+        if (safe_str_convert(rhs) != "UsedRange"):
             return None
 
         # Is a specific sheet given?
@@ -1905,7 +2320,7 @@ class MemberAccessExpression(VBA_Object):
             new_usedrange = function_call.parseString("UsedRange()", parseAll=True)[0]
             new_usedrange.params = []
         except ParseException as e:
-            log.error("Parsing synthetic UsedRange() failed. " + str(e))
+            log.error("Parsing synthetic UsedRange() failed. " + safe_str_convert(e))
             return None
         if (sheet is not None):
             new_usedrange.params.append(sheet)
@@ -1914,14 +2329,27 @@ class MemberAccessExpression(VBA_Object):
         return eval_arg(new_usedrange, context)
     
     def _eval_cell_range(self, context, just_expr=False):
-        """
-        Evaluate a member access expression that results in a range of Excel cells.
+        """Evaluate a member access expression that results in a range of
+        Excel cells.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param just_expr (boolean) If true just return the unevaluated
+        expression representing the cell range, if False evaulte the
+        expression and return the actual list of Excel cells.
+
+        @return (VBA_Object object or list) The expression to get the
+        cells or the Excel cells if this is an Excel cell range access
+        expression, None if not.
+
         """
 
         # Pull out just the cell range expression.
-        range_exp_str = str(self.lhs).replace("'", "")
+        range_exp_str = safe_str_convert(self.lhs).replace("'", "")
         for exp in self.rhs[:-1]:
-            range_exp_str += "." + str(exp).replace("'", "")
+            range_exp_str += "." + safe_str_convert(exp).replace("'", "")
         cells = None
         try:
 
@@ -1937,12 +2365,20 @@ class MemberAccessExpression(VBA_Object):
             log.warning("Parse error. Cannot parse cell range expression '" + range_exp_str + "'")            
             return None
         except Exception as e:
-            log.error("Cannot eval cell range expression '" + range_exp_str + "'. " + str(e))
+            log.error("Cannot eval cell range expression '" + range_exp_str + "'. " + safe_str_convert(e))
             return None
         
     def _handle_specialcells_call(self, context):
-        """
-        Handle things like ActiveSheet.UsedRange.SpecialCells(xlCellTypeConstants)
+        """Handle things like
+        ActiveSheet.UsedRange.SpecialCells(xlCellTypeConstants).
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (list) The Excel cells if this is a SpecialCells()
+        method call, None if not.
+
         """
 
         # Do we have a SpecialCells() method call?
@@ -1971,9 +2407,10 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _eval_nested_methods(self, context):
-        """
-        Given a member access expression like foo(1).bar(2).baz(3)
-        evaluate this as nested function calls (conceptually) like baz(3, bar(2, foo(1))).
+        """Given a member access expression like foo(1).bar(2).baz(3)
+        evaluate this as nested function calls (conceptually) like
+        baz(3, bar(2, foo(1))).
+
         """
 
         # Convert this to nested function calls
@@ -1993,13 +2430,24 @@ class MemberAccessExpression(VBA_Object):
         return r
 
     def _handle_stringbuilder_method(self, context, lhs_val):
-        """
-        Handle string builder object appends like 'foo.Append_3 "aaa"' and
+        """Handle string builder object appends like 'foo.Append_3 "aaa"' and
         string builder string conversions like 'foo.ToString'.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param lhs_val (any) The evaluated LHS of the member access
+        expression.
+
+        @return (any) The result of the stringbuilder append or
+        tostring operation if this one of those operations, None if
+        not.
+
         """
 
         # Is the LHS a StringBuilder object?
-        if (not str(lhs_val).lower().endswith("stringbuilder")):
+        if (not safe_str_convert(lhs_val).lower().endswith("stringbuilder")):
             return None
 
         # We are doing something with a StringBuilder object.
@@ -2008,11 +2456,11 @@ class MemberAccessExpression(VBA_Object):
         rhs = self.rhs
         if (isinstance(rhs, list)):
             rhs = rhs[0]
-        if (isinstance(rhs, Function_Call) and (str(rhs.name) == "Append_3")):
+        if (isinstance(rhs, Function_Call) and (safe_str_convert(rhs.name) == "Append_3")):
 
             # We save the stringbuilder buffer with a synthetic
             # variable.
-            synth_var = str(self.lhs) + ".__BUFFER__"
+            synth_var = safe_str_convert(self.lhs) + ".__BUFFER__"
 
             # Get the current buffer value.
             buffer_val = ""
@@ -2032,11 +2480,11 @@ class MemberAccessExpression(VBA_Object):
             return buffer_val
 
         # Getting the string builder as a string?
-        if (str(rhs) == "ToString"):
+        if (safe_str_convert(rhs) == "ToString"):
 
             # We save the stringbuilder buffer with a synthetic
             # variable.
-            synth_var = str(self.lhs) + ".__BUFFER__"
+            synth_var = safe_str_convert(self.lhs) + ".__BUFFER__"
 
             # Get the current buffer value.
             buffer_val = ""
@@ -2048,25 +2496,121 @@ class MemberAccessExpression(VBA_Object):
                 
         return None
 
+    def _handle_function_call(self, context, rhs, tmp_lhs):
+        """Handle various types of function calls that can appear as the
+        rightmost component of a N1.N2...NN() member access
+        expression.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param rhs (any) The rightmost item NN in the member access
+        expression N1.N2...NN.
+
+        @param tmp_lhs (any) The evaulated leftmost element of the
+        N1.N2...NN() member access expression.
+
+        @return (any) The result of the leftmost function call if it
+        is a handled function call, None if not.
+
+        """
+
+        # Handle the RHS of the member access expression being a
+        # method (function) call.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('rhs ' + safe_str_convert(rhs) + ' is a Function_Call')
+
+        # Skip local functions that have a name collision with VBA built in functions.
+        #print "HERE: 28"
+        rhs_name = safe_str_convert(rhs)
+        if (hasattr(rhs, "name")):
+            rhs_name = rhs.name
+        if (context.contains_user_defined(rhs_name)):
+            for func in Function_Call.log_funcs:
+                if (rhs_name.lower() == func.lower()):
+                    #print "OUT: 23"
+                    return safe_str_convert(self)
+
+        # Handle things like foo.Replace(bar, baz).
+        #print "HERE: 29"
+        call_retval = self._handle_replace(context, tmp_lhs, self.rhs)
+        if (call_retval is not None):
+            #print "OUT: 24"
+            return call_retval
+
+        # Handle things like foo.Add(bar, baz).
+        #print "HERE: 30"
+        call_retval = self._handle_add(context, tmp_lhs, self.rhs)
+        if (call_retval is not None):
+            #print "OUT: 25"
+            return call_retval
+
+        # Handle things like foo.AddItem(bar).
+        #print "HERE: 31"
+        call_retval = self._handle_listbox_additem(context, tmp_lhs, self.rhs)
+        if (call_retval is not None):
+            #print "OUT: 25.1"
+            return call_retval
+
+        # Handle things like foo.Exists(bar).
+        #print "HERE: 32"
+        call_retval = self._handle_exists(context, tmp_lhs, self.rhs)
+        if (call_retval is not None):
+            #print "OUT: 25.1"
+            return call_retval
+                    
+        # This is not a builtin. Evaluate it
+        tmp_rhs = eval_arg(rhs, context)
+
+        # Was this a call to LoadXML()?
+        #print "HERE: 34"
+        if (self._handle_loadxml(context, tmp_rhs)):
+            #print "OUT: 27"
+            return "NULL"
+
+        # Was this a call to SaveToFile()?
+        #print "HERE: 35"
+        if (self._handle_savetofile(context, tmp_rhs)):
+            #print "OUT: 28"
+            return "NULL"
+
+        # It was a regular call.
+        #print "OUT: 29"
+        #print "HERE: 36"
+        return tmp_rhs
+
     def _handle_parentdirectory(self, context):
         """Handle reading the ParentFolder property for things like
         undertakesPurposes.GetSpecialFolder(2).ParentFolder.
 
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) The value of the PathFolder property if that is
+        what we have, None if not.
+
         """
 
         # Reading the ParentFolder?
-        self_str = str(self).strip()
+        self_str = safe_str_convert(self).strip()
         if (not self_str.endswith(".ParentFolder")):
             return None
 
         # Get the child folder.
         child_folder = ""
         if (isinstance(self.rhs, list) and (len(self.rhs) > 1)):
-            child_folder = str(eval_arg(self.rhs[-2], context))
+            child_folder = safe_str_convert(eval_arg(self.rhs[-2], context))
         return child_folder + "\.."
 
     def _handle_exec(self, context):
-        """Handle calling the WSCriptShell Exec() method.
+        """Handle calling the WSCriptShell Exec() method. The executed command
+        will be saved in the actions in the context.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
 
         """
 
@@ -2074,13 +2618,14 @@ class MemberAccessExpression(VBA_Object):
         # be tracked in the context.
         if (isinstance(self.rhs, list) and
             (len(self.rhs) > 0) and
-            (str(self.rhs[0]).startswith("Exec("))):
+            (safe_str_convert(self.rhs[0]).startswith("Exec("))):
             eval_arg(self.rhs[0], context)            
     
     def eval(self, context, params=None):
-
+        params = params # pylint warning
+        
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("MemberAccess eval of " + str(self))
+            log.debug("MemberAccess eval of " + safe_str_convert(self))
 
         # Pull out the left hand side of the member access.
         #print "MEMBER!!"
@@ -2142,7 +2687,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = self.rhs1
         else:
             rhs = self.rhs[len(self.rhs) - 1]
-            if ((str(rhs) == "Text") and (len(self.rhs) > 1)):
+            if ((safe_str_convert(rhs) == "Text") and (len(self.rhs) > 1)):
                 rhs = self.rhs[len(self.rhs) - 2]
 
         # Figure out if we are calling a function.
@@ -2150,12 +2695,12 @@ class MemberAccessExpression(VBA_Object):
         calling_func = isinstance(rhs, Function_Call)
         if (not calling_func):
             try:
-                func = context.get(str(rhs), search_wildcard=False)
+                func = context.get(safe_str_convert(rhs), search_wildcard=False)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Member access " + str(self) + " got RHS = " + str(func))
-                calling_func = (isinstance(func, procedures.Function) or isinstance(func, procedures.Sub))
+                    log.debug("Member access " + safe_str_convert(self) + " got RHS = " + safe_str_convert(func))
+                calling_func = isinstance(func, (procedures.Function, procedures.Sub))
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Member access " + str(self) + " calling function = " + str(calling_func))
+                    log.debug("Member access " + safe_str_convert(self) + " calling function = " + safe_str_convert(calling_func))
             except KeyError:
                 pass
 
@@ -2225,7 +2770,7 @@ class MemberAccessExpression(VBA_Object):
         # Handle accessing document variables as a special case.
         #print "HERE: 15"
         if (not calling_func):
-            call_retval = self._handle_docvars_read(context)
+            call_retval = self.handle_docvars_read(context)
             if (call_retval is not None):
                 #print "OUT: 11"
                 return call_retval
@@ -2253,7 +2798,7 @@ class MemberAccessExpression(VBA_Object):
                         
         # Handle getting the .Count of a data collection..
         #print "HERE: 19"
-        call_retval = self._handle_count(context, tmp_lhs)
+        call_retval = self._handle_count(tmp_lhs)
         if (call_retval is not None):
             #print "OUT: 16"
             return call_retval
@@ -2270,6 +2815,14 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_regex_execute(context, tmp_lhs)
         if (call_retval is not None):
             #print "OUT: 18"
+            return call_retval
+
+        # Handle Regex object applications.
+        #print "HERE: 21.1"
+        call_retval = self._handle_regex_test(context, tmp_lhs)
+        if (call_retval is not None):
+            #print "OUT: 18.1"
+            #print call_retval
             return call_retval
 
         # Handle simple 0-argument function calls.
@@ -2325,96 +2878,36 @@ class MemberAccessExpression(VBA_Object):
         # it as a fancy variable access.
         #print "HERE: 27"
         if (calling_func):
-            if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('rhs {!r} is a Function_Call'.format(rhs))
+            return self._handle_function_call(context, rhs, tmp_lhs)
 
-            # Skip local functions that have a name collision with VBA built in functions.
-            #print "HERE: 28"
-            rhs_name = str(rhs)
-            if (hasattr(rhs, "name")):
-                rhs_name = rhs.name
-            if (context.contains_user_defined(rhs_name)):
-                for func in Function_Call.log_funcs:
-                    if (rhs_name.lower() == func.lower()):
-                        #print "OUT: 23"
-                        return str(self)
-
-            # Handle things like foo.Add(bar, baz).
-            #print "HERE: 30"
-            call_retval = self._handle_add(context, tmp_lhs, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 25"
-                return call_retval
-
-            # Handle things like foo.AddItem(bar).
-            #print "HERE: 31"
-            call_retval = self._handle_listbox_additem(context, tmp_lhs, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 25.1"
-                return call_retval
-
-            # Handle things like foo.Exists(bar).
-            #print "HERE: 32"
-            call_retval = self._handle_exists(context, tmp_lhs, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 25.1"
-                return call_retval
-
-            # Handle Excel cells() references.
-            #print "HERE: 33"
-            call_retval = self._handle_excel_read(context, self.rhs)
-            if (call_retval is not None):
-                #print "OUT: 26"
-                return call_retval
-                    
-            # This is not a builtin. Evaluate it
-            tmp_rhs = eval_arg(rhs, context)
-
-            # Was this a call to LoadXML()?
-            #print "HERE: 34"
-            if (self._handle_loadxml(context, tmp_rhs)):
-                #print "OUT: 27"
-                return "NULL"
-
-            # Was this a call to SaveToFile()?
-            #print "HERE: 35"
-            if (self._handle_savetofile(context, tmp_rhs)):
-                #print "OUT: 28"
-                return "NULL"
-
-            # It was a regular call.
-            #print "OUT: 29"
-            #print "HERE: 36"
-            return tmp_rhs
-
-        # Arracy access of function call as the RHS?
+        # Array access of function call as the RHS?
         elif (isinstance(rhs, Function_Call_Array_Access)):
 
             # Just evaluate and return the array access.
             #print "HERE: 37"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('rhs {!r} is a Function_Call_Array_Access'.format(rhs))
+                log.debug('rhs ' + safe_str_convert(rhs) + ' is a Function_Call_Array_Access')
             tmp_rhs = eval_arg(rhs, context)
             #print "OUT: 30"
             return tmp_rhs
             
         # Did the lhs resolve to something new?
-        elif (str(self.lhs) != str(tmp_lhs)):
+        elif (safe_str_convert(self.lhs) != safe_str_convert(tmp_lhs)):
 
             # Is this a read from an Excel cell?
             # TODO: Need to do this logic based on what IS an Excel read rather
             # than what IS NOT an Excel read.
-            #print "HERE: 38"
-            if (((isinstance(tmp_lhs, str)) or (isinstance(tmp_lhs, SimpleNameExpression))) and
-                (str(tmp_lhs) != "NULL") and
-                (not "Shapes(" in str(tmp_lhs)) and
-                (not "Close" in str(self.rhs)) and
-                (not context.contains(str(self.lhs)))):
+            #print "HERE: 38"            
+            if ((isinstance(tmp_lhs, (SimpleNameExpression, str))) and
+                (safe_str_convert(tmp_lhs) != "NULL") and
+                ("Shapes(" not in safe_str_convert(tmp_lhs)) and
+                ("Close" not in safe_str_convert(self.rhs)) and
+                (not context.contains(safe_str_convert(self.lhs)))):
 
                 # Just work with the returned string value.
                 #print "OUT: 31"
                 #print "HERE: 39"
-                return str(tmp_lhs)
+                return safe_str_convert(tmp_lhs)
 
             # See if this is reading a doc var name or item.
             #print "HERE: 40"
@@ -2444,7 +2937,7 @@ class MemberAccessExpression(VBA_Object):
 
             # Are we reading the text of an object that we resolved?
             #print "HERE: 44"
-            if (((str(self.rhs) == "['Text']") or (str(self.rhs).lower() == "['value']")) and (isinstance(tmp_lhs, str))):
+            if (((safe_str_convert(self.rhs) == "['Text']") or (safe_str_convert(self.rhs).lower() == "['value']")) and (isinstance(tmp_lhs, str))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Returning .Text value.")
                 #print "OUT: 35"
@@ -2455,10 +2948,10 @@ class MemberAccessExpression(VBA_Object):
             
             # See if we can now resolve this to a doc var read.
             #print "HERE: 45"
-            call_retval = r._handle_docvars_read(context)
+            call_retval = r.handle_docvars_read(context)
             if (call_retval is not None):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("MemberAccess: Found " + str(r) + " = '" + str(call_retval) + "'") 
+                    log.debug("MemberAccess: Found " + safe_str_convert(r) + " = '" + safe_str_convert(call_retval) + "'") 
                 #print "OUT: 36"
                 return call_retval
 
@@ -2467,10 +2960,10 @@ class MemberAccessExpression(VBA_Object):
             tmp_rhs = eval_arg(rhs, context)
             var_pat = r"[A-za-z_0-9]+"
             if ((tmp_rhs != rhs) and
-                ((re.match(var_pat, str(tmp_lhs)) is not None) or
-                 (str(tmp_lhs).lower().endswith(".application"))) and
+                ((re.match(var_pat, safe_str_convert(tmp_lhs)) is not None) or
+                 (safe_str_convert(tmp_lhs).lower().endswith(".application"))) and
                 (tmp_rhs != "NULL") and
-                ("vipermonkey.core.vba_library" not in str(type(tmp_rhs)))):
+                ("vipermonkey.core.vba_library" not in safe_str_convert(type(tmp_rhs)))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Resolved member access variable.")
                 #print "OUT: 37"
@@ -2479,7 +2972,7 @@ class MemberAccessExpression(VBA_Object):
             # Cannot resolve directly. Return the member access object.
             #print "HERE: 47"
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("MemberAccess: Return new access object " + str(r))
+                log.debug("MemberAccess: Return new access object " + safe_str_convert(r))
             #print "OUT: 38"
             return r
 
@@ -2495,6 +2988,7 @@ class MemberAccessExpression(VBA_Object):
             #print "HERE: 49"
             return eval_arg(self.__repr__(), context)
         
+
 # need to use Forward(), because the definition of l-expression is recursive:
 l_expression = Forward()
 
@@ -2511,12 +3005,15 @@ member_object_limited = (
     + NotAny("!")
 )
 # If the member is a function, it cannot be the last member, otherwise this line is considered a Call_Statement.
-member_object_loose = Suppress(Literal("(")) + ((func_call_array_access_limited ^ function_call_limited) | member_object_limited) + Suppress(Literal(")")) | \
+member_object_loose = Suppress(Literal("(")) + \
+                      ((func_call_array_access_limited ^ function_call_limited) | member_object_limited) + \
+                      Suppress(Literal(")")) | \
                       ((func_call_array_access_limited ^ function_call_limited) | member_object_limited)
 member_object_strict = Suppress(Optional(".")) + NotAny(reserved_identifier) + member_object_loose
 
 # TODO: Just use delimitedList is the "lhs"/"rhs" neccessary?
-member_access_expression = Group(Group(member_object_strict("lhs") + OneOrMore((Suppress(".") | Suppress("!")) + member_object_loose("rhs"))))
+member_access_expression = Group(Group(member_object_strict("lhs") + \
+                                       OneOrMore((Suppress(".") | Suppress("!")) + member_object_loose("rhs"))))
 member_access_expression.setParseAction(MemberAccessExpression)
 
 
@@ -2587,8 +3084,11 @@ addressof_expression = CaselessKeyword("addressof").suppress() + procedure_point
 argument_expression = (Optional(CaselessKeyword("byval")) + expression) | addressof_expression
 
 class NamedArgument(VBA_Object):
+    """Handle named arguments like 'foo := 12' to functions/subs.
 
-    def __init__(self, original_str, location, tokens, name=None):
+    """
+    
+    def __init__(self, original_str, location, tokens):
         super(NamedArgument, self).__init__(original_str, location, tokens)
 
         self.name = tokens.name
@@ -2600,12 +3100,14 @@ class NamedArgument(VBA_Object):
         return '%s:=%s' % (self.name, self.value)
 
     def eval(self, context, params=None):
+        params = params # pylint warning
         try:
             return eval_arg(self.value, context)
-        except:
-            log.error("NamedArgument: Cannot eval " + self.__repr__() + ".")
+        except Exception as e:
+            log.error("NamedArgument: Cannot eval " + self.__repr__() + ". " + safe_str_convert(e))
             return ''
     
+
 named_argument = unrestricted_name('name') + Suppress(":=") + argument_expression('value')
 named_argument.setParseAction(NamedArgument)
 named_argument_list = delimitedList(named_argument)
@@ -2657,6 +3159,9 @@ dictionary_access_expression = l_expression + Suppress("!") + unrestricted_name
 # MS-GRAMMAR: with-dictionary-access-expression = "!" unrestricted-name
 
 class With_Member_Expression(VBA_Object):
+    """Handle field references in With statements like '.foo'.
+
+    """
     
     def __init__(self, original_str, location, tokens, old_call=None):
         super(With_Member_Expression, self).__init__(original_str, location, tokens)
@@ -2666,7 +3171,7 @@ class With_Member_Expression(VBA_Object):
             log.debug('parsed %r as With_Member_Expression' % self)
 
     def __repr__(self):
-        return "." + str(self.expr)
+        return "." + safe_str_convert(self.expr)
 
     def to_python(self, context, params=None, indent=0):
         indent = indent # pylint warning
@@ -2675,12 +3180,12 @@ class With_Member_Expression(VBA_Object):
         # based on Scripting.Dictionary. Is that what we have?
         with_dict = None
         if ((context.with_prefix_raw is not None) and
-            (context.contains(str(context.with_prefix_raw)))):
-            with_dict = context.get(str(context.with_prefix_raw))
+            (context.contains(safe_str_convert(context.with_prefix_raw)))):
+            with_dict = context.get(safe_str_convert(context.with_prefix_raw))
             if (with_dict == "__ALREADY_SET__"):
 
                 # Try getting the original value.
-                with_dict = context.get("__ORIG__" + str(context.with_prefix_raw))
+                with_dict = context.get("__ORIG__" + safe_str_convert(context.with_prefix_raw))
 
             # Got Scripting.Dictionary?
             if (not isinstance(with_dict, dict)):                
@@ -2691,7 +3196,7 @@ class With_Member_Expression(VBA_Object):
             return "ERROR: Only doing JIT on Scripting.Dictionary With blocks."
 
         # Is this a Scripting.Dictionary method call?
-        expr_str = str(self)
+        expr_str = safe_str_convert(self)
         if ((not expr_str.startswith(".Exists")) and
             (not expr_str.startswith(".Items")) and
             (not expr_str.startswith(".Item")) and
@@ -2703,7 +3208,7 @@ class With_Member_Expression(VBA_Object):
             return "(len(" + context.with_prefix_raw + ") - 1)"
 
         # Generate python for the dictionary method call.
-        tmp_var = SimpleNameExpression(None, None, None, name=str(context.with_prefix_raw))
+        tmp_var = SimpleNameExpression(None, None, None, name=safe_str_convert(context.with_prefix_raw))
         new_exists = Function_Call(None, None, None, old_call=self.expr)
         tmp = [tmp_var]
         for p in new_exists.params:
@@ -2713,20 +3218,27 @@ class With_Member_Expression(VBA_Object):
         return r
         
     def _handle_method_calls(self, context):
-        """
-        Handle Scripting.Dictionary...() calls.
+        """Handle Scripting.Dictionary...() calls in a With expression.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (any) Return the result of the scripting dictionary
+        method call if we have one, None if not.
+
         """
 
         # Is this a method call?
-        expr_str = str(self)
+        expr_str = safe_str_convert(self)
         if ((not expr_str.startswith(".Exists")) and (not expr_str.startswith(".Count"))):
             return None
 
         # Get the Dictionary if it is a With variable.
         if ((context.with_prefix_raw is None) or
-            (not context.contains(str(context.with_prefix_raw)))):
+            (not context.contains(safe_str_convert(context.with_prefix_raw)))):
             return None
-        with_dict = context.get(str(context.with_prefix_raw))
+        with_dict = context.get(safe_str_convert(context.with_prefix_raw))
 
         # Count? Not parsed as a function call...
         if (expr_str == ".Count"):
@@ -2744,7 +3256,7 @@ class With_Member_Expression(VBA_Object):
             tmp.append(p)
         new_exists.params = tmp
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Dictionary NNNNNN() func = " + str(new_exists))
+            log.debug("Dictionary NNNNNN() func = " + safe_str_convert(new_exists))
         
         # Evaluate the dictionary exists.
         r = new_exists.eval(context)
@@ -2795,8 +3307,9 @@ l_expression << (with_expression ^ member_access_expression ^ new_expression ^ m
 # --- FUNCTION CALL ---------------------------------------------------------
 
 class Function_Call(VBA_Object):
-    """
-    Function call within a VBA expression
+    """Handle function calls within a VBA expression like 'foo(2,3)' in
+    '12 + foo(2,3)'.
+
     """
 
     # List of interesting functions to log calls to.
@@ -2819,7 +3332,7 @@ class Function_Call(VBA_Object):
             return
 
         # Making a new one.
-        self.name = str(tokens.name)
+        self.name = safe_str_convert(tokens.name)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('Function_Call.name = %r' % self.name)
         assert isinstance(self.name, basestring)
@@ -2835,7 +3348,7 @@ class Function_Call(VBA_Object):
         array_pat = r"\w+\(.+\)"
         if ((self.name.lower() == "multibytetowidechar") and
             (len(self.params) == 6) and
-            (re.match(array_pat, str(self.params[2])) is not None) and
+            (re.match(array_pat, safe_str_convert(self.params[2])) is not None) and
             (isinstance(self.params[2], Function_Call))):
 
             # Turn this into just an access (hopefully) of an array variable.
@@ -2847,7 +3360,7 @@ class Function_Call(VBA_Object):
                 pass
             if (array is not None):
                 self.params[2] = array
-                log.warning("Rewrote MultiByteToWideChar() array reference '" + str(orig_array) + "' to '" + str(array) + "'.")
+                log.warning("Rewrote MultiByteToWideChar() array reference '" + safe_str_convert(orig_array) + "' to '" + safe_str_convert(array) + "'.")
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('Function_Call.params = %r' % self.params)
@@ -2861,9 +3374,97 @@ class Function_Call(VBA_Object):
             if (not first):
                 parms += ", "
             first = False
-            parms += str(parm)
+            parms += safe_str_convert(parm)
         return '%s(%r)' % (self.name, parms)
 
+    def _handle_dict_access(self, f, params):
+        """Handle something parsed as a call that is actually reading the
+        field in a dictionary.
+
+        @param f (dict or VBA_Object object) The resolved value of the
+        function being called (function object) or the resolved value
+        of the dict variable.
+
+        @param params (list) The resolved parameters for the function
+        call or dict access.
+
+        @return (any) The value returned from the dict lookup if
+        appropriate, None if not.
+
+        """
+
+        # Is this actually a hash lookup?
+        if (isinstance(f, dict) and (len(params) > 0)):
+
+            # We are accessing an element.
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Dict Access: %r[%r]' % (f, params[0]))
+            index = params[0]
+            if (index in f):
+                return f[index]
+            return "NULL"
+
+        # Not a hash lookup.
+        return None
+        
+    def _handle_array_access(self, context, f, params):
+        """Handle a thing that was parsed as a function call that is actually
+        an array access.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @param f (list or VBA_Object object) The resolved value of the
+        function being called (function object) or the resolved value
+        of the list (array) variable.
+
+        @param params (list) The resolved parameters for the function
+        call or list access.
+
+        @return (any) The value returned from the array access if
+        appropriate, None if not.
+
+        """
+        
+        # Is this actually an array access?
+        if (not isinstance(f, list)):
+            # No.
+            return None
+
+        # Do we want the whole array (ex. foo())?
+        if (len(params) == 0):
+            # Return whole array result.
+            return f
+        
+        # We are accessing an element.
+        tmp = f
+        # Try to guess whether we are accessing a character in a string.
+        # TODO: Revisit this.
+        #if ((len(f) == 1) and (isinstance(f[0], str))):
+        #    tmp = f[0]
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug('Array Access: %r[%r]' % (tmp, safe_str_convert(params)))
+        index = vba_conversion.int_convert(params[0])
+        index1 = None
+        if (len(params) > 1):
+            index1 = vba_conversion.int_convert(params[1])
+        try:
+            # Return array access result.
+            if (index1 is None):
+                r = tmp[index]
+            else:
+                r = tmp[index][index1]
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug('Returning: %r' % r)
+            return r
+        except Exception as e:
+
+            # Return error array access result.
+            msg = 'Array Access Failed: %r[%r] %r' % (tmp, safe_str_convert(params), safe_str_convert(e))
+            context.set_error(msg)
+            return 0        
+    
     def eval(self, context, params=None):
 
         # Save the unresolved argument values.
@@ -2871,7 +3472,7 @@ class Function_Call(VBA_Object):
         vba_library.var_names = self.params
         
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Function_Call: eval params: " + str(self.params))
+            log.debug("Function_Call: eval params: " + safe_str_convert(self.params))
 
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
@@ -2900,7 +3501,7 @@ class Function_Call(VBA_Object):
         # We will not report the calls of some functions.
         skip_report_functions = set(["cos", "tan"])
         #print "CALL!!"
-        if (str(self.name).lower() not in skip_report_functions):
+        if (safe_str_convert(self.name).lower() not in skip_report_functions):
             if (not context.throttle_logging):
                 log.info('calling Function: %s(%s)' % (self.name, str_params))
         
@@ -2909,7 +3510,7 @@ class Function_Call(VBA_Object):
         if (is_external):
 
             # Save the call as a reportable action.
-            context.report_action("External Call", self.name + "(" + str(params) + ")", self.name, strip_null_bytes=True)
+            context.report_action("External Call", self.name + "(" + safe_str_convert(params) + ")", self.name, strip_null_bytes=True)
 
             # Emulate the call.
             try:
@@ -2918,16 +3519,16 @@ class Function_Call(VBA_Object):
                     raise KeyError("func not found")
                 r = s.eval(context=context, params=params)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("External function " + str(s.name) + " returns " + str(r))
+                    log.debug("External function " + safe_str_convert(s.name) + " returns " + safe_str_convert(r))
                 return r
             except KeyError:
-                log.warning("External function " + str(self.name) + " not found.")
+                log.warning("External function " + safe_str_convert(self.name) + " not found.")
                 return "NULL"
 
         # pylint: disable=protected-access
         if self.name.lower() in context._log_funcs \
                 or any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs):
-            if ("Scripting.Dictionary" not in str(params)):
+            if ("Scripting.Dictionary" not in safe_str_convert(params)):
                 context.report_action(self.name, params, 'Interesting Function Call', strip_null_bytes=True)
         try:
 
@@ -2936,56 +3537,16 @@ class Function_Call(VBA_Object):
             f = context.get(self.name)
             
             # Is this actually a hash lookup?
-            if (isinstance(f, dict)):
-
-                # Are we accessing an element?
-                if (len(params) > 0):
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('Dict Access: %r[%r]' % (f, params[0]))
-                    index = params[0]
-                    if (index in f):
-                        return f[index]
-                    return "NULL"
+            tmp_r = self._handle_dict_access(f, params)
+            if (tmp_r is not None):
+                return tmp_r
             
             # Is this actually an array access?
-            if (isinstance(f, list)):
+            tmp_r = self._handle_array_access(context, f, params)
+            if (tmp_r is not None):
+                return tmp_r
 
-                # Are we accessing an element?
-                if (len(params) > 0):
-                    tmp = f
-                    # Try to guess whether we are accessing a character in a string.
-                    # TODO: Revisit this.
-                    #if ((len(f) == 1) and (isinstance(f[0], str))):
-                    #    tmp = f[0]
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug('Array Access: %r[%r]' % (tmp, str(params)))
-                    index = utils.int_convert(params[0])
-                    index1 = None
-                    if (len(params) > 1):
-                        index1 = utils.int_convert(params[1])
-                    try:
-
-                        # Return array access result.
-                        if (index1 is None):
-                            r = tmp[index]
-                        else:
-                            r = tmp[index][index1]
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug('Returning: %r' % r)
-                        return r
-                    except Exception as e:
-
-                        # Return error array access result.
-                        msg = 'Array Access Failed: %r[%r] %r' % (tmp, str(params), str(e))
-                        context.set_error(msg)
-                        return 0
-
-                # Looks like we want the whole array (ex. foo()).
-                else:
-
-                    # Return whole array result.
-                    return f
-                    
+            # Looks like an actual call.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Calling: %r' % f)
 
@@ -2996,85 +3557,87 @@ class Function_Call(VBA_Object):
                 if (isinstance(tmp_f, VbaLibraryFunc)):
                     f = tmp_f
 
-            # Emulate the action.
-            #print "WHERE: 4"
-            if (f is not None):
-                if (isinstance(f, (procedures.Function, procedures.Sub)) or
-                    ("vba_library." in str(type(f)))):
-                    try:
 
-                        # Call function.
-                        #print "WHERE: 5"
-                        r = f.eval(context=context, params=params)                        
-                        
-                        # Set the values of the arguments passed as ByRef parameters.
-                        #print "WHERE: 6"
-                        if (hasattr(f, "byref_params")):
-                            for byref_param_info in f.byref_params.keys():
-                                try:
-                                    arg_var_name = str(self.params[byref_param_info[1]])
-                                    if (context.contains(arg_var_name)):
-
-                                        # Don't overwrite functions.
-                                        if (not isinstance(f, (VbaLibraryFunc, procedures.Function, procedures.Sub))):
-                                            context.set(arg_var_name, f.byref_params[byref_param_info])
-                                except IndexError:
-                                    break
-
-                        # We are out of the called function, so if we exited the called function early
-                        # it does not apply to the current function.
-                        context.exit_func = False
-                                    
-                        # Return result.
-                        #print "WHERE: 7"
-                        return r
-
-                    except AttributeError as e:
-
-                        # Return result.
-                        log.error(str(f) + " has no eval() method. " + str(e))
-                        return f
-
-                # Misparsed addition?
-                elif ((isinstance(f, int)) and
-                      (len(params) == 1) and
-                      (isinstance(params[0], int))):
-                    return (f + params[0])
-
-                # Array access?
-                elif (len(params) > 0):
-
-                    # Looks like this is actually an array access.
-                    if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("Looks like array access.")
-                    try:
-
-                        # Return result.
-                        i = utils.int_convert(params[0])
-                        r = f[i]
-                        if (isinstance(f, str)):
-                            r = ord(r)
-                        if (log.getEffectiveLevel() == logging.DEBUG):
-                            log.debug("Return " + str(r))
-                        return r
-
-                    except Exception as e:
-
-                        # Return result.
-                        log.error("Array access %r[%r] failed. %r" % (f, params[0], str(e)))
-                        return 0
-            else:
+            # Got a function.
+            if (f is None):
 
                 # Return result.
                 log.error('Function %r resolves to None' % self.name)
                 return None
+            
+            # Emulate the action.
+
+            #print "WHERE: 4"
+            # Do we have a straight function call?
+            if (isinstance(f, (procedures.Function, procedures.Sub)) or
+                ("vba_library." in safe_str_convert(type(f)))):
+
+                # Can we evaluate this?
+                if (not hasattr(f, "eval")):
+                    log.error(safe_str_convert(f) + " has no eval() method.")
+                    return f
+
+                # Call function.
+                #print "WHERE: 5"
+                r = f.eval(context=context, params=params)                        
+                        
+                # Set the values of the arguments passed as ByRef parameters.
+                #print "WHERE: 6"
+                if (hasattr(f, "byref_params")):
+                    for byref_param_info in f.byref_params.keys():
+                        try:
+                            arg_var_name = safe_str_convert(self.params[byref_param_info[1]])
+                            if (context.contains(arg_var_name)):
+
+                                # Don't overwrite functions.
+                                if (not isinstance(f, (VbaLibraryFunc, procedures.Function, procedures.Sub))):
+                                    context.set(arg_var_name, f.byref_params[byref_param_info])
+                        except IndexError:
+                            break
+
+                # We are out of the called function, so if we exited the called function early
+                # it does not apply to the current function.
+                context.exit_func = False
+                                    
+                # Return result.
+                #print "WHERE: 7"
+                return r
+                
+            # Misparsed addition?
+            elif ((isinstance(f, int)) and
+                  (len(params) == 1) and
+                  (isinstance(params[0], int))):
+                return (f + params[0])
+
+            # Array access?
+            elif (len(params) > 0):
+
+                # Looks like this is actually an array access.
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Looks like array access.")
+                try:
+
+                    # Return result.
+                    i = vba_conversion.int_convert(params[0])
+                    r = f[i]
+                    if (isinstance(f, str)):
+                        r = ord(r)
+                    if (log.getEffectiveLevel() == logging.DEBUG):
+                        log.debug("Return " + safe_str_convert(r))
+                    return r
+
+                except Exception as e:
+
+                    # Return result.
+                    log.error("Array access %r[%r] failed. %r" % (f, params[0], safe_str_convert(e)))
+                    return 0
 
         except KeyError:
 
             # If something like Application.Run("foo", 12) is called, foo(12) will be run.
             # Try to handle that.
             #print "WHERE: 8"
-            func_name = str(self.name)
+            func_name = safe_str_convert(self.name)
             if ((func_name == "Application.Run") or (func_name == "Run")):
 
                 # Pull the name of what is being run from the 1st arg.
@@ -3100,7 +3663,7 @@ class Function_Call(VBA_Object):
                             r = s
 
                     # Report actions if interesting.
-                    if ((str(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
+                    if ((safe_str_convert(self).lower().startswith("thisdocument.run(")) and (r != "NULL")):
                         context.report_action('Execute Command', r, 'ThisDocument.Run', strip_null_bytes=True)
 
                 except KeyError:
@@ -3171,9 +3734,9 @@ class Function_Call(VBA_Object):
             # Internal VBA function emulated by ViperMonkey?
             r = None
             if is_internal:
-                r = "core.vba_library.run_function(\"" + str(func_name) + "\", vm_context, " + args + ")"
+                r = "core.vba_library.run_function(\"" + safe_str_convert(func_name) + "\", vm_context, " + args + ")"
             else:
-                r = "core.vba_library.run_external_function(\"" + str(func_name) + "\", vm_context, " + args + ",\"\")"
+                r = "core.vba_library.run_external_function(\"" + safe_str_convert(func_name) + "\", vm_context, " + args + ",\"\")"
             return r
 
         # Is this an array access? We tell if this is an array access based on the
@@ -3194,11 +3757,11 @@ class Function_Call(VBA_Object):
                 acc_str = ""
                 for p in py_params:
                     acc_str += "[coerce_to_int(" + p + ")]"
-                r = str(func_name) + acc_str
+                r = safe_str_convert(func_name) + acc_str
                 return r
         
         # Generate the Python function call to a local function.
-        r = str(func_name) + "("
+        r = safe_str_convert(func_name) + "("
         first = True
         for p in py_params:
             if (not first):
@@ -3231,7 +3794,15 @@ expr_list_item = (expr_item + FollowedBy(',')) | expr_list_item
 expr_list_item_strict = (expr_item_strict + FollowedBy(',')) | expr_list_item_strict
 
 def quick_parse_int_or_var(text):
-    text = str(text).strip()
+    """A fast regex based parsing helper function for parsing integers or
+    variable names.
+
+    @param text (str) The text to parse.
+
+    @return (VBA_Object object) The parsed int/variable.
+
+    """
+    text = safe_str_convert(text).strip()
 
     # Integer?
     if (text.isdigit()):
@@ -3329,8 +3900,9 @@ function_call_limited.setParseAction(Function_Call)
 # --- ARRAY ACCESS OF FUNCTION CALL --------------------------------------------------------
 
 class Function_Call_Array_Access(VBA_Object):
-    """
-    Array access of the return value of a function call.
+    """Handle array access of the return value of a function call like
+    'foo(1,2)[4]'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3344,9 +3916,9 @@ class Function_Call_Array_Access(VBA_Object):
             log.debug('parsed %r as Function_Call_Array_Access' % self)
 
     def __repr__(self):
-        r = str(self.array) + "(" + str(self.index) + ")"
+        r = safe_str_convert(self.array) + "(" + safe_str_convert(self.index) + ")"
         if (self.other_indices is not None):
-            r = str(self.array) + "(" + str(self.index) + ", " + str(self.other_indices) + ")"
+            r = safe_str_convert(self.array) + "(" + safe_str_convert(self.index) + ", " + safe_str_convert(self.other_indices) + ")"
         return r
 
     def eval(self, context, params=None):
@@ -3355,7 +3927,7 @@ class Function_Call_Array_Access(VBA_Object):
         # Evaluate the value of the function returing the array.
         array_val = eval_arg(self.array, context=context)
         # Evaluate the index to read.
-        array_index = coerce_to_int(eval_arg(self.index, context=context))
+        array_index = vba_conversion.coerce_to_int(eval_arg(self.index, context=context))
 
         # Do we have a list to read from?
         if (not isinstance(array_val, list)):
@@ -3508,8 +4080,9 @@ expr_const <<= infixNotation(expr_const_item,
 # ----------------------------- BOOLEAN expressions --------------
 
 class BoolExprItem(VBA_Object):
-    """
-    A comparison expression or other item appearing in a boolean expression.
+    """Handle a comparison expression or other item appearing in a
+    boolean expression like 'foo > 12'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3533,6 +4106,20 @@ class BoolExprItem(VBA_Object):
         return ""
 
     def _vba_to_python_op(self, op, context):
+        """Convert a VBA boolean operator to a Python boolean operator or a
+        Python bitwise operator. The context is used to determine
+        whether we need bitwise or boolean operators.
+        
+        @param op (str) The VBA boolean operator.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+        
+        @param is_boolean (boolean) If True return a Python boolean
+        operator, if False return a Python bitwise operator.
+
+        """        
         return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
@@ -3590,7 +4177,7 @@ class BoolExprItem(VBA_Object):
                 rhs = 0
             context.set(self.rhs, rhs)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Set unitinitialized " + str(self.rhs) + " = " + str(rhs))
+                log.debug("Set unitinitialized " + safe_str_convert(self.rhs) + " = " + safe_str_convert(rhs))
         if ((lhs == "NULL") or (lhs is None)):
             if (isinstance(rhs, str)):
                 lhs = ''
@@ -3598,7 +4185,7 @@ class BoolExprItem(VBA_Object):
                 lhs = 0
             context.set(self.lhs, lhs)
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Set unitialized " + str(self.lhs) + " = " + str(lhs))
+                log.debug("Set unitialized " + safe_str_convert(self.lhs) + " = " + safe_str_convert(lhs))
 
         # Ugh. VBA autoconverts strings and ints.
         if (isinstance(lhs, str) and isinstance(rhs, int)):
@@ -3637,15 +4224,15 @@ class BoolExprItem(VBA_Object):
         if (rhs_invalid_type or lhs_invalid_type):
 
             # Punt and compare everything as strings.
-            lhs = str(lhs)
-            rhs = str(rhs)
+            lhs = safe_str_convert(lhs)
+            rhs = safe_str_convert(rhs)
 
         # Always evaluate to true if comparing against a wildcard.
         # We will treat logic looking at the current file name as a wildcard also.
         rhs = utils.strip_nonvb_chars(rhs)
         lhs = utils.strip_nonvb_chars(lhs)
-        rhs_str = str(rhs)
-        lhs_str = str(lhs)
+        rhs_str = safe_str_convert(rhs)
+        lhs_str = safe_str_convert(lhs)
         if (("**MATCH ANY**" in lhs_str) or
             ("**MATCH ANY**" in rhs_str) or
             ("CURRENT_FILE_NAME" in lhs_str) or
@@ -3681,18 +4268,18 @@ class BoolExprItem(VBA_Object):
         elif (self.op.lower() == "like"):
 
             # Try as a Python regex.
-            rhs = str(rhs)
-            lhs = str(lhs)
+            rhs = safe_str_convert(rhs)
+            lhs = safe_str_convert(lhs)
             try:
                 rhs = rhs.replace("*", ".*")
                 r = (re.match(rhs, lhs) is not None)
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("'" + lhs + "' Like '" + rhs + "' == " + str(r))
+                    log.debug("'" + lhs + "' Like '" + rhs + "' == " + safe_str_convert(r))
             except Exception as e:
                 
                 # Not a valid python regex. Just check string equality.
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug(str(rhs) + " not valid python regex. " + str(e))
+                    log.debug(safe_str_convert(rhs) + " not valid python regex. " + safe_str_convert(e))
                 r = (rhs == lhs)
         else:
             log.error("BoolExprItem: Unknown operator %r" % self.op)
@@ -3707,7 +4294,7 @@ class BoolExprItem(VBA_Object):
                 r = 0
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Evaled '" + str(self) + "' == " + str(r))
+            log.debug("Evaled '" + safe_str_convert(self) + "' == " + safe_str_convert(r))
                 
         # Done.                
         return r
@@ -3720,8 +4307,8 @@ bool_expr_item <<= (limited_expression + \
 bool_expr_item.setParseAction(BoolExprItem)
 
 class BoolExpr(VBA_Object):
-    """
-    A boolean expression.
+    """Handle boolean expressions like '(foo > 12) And (bar < 12)'.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -3769,6 +4356,20 @@ class BoolExpr(VBA_Object):
         return ""
 
     def _vba_to_python_op(self, op, context):
+        """Convert a VBA boolean operator to a Python boolean operator or a
+        Python bitwise operator. The context is used to determine
+        whether we need bitwise or boolean operators.
+        
+        @param op (str) The VBA boolean operator.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+        
+        @param is_boolean (boolean) If True return a Python boolean
+        operator, if False return a Python bitwise operator.
+
+        """
         return _vba_to_python_op(op, not context.in_bitwise_expression)
         
     def to_python(self, context, params=None, indent=0):
@@ -3811,23 +4412,23 @@ class BoolExpr(VBA_Object):
             try:
                 rhs = eval_arg(self.rhs, context)
             except Exception as e:
-                log.error("BoolExpr: Cannot eval " + self.__repr__() + ". " + str(e))
+                log.error("BoolExpr: Cannot eval " + self.__repr__() + ". " + safe_str_convert(e))
                 return ''
 
             # Bitwise operation?
             if ((isinstance(rhs, int)) and (not isinstance(rhs, bool))):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Bitwise boolean operation: " + str(self))
+                    log.debug("Bitwise boolean operation: " + safe_str_convert(self))
                 if (self.op.lower() == "not"):
                     # pylint: disable=invalid-unary-operand-type
                     return (~ rhs)
-                log.error("BoolExpr: Unknown bitwise unary op " + str(self.op))
+                log.error("BoolExpr: Unknown bitwise unary op " + safe_str_convert(self.op))
                 return 0
                 
             # Evalue the unary expression.
             if (self.op.lower() == "not"):
                 return (not rhs)
-            log.error("BoolExpr: Unknown boolean unary op " + str(self.op))
+            log.error("BoolExpr: Unknown boolean unary op " + safe_str_convert(self.op))
             return ''
                 
         # If we get here we always have a LHS. Evaluate that in the current context.
@@ -3855,7 +4456,7 @@ class BoolExpr(VBA_Object):
             (not isinstance(lhs, bool) and not isinstance(rhs, bool))):
 
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Bitwise boolean operation: " + str(self))
+                log.debug("Bitwise boolean operation: " + safe_str_convert(self))
             if ((self.op.lower() == "and") or (self.op.lower() == "andalso")):
                 return lhs & rhs
             elif ((self.op.lower() == "or") or (self.op.lower() == "orelse")):
@@ -3893,6 +4494,10 @@ boolean_expression.setParseAction(BoolExpr)
 # --- NEW EXPRESSION --------------------------------------------------------------
 
 class New_Expression(VBA_Object):
+    """Handle expressions like 'New foo'.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(New_Expression, self).__init__(original_str, location, tokens)
         self.obj = tokens.expression
@@ -3908,11 +4513,11 @@ class New_Expression(VBA_Object):
         indent = indent # pylint warning
         
         # We can fake RegEx objects.
-        if (str(self.obj).strip().lower() == "regexp"):
+        if (safe_str_convert(self.obj).strip().lower() == "regexp"):
             return "core.utils.vb_RegExp()"
 
         # Not faking other objects at this point.
-        return "ERROR: Not emulating " + str(self)
+        return "ERROR: Not emulating " + safe_str_convert(self)
     
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -3920,6 +4525,7 @@ class New_Expression(VBA_Object):
         
         # TODO: Not sure how to handle this. For now just return what is being created.
         return self.obj
+
 
 # pylint: disable=expression-not-assigned
 new_expression << CaselessKeyword('New').suppress() + expression('expression')
@@ -3930,6 +4536,10 @@ any_expression = expression ^ boolean_expression
 # --- TYPEOF EXPRESSION --------------------------------------------------------------
 
 class TypeOf_Expression(VBA_Object):
+    """Handle type check expressions like 'TypeOf foo Is String'.
+
+    """
+
     def __init__(self, original_str, location, tokens):
         super(TypeOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -3938,7 +4548,7 @@ class TypeOf_Expression(VBA_Object):
             log.debug('parsed %r as TypeOf_Expression' % self)
 
     def __repr__(self):
-        return "TypeOf " + str(self.item) + " Is " + str(self.the_type)
+        return "TypeOf " + safe_str_convert(self.item) + " Is " + safe_str_convert(self.the_type)
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -3954,6 +4564,11 @@ typeof_expression.setParseAction(TypeOf_Expression)
 # --- ADDRESSOF EXPRESSION --------------------------------------------------------------
 
 class AddressOf_Expression(VBA_Object):
+    """Handle expressions for getting the memory address of a variable
+    like 'AddressOf foo'.
+
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(AddressOf_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -3961,7 +4576,7 @@ class AddressOf_Expression(VBA_Object):
             log.debug('parsed %r as AddressOf_Expression' % self)
 
     def __repr__(self):
-        return "AddressOf " + str(self.item)
+        return "AddressOf " + safe_str_convert(self.item)
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -3976,7 +4591,10 @@ addressof_expression.setParseAction(AddressOf_Expression)
 # --- EXCEL ROW/COLUMN EXPRESSION --------------------------------------------------------------
 
 class Excel_Expression(VBA_Object):
+    """Handle Excel row/column expressions like '[A:B]'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Excel_Expression, self).__init__(original_str, location, tokens)
         self.row = tokens.row
@@ -3985,7 +4603,7 @@ class Excel_Expression(VBA_Object):
             log.debug('parsed %r as Excel_Expression' % self)
 
     def __repr__(self):
-        return "[" + str(self.row) + ":" + str(self.col) + "]"
+        return "[" + safe_str_convert(self.row) + ":" + safe_str_convert(self.col) + "]"
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -4003,7 +4621,10 @@ excel_expression.setParseAction(Excel_Expression)
 # --- LITERAL LIST EXPRESSION --------------------------------------------------------------
 
 class Literal_List_Expression(VBA_Object):
+    """Handle a list of variables or integers like '[1, 2, foo, 3, bar]'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Literal_List_Expression, self).__init__(original_str, location, tokens)
         self.item = tokens.item
@@ -4011,7 +4632,7 @@ class Literal_List_Expression(VBA_Object):
             log.debug('parsed %r as Literal_List_Expression' % self)
 
     def __repr__(self):
-        return "[" + str(self.item) + "]"
+        return "[" + safe_str_convert(self.item) + "]"
 
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -4030,7 +4651,10 @@ literal_range_expression.setParseAction(lambda t: str(t[0]) + ":" + str(t[1]))
 
 # --- TUPLE EXPRESSION --------------------------------------------------------------
 class Tuple_Expression(VBA_Object):
+    """Handle a tuple expression like '(1, foo(2), bar)'.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Tuple_Expression, self).__init__(original_str, location, tokens)
         self.expr_items = tokens.expr_items
@@ -4044,7 +4668,7 @@ class Tuple_Expression(VBA_Object):
             if not first:
                 r += ", "
             first = False
-            r += str(i)
+            r += safe_str_convert(i)
         r += ")"
         return r
 

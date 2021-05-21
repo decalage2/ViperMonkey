@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.lhs_var_visitor Visitor for collecting
+variables on the LHS of assignments in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting variables on the LHS of assignments.
 
@@ -36,14 +42,15 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
-
-from visitor import *
 import pyparsing
 
+from visitor import visitor
+from utils import safe_str_convert
+
 class lhs_var_visitor(visitor):
-    """
-    Get the LHS of all Let statements.
+    """Get the LHS of all Let statements. The variables on the LHSs of
+    assignments are saved in the .variables field of the visitor object.
+
     """
 
     def __init__(self):
@@ -51,16 +58,14 @@ class lhs_var_visitor(visitor):
         self.visited = set()
     
     def visit(self, item):
-        from statements import Let_Statement
-
-        if (str(item) in self.visited):
+        if (safe_str_convert(item) in self.visited):
             return False
-        self.visited.add(str(item))
-        if ("Let_Statement" in str(type(item))):
+        self.visited.add(safe_str_convert(item))
+        if ("Let_Statement" in safe_str_convert(type(item))):
             if (isinstance(item.name, str)):
                 self.variables.add(item.name)
             elif (isinstance(item.name, pyparsing.ParseResults) and
                   (item.name[0].lower().replace("$", "").replace("#", "").replace("%", "") == "mid")):
-                self.variables.add(str(item.name[1]))
+                self.variables.add(safe_str_convert(item.name[1]))
 
         return True

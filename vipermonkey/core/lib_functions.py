@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.lib_functions VBA library function
+definitions. TODO: Roll these over into vba_library.py.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Library Functions
 
@@ -41,13 +46,16 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+import re
 from curses_ascii import isprint
 import logging
-from pyparsing import *
+from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
+    CaselessLiteral, Literal, Forward
 
-from vba_object import *
-from literals import *
+from vba_object import eval_arg, VBA_Object
+from python_jit import to_python
 import vb_str
+from utils import safe_str_convert
 
 from logger import log
 
@@ -62,8 +70,8 @@ expression = Forward()
 # --- CHR --------------------------------------------------------------------
 
 class Chr(VBA_Object):
-    """
-    6.1.2.11.1.4 VBA Chr function
+    """Emulator for VBA Chr function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -86,12 +94,14 @@ class Chr(VBA_Object):
 
         # This is implemented in the common vba_library._Chr handler class.
         import vba_library
+        # pylint: disable=protected-access
         chr_handler = vba_library._Chr()
         param = eval_arg(self.arg, context)
         return chr_handler.eval(context, [param])
 
     def __repr__(self):
         return 'Chr(%s)' % repr(self.arg)
+
 
 # Chr, Chr$, ChrB, ChrW()
 chr_ = (
@@ -105,8 +115,8 @@ chr_.setParseAction(Chr)
 # --- ASC --------------------------------------------------------------------
 
 class Asc(VBA_Object):
-    """
-    VBA Asc function
+    """Emulator for VBA Asc function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -138,11 +148,7 @@ class Asc(VBA_Object):
         c = eval_arg(self.arg, context)
 
         # Don't modify the "**MATCH ANY**" special value.
-        c_str = None
-        try:
-            c_str = str(c).strip()
-        except UnicodeEncodeError:
-            c_str = filter(isprint, c).strip()
+        c_str = safe_str_convert(c).strip()
         if (c_str == "**MATCH ANY**"):
             return c
 
@@ -182,8 +188,8 @@ asc.setParseAction(Asc)
 # --- StrReverse() --------------------------------------------------------------------
 
 class StrReverse(VBA_Object):
-    """
-    VBA StrReverse function
+    """Emulator for VBA StrReverse function.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -202,6 +208,7 @@ class StrReverse(VBA_Object):
     def __repr__(self):
         return 'StrReverse(%s)' % repr(self.arg)
 
+
 # StrReverse()
 strReverse = Suppress(CaselessLiteral('StrReverse') + Literal('(')) + expression + Suppress(Literal(')'))
 strReverse.setParseAction(StrReverse)
@@ -209,8 +216,8 @@ strReverse.setParseAction(StrReverse)
 # --- ENVIRON() --------------------------------------------------------------------
 
 class Environ(VBA_Object):
-    """
-    VBA Environ function
+    """Emulator for VBA Environ function
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -233,6 +240,7 @@ class Environ(VBA_Object):
 
     def __repr__(self):
         return 'Environ(%s)' % repr(self.arg)
+
 
 # Environ("name") => just translated to "%name%", that is enough for malware analysis
 environ = Suppress(CaselessKeyword('Environ') + '(') + expression('arg') + Suppress(')')

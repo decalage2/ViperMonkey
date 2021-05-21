@@ -1,3 +1,7 @@
+"""@package vipermonkey.core.filetype Check for Office file types
+"""
+
+# pylint: disable=pointless-string-statement
 """
 Check for Office file types
 
@@ -46,14 +50,25 @@ magic_nums = {
 pe_magic_num = "4D 5A"
 
 def get_1st_8_bytes(fname, is_data):
+    """Get the first 8 bytes of a file (or data).
 
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (str) The 1st 8 bytes of the file.
+
+    """
+    
     info = None
     is_data = (is_data or (len(fname) > 200))
     if (not is_data):
         try:
             tmp = open(fname, 'rb')
             tmp.close()
-        except:
+        except IOError:
             is_data = True
     if (not is_data):
         with open(fname, 'rb') as f:
@@ -68,10 +83,16 @@ def get_1st_8_bytes(fname, is_data):
     return curr_magic
 
 def is_pe_file(fname, is_data):
-    """
-    Check to see if the given file is a PE executable.
+    """Check to see if the given file is a PE executable.
 
-    return - True if it is a PE file, False if not.
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (boolean) True if it is a PE file, False if not.
+
     """
 
     # Read the 1st 8 bytes of the file.
@@ -81,24 +102,41 @@ def is_pe_file(fname, is_data):
     return (curr_magic.startswith(pe_magic_num))
 
 def is_office_file(fname, is_data):
-    """
-    Check to see if the given file is a MS Office file format.
+    """Check to see if the given file is a MS Office (97 or 2007+) file.
 
-    return - True if it is an Office file, False if not.
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (boolean) True if it is an Office file, False if not.
+
     """
 
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 
     # See if we have 1 of the known magic #s.
-    for typ in magic_nums.keys():
+    for typ in magic_nums:
         magic = magic_nums[typ]
         if (curr_magic.startswith(magic)):
             return True
     return False
 
 def is_office97_file(fname, is_data):
+    """Check to see if the given file is a MS Office 97 file.
 
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (boolean) True if it is an Office 97 file, False if not.
+
+    """
+    
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 
@@ -106,7 +144,18 @@ def is_office97_file(fname, is_data):
     return (curr_magic.startswith(magic_nums["office97"]))
 
 def is_office2007_file(fname, is_data):
+    """Check to see if the given file is a MS Office 2007+ file.
 
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (boolean) True if it is an Office 2007+ file, False if not.
+
+    """
+    
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 

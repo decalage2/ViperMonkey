@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.literals Parsing and emulation of
+VBA/VBScript literals.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Literals
 
@@ -44,10 +49,16 @@ __version__ = '0.02'
 import logging
 import re
 
-from pyparsing import *
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
+from pyparsing import QuotedString, Regex
 
 from logger import log
 from vba_object import VBA_Object
+from utils import safe_str_convert
 
 # --- BOOLEAN ------------------------------------------------------------
 
@@ -107,7 +118,10 @@ float_literal.setParseAction(lambda t: float(t.value))
 # MS-GRAMMAR: string-character = NO-LINE-CONTINUATION ((double-quote double-quote) termination-character)
 
 class String(VBA_Object):
+    """Emulate a VBA/VBScript string literal.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.value = tokens[0]        
@@ -115,7 +129,7 @@ class String(VBA_Object):
             log.debug('parsed "%r" as String' % self)
 
     def __repr__(self):
-        return '"' + str(self.value) + '"'
+        return '"' + safe_str_convert(self.value) + '"'
 
     def eval(self, context, params=None):
         r = self.value
@@ -125,7 +139,7 @@ class String(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):
         # Escape some characters.
-        r = str(self.value).\
+        r = safe_str_convert(self.value).\
             replace("\\", "\\\\").\
             replace('"', '\\"').\
             replace("\n", "\\n").\
@@ -157,6 +171,7 @@ class String(VBA_Object):
             r = r.replace(chr(i), repl)
         return '"' + r + '"'
 
+
 # NOTE: QuotedString creates a regex, so speed should not be an issue.
 #quoted_string = (QuotedString('"', escQuote='""') | QuotedString("'", escQuote="''"))('value')
 quoted_string = QuotedString('"', escQuote='""', convertWhitespaceEscapes=False)('value')
@@ -178,7 +193,8 @@ quoted_string_keep_quotes.setParseAction(lambda t: str(t[0]))
 # MS-GRAMMAR: right-date-value = decimal-literal / month-name
 # MS-GRAMMAR: date-separator = 1*WSC / (*WSC ("/" / "-" / ",") *WSC)
 # MS-GRAMMAR: month-name = English-month-name / English-month-abbreviation
-# MS-GRAMMAR: English-month-name = "january" / "february" / "march" / "april" / "may" / "june" / "august" / "september" / "october" / "november" / "december"
+# MS-GRAMMAR: English-month-name = "january" / "february" / "march" / "april" / "may" /
+#     "june" / "august" / "september" / "october" / "november" / "december"
 # MS-GRAMMAR: English-month-abbreviation = "jan" / "feb" / "mar" / "apr" / "jun" / "jul" / "aug" / "sep" / "oct" / "nov" / "dec"
 # MS-GRAMMAR: time-value = (hour-value ampm) / (hour-value time-separator minute-value [time-separator
 # MS-GRAMMAR: second-value] [ampm])
@@ -198,4 +214,3 @@ date_string.setParseAction(lambda t: str(t[0]))
 
 literal = boolean_literal | integer | quoted_string | date_string | float_literal
 literal.setParseAction(lambda t: t[0])
-

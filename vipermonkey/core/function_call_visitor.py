@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.function_call_visitor Visitor for
+collecting the names of all called functions in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting the names of all called functions
 
@@ -36,11 +42,12 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
+from visitor import visitor
+from utils import safe_str_convert
 
 class function_call_visitor(visitor):
-    """
-    Collect the names of all called functions.
+    """Collect the names of all called functions.
+
     """
 
     def __init__(self):
@@ -58,9 +65,9 @@ class function_call_visitor(visitor):
         self.visited.add(item)
         if (isinstance(item, statements.Call_Statement)):
             if (not isinstance(item.name, expressions.MemberAccessExpression)):
-                self.called_funcs.add(str(item.name))
+                self.called_funcs.add(safe_str_convert(item.name))
         if (isinstance(item, expressions.Function_Call)):
-            self.called_funcs.add(str(item.name))
+            self.called_funcs.add(safe_str_convert(item.name))
         if (isinstance(item, statements.File_Open)):
             self.called_funcs.add("Open")
         if (isinstance(item, statements.Print_Statement)):

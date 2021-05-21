@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.var_defn_visitor Visitor for collecting
+the names of declared variables in a VBA object.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Visitor for collecting the names declared variables.
 
@@ -36,12 +42,14 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from statements import *
+from visitor import visitor
+from statements import Dim_Statement, Let_Statement
+from utils import safe_str_convert
 
 class var_defn_visitor(visitor):
-    """
-    Collect the names of all declared variables.
+    """Collect the names of all declared variables. The collected names
+    are saved in the self.variables (set) field of the visitor.
+
     """
 
     def __init__(self):
@@ -54,7 +62,7 @@ class var_defn_visitor(visitor):
         self.visited.add(item)        
         if (isinstance(item, Dim_Statement)):
             for name, _, _, _ in item.variables:
-                self.variables.add(str(name))
+                self.variables.add(safe_str_convert(name))
         if (isinstance(item, Let_Statement)):
-            self.variables.add(str(item.name))
+            self.variables.add(safe_str_convert(item.name))
         return True

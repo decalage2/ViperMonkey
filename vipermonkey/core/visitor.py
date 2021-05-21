@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.visitor Define base class for all
+implementations of the visitor pattern.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Class template for visitor classes for the visitor design pattern.
 
@@ -37,10 +43,19 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class visitor(object):
-    """
-    The class template for visitor objects for the visitor design pattern.
-    Visitors can be accepted by the accept method of VBA_Object objects.
+    """The class template for visitor objects for the visitor design
+    pattern.  Visitors can be accepted by the accept method of
+    VBA_Object objects.
+
     """
 
-    def visit(self):
+    def visit(self, item):
+        """Visit a given item.
+
+        @param visit (VBA_Object object) The item to visit.
+
+        @return (boolean) True if the item was processed (visited),
+        False if not.
+
+        """
         raise NotImplementedError("Not implemented.")
