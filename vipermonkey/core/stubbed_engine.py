@@ -1,5 +1,11 @@
+"""@package vipermonkey.core.stubbed_engine Base class for
+VBA/VBScript emulators. Currently only 1 emulator is implemented.
+
 """
-ViperMonkey: VBA Library
+
+# pylint: disable=pointless-string-statement
+"""
+ViperMonkey: Base class for VBA/VBScript emulators.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -47,9 +53,9 @@ from logger import log
 from utils import safe_str_convert
 
 class StubbedEngine(object):
-    """
-    Stubbed out Vipermonkey analysis engine that just supports tracking
-    actions.
+    """Stubbed out Vipermonkey analysis engine that just supports
+    tracking actions.
+
     """
 
     def __init__(self):
@@ -58,8 +64,16 @@ class StubbedEngine(object):
         self.action_limit = 10
         
     def report_action(self, action, params=None, description=None):
-        """
-        Callback function for each evaluated statement to report macro actions
+        """Save information about an interesting action.
+
+        @param action (str) The action to save in the context.
+        
+        @param params (list or str) Any parameter values for the
+        action. 
+
+        @param description (str) A human readable description of the
+        action.
+
         """
 
         # Make sure all the action info is a proper string.

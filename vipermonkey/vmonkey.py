@@ -46,7 +46,7 @@ follows:
    @see read_ole_fields.read_payload_hiding_places()
 7. Create a ViperMonkey emulator object.
    @see core/__init__.py
-8. Call the trace() method of the ViperMonkey emulator object to 
+8. Call the core.ViperMonkey.trace() method of the ViperMonkey emulator object to 
    start emulation.
 9. Create a context object to track the program state. This will be
    updated with variable values, file write information, and actions
