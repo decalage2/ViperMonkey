@@ -1,5 +1,5 @@
-"""@package expressions Parsing and emulation of VBA/VBScript
-expressions.
+"""@package vipermonkey.core.expressions Parsing and emulation of
+VBA/VBScript expressions.
 
 """
 

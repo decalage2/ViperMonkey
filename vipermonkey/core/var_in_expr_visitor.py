@@ -1,5 +1,6 @@
-"""@package var_in_expr_visitor Visitor for collecting the names of
-variables referenced in expressions in a VBA object.
+"""@package vipermonkey.core.var_in_expr_visitor Visitor for
+collecting the names of variables referenced in expressions in a VBA
+object.
 
 """
 

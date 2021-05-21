@@ -1,5 +1,5 @@
-"""@package let_statement_visitor Visitor for collecting the Let
-statements appearing in a VBA object.
+"""@package vipermonkey.core.let_statement_visitor Visitor for
+collecting the Let statements appearing in a VBA object.
 
 """
 

@@ -1,4 +1,4 @@
-"""@package excel
+"""@package vipermonkey.core.excel
 Partial implementation of xlrd.book object interface and some Excel
 functions.
 

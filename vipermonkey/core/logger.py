@@ -1,4 +1,5 @@
-"""@package logger Defines some logging helper classes and functions.
+"""@package vipermonkey.core.logger Defines some logging helper
+classes and functions.
 
 """
 

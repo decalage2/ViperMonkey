@@ -1,5 +1,5 @@
-"""@package procedures Parsing and Emulation of VBA/VBScript Functions
-and Subs.
+"""@package vipermonkey.core.procedures Parsing and Emulation of
+VBA/VBScript Functions and Subs.
 
 """
 

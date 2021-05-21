@@ -1,4 +1,5 @@
-"""@package vba_conversions Functions for doing VBScript/VBA type coercion.
+"""@package vipermonkey.core.vba_conversion Functions for doing
+VBScript/VBA type coercion.
 
 """
 

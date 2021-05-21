@@ -1,6 +1,6 @@
 #!/usr/bin/env pypy
 
-"""@package vmonkey
+"""@package vipermonkey.vmonkey
 
 The ViperMonkey command line and programatic interface. The top level
 function for using ViperMonkey programatically is process_file().

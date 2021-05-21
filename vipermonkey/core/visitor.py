@@ -1,5 +1,5 @@
-"""@package visitor Define base class for all implementations of the
-visitor pattern.
+"""@package vipermonkey.core.visitor Define base class for all
+implementations of the visitor pattern.
 
 """
 

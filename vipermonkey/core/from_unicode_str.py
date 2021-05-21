@@ -1,5 +1,5 @@
-"""@package from_unicode_str Defines a marker class to mark strings
-created by StrConv() with the vbaFromUnicode option.
+"""@package vipermonkey.core.from_unicode_str Defines a marker class
+to mark strings created by StrConv() with the vbaFromUnicode option.
 
 """
 

@@ -1,4 +1,5 @@
-"""@package modules Parsing and emulation of VBA/VBScript Modules.
+"""@package vipermonkey.core.modules Parsing and emulation of
+VBA/VBScript Modules.
 
 """
 

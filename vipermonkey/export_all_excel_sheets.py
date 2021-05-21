@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-"""@package export_all_excel_sheets 
-Export all of the sheets of an Excel file as separate CSV files. This
-is Python 3.
+"""@package vipermonkey.export_all_excel_sheets Export all of the
+sheets of an Excel file as separate CSV files. This is Python 3.
+
 """
 
 import sys

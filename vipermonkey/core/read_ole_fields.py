@@ -1,5 +1,6 @@
-"""@package read_ole_fields
-Read in data values from OLE items like shapes and text boxes.
+"""@package vipermonkey.core.read_ole_fields Read in data values from
+OLE items like shapes and text boxes.
+
 """
 
 """

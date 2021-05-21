@@ -1,4 +1,5 @@
-"""@package literals Parsing and emulation of VBA/VBScript literals.
+"""@package vipermonkey.core.literals Parsing and emulation of
+VBA/VBScript literals.
 
 """
 

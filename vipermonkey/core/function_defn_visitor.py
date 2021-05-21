@@ -1,5 +1,5 @@
-"""@package function_defn_visitor Visitor for collecting the names of
-locally defined functions in a VBA object.
+"""@package vipermonkey.core.function_defn_visitor Visitor for
+collecting the names of locally defined functions in a VBA object.
 
 """
 

@@ -1,5 +1,5 @@
-"""@package function_import_visitor Visitor for collecting the names
-of functions imported from DLLs in a VBA object.
+"""@package vipermonkey.core.function_import_visitor Visitor for
+collecting the names of functions imported from DLLs in a VBA object.
 
 """
 

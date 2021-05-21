@@ -1,4 +1,5 @@
-"""@package vba_lines Parsing VBScript/VBA code lines.
+"""@package vipermonkey.core.vba_lines Parsing VBScript/VBA code
+lines.
 
 """
 

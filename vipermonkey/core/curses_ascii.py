@@ -1,4 +1,4 @@
-"""@package curses_ascii
+"""@package vipermonkey.core.curses_ascii
 Various utility functions for working with characters.
 """
 

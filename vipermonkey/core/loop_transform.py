@@ -1,5 +1,5 @@
-"""@package loop_transform Transform certain types of loops into
-easier to emulate constructs.
+"""@package vipermonkey.core.loop_transform Transform certain types of
+loops into easier to emulate constructs.
 
 """
 

@@ -1,5 +1,5 @@
-"""@package __init__ Definition of the main ViperMonkey emulator
-class.
+"""@package vipermonkey.core.__init__ Definition of the main
+ViperMonkey emulator class.
 
 """
 
@@ -269,6 +269,8 @@ class ViperMonkey(StubbedEngine):
         emulate loops using the regular emulation engine.
 
         """
+        super(ViperMonkey, self).__init__()
+        
         self.do_jit = do_jit
         self.comments = None
         self.metadata = None

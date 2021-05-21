@@ -1,4 +1,5 @@
-"""@package identifiers Handle parsing and emulation of identifiers.
+"""@package vipermonkey.core.identifiers Handle parsing and emulation
+of identifiers.
 
 """
 

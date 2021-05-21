@@ -1,5 +1,5 @@
-"""@package python_jit Core functions for converting VBScript/VBA to
-Python and for executing the Python JIT code.
+"""@package vipermonkey.core.python_jit Core functions for converting
+VBScript/VBA to Python and for executing the Python JIT code.
 
 """
 

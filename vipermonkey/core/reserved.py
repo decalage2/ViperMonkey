@@ -1,4 +1,4 @@
-"""@package reserved VBA/VBScript reserved keywords.
+"""@package vipermonkey.core.reserved VBA/VBScript reserved keywords.
 
 """
 

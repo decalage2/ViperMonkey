@@ -1,5 +1,5 @@
-"""@package vba_constants Define many builtin VBA enum constant
-values.
+"""@package vipermonkey.core.vba_constants Define many builtin VBA
+enum constant values.
 
 """
 

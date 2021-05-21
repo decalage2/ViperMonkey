@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""@package comments_eol
+"""@package vipermonkey.core.comments_eol
 Parsing of VB comments and end of line markers.
 """
 

@@ -1,5 +1,5 @@
-"""@package function_call_visitor Visitor for collecting the names of
-all called functions in a VBA object.
+"""@package vipermonkey.core.function_call_visitor Visitor for
+collecting the names of all called functions in a VBA object.
 
 """
 

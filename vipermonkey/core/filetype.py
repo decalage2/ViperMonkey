@@ -1,4 +1,4 @@
-"""@package filetype Check for Office file types
+"""@package vipermonkey.core.filetype Check for Office file types
 """
 
 # pylint: disable=pointless-string-statement

@@ -1,5 +1,5 @@
-"""@package vba_context Track the program state during
-emulation. Tracks variables values, file contents, etc.
+"""@package vipermonkey.core.vba_context Track the program state
+during emulation. Tracks variables values, file contents, etc.
 
 """
 

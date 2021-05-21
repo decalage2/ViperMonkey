@@ -1,4 +1,5 @@
-"""@package meta Functionality for reading in Office file metadata.
+"""@package vipermonkey.core.meta Functionality for reading in Office
+file metadata.
 
 """
 

@@ -1,5 +1,5 @@
-"""@package lib_functions VBA library function definitions. TODO: Roll
-these over into vba_library.py.
+"""@package vipermonkey.core.lib_functions VBA library function
+definitions. TODO: Roll these over into vba_library.py.
 
 """
 

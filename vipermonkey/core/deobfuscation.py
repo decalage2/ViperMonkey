@@ -1,4 +1,4 @@
-"""@package deobfuscation
+"""@package vipermonkey.core.deobfuscation
 
 Utility to help deobfuscate some VBA code before it gets processed.
 This can also be used by the user to help clean up code for analysis.

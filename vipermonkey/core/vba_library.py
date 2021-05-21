@@ -1,6 +1,8 @@
-"""@package vba_library Emulation of builtin VBScript/VBA functions.
+"""@package vipermonkey.core.vba_library Emulation of builtin
+VBScript/VBA functions.
 
 Each function is represented with a class in this package.
+
 """
 
 # pylint: disable=pointless-string-statement

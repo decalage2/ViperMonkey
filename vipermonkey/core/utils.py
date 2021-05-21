@@ -1,4 +1,4 @@
-"""@package expressions Utility functions.
+"""@package vipermonkey.core.utils Utility functions.
 
 """
 

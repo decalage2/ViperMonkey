@@ -1,5 +1,5 @@
-"""@package var_defn_visitor Visitor for collecting the names of
-declared variables in a VBA object.
+"""@package vipermonkey.core.var_defn_visitor Visitor for collecting
+the names of declared variables in a VBA object.
 
 """
 

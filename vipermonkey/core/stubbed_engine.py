@@ -44,6 +44,7 @@ import string
 
 import logging
 from logger import log
+from utils import safe_str_convert
 
 class StubbedEngine(object):
     """
@@ -53,13 +54,15 @@ class StubbedEngine(object):
 
     def __init__(self):
         self.actions = []
-
+        self.action_count = {}
+        self.action_limit = 10
+        
     def report_action(self, action, params=None, description=None):
         """
         Callback function for each evaluated statement to report macro actions
         """
 
-        # store the action for later use:
+        # Make sure all the action info is a proper string.
         try:
             if (isinstance(action, str)):
                 action = unidecode.unidecode(action.decode('unicode-escape'))
@@ -78,5 +81,13 @@ class StubbedEngine(object):
         except UnicodeDecodeError as e:
             log.warn("Unicode decode of action description failed. " + str(e))
             description = ''.join(filter(lambda x:x in string.printable, description))
-        self.actions.append((action, params, description))
-        log.info("ACTION: %s - params %r - %s" % (action, params, description))
+
+        # Throttle actions that happen a lot.
+        action_tuple = (action, params, description)
+        action_str = safe_str_convert(action_tuple)
+        if (action_str not in self.action_count):
+            self.action_count[action_str] = 0
+        self.action_count[action_str] += 1
+        if (self.action_count[action_str] < self.action_limit):
+            self.actions.append(action_tuple)
+            log.info("ACTION: %s - params %r - %s" % (action, params, description))

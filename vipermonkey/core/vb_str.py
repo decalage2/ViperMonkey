@@ -1,4 +1,5 @@
-"""@package vb_str Representation of VBA extended ASCII strings.
+"""@package vipermonkey.core.vb_str Representation of VBA extended
+ASCII strings.
 
 """
 

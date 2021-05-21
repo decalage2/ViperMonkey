@@ -1,5 +1,5 @@
-"""@package tagged_block_finder_visitor Visitor for collecting the names of
-code blocks tagged with a label (label names).
+"""@package vipermonkey.core.tagged_block_finder_visitor Visitor for
+collecting the names of code blocks tagged with a label (label names).
 
 """
 

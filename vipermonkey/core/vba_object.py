@@ -1,5 +1,5 @@
-"""@package vba_object Base class for all VBA objects and top level
-functions for evaluating ViperMonkey VBA objects.
+"""@package vipermonkey.core.vba_object Base class for all VBA objects
+and top level functions for evaluating ViperMonkey VBA objects.
 
 """
 

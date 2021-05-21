@@ -1,5 +1,5 @@
-"""@package lhs_var_visitor Visitor for collecting variables on
-the LHS of assignments in a VBA object.
+"""@package vipermonkey.core.lhs_var_visitor Visitor for collecting
+variables on the LHS of assignments in a VBA object.
 
 """
 
