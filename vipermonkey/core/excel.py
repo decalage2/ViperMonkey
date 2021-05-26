@@ -780,13 +780,14 @@ class ExcelBook(object):
         """
         
         # Create empty workbook to fill in later?
+        self.all_cells = None
         self.sheets = []
         if (cells is None):
             return
 
         # Create single sheet workbook?
-        self.sheets.append(ExcelSheet(cells, name))
-
+        self.sheets.append(ExcelSheet(cells, name))        
+        
     def __repr__(self):
         """String version of workbook.
 
@@ -796,6 +797,20 @@ class ExcelBook(object):
         for sheet in self.sheets:
             r += safe_str_convert(sheet) + "\n"
         return r
+
+    def get_all_cells(self):
+        """Pull all the cells from all sheets in the workbook.
+
+        @return (list) A list of cells from the sheets in the workbook
+        represented as a dict. Each cell dict is of the form { "value"
+        : cell value, "row" : row index, "col" : column index, "index"
+        : AB123 form of cell index }. Note that all the cells for all
+        the sheets go in a single list.
+
+        """
+        if (self.all_cells is None):
+            self.all_cells = pull_cells_workbook(self)
+        return self.all_cells
         
     def sheet_names(self):
         """Get the names of all the sheets in the workbook.

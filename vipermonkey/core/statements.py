@@ -4459,7 +4459,15 @@ class Call_Statement(VBA_Object):
         # pylint: disable=protected-access
         if ((self.name.lower() in context._log_funcs) or
             (any(self.name.lower().endswith(func.lower()) for func in Function_Call.log_funcs))):
-            context.report_action(self.name, call_params, 'Interesting Function Call', strip_null_bytes=True)
+            tmp_call_params = call_params
+            if ((safe_str_convert(self.name).endswith(".Run")) and (isinstance(call_params, list))):
+                cmd = ""
+                for p in call_params:
+                    if (isinstance(p, str) and (len(p) > len(cmd))):
+                        cmd = p
+                if (len(cmd) > 0):
+                    tmp_call_params = cmd
+            context.report_action(self.name, tmp_call_params, 'Interesting Function Call', strip_null_bytes=True)
 
         # Handle method calls inside a With statement.
         r = self._handle_with_calls(context)
@@ -4486,7 +4494,15 @@ class Call_Statement(VBA_Object):
                 (not func_name.endswith("Add")) and
                 (not func_name.endswith("Write")) and
                 (len(tmp_call_params) > 0)):
-                context.report_action('Object.Method Call', tmp_call_params, func_name, strip_null_bytes=True)
+                tmp_call_params1 = tmp_call_params
+                if ((safe_str_convert(func_name).endswith(".Run")) and (isinstance(tmp_call_params, list))):
+                    cmd = ""
+                    for p in tmp_call_params:
+                        if (isinstance(p, str) and (len(p) > len(cmd))):
+                            cmd = p
+                    if (len(cmd) > 0):
+                        tmp_call_params1 = cmd
+                context.report_action('Object.Method Call', tmp_call_params1, func_name, strip_null_bytes=True)
 
         # Emulate the function body.
         try:
