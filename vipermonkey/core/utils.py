@@ -190,7 +190,20 @@ def safe_equals(x,y):
         x = 0
     if (y == "NULL"):
         y = 0
-    
+
+    # Handle equality checks on a wildcarded file name. The
+    # current file name is never going to be equal to "".
+    if (((x == "CURRENT_FILE_NAME") and (y == "")) or
+        ((y == "CURRENT_FILE_NAME") and (x == "")) or
+        ((x == "SOME_FILE_NAME") and (y == "")) or
+        ((y == "SOME_FILE_NAME") and (x == ""))):
+        return False
+        
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if ((x in wildcards) or (y in wildcards)):
+        return True
+        
     # Easy case first.
     # pylint: disable=unidiomatic-typecheck
     if (type(x) == type(y)):

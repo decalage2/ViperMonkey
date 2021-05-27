@@ -208,7 +208,22 @@ def convert_csv(fname):
     # 
     
     # Connect to the local LibreOffice server.
-    context = connect(Socket(HOST, PORT))
+    context = None
+    attempts = 0
+    while (attempts < 5):
+        attempts += 1
+        try:
+            context = connect(Socket(HOST, PORT))
+            break
+        except ConnectionError:
+            time.sleep(1)
+
+    # Do we have a connection to the headless LibreOffice?
+    if (context is None):        
+
+        # Can't connect to LibreOffice. Punt.
+        print("ERROR: Cannot connect to headless LibreOffice.")
+        return []
 
     # Load the Excel sheet.
     component = get_component(fname, context)

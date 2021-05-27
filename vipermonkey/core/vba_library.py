@@ -3289,28 +3289,68 @@ class Dir(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
+        # Sanity check.
         if ((params is None) or (len(params) == 0)):
             return ""
-        pat = utils.safe_str_convert(params[0])
 
-        # Handle a special case for a maldoc that looks for things
-        # not existing in a certain directory.
-        if (("\\Microsoft\\Corporation\\" in pat) or
-            ("\\AppData\\Roaming\\Microsoft" in pat) or
-            ("\\AppData\\Local\\Temp" in pat)):
-            return ""
-            
-        # Just act like we found something always.
-        r = pat.replace("*", "foo")
-
-        # TODO: Figure out how to simulate actual file searches.            
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Dir: %r returns %r" % (self, r))
-        return r
+        # Lets have this match any logic and see what the VB does.
+        return "**MATCH ANY**"
 
     def return_type(self):
         return "STRING"
 
+class SubFolders(VbaLibraryFunc):
+    """Fake Subfolders field in directory object.
+
+    """
+
+    def eval(self, context, params=None):
+        context = context # pylint
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 1)):
+            return []
+
+        # Terminate recursion when exploring a file system.
+        dir = params[0]
+        if (dir == "**MATCH ANY**"):
+            return []
+        
+        # Lets have this match any logic and see what the VB does.
+        return ["**MATCH ANY**"]
+
+class Files(VbaLibraryFunc):
+    """Fake Files field in directory object.
+
+    """
+
+    def eval(self, context, params=None):
+        context = context # pylint
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 1)):
+            return []
+
+        # Terminate recursion when exploring a file system.
+        dir = params[0]
+        if (dir == "**MATCH ANY**"):
+            return []
+        
+        # Lets have this match any logic and see what the VB does.
+        return ["SOME_FILE_NAME"]
+
+class Name(VbaLibraryFunc):
+    """Fake Name field in File object.
+
+    """
+
+    def eval(self, context, params=None):
+        context = context # pylint
+        params = params # pylint
+
+        # Lets have this match any logic and see what the VB does.
+        return "SOME_FILE_NAME"
+    
 class Choose(VbaLibraryFunc):
     """Emulate Choose() choice function.
 
@@ -5940,7 +5980,83 @@ class Write(VbaLibraryFunc):
 
         context.write_file(file_id, data)
 
+class DefaultFilePath(VbaLibraryFunc):
+    """Emulate Options.DefaultFilePath() property. Stubbed.
 
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 1)):
+            return ""
+
+        # Get the sort of directory to return.
+        dir_type = None
+        try:
+            dir_type = int(params[0])
+        except ValueError:
+            log.error("Bad param '" + utils.safe_str_convert(params[0]) + "' passed to DefaultFilePath().")
+            return ""
+
+        # Return a faked directory of each type.
+
+        # wdAutoRecoverPath
+        if (dir_type == 5):
+            return "C:\\AutoRecoverPath_WORD\\"
+        # wdBorderArtPath
+        elif (dir_type == 19):
+            return "C:\\BorderArtPath_WORD\\"        
+        # wdCurrentFolderPath
+        elif (dir_type == 14):
+            return "C:\\CurrentFolderPath_WORD\\"        
+        # wdDocumentsPath
+        elif (dir_type == 0):
+            return "C:\\DocumentsPath_WORD\\"        
+        # wdGraphicsFiltersPath
+        elif (dir_type == 10):
+            return "C:\\GraphicsFiltersPath_WORD\\"        
+        # wdPicturesPath
+        elif (dir_type == 1):
+            return "C:\\PicturesPath_WORD\\"        
+        # wdProgramPath
+        elif (dir_type == 9):
+            return "C:\\ProgramPath_WORD\\"        
+        # wdProofingToolsPath
+        elif (dir_type == 12):
+            return "C:\\ProofingToolsPath_WORD\\"        
+        # wdStartupPath
+        elif (dir_type == 8):
+            return "C:\\StartupPath_WORD\\"        
+        # wdStyleGalleryPath
+        elif (dir_type == 15):
+            return "C:\\StyleGalleryPath_WORD\\"        
+        # wdTempFilePath
+        elif (dir_type == 13):
+            return "C:\\TempFilePath_WORD\\"        
+        # wdTextConvertersPath
+        elif (dir_type == 11):
+            return "C:\\TextConvertersPath_WORD\\"        
+        # wdToolsPath
+        elif (dir_type == 6):
+            return "C:\\ToolsPath_WORD\\"        
+        # wdTutorialPath
+        elif (dir_type == 7):
+            return "C:\\TutorialPath_WORD\\"        
+        # wdUserOptionsPath
+        elif (dir_type == 4):
+            return "C:\\UserOptionsPath_WORD\\"        
+        # wdUserTemplatesPath
+        elif (dir_type == 2):
+            return "C:\\UserTemplatesPath_WORD\\"        
+        # wdWorkgroupTemplatesPath
+        elif (dir_type == 3):
+            return "C:\\wdWorkgroupTemplatesPath_WORD\\"        
+
+        # Unknown
+        return "C:\\UNKOWN_DEFAULTFILEPATH_DIR\\"        
+        
+        
 # Save classes emulating various VB functions for later lookup.
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -5973,7 +6089,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RandBetween, Items, Count, GetParentFolderName, WriteByte, ChrB, ChrW,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
-               Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts):
+               Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
+               SubFolders, Files, Name):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

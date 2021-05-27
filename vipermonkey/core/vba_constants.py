@@ -401,6 +401,44 @@ class VbaConstants(object):
 
         self.globals["Null".lower()] = None
 
+        # WdDefaultFilePath enumeration (Word)
+        #
+        # Specifies a default folder for files related to Microsoft Word.
+        # Path for Auto Recover files.
+        self.globals["wdAutoRecoverPath".lower()] = 5
+        # Border art path.
+        self.globals["wdBorderArtPath".lower()] = 19
+        # Current folder path.
+        self.globals["wdCurrentFolderPath".lower()] = 14
+        # Documents path.
+        self.globals["wdDocumentsPath".lower()] = 0
+        # Graphics filters path.
+        self.globals["wdGraphicsFiltersPath".lower()] = 10
+        # Pictures path.
+        self.globals["wdPicturesPath".lower()] = 1
+        # Program path.
+        self.globals["wdProgramPath".lower()] = 9
+        # Proofing tools path.
+        self.globals["wdProofingToolsPath".lower()] = 12
+        # Startup path.
+        self.globals["wdStartupPath".lower()] = 8
+        # Style Gallery path.
+        self.globals["wdStyleGalleryPath".lower()] = 15
+        # Temp file path.
+        self.globals["wdTempFilePath".lower()] = 13
+        # Text converters path.
+        self.globals["wdTextConvertersPath".lower()] = 11
+        # Tools path.
+        self.globals["wdToolsPath".lower()] = 6
+        # Tutorial path.
+        self.globals["wdTutorialPath".lower()] = 7
+        # User Options path.
+        self.globals["wdUserOptionsPath".lower()] = 4
+        # User templates path.
+        self.globals["wdUserTemplatesPath".lower()] = 2
+        # Workgroup templates path.
+        self.globals["wdWorkgroupTemplatesPath".lower()] = 3
+        
         # WdDisableFeaturesIntroducedAfter enumeration (Word) 
         #    
         # Specifies the version of Microsoft Word for which to disable

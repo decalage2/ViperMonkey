@@ -4147,7 +4147,7 @@ class BoolExprItem(VBA_Object):
         
     def eval(self, context, params=None):
         params = params # pylint warning
-        
+
         # We always have a LHS. Evaluate that in the current context.
         lhs = self.lhs
         try:
@@ -4236,11 +4236,24 @@ class BoolExprItem(VBA_Object):
         if (("**MATCH ANY**" in lhs_str) or
             ("**MATCH ANY**" in rhs_str) or
             ("CURRENT_FILE_NAME" in lhs_str) or
-            ("CURRENT_FILE_NAME" in rhs_str)):
+            ("CURRENT_FILE_NAME" in rhs_str) or
+            ("SOME_FILE_NAME" in lhs_str) or
+            ("SOME_FILE_NAME" in rhs_str)):
 
             # Track that we have evaluated a wildcard expression.
             context.tested_wildcard = True
-            
+
+            # Handle equality checks on a wildcarded file name. The
+            # current file name is never going to be equal to "".
+            if (((lhs_str == "CURRENT_FILE_NAME") and (rhs_str == "")) or
+                ((rhs_str == "CURRENT_FILE_NAME") and (lhs_str == "")) or
+                ((lhs_str == "SOME_FILE_NAME") and (rhs_str == "")) or
+                ((rhs_str == "SOME_FILE_NAME") and (lhs_str == ""))):
+                if (self.op == "<>"):
+                    return True
+                if ((self.op == "=") or (self.op == "is")):
+                    return False
+                
             # Always match or always fail to match.
             if (self.op == "<>"):
                 if (context.in_bitwise_expression):
