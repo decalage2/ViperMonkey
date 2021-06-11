@@ -290,9 +290,10 @@ def parse_stream(subfilename,
     vba_code = get_vb_contents_from_hta(vba_code)
 
     # Do not analyze the file if the VBA looks like garbage characters.
-    if (read_ole_fields.is_garbage_vba(vba_code)):
-        raise ValueError("VBA looks corrupted. Not analyzing.")
-
+    if (read_ole_fields.is_garbage_vba(vba_code, no_html=True)):
+        log.warning("Failed to extract VBScript from HTA. Skipping.")
+        return "empty"
+        
     # Skip some XML that olevba gives for some 2007+ streams.
     if (vba_code.strip().startswith("<?xml")):
         log.warning("Skipping XML stream.")

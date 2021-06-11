@@ -61,14 +61,16 @@ from utils import safe_str_convert
 
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
-def is_garbage_vba(vba, test_all=False, bad_pct=.6):
+def is_garbage_vba(vba, test_all=False, bad_pct=.6, no_html=False):
     """Check to see if the given supposed VBA is actually just a bunch of
-    non-ASCII characters.
+    non-ASCII or other garbage characters.
 
     @param vba (str) The VBA code to check.
     
     @param test_all (boolean) A flag indicating whether to look at all
     the code (True) or just the first part of the code (False).
+
+    @param no_html (boolean) Treat HTML as garbage if True.
 
     @param bad_pct (float) The max ratio of bad code to all code for
     this to be considered to be bad (i.e. percent bad divided by
@@ -80,6 +82,11 @@ def is_garbage_vba(vba, test_all=False, bad_pct=.6):
     if filetype.is_pe_file(vba, True):
         return True
 
+    # HTML is not analyzable.
+    # <!DOCTYPE html>
+    if (vba.strip().startswith("<") and no_html):
+        return True
+    
     # Pull out the 1st % of the string.
     total_len = len(vba)
     if ((total_len > 50000) and (not test_all)):
@@ -123,8 +130,13 @@ def pull_base64(data):
 
     # Pull out strings that might be base64.
     base64_pat_loose = r"[A-Za-z0-9+/=]{40,}"
-    r = set(re.findall(base64_pat_loose, data))
-    return r
+    all_strs = set(re.findall(base64_pat_loose, data))
+    r = set()
+    for curr_value in all_strs:
+        if (len(curr_value) > 100):
+            r.add(curr_value)
+            log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
+    return list(r)
 
 def unzip_data(data):
     """Unzip zipped data in memory.

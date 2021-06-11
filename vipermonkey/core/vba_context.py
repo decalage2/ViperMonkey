@@ -1701,7 +1701,7 @@ class Context(object):
         # Did we find anything?
         if (not got_ioc):
             return
-
+        
         # Is this new and interesting?
         iocs_to_delete = set()
         got_ioc = True
