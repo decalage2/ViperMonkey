@@ -3293,6 +3293,11 @@ class Dir(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return ""
 
+        # Try not matching everything in the special case where the attribute
+        # arg is vbDirectory.
+        if ((len(params) >= 2) and (params[1] == 16)):
+            return params[0]
+        
         # Lets have this match any logic and see what the VB does.
         return "**MATCH ANY**"
 
