@@ -4851,7 +4851,12 @@ class Redim_Statement(VBA_Object):
 
         # pylint.
         params = params
-        
+
+        # Pull out the variable being redimmed.
+        redim_var = safe_str_convert(self.item)
+        if ("(" in redim_var):
+            redim_var = redim_var[:redim_var.index("(")]
+
         # Is this a Variant type?
         if (safe_str_convert(context.get_type(self.item)) == "Variant"):
 
@@ -4861,27 +4866,30 @@ class Redim_Statement(VBA_Object):
 
         # Is this a Byte array?
         # Or calling ReDim on something that does not exist (grrr)?
-        elif ((safe_str_convert(context.get_type(self.item)) == "Byte Array") or
-              (not context.contains(self.item))):
+        elif (((safe_str_convert(context.get_type(self.item)) == "Byte Array") or
+               (not context.contains(self.item))) and
+              (self.start is not None) and
+              (self.end is not None) and
+              (len(safe_str_convert(self.start).strip()) > 0) and
+              (len(safe_str_convert(self.end).strip()) > 0)):
 
-            # Do we have a start and end for the new size?
-            if ((self.start is not None) and (self.end is not None)):
+            # We have a start and end for the new size.
 
-                # Compute the new array size.
-                start = None
-                end = None
-                try:
+            # Compute the new array size.
+            start = None
+            end = None
+            try:
 
-                    # Get the start and end of the new array. Must be integer constants.
-                    start = int(eval_arg(self.start, context=context))
-                    end = int(eval_arg(self.end, context=context))
-
-                    # Resize the list.
-                    new_list = [0] * (end - start)
-                    context.set(self.item, new_list)
-
-                except Exception:
-                    pass
+                # Get the start and end of the new array. Must be integer constants.
+                start = int(eval_arg(self.start, context=context))
+                end = int(eval_arg(self.end, context=context))
+                
+                # Resize the list.
+                new_list = [0] * (end - start)
+                context.set(self.item, new_list)
+                
+            except Exception:
+                pass
 
         # Resize array?
         elif (isinstance(self.raw_item, Function_Call)):
@@ -4891,10 +4899,10 @@ class Redim_Statement(VBA_Object):
 
                 # Get the new size.
                 new_size = eval_arg(self.raw_item.params[0], context=context)
-
+                
                 # Got a value we can work with?
                 if (isinstance(new_size, int)):
-                    new_list = [0] * (new_size)
+                    new_list = [0] * (new_size + 1)
                     var_name = self.raw_item.name
                     context.set(var_name, new_list)
                     

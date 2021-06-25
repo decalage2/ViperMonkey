@@ -863,7 +863,7 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
             return len(utils.safe_str_convert(params[0]))
-        val = vba_conversion.str_convert(params[0])
+        val = params[0]
         if (hasattr(params[0], '__len__')):
 
             # Is this a string?            
