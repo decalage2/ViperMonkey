@@ -577,7 +577,7 @@ def _remove_duplicate_iocs(iocs):
     skip = set()
     log.info("Found " + safe_str_convert(len(iocs)) + " possible IOCs. Stripping duplicates...")
     for ioc1 in iocs:
-        
+
         # Does this IOC look like straight up garbage?
         if (read_ole_fields.is_garbage_vba(ioc1, test_all=True, bad_pct=.25)):
             skip.add(ioc1)
@@ -717,18 +717,23 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
 
     """
 
+    # Limit the number of base64 IOCs.
+    full_iocs = core.vba_context.intermediate_iocs
+    tmp_b64_iocs = []
+    for ioc in full_iocs:
+        if ("http" not in ioc):
+            tmp_b64_iocs.append(ioc)
+    tmp_b64_iocs = tmp_b64_iocs + list(read_ole_fields.pull_base64(data))
+    tmp_b64_iocs = sorted(tmp_b64_iocs, key=len)[::-1][:200]
+    for ioc in tmp_b64_iocs:
+        full_iocs.add(ioc)
+        core.vba_context.num_b64_iocs += 1
+    
+    
     # Print table of all recorded actions
     safe_print('\nRecorded Actions:')
     safe_print(vm.dump_actions())
     safe_print('')
-    full_iocs = core.vba_context.intermediate_iocs
-    raw_b64_iocs = read_ole_fields.pull_base64(data)
-    for ioc in raw_b64_iocs:
-        if (core.vba_context.num_b64_iocs > 200):
-            log.warning("Found too many potential base64 IOCs. Skipping the rest.")
-            break
-        full_iocs.add(ioc)
-        core.vba_context.num_b64_iocs += 1
 
     # Report intermediate IOCs.
     tmp_iocs = []
