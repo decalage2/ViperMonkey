@@ -4926,6 +4926,9 @@ class Cells(VbaLibraryFunc):
         context.increase_general_errors()
         log.warning("Failed to read Cell(" + utils.safe_str_convert(col) + ", " + utils.safe_str_convert(row) + "). (1)")
         return "NULL"
+
+    def return_type(self):
+        return "STRING"
     
 class Sheets(VbaLibraryFunc):
     """Emulate Excel Sheets() function.
