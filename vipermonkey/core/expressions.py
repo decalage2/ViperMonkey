@@ -505,7 +505,11 @@ class MemberAccessExpression(VBA_Object):
                 # This is not a VBA function call. Is it a variable reference? We can
                 # handle a variable reference if it is the last item on the stack.
                 if ((context.contains(obj_name)) and (len(obj_stack) == 0)):
+
+                    # If this is a synthetic value leave it as a variable.
                     curr_func = context.get(obj_name)
+                    if (curr_func == "__LOOP_VAR__"):
+                        curr_func = curr_obj
                 else:
                     return None
 

@@ -5550,6 +5550,7 @@ class Print(VbaLibraryFunc):
 
         if (params[0] is not None):
             if (not context.throttle_logging):
+                data_str = utils.safe_str_convert(data_str).replace("\x00", "")
                 context.report_action("Debug Print", data_str, '')
 
 class Debug(Print):
