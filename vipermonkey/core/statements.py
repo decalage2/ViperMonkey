@@ -5276,15 +5276,32 @@ class File_Open(VBA_Object):
         # Store file id variable in context.
         file_id = ""
         if self.file_id:
+
+            # Is the fileid already a #NNN fileid?
             file_id = safe_str_convert(self.file_id)
             if not file_id.startswith('#'):
 
-                # Might be a variable containing the number of the file.
+                # No, Might be a variable containing the number of the file.
                 try:
                     file_id = "#" + safe_str_convert(context.get(file_id))
                 except KeyError:
-                    # Punt and hope this si referring to the next open file ID.
+                    # Punt and hope this is referring to the next open file ID.
                     file_id = "#" + safe_str_convert(context.get_num_open_files() + 1)
+
+            # The fileid already is a #??? construct.
+            else:
+
+                # Is it something like #VAR_NAME (not numeric)?
+                tmp_id = file_id[1:]
+                if (not tmp_id.isdigit()):
+
+                    # No, Might be a variable containing the number of the file.
+                    try:
+                        file_id = "#" + safe_str_convert(context.get(tmp_id))
+                    except KeyError:
+                        # Punt and hope this is referring to the next open file ID.
+                        file_id = "#" + safe_str_convert(context.get_num_open_files() + 1)
+                
             context.set(file_id, name, force_global=True)
 
         # Save that the file is opened.

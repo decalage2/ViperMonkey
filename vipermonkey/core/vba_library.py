@@ -5863,8 +5863,8 @@ class FreeFile(VbaLibraryFunc):
         params = params # pylint        
 
         # Return index of next open file.
-        v = len(context.open_files) + 1
-        return v
+        r = utils.safe_str_convert(len(context.open_files) + 1)
+        return r
 
 class CreateElement(VbaLibraryFunc):
     """Faked emulation of things like
