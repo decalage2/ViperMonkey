@@ -297,7 +297,8 @@ class Sub(VBA_Object):
 
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
-
+        context.exit_func = False
+        
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
 

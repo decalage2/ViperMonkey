@@ -430,6 +430,7 @@ class TaggedBlock(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Assign all const variables first.
@@ -659,6 +660,7 @@ class Dim_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Evaluate the initial variable value(s).
@@ -1301,6 +1303,7 @@ class Let_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # If a function return value is being set (LHS == current function name),
@@ -1633,6 +1636,7 @@ class Prop_Assign_Statement(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
 
@@ -2144,6 +2148,7 @@ class For_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # evaluate values:
@@ -2493,6 +2498,7 @@ class For_Each_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Track that the current loop is running.
@@ -3034,6 +3040,7 @@ class While_Statement(VBA_Object):
     def eval(self, context, params=None):
 
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return None
         
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3307,6 +3314,7 @@ class Do_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3497,6 +3505,7 @@ class Select_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Get the current value of the guard expression for the select.
@@ -3579,6 +3588,7 @@ class Select_Clause(VBA_Object):
     def eval(self, context, params=None):
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return None
         if (hasattr(self.select_val, "eval")):
             return self.select_val.eval(context, params)
@@ -3671,6 +3681,7 @@ class Case_Clause_Atomic(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return False
         
         # Get the value against which to test the guard. This must already be
@@ -3773,6 +3784,7 @@ class Case_Clause(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return False
         
         # Check each clause.
@@ -3806,6 +3818,7 @@ class Select_Case(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
     
 
@@ -4026,6 +4039,7 @@ class If_Statement(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Walk through each case of the if, seeing which one applies (if any).
@@ -4120,6 +4134,7 @@ class If_Statement_Macro(If_Statement):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # TODO: Properly evaluating this will involve supporting compile time variables
@@ -4688,6 +4703,7 @@ class Exit_For_Statement(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         # Update the loop stack to indicate that the current loop should exit.
         if (len(context.loop_stack) > 0):
@@ -4970,6 +4986,7 @@ class With_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Evaluate the with prefix value. This calls any functions that appear in the
@@ -5063,6 +5080,7 @@ class Goto_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Do we know the code block associated with the GOTO label?
@@ -5257,6 +5275,7 @@ class File_Open(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Get the file name.
@@ -5371,6 +5390,7 @@ class Print_Statement(VBA_Object):
         
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         
         # Get the ID of the file.
@@ -5591,6 +5611,7 @@ class External_Function(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
+            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return 0
 
         # If we emulate an external function we are treating it like a VBA builtin function.
