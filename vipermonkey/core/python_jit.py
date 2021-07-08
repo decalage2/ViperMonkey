@@ -582,13 +582,10 @@ def to_python(arg, context, params=None, indent=0, statements=False):
                 return "ERROR! to_python failed! " + safe_str_convert(e)
             r += indent_str + "except IndexError as e:\n"
             r += indent_str + " " * 4 + "safe_print(\"VB ERROR: \" + safe_str_convert(e))\n"
+            r += indent_str + " " * 4 + "got_vb_error = True\n"
             if in_loop:
-                # If we are in a loop break out of the loop and track that we have an error.
-                r += indent_str + " " * 4 + "got_vb_error = True\n"
+                # If we are in a loop break out of the loop.
                 r += indent_str + " " * 4 + "break\n"
-            else:
-                # If we are not in a loop pass the exception along.
-                r += indent_str + " " * 4 + "raise(e)\n"
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"

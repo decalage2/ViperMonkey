@@ -875,6 +875,12 @@ class Let_Statement(VBA_Object):
 
     def to_python(self, context, params=None, indent=0):        
 
+        # If we are not assigning to a boolean variable, assume that any
+        # boolean operators on the RHS are bitwise operators.
+        old_in_bitwise = context.in_bitwise_expression
+        if (context.get_type(self.name) != "Boolean"):
+            context.in_bitwise_expression = True
+            
         # Are we updating a global variable?
         r = ""
         try:
@@ -905,6 +911,7 @@ class Let_Statement(VBA_Object):
                 # Get the string to modify, substring start index, and substring length.
                 args = self.string_op["args"]
                 if (len(args) < 3):
+                    context.in_bitwise_expression = old_in_bitwise
                     return "ERROR: Wrong # args to mid. " + safe_str_convert(self)
                 the_str_var = to_python(args[0], context)
                 start = to_python(args[1], context)
@@ -959,7 +966,10 @@ class Let_Statement(VBA_Object):
         # Mark this variable as set so it does not get overwritten by
         # future to_python() code generation.
         context.set(self.name, "__ALREADY_SET__")
-                
+
+        # Reset whether we think we are in a bitwise expression.
+        context.in_bitwise_expression = old_in_bitwise
+        
         # Done.
         if (r.startswith(".")):
             r = r[1:]
@@ -1833,7 +1843,9 @@ class For_Statement(VBA_Object):
                      "safe_print(str(int(float(" + loop_var + ")/(coerce_to_int(" + end_var + ") if coerce_to_int(" + end_var + ") != 0 else 1)*100)) + " + \
                      "\"% done with loop " + body_escaped + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
+        enter_loop()
         body_str = to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
+        exit_loop()
         if (body_str.strip() == '""'):
             body_str = "\n"
         loop_body += body_str
@@ -2490,8 +2502,10 @@ class For_Each_Statement(VBA_Object):
                      "safe_print(str(int(float(" + pos_var + ")/(" + len_var + \
                      " if " + len_var + " != 0 else 1)*100)) + \"% done with loop " + body_escaped + "\")\n"
         loop_body += indent_str + " " * 8 + prog_var + " += 1\n"
+        enter_loop()
         loop_body += to_python(self.statements, tmp_context, params=params, indent=indent+4, statements=True)
-            
+        exit_loop()
+        
         # Full python code for the loop.
         python_code = loop_init + "\n" + \
                       loop_start + "\n" + \
@@ -3300,8 +3314,10 @@ class Do_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound/10) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
+        enter_loop()
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
-
+        exit_loop()
+        
         # Simulate the do-while loop by checking the not of the guard and exiting if needed at
         # the end of the loop body. Only do this if we actually have a guard.
         if (len(safe_str_convert(self.guard).strip()) > 0):
