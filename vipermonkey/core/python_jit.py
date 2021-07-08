@@ -450,6 +450,7 @@ def _loop_vars_to_python(loop, context, indent):
     indent_str = " " * indent
     loop_init = ""
     init_vals, _ = _get_var_vals(loop, context)
+    init_vals["got_vb_error"] = False
     sorted_vars = list(init_vals.keys())
     sorted_vars.sort()
     for var in sorted_vars:
@@ -468,6 +469,38 @@ def _loop_vars_to_python(loop, context, indent):
     loop_init += indent_str + prog_var + " = 0\n"
     loop_init = indent_str + "# Initialize variables read in the loop.\n" + loop_init
     return (loop_init, prog_var)
+
+# Track whether we are generating JIT code for a loop body or not.
+in_loop = False
+
+# Stack for saving old values of whether we are processing a loop body
+# or not.
+in_loop_stack = []
+
+def enter_loop():
+    """Track that we have started generating Python code for a loop body.
+
+    """
+
+    # Save whether we are currently in a loop or not.
+    global in_loop
+    in_loop_stack.append(in_loop)
+
+    # We are now processing a loop body.
+    in_loop = True
+
+def exit_loop():
+    """Track that we have stopped generating Python code for the current
+    loop body. Note that loops can be nested so once the current loop body is
+    done we can still be in a loop.
+
+    """
+    global in_loop
+    if (len(in_loop_stack) > 0):
+        in_loop = in_loop_stack.pop()
+    else:
+        log.warning("exit_loop() called with no matching enter_loop() call.")
+        in_loop = False    
 
 def to_python(arg, context, params=None, indent=0, statements=False):
     """Call arg.to_python() if arg is a VBAObject, otherwise just return
@@ -547,6 +580,15 @@ def to_python(arg, context, params=None, indent=0, statements=False):
                 #traceback.print_exc(file=sys.stdout)
                 #sys.exit(0)
                 return "ERROR! to_python failed! " + safe_str_convert(e)
+            r += indent_str + "except IndexError as e:\n"
+            r += indent_str + " " * 4 + "safe_print(\"VB ERROR: \" + safe_str_convert(e))\n"
+            if in_loop:
+                # If we are in a loop break out of the loop and track that we have an error.
+                r += indent_str + " " * 4 + "got_vb_error = True\n"
+                r += indent_str + " " * 4 + "break\n"
+            else:
+                # If we are not in a loop pass the exception along.
+                r += indent_str + " " * 4 + "raise(e)\n"
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"
@@ -779,7 +821,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     # Emulating full VB programs in Python is difficult, so for now skip loops
     # that Execute() dynamic VB.
     code_vba = safe_str_convert(loop).replace("\n", "\\n")[:20]
-    log.info("Starting JIT emulation of '" + code_vba + "...' ...")
+    if (not context.throttle_logging):
+        log.info("Starting JIT emulation of '" + code_vba + "...' ...")
     if (("Execute(" in safe_str_convert(loop)) or
         ("ExecuteGlobal(" in safe_str_convert(loop)) or
         ("Eval(" in safe_str_convert(loop))):
@@ -797,7 +840,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         
         # Get the Python code for the loop.
-        log.info("Generating Python JIT code...")
+        if (not context.throttle_logging):
+            log.info("Generating Python JIT code...")
         code_python = to_python(loop, tmp_context)
         if add_boilerplate:
             var_inits, _ = _loop_vars_to_python(loop, tmp_context, 0)
@@ -813,7 +857,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             safe_print(code_python)
             #print "REMOVE THIS!!!"
             #sys.exit(0)
-        log.info("Done generating Python JIT code.")
+        if (not context.throttle_logging):
+            log.info("Done generating Python JIT code.")
 
         # Extended ASCII strings are handled differently in VBScript and VBA.
         # Punt if we are emulating VBA and we have what appears to be extended ASCII
@@ -841,7 +886,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         # Have we already run this exact loop?
         if (code_python in jit_cache):
             var_updates = jit_cache[code_python]
-            log.info("Using cached JIT loop results.")
+            if (not context.throttle_logging):
+                log.info("Using cached JIT loop results.")
             if (var_updates == "ERROR"):
                 log.error("Previous run of Python JIT loop emulation failed. Using fallback emulation for loop.")
                 return False
@@ -854,7 +900,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         
             # Magic. For some reason exec'ing in locals() makes the dynamically generated
             # code recognize functions defined in the dynamic code. I don't know why.
-            log.info("Evaluating Python JIT code...")
+            if (not context.throttle_logging):
+                log.info("Evaluating Python JIT code...")
             exec code_python in locals()
         else:
 
@@ -864,7 +911,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             # Run the JIT code in the given namespace.
             exec(code_python, namespace)
             var_updates = namespace["var_updates"]
-        log.info("Done JIT emulation of '" + code_vba + "...' .")
+        if (not context.throttle_logging):
+            log.info("Done JIT emulation of '" + code_vba + "...' .")
 
         # Cache the loop results.
         jit_cache[code_python] = var_updates

@@ -307,6 +307,7 @@ class VBA_Object(object):
         implemented as Python code.
 
         """
+        log.warning("to_python() not implemented in " + safe_str_convert(type(self)))
         raise NotImplementedError("to_python() not implemented in " + safe_str_convert(type(self)))
 
 def _read_from_excel(arg, context):

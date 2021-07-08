@@ -80,7 +80,8 @@ from vba_context import Context, is_procedure
 from reserved import reserved_complex_type_identifier
 from from_unicode_str import from_unicode_str
 from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
-from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python
+from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python, \
+    enter_loop, exit_loop
 import procedures
 from var_in_expr_visitor import var_in_expr_visitor
 from function_call_visitor import function_call_visitor
@@ -603,7 +604,9 @@ class Dim_Statement(VBA_Object):
             if (curr_type is not None):
 
                 # Get the initial value.
-                if ((curr_type == "Long") or (curr_type == "Integer")):
+                if ((curr_type == "Long") or
+                    (curr_type == "Byte") or
+                    (curr_type == "Integer")):
                     curr_init_val = "0"
                 if (curr_type == "String"):
                     curr_init_val = '""'
@@ -615,10 +618,14 @@ class Dim_Statement(VBA_Object):
                     curr_type += " Array"
                     curr_init_val = []
                     if ((var[3] is not None) and
-                        ((curr_type == "Byte Array") or (curr_type == "Integer Array"))):
+                        ((curr_type == "Byte Array") or
+                         (curr_type == "Long Array") or
+                         (curr_type == "Integer Array"))):
                         curr_init_val = safe_str_convert([0] * (var[3] + 1))
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = safe_str_convert([''] * var[3])
+                    if ((var[3] is not None) and (curr_type == "Boolean Array")):
+                        curr_init_val = [False] * var[3]
 
             # Handle untyped arrays.
             elif (var[1]):
@@ -2722,8 +2729,10 @@ class While_Statement(VBA_Object):
         loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
+        enter_loop()
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
-            
+        exit_loop()
+        
         # Full python code for the loop.
         python_code = loop_init + "\n" + \
                       loop_start + "\n" + \
@@ -3294,12 +3303,13 @@ class Do_Statement(VBA_Object):
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
 
         # Simulate the do-while loop by checking the not of the guard and exiting if needed at
-        # the end of the loop body.
-        if (self.loop_type.lower() == "until"):
-            loop_body += indent_str + " " * 4 + "if (" + to_python(self.guard, context) + "):\n"
-        else:
-            loop_body += indent_str + " " * 4 + "if (not (" + to_python(self.guard, context) + ")):\n"
-        loop_body += indent_str + " " * 8 + "break\n"
+        # the end of the loop body. Only do this if we actually have a guard.
+        if (len(safe_str_convert(self.guard).strip()) > 0):
+            if (self.loop_type.lower() == "until"):
+                loop_body += indent_str + " " * 4 + "if (" + to_python(self.guard, context) + "):\n"
+            else:
+                loop_body += indent_str + " " * 4 + "if (not (" + to_python(self.guard, context) + ")):\n"
+            loop_body += indent_str + " " * 8 + "break\n"
         
         # Full python code for the loop.
         python_code = loop_init + "\n" + \
@@ -3399,23 +3409,29 @@ class Do_Statement(VBA_Object):
                 break
 
             # Test the loop guard to see if we should exit the loop.
-            guard_val = eval_arg(self.guard, context)
-            if (self.loop_type.lower() == "until"):
-                guard_val = (not guard_val)
+            guard_val = True
+
+            # Evaluate the guard if we have one.
+            have_guard = (len(safe_str_convert(self.guard).strip()) > 0)
+            if have_guard:
+                guard_val = eval_arg(self.guard, context)
+                if (self.loop_type.lower() == "until"):
+                    guard_val = (not guard_val)
             if (not guard_val):
                 break
 
             # Does it look like this might be an infinite loop? Check this by
             # seeing if any changes have been made to the variables in the loop
             # guard.
-            curr_guard_vals = _get_guard_variables(self, context)
-            if (curr_guard_vals == old_guard_vals):
-                num_no_change += 1
-                if (num_no_change >= context.max_static_iters):
-                    log.warn("Possible infinite While loop detected. Exiting loop.")
-                    break
-            else:
-                num_no_change = 0
+            if have_guard:
+                curr_guard_vals = _get_guard_variables(self, context)
+                if (curr_guard_vals == old_guard_vals):
+                    num_no_change += 1
+                    if (num_no_change >= context.max_static_iters):
+                        log.warn("Possible infinite While loop detected. Exiting loop.")
+                        break
+                else:
+                    num_no_change = 0
             
         # Remove tracking of this loop.
         if (len(context.loop_stack) > 0):
@@ -4505,7 +4521,8 @@ class Call_Statement(VBA_Object):
                         tmp_call_params.append(p.replace("\x00", ""))
                     else:
                         tmp_call_params.append(p)
-            if ((func_name != "Debug.Print") and
+            if ((func_name.lower() != "Debug.Print".lower()) and
+                (func_name.lower() != "WScript.Echo".lower()) and                
                 (not func_name.endswith("Add")) and
                 (not func_name.endswith("Write")) and
                 (len(tmp_call_params) > 0)):
