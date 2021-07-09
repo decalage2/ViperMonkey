@@ -467,7 +467,889 @@ class VbaConstants(object):
         self.globals["wdEmphasisMarkOverWhiteCircle".lower()] = 3
         # A solid black circle. 
         self.globals["wdEmphasisMarkUnderSolidCircle".lower()] = 4
+
+        # Options Interface
+        #
+        # Represents application and document options in Microsoft
+        # Word. Many of the properties for the Options object
+        # correspond to items in the Options dialog box (Tools menu).
         
+        # True if Microsoft Word adds bidirectional control characters
+        # when saving a document as a text file.
+        self.globals["AddBiDirectionalMarksWhenSavingTextFile".lower()] = True
+        # True if Microsoft Word adds bidirectional control characters
+        # when cutting and copying text. 
+        self.globals["AddControlCharacters".lower()] = True
+        # True if Microsoft Word encloses number formats in double
+        # quotation marks ("). 
+        self.globals["AddHebDoubleQuote".lower()] = True
+        # True if users are notified if Word is not the default
+        # program for viewing and editing documents. Read-write. 
+        self.globals["AlertIfNotDefault".lower()] = True
+        # True if accents are retained when a French language
+        # character is changed to uppercase. 
+        self.globals["AllowAccentedUppercase".lower()] = True
+        # True if Click and Type functionality is enabled. 
+        self.globals["AllowClickAndTypeMouse".lower()] = True
+        # True if Microsoft Word ignores auxiliary verb forms when
+        # checking spelling in a Korean language document. 
+        self.globals["AllowCombinedAuxiliaryForms".lower()] = True
+        # True if Microsoft Word ignores compound nouns when checking
+        # spelling in a Korean language document. 
+        self.globals["AllowCompoundNounProcessing".lower()] = True
+        # True if dragging and dropping can be used to move or copy a
+        # selection. 
+        self.globals["AllowDragAndDrop".lower()] = True
+        # True if Microsoft Word saves only changes to a
+        # document. When reopening the document, Word uses the saved
+        # changes to reconstruct the document. 
+        self.globals["AllowFastSave".lower()] = True
+        # True if to allow users to open documents in draft
+        # view. Read/write. 
+        self.globals["AllowOpenInDraftView".lower()] = True
+        # True if Microsoft Word uses pixels as the default unit of
+        # measurement for HTML features that support measurements. 
+        self.globals["AllowPixelUnits".lower()] = True
+        # True indicates that Microsoft Word opens documents in
+        # Reading Layout view. Corresponds to the Allow starting in
+        # Reading Layout check box on the General tab of the Options
+        # dialog box.True 
+        self.globals["AllowReadingMode".lower()] = True
+        # True if Microsoft Word animates mouse movements, uses
+        # animated cursors, and animates actions such as background
+        # saving and find and replace operations. 
+        self.globals["AnimateScreenMovements".lower()] = True
+        # "Word.Application" Returns a Application object that
+        # represents the Microsoft Word application. 
+        self.globals["Application".lower()] = "Word.Application"
+        # True if Microsoft Word applies East Asian fonts to Latin
+        # text. 
+        self.globals["ApplyFarEastFontsToAscii".lower()] = True
+        # 3 Returns or sets the mode for the Arabic spelling checker. 
+        self.globals["ArabicMode".lower()] = 3
+        # 0 Returns or sets the numeral style for an Arabic language
+        # document. 
+        self.globals["ArabicNumeral".lower()] = 0
+        # True for Microsoft Word to draw newly created shapes in a
+        # drawing canvas. 
+        self.globals["AutoCreateNewDrawings".lower()] = True
+        # True if characters (such as asterisks, hyphens, and
+        # greater-than signs) at the beginning of list paragraphs are
+        # replaced with bullets from the Bullets and Numbering dialog
+        # box (Format menu) when Microsoft Word formats a document or
+        # range automatically.True 
+        self.globals["AutoFormatApplyBulletedLists".lower()] = True
+        # True if Microsoft Word replaces a space entered at the
+        # beginning of a paragraph with a first-line indent when Word
+        # formats a document or range automatically. 
+        self.globals["AutoFormatApplyFirstIndents".lower()] = True
+        # True if styles are automatically applied to headings when
+        # Word formats a document or range automatically. 
+        self.globals["AutoFormatApplyHeadings".lower()] = True
+        # True if styles are automatically applied to lists when
+        # Microsoft Word formats a document or range automatically. 
+        self.globals["AutoFormatApplyLists".lower()] = True
+        # True if styles are automatically applied to paragraphs that
+        # aren't headings or list items when Microsoft Word formats a
+        # document or range automatically. 
+        self.globals["AutoFormatApplyOtherParas".lower()] = True
+        # True if a series of three or more hyphens (-), equal signs
+        # (=), or underscore characters (_) are automatically replaced
+        # by a specific border line when the ENTER key is pressed.True 
+        self.globals["AutoFormatAsYouTypeApplyBorders".lower()] = True
+        # True if bullet characters (such as asterisks, hyphens, and
+        # greater-than signs) are replaced with bullets from the
+        # Bullets And Numbering dialog box (Format menu) as you type. 
+        self.globals["AutoFormatAsYouTypeApplyBulletedLists".lower()] = True
+        # True for Microsoft Word to automatically apply the Closing
+        # style to letter closings as you type. 
+        self.globals["AutoFormatAsYouTypeApplyClosings".lower()] = True
+        # True for Microsoft Word to automatically apply the Date
+        # style to dates as you type. 
+        self.globals["AutoFormatAsYouTypeApplyDates".lower()] = True
+        # True for Microsoft Word to automatically replace a space
+        # entered at the beginning of a paragraph with a first-line
+        # indent. 
+        self.globals["AutoFormatAsYouTypeApplyFirstIndents".lower()] = True
+        # True if styles are automatically applied to headings as you
+        # type. 
+        self.globals["AutoFormatAsYouTypeApplyHeadings".lower()] = True
+        # True if paragraphs are automatically formatted as numbered
+        # lists with a numbering scheme from the Bullets and Numbering
+        # dialog box (Format menu), according to what's typed. 
+        self.globals["AutoFormatAsYouTypeApplyNumberedLists".lower()] = True
+        # True if Microsoft Word automatically creates a table when
+        # you type a plus sign, a series of hyphens, another plus
+        # sign, and so on, and then press ENTER. The plus signs become
+        # the column borders, and the hyphens become the column
+        # widths. 
+        self.globals["AutoFormatAsYouTypeApplyTables".lower()] = True
+        # True for Microsoft Word to automatically start the Letter
+        # Wizard when the user enters a letter salutation or closing. 
+        self.globals["AutoFormatAsYouTypeAutoLetterWizard".lower()] = True
+        # True if Microsoft Word automatically creates new styles
+        # based on manual formatting. 
+        self.globals["AutoFormatAsYouTypeDefineStyles".lower()] = True
+        # True for Microsoft Word to automatically delete spaces
+        # inserted between Japanese and Latin text as you type. 
+        self.globals["AutoFormatAsYouTypeDeleteAutoSpaces".lower()] = True
+        # True if Microsoft Word repeats character formatting applied
+        # to the beginning of a list item to the next list item. 
+        self.globals["AutoFormatAsYouTypeFormatListItemBeginning".lower()] = True
+        # True for Microsoft Word to automatically insert the
+        # corresponding memo closing when the user enters a memo
+        # heading. 
+        self.globals["AutoFormatAsYouTypeInsertClosings".lower()] = True
+        # True for Microsoft Word to automatically insert the "ijou"
+        # characters when the user enters the "ki" or "an" character. 
+        self.globals["AutoFormatAsYouTypeInsertOvers".lower()] = True
+        # True for Microsoft Word to automatically correct improperly
+        # paired parentheses. 
+        self.globals["AutoFormatAsYouTypeMatchParentheses".lower()] = True
+        # True for Microsoft Word to automatically correct long vowel
+        # sounds and dashes. 
+        self.globals["AutoFormatAsYouTypeReplaceFarEastDashes".lower()] = True
+        # True if typed fractions are replaced with fractions from the
+        # current character set as you type. For example, "1/2" is
+        # replaced with "½." 
+        self.globals["AutoFormatAsYouTypeReplaceFractions".lower()] = True
+        # True if e-mail addresses, server and share names (also known
+        # as UNC paths), and Internet addresses (also known as URLs)
+        # are automatically changed to hyperlinks as you type. 
+        self.globals["AutoFormatAsYouTypeReplaceHyperlinks".lower()] = True
+        # True if the ordinal number suffixes "st", "nd", "rd", and
+        # "th" are replaced with the same letters in superscript as
+        # you type. For example, "1st" is replaced with "1" followed
+        # by "st" formatted as superscript. 
+        self.globals["AutoFormatAsYouTypeReplaceOrdinals".lower()] = True
+        # True if manual emphasis characters are automatically
+        # replaced with character formatting as you type. For example,
+        # "bold" is changed to "bold" and "underline" is changed to
+        # "underline." 
+        self.globals["AutoFormatAsYouTypeReplacePlainTextEmphasis".lower()] = True
+        # True if straight quotation marks are automatically changed
+        # to smart (curly) quotation marks as you type. 
+        self.globals["AutoFormatAsYouTypeReplaceQuotes".lower()] = True
+        # True if two consecutive hyphens (--) are replaced with an en
+        # dash (–) or an em dash (— ) as you type. 
+        self.globals["AutoFormatAsYouTypeReplaceSymbols".lower()] = True
+        # True if spaces inserted between Japanese and Latin text will
+        # be deleted when Microsoft Word formats a document or range
+        # automatically. 
+        self.globals["AutoFormatDeleteAutoSpaces".lower()] = True
+        # True if improperly paired parentheses are corrected when
+        # Microsoft Word formats a document or range automatically. 
+        self.globals["AutoFormatMatchParentheses".lower()] = True
+        # True if Microsoft Word automatically formats plain-text
+        # e-mail messages when you open them in Word. 
+        self.globals["AutoFormatPlainTextWordMail".lower()] = True
+        # True if previously applied styles are preserved when
+        # Microsoft Word formats a document or range automatically. 
+        self.globals["AutoFormatPreserveStyles".lower()] = True
+        # True if long vowel sound and dash use is corrected when
+        # Microsoft Word formats a document or range automatically. 
+        self.globals["AutoFormatReplaceFarEastDashes".lower()] = True
+        # True if typed fractions are replaced with fractions from the
+        # current character set when Microsoft Word formats a document
+        # or range automatically. For example, "1/2" is replaced with
+        # "½." 
+        self.globals["AutoFormatReplaceFractions".lower()] = True
+        # True if e-mail addresses, server and share names (also known
+        # as UNC paths), and Internet addresses (also known as URLs)
+        # are automatically formatted whenever Microsoft Word
+        # AutoFormats a document or range. 
+        self.globals["AutoFormatReplaceHyperlinks".lower()] = True
+        # True if the ordinal number suffixes "st", "nd", "rd", and
+        # "th" are replaced with the same letters in superscript when
+        # Word formats a document or range automatically. For example,
+        # "1st" is replaced with "1" followed by "st" formatted as
+        # superscript. 
+        self.globals["AutoFormatReplaceOrdinals".lower()] = True
+        # True if manual emphasis characters are replaced with
+        # character formatting when Microsoft Word formats a document
+        # or range automatically. For example, "bold" is changed to
+        # "bold" and "underline" is changed to "underline." 
+        self.globals["AutoFormatReplacePlainTextEmphasis".lower()] = True
+        # True if straight quotation marks are automatically changed
+        # to smart (curly) quotation marks when Microsoft Word formats
+        # a document or range automatically. 
+        self.globals["AutoFormatReplaceQuotes".lower()] = True
+        # True if two consecutive hyphens (--) are replaced by an en
+        # dash (–) or an em dash (— ) when Microsoft Word formats a
+        # document or range automatically. 
+        self.globals["AutoFormatReplaceSymbols".lower()] = True
+        # True if Microsoft Word automatically switches the keyboard
+        # language to match what you’re typing at any given time. 
+        self.globals["AutoKeyboardSwitching".lower()] = True
+        # True if dragging selects one word at a time instead of one
+        # character at a time. 
+        self.globals["AutoWordSelection".lower()] = True
+        # True for Microsoft Word to open Web documents in the
+        # background. 
+        self.globals["BackgroundOpen".lower()] = True
+        # True if Microsoft Word saves documents in the
+        # background. When Word is saving in the background, users can
+        # continue to type and to choose commands. 
+        self.globals["BackgroundSave".lower()] = True
+        # "Title" Returns or sets a String that represents the order
+        # in which to display sources in the Source Manager dialog
+        # box. Read/write. 
+        self.globals["BibliographySort".lower()] = "Title"
+        # "??style??" Returns or sets a String that represents the
+        # name of the style to use for formatting
+        # bibliographies. Read/write. 
+        self.globals["BibliographyStyle".lower()] = "??style??"
+        # True if Microsoft Word displays text as white characters on
+        # a blue background. 
+        self.globals["BlueScreen".lower()] = True
+        # 1 Returns or sets the number of clicks (either one or two)
+        # required to run a GOTOBUTTON or MACROBUTTON field. 
+        self.globals["ButtonFieldClicks".lower()] = 1
+        # True if Microsoft Word checks grammar and marks errors
+        # automatically as you type. 
+        self.globals["CheckGrammarAsYouType".lower()] = True
+        # True if Microsoft Word checks grammar while checking
+        # spelling. 
+        self.globals["CheckGrammarWithSpelling".lower()] = True
+        # True if Microsoft Word automatically detects Hangul endings
+        # and ignores them during conversion from Hangul to Hanja. 
+        self.globals["CheckHangulEndings".lower()] = True
+        # True if Microsoft Word checks spelling and marks errors
+        # automatically as you type. 
+        self.globals["CheckSpellingAsYouType".lower()] = True
+        # 123 Returns or sets a WdColorIndex constant that represents
+        # the color of comments in a document. 
+        self.globals["CommentsColor".lower()] = 123
+        # True if Microsoft Word displays the Convert File dialog box
+        # before it opens or inserts a file that isn't a Word document
+        # or template. In the Convert File dialog box, the user
+        # chooses the format to convert the file from. 
+        self.globals["ConfirmConversions".lower()] = True
+        # True Returns or sets a Boolean that represents whether to
+        # use the contextual speller to check spelling based on the
+        # context of a word and the words around it. Read/write. 
+        self.globals["ContextualSpeller".lower()] = True
+        # True if Microsoft Word converts text that is associated with
+        # an East Asian font to the appropriate font when it opens a
+        # document. 
+        self.globals["ConvertHighAnsiToFarEast".lower()] = True
+        # True if Microsoft Word creates a backup copy each time a
+        # document is saved. 
+        self.globals["CreateBackup".lower()] = True
+        # 12345 Returns a 32-bit integer that indicates the
+        # application in which the specified object was created. 
+        self.globals["Creator".lower()] = 12345
+        # True if Microsoft Word requires holding down the CTRL key
+        # while clicking to open a hyperlink. 
+        self.globals["CtrlClickHyperlinkToOpen".lower()] = True
+        # 0 Returns or sets how the insertion point progresses within
+        # bidirectional text. 
+        self.globals["CursorMovement".lower()] = 0
+        # 747 Returns or sets the default 24-bit color to use for new
+        # Border objects. Can be any valid WdColor constant or a value
+        # returned by Visual Basic's RGB function. 
+        self.globals["DefaultBorderColor".lower()] = 747
+        # 872 Returns or sets the default line color for borders. 
+        self.globals["DefaultBorderColorIndex".lower()] = 872
+        # 5 Returns or sets the default border line style. 
+        self.globals["DefaultBorderLineStyle".lower()] = 5
+        # 5 Returns or sets the default line width of borders. 
+        self.globals["DefaultBorderLineWidth".lower()] = 5
+        # Sets or returns a String that represents the path and file
+        # name of the default electronic postage application. 
+        self.globals["DefaultEPostageApp".lower()] = "C:\\DefaultEPostageApp.exe"
+        # "C:\\DEFAULT_WORD_FOLDER\\" Returns or sets default folders
+        # for items such as documents, templates, and graphics. 
+        self.globals["DefaultFilePath[WdDefaultFilePath]".lower()] = "C:\\DEFAULT_WORD_FOLDER\\"
+        # 832 Returns or sets the color used to highlight text
+        # formatted with the Highlight button (Formatting toolbar). 
+        self.globals["DefaultHighlightColorIndex".lower()] = 832
+        # 3 Returns or sets the default file converter used to open
+        # documents. Can be a number returned by the OpenFormat
+        # property, or one of the WdOpenFormat constants. 
+        self.globals["DefaultOpenFormat".lower()] = 3
+        # 437 Returns or sets a MsoEncoding constant representing the
+        # code page, or character set, that Microsoft Word uses for
+        # all documents saved as encoded text files. 
+        self.globals["DefaultTextEncoding".lower()] = 437
+        # 1 Returns or sets the default tray your printer uses to
+        # print documents. 
+        self.globals["DefaultTray".lower()] = 1
+        # 1 Returns or sets the default tray your printer uses to
+        # print documents. 
+        self.globals["DefaultTrayID".lower()] = 1
+        # 432 Returns or sets a WdCellColor constant that represents
+        # the color for a deleted cell. Read/write. 
+        self.globals["DeletedCellColor".lower()] = 432
+        # 745 Returns or sets the color of text that is deleted while
+        # change tracking is enabled. 
+        self.globals["DeletedTextColor".lower()] = 745
+        # 2 Returns or sets the format of text that is deleted while
+        # change tracking is enabled. 
+        self.globals["DeletedTextMark".lower()] = 2
+        # 323 Returns or sets the 24-bit color to be used for
+        # diacritics in a right-to-left language document. Can be any
+        # valid WdColor constant or a value returned by Visual Basic's
+        # RGB function. 
+        self.globals["DiacriticColorVal".lower()] = 323
+        # True for Microsoft Word to disable in all documents all
+        # features introduced after the version of Word specified in
+        # the DisableFeaturesIntroducedAfterbyDefault property. The
+        # default value is False. 
+        self.globals["DisableFeaturesbyDefault".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) that specifies
+        # whether alignment guides are enabled in the user
+        # interface. Read-write. 
+        self.globals["DisplayAlignmentGuides".lower()] = True
+        # True if Microsoft Word displays the document grid. This
+        # property is the equivalent of the Gridlines command on the
+        # View menu. 
+        self.globals["DisplayGridLines".lower()] = True
+        # True for Microsoft Word to display the Paste Options button,
+        # which displays directly under newly pasted text. 
+        self.globals["DisplayPasteOptions".lower()] = True
+        # True for Microsoft Word to display a button directly above a
+        # smart tag when a mouse pointer is positioned over it. 
+        self.globals["DisplaySmartTagButtons".lower()] = True
+        # 1 Returns or sets the alignment and reading order for the
+        # entire document. 
+        self.globals["DocumentViewDirection".lower()] = 1
+        # False Sets or returns a Boolean that represents whether to
+        # prompt a warning dialog when the Convert command is invoked
+        # for documents that are in compatibility mode. Read/write. 
+        self.globals["DoNotPromptForConvert".lower()] = False
+        # True if Microsoft Word displays the most recently used words
+        # at the top of the suggestions list during conversion between
+        # Hangul and Hanja. 
+        self.globals["EnableHangulHanjaRecentOrdering".lower()] = True
+        # False Returns or sets aBoolean that represents whether to
+        # enable legacy IME mode. Read/write. 
+        self.globals["EnableLegacyIMEMode".lower()] = False
+        # True Returns or sets a Boolean (bool in C#) that is True if
+        # live drag is enabled. Read-write. 
+        self.globals["EnableLiveDrag".lower()] = True
+        # True Sets or returns a Boolean that represents whether to
+        # show or hide gallery previews that appear when using
+        # galleries that support previewing. True shows a preview in
+        # your document before applying the command. Read/write. 
+        self.globals["EnableLivePreview".lower()] = True
+        # True if Microsoft Word checks for misused words when
+        # checking the spelling and grammar in a document. 
+        self.globals["EnableMisusedWordsDictionary".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) value that, when
+        # True, specifies that users be notified when additional
+        # proofing tools are available for download. Read-write. 
+        self.globals["EnableProofingToolsAdvertisement".lower()] = True
+        # True if Microsoft Word makes the computer respond with a
+        # sound whenever an error occurs. 
+        self.globals["EnableSound".lower()] = True
+        # True if the current printer has a special feeder for
+        # envelopes. 
+        self.globals["EnvelopeFeederInstalled".lower()] = True
+        # True to expand all headings in the document when the
+        # document opens. Read/write Boolean (bool in C#). 
+        self.globals["ExpandHeadingsOnOpen".lower()] = True
+        # True for Microsoft Word to keep track of all formatting in a
+        # document. 
+        self.globals["FormatScanning".lower()] = True
+        # 0 Returns or sets a WdFrenchSpeller constant that represents
+        # which spelling dictionary to use for regions of text with
+        # language formatting set to French. Read/write. 
+        self.globals["FrenchReform".lower()] = 0
+        # 3 Returns or sets the amount of horizontal space between the
+        # invisible gridlines that Microsoft Word uses when you draw,
+        # move, and resize AutoShapes or East Asian characters in new
+        # documents. 
+        self.globals["GridDistanceHorizontal".lower()] = 3
+        # 3 Returns or sets the amount of vertical space between the
+        # invisible gridlines that Microsoft Word uses when you draw,
+        # move, and resize AutoShapes or East Asian characters in new
+        # documents. 
+        self.globals["GridDistanceVertical".lower()] = 3
+        # 3 Returns or sets the point, relative to the left edge of
+        # the page, where you want the invisible grid for drawing,
+        # moving, and resizing AutoShapes or East Asian characters to
+        # begin in new documents. 
+        self.globals["GridOriginHorizontal".lower()] = 3
+        # 3 Returns or sets the point, relative to the top of the
+        # page, where you want the invisible grid for drawing, moving,
+        # and resizing AutoShapes or East Asian characters to begin in
+        # new documents. 
+        self.globals["GridOriginVertical".lower()] = 3
+        # True if Microsoft Word automatically converts a word with
+        # only one suggestion during conversion between Hangul and
+        # Hanja. 
+        self.globals["HangulHanjaFastConversion".lower()] = True
+        # 0 Returns or sets the mode for the Hebrew spelling checker. 
+        self.globals["HebrewMode".lower()] = 0
+        # True if file name extensions, MS-DOS paths, e-mail
+        # addresses, server and share names (also known as UNC paths),
+        # and Internet addresses (also known as URLs) are ignored
+        # while checking spelling. 
+        self.globals["IgnoreInternetAndFileAddresses".lower()] = True
+        # True if words that contain numbers are ignored while
+        # checking spelling. 
+        self.globals["IgnoreMixedDigits".lower()] = True
+        # True if words in all uppercase letters are ignored while
+        # checking spelling. 
+        self.globals["IgnoreUppercase".lower()] = True
+        # True if Microsoft Word is set to automatically open and
+        # close the Japanese Input Method Editor (IME). 
+        self.globals["IMEAutomaticControl".lower()] = True
+        # True if Microsoft Word displays an unconfirmed character
+        # string in the Japanese Input Method Editor (IME) as an
+        # insertion between existing (confirmed) character strings. 
+        self.globals["InlineConversion".lower()] = True
+        # 21 Returns or sets a WdCellColor constant that represents
+        # the color for an inserted table cell. Read/write. 
+        self.globals["InsertedCellColor".lower()] = 21
+        # 72 Returns or sets the color of text that is inserted while
+        # change tracking is enabled. 
+        self.globals["InsertedTextColor".lower()] = 72
+        # 5 Returns or sets how Microsoft Word formats inserted text
+        # while change tracking is enabled (the TrackRevisions
+        # property is True). 
+        self.globals["InsertedTextMark".lower()] = 5
+        # True if the INS key can be used for switching Overtype on
+        # and off. Read/write Boolean. 
+        self.globals["INSKeyForOvertype".lower()] = True
+        # True if the INS key can be used for pasting the Clipboard
+        # contents. 
+        self.globals["INSKeyForPaste".lower()] = True
+        # 2 Returns or sets the high-ANSI text interpretation
+        # behavior. 
+        self.globals["InterpretHighAnsi".lower()] = 2
+        # True for Microsoft Word to mark text in documents with smart
+        # tag information. 
+        self.globals["LabelSmartTags".lower()] = True
+        # True if Microsoft Word creates a local copy of a file on the
+        # user's machine when editing a file stored on a network
+        # server. 
+        self.globals["LocalNetworkFile".lower()] = True
+        # True if documents formatted for another country's/region's
+        # standard paper size (for example, A4) are automatically
+        # adjusted so that they're printed correctly on your
+        # country's/region's standard paper size (for example,
+        # Letter). 
+        self.globals["MapPaperSize".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) that specifies
+        # whether margin alignment guides are displayed in the user
+        # interface. Read-write. 
+        self.globals["MarginAlignmentGuides".lower()] = True
+        # True if Microsoft Word ignores the distinction between the
+        # "a" and "ya" characters following the "i"-row and "e"-row
+        # characters during a search. 
+        self.globals["MatchFuzzyAY".lower()] = True
+        # True if Microsoft Word ignores the distinction between the
+        # "ba" and "vua" characters and between the "ha" and "fua"
+        # characters during a search. 
+        self.globals["MatchFuzzyBV".lower()] = True
+        # True if Microsoft Word ignores the distinction between
+        # full-width and half-width characters (Latin or Japanese)
+        # during a search. 
+        self.globals["MatchFuzzyByte".lower()] = True
+        # True if Microsoft Word ignores the distinction between
+        # uppercase and lowercase letters during a search. 
+        self.globals["MatchFuzzyCase".lower()] = True
+        # True if Microsoft Word ignores the distinction between minus
+        # signs, long vowel sounds, and dashes during a search. 
+        self.globals["MatchFuzzyDash".lower()] = True
+        # True if Microsoft Word ignores the distinction between the
+        # "di" and "zi" characters and between the "du" and "zu"
+        # characters during a search. 
+        self.globals["MatchFuzzyDZ".lower()] = True
+        # True if Microsoft Word ignores the distinction the "heyu"
+        # and "fuyu" characters and between the "beyu" and "vuyu"
+        # characters during a search. 
+        self.globals["MatchFuzzyHF".lower()] = True
+        # True if Microsoft Word ignores the distinction between
+        # hiragana and katakana during a search. 
+        self.globals["MatchFuzzyHiragana".lower()] = True
+        # True if Microsoft Word ignores the distinction between types
+        # of repetition marks during a search. 
+        self.globals["MatchFuzzyIterationMark".lower()] = True
+        # True if Microsoft Word ignores the distinction between
+        # standard and nonstandard kanji ideography during a search. 
+        self.globals["MatchFuzzyKanji".lower()] = True
+        # True if Microsoft Word ignores the distinction between the
+        # "ki" and "ku" characters before "sa"-row characters during a
+        # search. 
+        self.globals["MatchFuzzyKiKu".lower()] = True
+        # True if Microsoft Word ignores the distinction between new
+        # kana and old kana characters during a search. 
+        self.globals["MatchFuzzyOldKana".lower()] = True
+        # True if Microsoft Word ignores the distinction between short
+        # and long vowel sounds during a search. 
+        self.globals["MatchFuzzyProlongedSoundMark".lower()] = True
+        # True if Microsoft Word ignores the distinction between types
+        # of punctuation marks during a search. 
+        self.globals["MatchFuzzyPunctuation".lower()] = True
+        # True if Microsoft Word ignores the distinction between
+        # diphthongs and double consonants during a search. 
+        self.globals["MatchFuzzySmallKana".lower()] = True
+        # True if Microsoft Word ignores the distinction between space
+        # markers used during a search. 
+        self.globals["MatchFuzzySpace".lower()] = True
+        # True if Microsoft Word ignores the distinction between the
+        # "tsui", "tei", and "chi" characters and between the "dei"
+        # and "ji" characters during a search. 
+        self.globals["MatchFuzzyTC".lower()] = True
+        # True if Microsoft Word ignores the distinction the "se" and
+        # "shie" characters and between the "ze" and "jie" characters
+        # during a search. 
+        self.globals["MatchFuzzyZJ".lower()] = True
+        # 2 Returns or sets the standard measurement unit for
+        # Microsoft Word. 
+        self.globals["MeasurementUnit".lower()] = 2
+        # 16 Returns or sets a WdCellColor constant that represents
+        # the color for merged table cells. Read/write. 
+        self.globals["MergedCellColor".lower()] = 16
+        # 1 Returns or sets the direction for conversion between
+        # Hangul and Hanja. 
+        self.globals["MonthNames".lower()] = 1
+        # 45 Returns or sets a WdColorIndex constant that represents
+        # the color of moved text. Read/write. 
+        self.globals["MoveFromTextColor".lower()] = 45
+        # 3 Returns or sets a WdMoveFromTextMark constant that
+        # represents the type of revision mark to use for moved
+        # text. Read/write. 
+        self.globals["MoveFromTextMark".lower()] = 3
+        # 54 Returns or sets a WdColorIndex constant that represents
+        # the color of moved text. Read/write. 
+        self.globals["MoveToTextColor".lower()] = 54
+        # 3 Returns or sets a WdMoveToTextMark constant that
+        # represents the type of revision mark to use for moved
+        # text. Read/write. 
+        self.globals["MoveToTextMark".lower()] = 3
+        # 0 Returns or sets the direction for conversion between
+        # Hangul and Hanja. 
+        self.globals["MultipleWordConversionsMode".lower()] = 0
+        # True Returns or sets a Boolean that represents whether
+        # Microsoft Office Word automatically converts equations to
+        # professional format. True indicates that Word automatically
+        # converts equations to professional format. Read/write. 
+        self.globals["OMathAutoBuildUp".lower()] = True
+        # True Returns or sets a Boolean that represents how equations
+        # are represented in plain text. True indicates equations are
+        # represented in Linear Format. False indicates equations are
+        # represented in MathML. Read/write. 
+        self.globals["OMathCopyLF".lower()] = True
+        # True if Microsoft Word optimizes all new documents for
+        # viewing in Word 97 by disabling any incompatible
+        # formatting. 
+        self.globals["OptimizeForWord97byDefault".lower()] = True
+        # True if Overtype mode is active. 
+        self.globals["Overtype".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) that specifies
+        # whether page alignment guides are displayed in the user
+        # interface. Read-write. 
+        self.globals["PageAlignmentGuides".lower()] = True
+        # True if Microsoft Word repaginates documents in the
+        # background. 
+        self.globals["Pagination".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) that specifies
+        # whether paragraph alignment guides are displayed in the user
+        # interface. Read-write. 
+        self.globals["ParagraphAlignmentGuides".lower()] = True
+        # "PARENT_OBJECT" Returns an object that represents the parent
+        # object of the specified object. 
+        self.globals["Parent".lower()] = "PARENT_OBJECT"
+        # True if Microsoft Word automatically adjusts the spacing of
+        # paragraphs when cutting and pasting selections. 
+        self.globals["PasteAdjustParagraphSpacing".lower()] = True
+        # True if Microsoft Word automatically adjusts the formatting
+        # of tables when cutting and pasting selections. 
+        self.globals["PasteAdjustTableFormatting".lower()] = True
+        # True if Microsoft Word automatically adjusts the spacing of
+        # words when cutting and pasting selections. 
+        self.globals["PasteAdjustWordSpacing".lower()] = True
+        # 0 Returns or sets a WdPasteOptions constant that represents
+        # how text is pasted when text is copied from another
+        # Microsoft Office Word document. Read/write. 
+        self.globals["PasteFormatBetweenDocuments".lower()] = 0
+        # 0 Returns or sets a WdPasteOptions constant that represents
+        # how text is pasted when text is copied from a document that
+        # uses styles. Read/write. 
+        self.globals["PasteFormatBetweenStyledDocuments".lower()] = 0
+        # 1 Returns or sets a WdPasteOptions constant that represents
+        # how text is pasted when text is copied from an external
+        # source, such as a Web page. Read/write. 
+        self.globals["PasteFormatFromExternalSource".lower()] = 1
+        # 1 Returns or sets a WdPasteOptions constant that represents
+        # how text is pasted when text is copied or cut and then
+        # pasted in the same document. Read/write. 
+        self.globals["PasteFormatWithinDocument".lower()] = 1
+        # True to merge text formatting when pasting from Microsoft
+        # PowerPoint. 
+        self.globals["PasteMergeFromPPT".lower()] = True
+        # True to merge table formatting when pasting from Microsoft
+        # Excel. 
+        self.globals["PasteMergeFromXL".lower()] = True
+        # True to merge the formatting of pasted lists with
+        # surrounding lists. 
+        self.globals["PasteMergeLists".lower()] = True
+        # True Returns or sets a Boolean that represents whether to
+        # keep bullets and numbering when selecting Keep text only
+        # from the Paste Options context menu. Read/write. 
+        self.globals["PasteOptionKeepBulletsAndNumbers".lower()] = True
+        # True if Microsoft Word intelligently pastes selections into
+        # a document. 
+        self.globals["PasteSmartCutPaste".lower()] = True
+        # True if Microsoft Word intelligently merges styles when
+        # pasting a selection from a different document. 
+        self.globals["PasteSmartStyleBehavior".lower()] = True
+        # "gimp" Returns or sets the name of the application to use to
+        # edit pictures. 
+        self.globals["PictureEditor".lower()] = "gimp"
+        # 4 Sets or returns a WdWrapTypeMerged constant that indicates
+        # how Microsoft Word wraps text around pictures. 
+        self.globals["PictureWrapType".lower()] = 4
+        # 3 Gets or sets the mode for the European Portuguese
+        # speller. 
+        self.globals["PortugalReform".lower()] = 3
+        # True Returns or sets a Boolean that represents whether Word
+        # optimizes character positioning for print layout rather than
+        # on-screen readability. True disables the default setting
+        # that compresses character spacing to facilitate on-screen
+        # readability and enables character spacing for print
+        # media. Read/write. 
+        self.globals["PrecisePositioning".lower()] = True
+        # True to save new documents in web locations by
+        # default. Read/write Boolean (bool in C#). 
+        self.globals["PreferCloudSaveLocations".lower()] = True
+        # True if Microsoft Word prints in the background. 
+        self.globals["PrintBackground".lower()] = True
+        # True Returns a Boolean that represents whether background
+        # colors and images are printed when a document is
+        # printed. True indicates that background colors and images
+        # are printed. False indicates that background colors and
+        # images are not printed. 
+        self.globals["PrintBackgrounds".lower()] = True
+        # True if Microsoft Word prints comments, starting on a new
+        # page at the end of the document. 
+        self.globals["PrintComments".lower()] = True
+        # True if Microsoft Word prints using minimal formatting. 
+        self.globals["PrintDraft".lower()] = True
+        # True if Microsoft Word prints drawing objects. 
+        self.globals["PrintDrawingObjects".lower()] = True
+        # True if Microsoft Word prints even pages in ascending order
+        # during manual duplex printing. 
+        self.globals["PrintEvenPagesInAscendingOrder".lower()] = True
+        # True if Microsoft Word prints field codes instead of field
+        # results. 
+        self.globals["PrintFieldCodes".lower()] = True
+        # True if hidden text is printed. 
+        self.globals["PrintHiddenText".lower()] = True
+        # True if Microsoft Word prints odd pages in ascending order
+        # during manual duplex printing. 
+        self.globals["PrintOddPagesInAscendingOrder".lower()] = True
+        # True if Microsoft Word prints document summary information
+        # on a separate page at the end of the document. False if
+        # document summary information is not printed. Summary
+        # information is found in the Properties dialog box (File
+        # menu). 
+        self.globals["PrintProperties".lower()] = True
+        # True if Microsoft Word prints pages in reverse order. 
+        self.globals["PrintReverse".lower()] = True
+        # True Returns a Boolean that represents whether to print the
+        # XML tags when printing a document. Corresponds to the XML
+        # tags check box on the Print tab in the Options dialog
+        # box. True indicates that tags are printed. False indicates
+        # tags are not printed. 
+        self.globals["PrintXMLTag".lower()] = True
+        # True displays a message asking the user to verify whether
+        # they want to reformat a style or reapply the original style
+        # formatting when changing the formatting of styles. False
+        # reapplies the style formatting to the selection without
+        # verifying whether the user wants to change the style. 
+        self.globals["PromptUpdateStyle".lower()] = True
+        # True Returns or sets a Boolean that represents whether to
+        # mark words that are repeated when spelling is checked. True
+        # flags repeated words. Read/write. 
+        self.globals["RepeatWord".lower()] = True
+        # True if the result of typing or pasting replaces the
+        # selection. False if the result of typing or pasting is added
+        # before the selection, leaving the selection intact. 
+        self.globals["ReplaceSelection".lower()] = True
+        # 231 Returns or sets the color of changed lines in a document
+        # with tracked changes. 
+        self.globals["RevisedLinesColor".lower()] = 231
+        # 1 Returns or sets the placement of changed lines in a
+        # document with tracked changes. 
+        self.globals["RevisedLinesMark".lower()] = 1
+        # 76 Returns or sets the color used to mark formatting changes
+        # while change tracking is enabled. 
+        self.globals["RevisedPropertiesColor".lower()] = 76
+        # 4 Returns or sets the mark used to show formatting changes
+        # while change tracking is enabled. 
+        self.globals["RevisedPropertiesMark".lower()] = 4
+        # 0 Returns or sets a WdRevisionsBalloonPrintOrientation
+        # constant that represents the direction of revision and
+        # comment balloons when they are printed. 
+        self.globals["RevisionsBalloonPrintOrientation".lower()] = 0
+        # 5 Returns or sets the time interval in minutes for saving
+        # AutoRecover information. 
+        self.globals["SaveInterval".lower()] = 5
+        # True if Microsoft Word prompts the user for confirmation to
+        # save changes to the Normal template before it quits. False
+        # if Word automatically saves changes to the Normal template
+        # before it quits. 
+        self.globals["SaveNormalPrompt".lower()] = True
+        # True if Microsoft Word prompts for document property
+        # information when saving a new document. 
+        self.globals["SavePropertiesPrompt".lower()] = True
+        # True if the Send To command on the File menu inserts the
+        # active document as an attachment to a mail message. False if
+        # the Send To command inserts the contents of the active
+        # document as text in a mail message. 
+        self.globals["SendMailAttach".lower()] = True
+        # True to check the sequence of independent characters for
+        # South Asian text. 
+        self.globals["SequenceCheck".lower()] = True
+        # True if bidirectional control characters are visible in the
+        # current document. 
+        self.globals["ShowControlCharacters".lower()] = True
+        # True Returns or sets a Boolean that represents whether the
+        # Developer tab is displayed in the Ribbon. Read/write. 
+        self.globals["ShowDevTools".lower()] = True
+        # True if diacritics are visible in a right-to-left language
+        # document. 
+        self.globals["ShowDiacritics".lower()] = True
+        # True for Microsoft Word to mark inconsistencies in
+        # formatting by placing a squiggly underline beneath text
+        # formatted similarly to other formatting that is used more
+        # frequently in a document. 
+        self.globals["ShowFormatError".lower()] = True
+        # True Returns or sets a Boolean that represents whether
+        # Microsoft Word displays hidden markup when opening or saving
+        # a file. 
+        self.globals["ShowMarkupOpenSave".lower()] = True
+        # True Returns or sets a Boolean that represents whether to
+        # display mini toolbars when the user right-clicks in the
+        # document window. Read/write. 
+        self.globals["ShowMenuFloaties".lower()] = True
+        # True if Microsoft Word displays a list of summary
+        # statistics, including measures of readability, when it has
+        # finished checking grammar. 
+        self.globals["ShowReadabilityStatistics".lower()] = True
+        # True Returns or sets a Boolean that represents whether mini
+        # toolbars display when a user selects text. Read/write. 
+        self.globals["ShowSelectionFloaties".lower()] = True
+        # True Returns or sets a Boolean that represents whether smart
+        # cursoring is enabled. True enables smart cursoring. 
+        self.globals["SmartCursoring".lower()] = True
+        # True if Microsoft Word automatically adjusts the spacing
+        # between words and punctuation when cutting and pasting
+        # occurs. 
+        self.globals["SmartCutPaste".lower()] = True
+        # True for Microsoft Word to include the paragraph mark in a
+        # selection when selecting most or all of a paragraph. 
+        self.globals["SmartParaSelection".lower()] = True
+        # True if AutoShapes or East Asian characters are
+        # automatically aligned with an invisible grid when they are
+        # drawn, moved, or resized in new documents. 
+        self.globals["SnapToGrid".lower()] = True
+        # True if Microsoft Word automatically aligns AutoShapes or
+        # East Asian characters with invisible gridlines that go
+        # through the vertical and horizontal edges of other
+        # AutoShapes or East Asian characters in new documents. 
+        self.globals["SnapToShapes".lower()] = True
+        # Gets or sets the mode for the Spanish speller. 
+        self.globals["SpanishMode".lower()] = 0
+        # 77 Returns or sets a WdCellColor that represents the color
+        # for split table cells. Read/write. 
+        self.globals["SplitCellColor".lower()] = 77
+        # True for Microsoft Word to assign a random number to changes
+        # in a document, each time a document is saved, to facilitate
+        # comparing and merging documents. Word stores the random
+        # numbers in a table and updates the table after each save. 
+        self.globals["StoreRSIDOnSave".lower()] = True
+        # True if the spelling checker uses spelling rules regarding
+        # Arabic words ending with the letter yaa. 
+        self.globals["StrictFinalYaa".lower()] = True
+        # True if the spelling checker uses spelling rules regarding
+        # Arabic words beginning with an alef hamza. 
+        self.globals["StrictInitialAlefHamza".lower()] = True
+        # Gets or sets whether the spelling checker uses spelling
+        # rules regarding Russian words that use the strict ë
+        # character. 
+        self.globals["StrictRussianE".lower()] = 0
+        # Gets or sets whether the spelling checker uses spelling
+        # rules to flag Arabic words ending with haa instead of taa
+        # marboota. 
+        self.globals["StrictTaaMarboota".lower()] = 0
+        # True if Microsoft Word draws spelling suggestions from the
+        # main dictionary only. False if it draws spelling suggestions
+        # from the main dictionary and any custom dictionaries that
+        # have been added. 
+        self.globals["SuggestFromMainDictionaryOnly".lower()] = True
+        # True if Microsoft Word always suggests alternative spellings
+        # for each misspelled word when checking spelling. 
+        self.globals["SuggestSpellingCorrections".lower()] = True
+        # True if the TAB and BACKSPACE keys can be used to increase
+        # and decrease, respectively, the left indent of paragraphs
+        # and if the BACKSPACE key can be used to change right-aligned
+        # paragraphs to centered paragraphs and centered paragraphs to
+        # left-aligned paragraphs. 
+        self.globals["TabIndentKey".lower()] = True
+        # True for Microsoft Word to replace illegal South Asian
+        # characters. 
+        self.globals["TypeNReplace".lower()] = True
+        # True if Microsoft Word updates fields automatically before
+        # printing a document. 
+        self.globals["UpdateFieldsAtPrint".lower()] = True
+        # Gets or sets whether Word 2010 allows fields containing
+        # tracked changes to update before printing. 
+        self.globals["UpdateFieldsWithTrackedChangesAtPrint".lower()] = True
+        # True if Microsoft Word automatically updates all embedded
+        # OLE links in a document when it's opened. 
+        self.globals["UpdateLinksAtOpen".lower()] = True
+        # True if Microsoft Word updates embedded links to other files
+        # before printing a document. 
+        self.globals["UpdateLinksAtPrint".lower()] = True
+        # Gets or sets a WdUpdateStyleListBehavior constant that
+        # specifies the behavior Word 2010 should take when updating a
+        # style to match a selection that contains numbering or
+        # bullets. 
+        self.globals["UpdateStyleListBehavior".lower()] = 1
+        # True if Microsoft Word uses characters as the default
+        # measurement unit for the current document. 
+        self.globals["UseCharacterUnit".lower()] = True
+        # True if you can set the color of diacritics in the current
+        # document. 
+        self.globals["UseDiffDiacColor".lower()] = True
+        # True if Microsoft Word uses the German post-reform spelling
+        # rules when checking spelling. 
+        self.globals["UseGermanSpellingReform".lower()] = True
+        # True Returns or sets a Boolean; True if Microsoft Word
+        # identifies the document author based upon the User name and
+        # Initials settings on the General tab of the Options dialog
+        # box, and False if Word identifies the author based on the
+        # account information with which the user signed in to
+        # Office. Read/write. 
+        self.globals["UseLocalUserInfo".lower()] = True
+        # True Returns or sets a Boolean that represents whether
+        # Microsoft Office Word uses the Normal style for bullets and
+        # numbering. Read/write. 
+        self.globals["UseNormalStyleForList".lower()] = True
+        # True Returns or sets a Boolean (bool in C#) that specifies
+        # whether sub-pixel positioning is enabled. Read-write. 
+        self.globals["UseSubPixelPositioning".lower()] = True
+        # True Returns or sets the selection behavior based on visual
+        # cursor movement in a right-to-left language document. 
+        self.globals["VisualSelection".lower()] = True
+        # True for Microsoft Word to display a warning when saving,
+        # printing, or sending as e-mail a document containing
+        # comments or tracked changes. 
+        self.globals["WarnBeforeSavingPrintingSendingMarkup".lower()] = True
+        # True to enable in Microsoft Word navigation keys for
+        # WordPerfect users. 
+        self.globals["WPDocNavKeys".lower()] = True
+        # True if pressing Microsoft Word key combinations that
+        # produce actions in WordPerfect displays dialog boxes that
+        # describe how to perform the equivalent actions in Word. 
+        self.globals["WPHelp".lower()] = True
+                         
         # WdUseFormattingFrom enumeration (Word) 
         #    
         # Specifies a source to copy formatting from. 

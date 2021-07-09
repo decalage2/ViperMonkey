@@ -374,7 +374,9 @@ def parse_streams(vba, strip_useless=False):
     @param strip_useless (boolean) Flag turning on/off modification of
     VB code prior to parsing.
 
-    @return (list) A list of parsed Module objects.
+    @return (list) A list of 2 element tuples where the 1st element is
+    the parsed Module objects and the 2nd element is the name of the
+    OLE stream containing the module.
 
     """
 
@@ -386,8 +388,9 @@ def parse_streams(vba, strip_useless=False):
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
         if (m is None):
-            return None
-        r.append(m)
+            continue
+        r.append((m, stream_path))
+    if (len(r) == 0): return None
     return r
 
 # === Top level utility functions ================================================================================
@@ -863,7 +866,7 @@ def _process_file (filename,
     orig_filename = filename
     if (entry_points is not None):
         for entry_point in entry_points:
-            vm.entry_points.append(entry_point)
+            vm.user_entry_points.append(entry_point)
     try:
         #TODO: handle olefile errors, when an OLE file is malformed
         if (isinstance(data, Exception)):
@@ -928,9 +931,11 @@ def _process_file (filename,
             if (comp_modules is None):
                 return None
             got_code = False
-            for m in comp_modules:
+            for module_info in comp_modules:
+                m = module_info[0]
+                stream = module_info[1]
                 if (m != "empty"):
-                    vm.add_compiled_module(m)
+                    vm.add_compiled_module(m, stream)
                     got_code = True
             if ((not got_code) and (not display_int_iocs)):
                 log.info("No VBA or VBScript found. Exiting.")

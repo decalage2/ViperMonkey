@@ -1690,8 +1690,10 @@ class For_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        return 'For %s = %r to %r step %r' % (self.name,
-                                              self.start_value, self.end_value, self.step_value)
+        r = 'For %s = %r to %r step %r' % (self.name,
+                                           self.start_value, self.end_value, self.step_value)
+        r += "\\n" + str(self.body)
+        return r
 
     def _get_loop_indices(self, context):
         """Get the start index, end index, and step for the loop.

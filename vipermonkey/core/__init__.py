@@ -324,6 +324,10 @@ class ViperMonkey(StubbedEngine):
                              'workbook_deactivate', 'documentopen', 'app_documentopen',
                              'main']
 
+        # List of user-specified entry points. If non-empty only these entry points
+        # will be used.
+        self.user_entry_points = []
+
         # List of suffixes of the names of callback functions that provide alternate
         # methods for running things on document (approximately) open.
         # See https://www.greyhathacker.net/?m=201609
@@ -379,42 +383,53 @@ class ViperMonkey(StubbedEngine):
                 setattr(new_dat, safe_str_convert(field), dat[field])
         self.metadata = new_dat
         
-    def add_compiled_module(self, m):
+    def add_compiled_module(self, m, stream):
         """Add an already parsed and processed module.
 
         @param m (Module object) The parsed object.
+
+        @param stream (str) The OLE stream name containing the module.
 
         """
         if (m is None):
             return
         self.modules.append(m)
         for name, _sub in m.subs.items():
-            # Skip duplicate subs that look less interesting than the old one.
+
+            # Append the stream name for duplicate subs
             if (name in self.globals):
-                old_sub = self.globals[name]
-                if (hasattr(old_sub, "statements")):
-                    if (len(_sub.statements) < len(old_sub.statements)):
-                        log.warning("Sub " + safe_str_convert(name) + " is already defined. Skipping new definition.")
-                        continue
+                new_name = safe_str_convert(stream) + "::" + safe_str_convert(name)
+                log.warn("Renaming duplicate function " + name + " to " + new_name)
+                name = new_name
+
+            # Save the sub.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
             self.globals[name] = _sub
+
+        # Functions.
         for name, _function in m.functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
+
+        # Properties.
         for name, _prop in m.functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing property let "%s" in globals' % name)
             self.globals[name.lower()] = _prop
             self.globals[name] = _prop
+
+        # External DLL functions.
         for name, _function in m.external_functions.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.externals[name.lower()] = _function
+
+        # Global variables.
         for name, _var in m.global_vars.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
@@ -638,8 +653,14 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
                 
-        # Look for hardcoded entry functions.
-        for entry_point in self.entry_points:
+        # Only start from user specified entry points if we have any.
+        tmp_entry_points = self.entry_points
+        only_user_entry_points = (len(self.user_entry_points) > 0)
+        if only_user_entry_points:
+            tmp_entry_points = self.user_entry_points
+            
+        # Perform analysis starting at given entry functions.
+        for entry_point in tmp_entry_points:
             entry_point = entry_point.lower()
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Trying entry point " + entry_point)
@@ -657,6 +678,12 @@ class ViperMonkey(StubbedEngine):
                 context.got_actions = tmp_context.got_actions
                 done_emulation = True
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+
+        # Stop analysis at the user specified analysis points if we have some.
+        if only_user_entry_points:
+            if (tested_wildcard and regular_emulation):
+                self.trace(regular_emulation=False)
+            return
 
         # Look for callback functions that can act as entry points.
         for name in self.globals:

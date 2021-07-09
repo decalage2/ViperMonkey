@@ -2625,7 +2625,98 @@ class MemberAccessExpression(VBA_Object):
             (len(self.rhs) > 0) and
             (safe_str_convert(self.rhs[0]).startswith("Exec("))):
             eval_arg(self.rhs[0], context)            
-    
+
+    def _handle_controls_count(self, context):
+        """Get the count of the number of controls in a user form object.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (str) The control count if this one of those
+        operations, None if not.
+
+        """
+
+        # UserForm2.Controls.Count
+        # Do we have a controls count expression?
+        self_str = str(self).strip()
+        if (not self_str.lower().endswith(".Controls.Count".lower())):
+            return None
+
+        # Get the name of the form.
+        form_name = self_str[:self_str.index(".")]
+        if ("(" in form_name):
+            return None
+
+        # Find all the combo box variables for this form name. This is
+        # how ViperMonkey is representing the control text values.
+        control_name_pat = (r"" + form_name + r"\.ComboBox\d+").lower()
+        count = 0
+        for var_name in context.globals.keys():
+
+            # Got a control variable?
+            if (re.search(control_name_pat, var_name) is not None):
+                count += 1
+
+        # Done.
+        return count
+
+    def _handle_control_text(self, context):
+        """Get the text associated with a control attached to a form.
+
+        @param context (Context object) Context for the Python code
+        generation (local and global variables). Current program state
+        will be read from the context.
+
+        @return (str) The control text if this one of those
+        operations, None if not.
+
+        """
+
+        # UserForm2.Controls.Item(bdjn)
+        # Are we getting the text of a control?
+        self_str = str(self).strip()
+        if (not self_str.lower().startswith("UserForm2.Controls.Item(".lower())):
+            return None
+
+        # Get the name of the form.
+        form_name = self_str[:self_str.index(".")]
+        if ("(" in form_name):
+            return None
+
+        # Get the index of the control.
+        item_pat = r"\.Item\((.+)\)"
+        index_str = re.findall(item_pat, self_str)
+        if (len(index_str) == 0):
+            return None
+        index_str = index_str[0]
+        if (index_str.startswith("'") and index_str.endswith("'")):
+            index_str = index_str[1:-1]
+        
+        # Evaluate the index.
+        index = None
+        try:
+            index = expression.parseString(index_str, parseAll=True)[0]
+            index = eval_arg(index, context)
+        except ParseException as e:
+            return None
+
+        # We can only handle fully resolved integer indices.
+        if (not isinstance(index, int)):
+            return None
+
+        # Got a valid index. See if we have a synthetic global variable for this
+        # control text.
+        index -= 1
+        var_name = form_name + ".ComboBox" + str(index)
+        if (not context.contains(var_name)):
+            return None
+
+        # Return the text.
+        r = context.get(var_name)
+        return r    
+
     def eval(self, context, params=None):
         params = params # pylint warning
         
@@ -2661,6 +2752,18 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_table_cell(context)
         if (call_retval is not None):
             #print "OUT: 0.1"
+            return call_retval
+
+        # Getting the count of controls in a form?
+        call_retval = self._handle_controls_count(context)
+        if (call_retval is not None):
+            #print "OUT: 0.2"
+            return call_retval
+
+        # Getting the text of a form control?
+        call_retval = self._handle_control_text(context)
+        if (call_retval is not None):
+            #print "OUT: 0.3"
             return call_retval
         
         # 0 argument call to local function?
