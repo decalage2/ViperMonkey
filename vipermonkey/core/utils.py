@@ -223,6 +223,48 @@ def safe_equals(x,y):
 eq=Infix(lambda x,y: safe_equals(x, y))
 neq=Infix(lambda x,y: (not safe_equals(x, y)))
 
+def safe_gt(x,y):
+    """Handle "x > y" where x and y could be some combination of ints and
+    strs.
+
+    @param x (any) LHS of the check.
+    @param y (any) RHS of the check.
+
+    @return (boolean) The result of the greater than check, taking into
+    account the implicit type conversions VB performs to "help" the
+    programmer.
+
+    """
+
+    # Handle NULLs.
+    if (x == "NULL"):
+        x = 0
+    if (y == "NULL"):
+        y = 0
+        
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if ((x in wildcards) or (y in wildcards)):
+        return True
+        
+    # Since we are doing > both values should be numbers.
+    try:
+        from vba_conversion import coerce_to_num
+        x = coerce_to_num(x)
+        y = coerce_to_num(y)
+    except ValueError:
+        return False
+
+    # Return the numeric comparison.
+    return (x > y)
+
+# Safe > and < infix operators. Ugh. Loosely typed languages are terrible.
+# pylint: disable=unnecessary-lambda
+gt=Infix(lambda x,y: safe_gt(x, y))
+lt=Infix(lambda x,y: (not safe_gt(x, y)))
+gte=Infix(lambda x,y: (safe_gt(x, y) or safe_equals(x,y)))
+lte=Infix(lambda x,y: (not safe_gt(x, y) or safe_equals(x,y)))
+
 def safe_print(text):
     """Sometimes printing large strings when running in a Docker
     container triggers exceptions.  This function just wraps a print

@@ -288,7 +288,9 @@ def coerce_to_num(obj):
 
     """
     # in VBA, Null/None is equivalent to 0
-    if ((obj is None) or (obj == "NULL")):
+    if ((obj is None) or
+        (obj == "NULL") or
+        (isinstance(obj, str) and (obj.strip() == ""))):
         return 0
 
     # Already have float or int?
