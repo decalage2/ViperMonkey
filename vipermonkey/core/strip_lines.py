@@ -628,7 +628,9 @@ def fix_skipped_1st_arg2(vba_code):
     """
 
     # Skipped this if unneeded.
-    if (re.match(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None):
+    plus_pat = r"\+ *\+"
+    if ((re.search(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None) and
+        (re.search(plus_pat, vba_code) is None)):
         #print "SKIPPED!!"
         return vba_code
     
@@ -671,7 +673,10 @@ def fix_skipped_1st_arg2(vba_code):
         tmp_code = tmp_code.replace(strings[str_name], str_name)
     #print "HERE: 1"
     #print tmp_code
-        
+
+    # Fix things like 'a + + b + "ff"' (double pluses).
+    tmp_code = re.sub(plus_pat, '+ "" +', tmp_code)
+    
     # Find all paren exprs and make up replacement names.
     in_paren = False
     paren_count = 0
