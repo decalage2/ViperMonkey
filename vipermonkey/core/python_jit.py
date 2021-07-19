@@ -823,14 +823,15 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     # that Execute() dynamic VB.
     full_code_vba = safe_str_convert(loop).replace("\n", "\\n")
     code_vba = full_code_vba[:20]
+    code_vba_lower = full_code_vba.lower()
     if (not context.throttle_logging):
         log.info("Starting JIT emulation of '" + code_vba + "...' ...")
-    if (("Execute(" in full_code_vba) or
-        ("ExecuteGlobal(" in full_code_vba) or
-        ("Eval(" in full_code_vba)):
+    if (("Execute(".lower() in code_vba_lower) or
+        ("ExecuteGlobal(".lower() in code_vba_lower) or
+        ("Eval(".lower() in code_vba_lower)):
         log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
         return False
-    if (".Item(" in full_code_vba):
+    if (".Item(".lower() in code_vba_lower):
         log.warning("Loop references forms with .Item(). Not JIT emulating.")
         return False
             
