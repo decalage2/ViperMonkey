@@ -58,10 +58,19 @@ except ImportError:
 from logging import LogRecord
 from logging import FileHandler
 
-def safe_str_convert(s):
+def _test_char(c):
+    if isinstance(c, int):
+        c = chr(c)
+    return (isprint(c) or (c in "\t\n"))
+
+def safe_str_convert(s, strict=False):
     """Convert a string to ASCII without throwing a unicode decode error.
 
     @param s (any) The thing to convert to a str.
+
+    @param strict (boolean) If True make sure that there are no
+    unprintable characters in the given string (if s is a str). If
+    False do no modification of a given str.
 
     @return (str) The given thing as a string.
 
@@ -73,11 +82,14 @@ def safe_str_convert(s):
 
     # Do the actual string conversion.
     try:
+        # Strip unprintable characters if needed.
+        if (strict and isinstance(s, str)):
+            s = filter(_test_char, s)
         return str(s)
     except UnicodeDecodeError:
-        return filter(isprint, s)
+        return filter(_test_char, s)
     except UnicodeEncodeError:
-        return filter(isprint, s)
+        return filter(_test_char, s)
 
 class Infix(object):
     """Used to define our own infix operators.
