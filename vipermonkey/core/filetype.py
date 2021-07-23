@@ -40,6 +40,11 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+import subprocess
+
+from logger import log
+
 # Office magic numbers.
 magic_nums = {
     "office97" : "D0 CF 11 E0 A1 B1 1A E1",    # Office 97
@@ -101,6 +106,37 @@ def is_pe_file(fname, is_data):
     # See if we the known magic #.
     return (curr_magic.startswith(pe_magic_num))
 
+def is_office_xml_file(fname, is_data):
+    """Check to see if the given file is a MS Office XML file.
+
+    @param fname (str) The name of the file or the already read in
+    file data. The data will be read in if a file name is given.
+
+    @param is_data (boolean) True if fname contains the file data,
+    False if it is a file name.
+
+    @return (boolean) True if it is an Office XML file, False if not.
+
+    """
+
+    # Get the file contents.
+    contents = None
+    if is_data:
+        contents = fname
+    else:
+        try:
+            f = open(fname, "r")
+            contents = f.read()
+            f.close()
+        except IOError as e:
+            log.error("Cannot read file " + fname + ". " + str(e))
+            return False
+
+    # Return whether this is an Office XML file.
+    # TODO: Currently only checks for Word files.
+    return (('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' in contents) and
+            ('<?mso-application progid="Word.Document"?>' in contents))
+
 def is_office_file(fname, is_data):
     """Check to see if the given file is a MS Office (97 or 2007+) file.
 
@@ -122,7 +158,9 @@ def is_office_file(fname, is_data):
         magic = magic_nums[typ]
         if (curr_magic.startswith(magic)):
             return True
-    return False
+
+    # See if it is an Office file saved as XML.
+    return is_office_xml_file(fname, is_data)
 
 def is_office97_file(fname, is_data):
     """Check to see if the given file is a MS Office 97 file.
