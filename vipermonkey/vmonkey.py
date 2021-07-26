@@ -211,7 +211,7 @@ def get_vb_contents_from_hta(vba_code):
         r"<[Ss][Cc][Rr][Ii][Pp][Tt] +[Tt][Yy][Pp][Ee] *= *" + \
         r"[\"'](?:[Tt][Ee][Xx][Tt]/)?(?:(?:[Vv][Bb])|(?:[Jj][Aa]?[Vv]?[Aa]?))[Ss][Cc][Rr][Ii][Pp][Tt][\"']" + \
         r"(?: +[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee] *= *[\"'][Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt][\"'])?[^>]*>" + \
-        r"(.{20,}?)</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
+        r"(.{20,}?)(?:(?:</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>)|$)"
     ]
     
     code = []

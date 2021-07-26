@@ -5107,7 +5107,7 @@ class Range(VbaLibraryFunc):
         # Get start and end rows and columns.
         start_row, start_col = self._get_row_and_column(start)
         end_row, end_col = self._get_row_and_column(end)
-
+        
         # Read all the cells, in row by row order.
         r = []
         row_incr = 0
@@ -5118,7 +5118,7 @@ class Range(VbaLibraryFunc):
             col_incr = (end_col - start_col)/abs(end_col - start_col)
         curr_row = start_row
         #print "=========== READ CELLS!!! ================"
-        while (curr_row != end_row):
+        while True:
             curr_col = start_col
             while True:
                 val = None
