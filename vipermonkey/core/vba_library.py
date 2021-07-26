@@ -5006,6 +5006,14 @@ class Value(VbaLibraryFunc):
         r = cell
         if (isinstance(cell, dict) and ("value" in cell)):
             r = cell["value"]
+
+        # Convert numeric cell values to numbers.
+        try:
+            r = vba_conversion.coerce_to_num(r)
+        except ValueError:
+            pass
+
+        # Done.
         #print("CELL VALUE!!")
         #print("'" + utils.safe_str_convert(r) + "'")
         #print(type(r))
