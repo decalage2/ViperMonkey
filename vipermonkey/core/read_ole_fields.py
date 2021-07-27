@@ -4477,7 +4477,41 @@ def _read_payload_doc_vars(data, orig_filename, vm):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
 
+def _get_embedded_files(data, vm):
+    """Pull out what appear to be embedded files from the given
+    document. This gets the original short file name, original long
+    file name, and file contents for each embedded file.
 
+    @param data (bytes) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
+    The results are saved in the engine's embedded_files field as a
+    list of 3 element tuples where the 1st element is the original
+    short name (str) of the embedded file, the 2nd element is the
+    original long name (str) of the embedded file, and the 3rd element
+    is the file contents.
+
+    """
+
+    # Ugly ugly regex to pull this info from an Office 97 file.
+    log.info("Finding embedded files...")
+    embedded_file_pat = r"\x02\x00\x02\x00([ -~]{10,200})[^ -~]{1,20}([ -~]{10,200})[^ -~]{1,20}(?:[ -~]?[^ -~]{1,20}){0,5}(?:[ -~]{1,9}?[^ -~]{1,20}){0,5}([ -~]{4,200})" + \
+    r"[^ -~]{1,20}(?:[ -~]{1,9}?[^ -~]{1,20}){0,5}((?:[ -~]|\n|\r|\t){30,})"
+
+    # Get any file information.
+    matches = re.findall(embedded_file_pat, data)
+    vm.embedded_files = []
+    for info in matches:
+        short_name = info[0]
+        long_name = info[1]
+        embed_contents = info[3][:-1]
+        vm.embedded_files.append((short_name, long_name, embed_contents))
+
+    # Done.
+            
 def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     """
     Read in text values from all of the various places in Office
@@ -4510,6 +4544,9 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     # Pull text associated with Shapes() objects.
     _read_payload_shape_text(data, vm)
 
+    # Pull embedded files.
+    _get_embedded_files(data, vm)
+    
     # Pull text associated with InlineShapes() objects.
     _read_payload_inline_shape_text(data, vm)
                     

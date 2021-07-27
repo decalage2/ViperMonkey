@@ -820,6 +820,10 @@ class FileExists(VbaLibraryFunc):
             return True
         if ("c:\\programdata" in fname.lower()):
             return True
+        # Lets say some log files exist.
+        tmp_log_pat = r"c:[\\]{1,6}temp[\\]{1,6}[^\.]{1,200}\.log"
+        if (re.search(tmp_log_pat, fname.lower()) is not None):
+            return True
         return False
 
     def num_args(self):

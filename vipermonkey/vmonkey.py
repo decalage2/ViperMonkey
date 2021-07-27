@@ -812,7 +812,37 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
 
     # Done.
     return (str_actions, tmp_iocs, shellcode_bytes)
+
+def _save_embedded_files(out_dir, vm):
+    """Save any extracted embedded files from the sample in the artifact
+    directory.
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that did the emulation.
+
+    @param out_dir (str) The artifact directory.
+    """
+
+    # Make the output directory if needed.
+    out_dir = safe_str_convert(out_dir)
+    if (not os.path.exists(out_dir)):
+        log.info("Making dropped sample directory ...")
+        os.mkdir(out_dir)
         
+    # Save each file.
+    out_dir = safe_str_convert(out_dir)
+    for file_info in vm.embedded_files:
+        short_name = safe_str_convert(file_info[0])
+        long_name = safe_str_convert(file_info[1])
+        contents = safe_str_convert(file_info[2])
+        log.info("Saving embedded file " + long_name + " ...")
+        try:
+            f = open(out_dir + "/" + short_name, "w")
+            f.write(contents)
+            f.close()
+        except IOError as e:
+            log.error("Saving embedded file " + long_name + " failed. " + str(e))
+
 # Wrapper for original function; from here out, only data is a valid variable.
 # filename gets passed in _temporarily_ to support dumping to vba_context.out_dir = out_dir.
 def _process_file (filename,
@@ -980,6 +1010,9 @@ def _process_file (filename,
 
             # Report the results.
             str_actions, tmp_iocs, shellcode_bytes = _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
+
+            # Save any embedded files as artifacts.
+            _save_embedded_files(out_dir, vm)
             
             # Return the results.
             return (str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes)
