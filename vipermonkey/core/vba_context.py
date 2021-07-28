@@ -244,6 +244,9 @@ class Context(object):
         # Track canonical names of variables.
         self.name_cache = {}
 
+        # Track information about string decode functions.
+        self.decoded_str_info = {}
+        
         # Track the name of the current function being emulated.
         self.curr_func_name = None
         
@@ -373,6 +376,7 @@ class Context(object):
             self.tested_wildcard = context.tested_wildcard
             self.wildcard_match_value = context.wildcard_match_value
             self.in_bitwise_expression = context.in_bitwise_expression
+            self.decoded_str_info = context.decoded_str_info
             self.last_saved_file = context.last_saved_file
             self.curr_func_name = context.curr_func_name
             self.do_jit = context.do_jit
@@ -486,7 +490,48 @@ class Context(object):
         if result is NotImplemented:
             return result
         return not result
-        
+
+    def track_possible_decoded_str(self, func_name, val):
+        """Track decoded string results from string decode function
+        executions. If the function return value is not a string no
+        updates will be performed.
+
+        @param func_name (str) The name of the executed function.
+
+        @param val (any) The value being returned from the function.
+
+        """
+
+        # We are only interested in string values.
+        if (not isinstance(val, str)):
+            return
+
+        # Track the string returned from the function.
+        func_name = safe_str_convert(func_name)
+        if (func_name not in self.decoded_str_info):
+            self.decoded_str_info[func_name] = set()
+        self.decoded_str_info[func_name].add(val)
+
+    def get_decoded_strs(self):
+        """Get all the potentially decoded strings tracked during emulation.
+
+        @return (set) A set of all the decoded strings.
+
+        """
+
+        # Look for functions that have returned multiple different
+        # string values.
+        r = set()
+        for func_name in self.decoded_str_info:
+
+            # Did this return a decent number of different strings?
+            curr_strs = self.decoded_str_info[func_name]
+            if (len(curr_strs) > 5):
+                r.update(curr_strs)
+
+        # Done.
+        return r
+            
     def read_metadata_item(self, var):
         """Read a metadata item from the current context.
 

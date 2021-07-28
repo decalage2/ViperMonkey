@@ -278,6 +278,7 @@ class ViperMonkey(StubbedEngine):
         self.data = data
         self.modules = []
         self.modules_code = []
+        self.decoded_strs = set()
         self.globals = {}
         self.externals = {}
         # list of actions (stored as tuples by report_action)
@@ -639,7 +640,10 @@ class ViperMonkey(StubbedEngine):
         # Track the external functions called.
         self.external_funcs = self._get_external_funcs()
         context.external_funcs = self.external_funcs
-        
+
+        # Track decoded strings.
+        self.decoded_strs = set()        
+
         # First emulate any Visual Basic that appears outside of subs/funcs.
         if (regular_emulation):
             context.report_action('Start Regular Emulation', '', 'All wildcard matches will match')
@@ -652,6 +656,7 @@ class ViperMonkey(StubbedEngine):
                 context.dump_all_files(autoclose=True)
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
+                self.decoded_strs.update(context.get_decoded_strs())
                 
         # Only start from user specified entry points if we have any.
         tmp_entry_points = self.entry_points
@@ -673,7 +678,8 @@ class ViperMonkey(StubbedEngine):
                 tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                 self.globals[entry_point].eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
-
+                self.decoded_strs.update(tmp_context.get_decoded_strs())
+                
                 # Save whether we got actions from this entry point.
                 context.got_actions = tmp_context.got_actions
                 done_emulation = True
@@ -709,6 +715,7 @@ class ViperMonkey(StubbedEngine):
                         # Save whether we got actions from this entry point.
                         context.got_actions = tmp_context.got_actions
                         tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+                        self.decoded_strs.update(tmp_context.get_decoded_strs())
                         
         # Did we find a proper entry point?
         if (not done_emulation):
@@ -734,7 +741,8 @@ class ViperMonkey(StubbedEngine):
                 only_sub.eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
-
+                self.decoded_strs.update(tmp_context.get_decoded_strs())
+                
         # If we used some wildcard boolean values in boolean expressions we now have
         # an opportunity to do some really simple speculative emulation. We just
         # emulated the behavior where all comparisons to a wild card value match, now

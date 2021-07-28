@@ -771,9 +771,19 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
 
     # See if we can directly pull any embedded PE files from the file.
     pull_embedded_pe_files(data, core.vba_context.out_dir)
-                
+
+    # Report VBA builtin fingerprint.
     safe_print('VBA Builtins Called: ' + safe_str_convert(vm.external_funcs))
     safe_print('')
+
+    # Report decoded strings.
+    if (len(vm.decoded_strs) > 0):
+        safe_print("Decoded Strings (" + str(len(vm.decoded_strs)) + "):")
+        for s in vm.decoded_strs:
+            safe_print("  " + s)
+        safe_print('')
+
+    # Done printing results.
     safe_print('Finished analyzing ' + safe_str_convert(orig_filename) + " .\n")
 
     # Reporting results in JSON file?
@@ -793,7 +803,8 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
             "potential_iocs": list(tmp_iocs),
             "shellcode" : shellcode_bytes,
             "vba_builtins": vm.external_funcs,
-            "actions": actions_data
+            "actions": actions_data,
+            "decoded_strs": list(vm.decoded_strs)
         }
 
         # Write out the results as JSON.
