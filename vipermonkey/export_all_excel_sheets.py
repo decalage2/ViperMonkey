@@ -231,12 +231,18 @@ def convert_csv(fname):
     # Save the currently active sheet.
     r = []
     controller = component.getCurrentController()
-    active_sheet = controller.ActiveSheet
+    active_sheet = None
+    if hasattr(controller, "ActiveSheet"):
+        active_sheet = controller.ActiveSheet
     active_sheet_name = "NO_ACTIVE_SHEET"
     if (active_sheet is not None):
         active_sheet_name = fix_file_name(active_sheet.getName())
     r.append(active_sheet_name)
-        
+
+    # Bomb out if this is not an Excel file.
+    if (not hasattr(component, "getSheets")):
+        return r
+    
     # Iterate on all the sheets in the spreadsheet.
     sheets = component.getSheets()
     enumeration = sheets.createEnumeration()
