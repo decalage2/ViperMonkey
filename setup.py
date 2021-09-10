@@ -57,7 +57,7 @@ setup(
         "colorlog",
         "colorama",
         "pyparsing==2.2.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58). pyparsing 2.3.0 parses some constructs differently and breaks things.
-        "unidecode",
+        "unidecode==1.2.0",
         "xlrd",
         # regex is not installable on PyPy+Windows, so we only require it if the platform is not Windows or not PyPy:
         'regex; platform_python_implementation!="PyPy" or platform_system!="Windows"',
