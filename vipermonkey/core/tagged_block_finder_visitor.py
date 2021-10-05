@@ -1,5 +1,12 @@
+"""@package vipermonkey.core.tagged_block_finder_visitor Visitor for
+collecting the names of code blocks tagged with a label (label names).
+
 """
-ViperMonkey: Visitor for collecting the names of locally defined functions
+
+# pylint: disable=pointless-string-statement
+"""
+ViperMonkey: Visitor for collecting the names of code blocks
+tagged with a label.
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
@@ -9,6 +16,7 @@ License: BSD, see source code or documentation
 
 Project Repository:
 https://github.com/decalage2/ViperMonkey
+
 """
 
 # === LICENSE ==================================================================
@@ -36,12 +44,15 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import *
-from statements import *
+from visitor import visitor
+from statements import TaggedBlock
 
 class tagged_block_finder_visitor(visitor):
-    """
-    Collect all the tagged block (labeled block) elements.
+    """Collect all the tagged block (labeled block) elements.
+
+    The tagged blocks are stored in the field self.blocks, which is a
+    dict mapping from block names (str) to blocks (VBA_Object object).
+
     """
 
     def __init__(self):

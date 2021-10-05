@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.vb_str Representation of VBA extended
+ASCII strings.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: Class for representing VBA strings that contain a mix of ASCII and
 wide character characters.
@@ -39,18 +45,24 @@ https://github.com/decalage2/ViperMonkey
 
 __version__ = '0.08'
 
-import string
-import sys
+from curses_ascii import isprint
 try:
     # sudo pypy -m pip install rure
     import rure as re
-except:
+except ImportError:
     import re
 
+from utils import safe_str_convert
+
 def is_wide_str(the_str):
-    """
-    Test to see if the given string is a simple wide char string (every other
-    character is a null byte).
+    """Test to see if the given string is a simple wide char string
+    (every other character is a null byte).
+
+    @param the_str (str) The string to test.
+    
+    @return (boolean) True if this looks like a simple wide character
+    string, False if not.
+
     """
     if (len(the_str) < 2):
         return False
@@ -68,8 +80,12 @@ def is_wide_str(the_str):
     return is_wide
 
 def convert_wide_to_ascii(the_str):
-    """
-    Convert a simple wide string to ASCII.
+    """Convert a simple wide string to ASCII.
+
+    @param the_str (str) The string to convert.
+    
+    @return (str) The converted string.
+
     """
     if (not is_wide_str(the_str)):
         return the_str
@@ -77,8 +93,12 @@ def convert_wide_to_ascii(the_str):
     return the_str[::2]
     
 def is_mixed_wide_ascii_str(the_str):
-    """
-    Test a string to see if it is a mix of wide and ASCII chars.
+    """Test a string to see if a string is a mix of wide and ASCII chars.
+
+    @param the_str (str) The string to check.
+
+    @return (boolean) True if the string is a mized string, False if
+    not.
     """
     uni_str = None
     try:
@@ -91,24 +111,35 @@ def is_mixed_wide_ascii_str(the_str):
         return True
     return False
 
+
+single_char_ord_fixes = {
+    195 : 197
+}
 str_to_ascii_map = None
 def get_ms_ascii_value(the_str):
-    """
-    Get the VBA ASCII value of a given string. This handles VBA using a different
-    extended ASCII character set than everyone else in the world.
+    """Get the VBA ASCII value of a given string. This handles VBA using
+    a different extended ASCII character set than everyone else in the
+    world.
 
-    This handles both retgular Python strings and VbStr objects.
+    This handles both regular Python strings and VbStr objects.
+
+    @param the_str (str) The string for which to get the char code of
+    the 1st 'character' in the string.
+    
+    @return (int) The character code for the 1st 'character' in the
+    string.
+
     """
 
     # Sanity check.
     if ((not isinstance(the_str, str)) and (not isinstance(the_str, VbStr))):
-        return ValueError("'" + str(the_str) + "' is not a string.")    
+        return ValueError("'" + safe_str_convert(the_str) + "' is not a string.")    
     
     # Initialize the map from wide char strings to MS ascii value if needed.
     global str_to_ascii_map
     if (str_to_ascii_map is None):
         str_to_ascii_map = {}
-        for code in VbStr.ascii_map.keys():
+        for code in VbStr.ascii_map:
             for bts in VbStr.ascii_map[code]:
                 chars = ""
                 for bt in bts:
@@ -127,8 +158,13 @@ def get_ms_ascii_value(the_str):
     # Look up the MS extended ASCII code.
     if (the_str not in str_to_ascii_map):
 
+        # Ugh. Some of these codes need to be fixed.
+        r = ord(the_str[0])
+        if (r in single_char_ord_fixes):
+            r = single_char_ord_fixes[r]
+        
         # Punt and just return the code for the 1st char in the string.
-        return ord(the_str[0])
+        return r
 
     # MS wide char. Return MS extended ASCII code.
     return str_to_ascii_map[the_str]
@@ -274,13 +310,13 @@ class VbStr(object):
     }
     
     def __init__(self, orig_str, is_vbscript=False):
-        """
-        Create a new VBA string object.
+        """Create a new VBA string object.
 
-        orig_str - The raw Python string.
-        is_vbscript - VBScript handles mixed ASCII/wide char strings differently than
-        VBA. Set this to True if VBScript is being analyzed, False if VBA is being 
-        analyzed.
+        @param orig_str (str) The raw Python string.
+
+        @param is_vbscript (boolean) VBScript handles mixed ASCII/wide
+        char strings differently than VBA. Set this to True if
+        VBScript is being analyzed, False if VBA is being analyzed.
 
         NOTE: This just handles characters from Microsoft's special extended ASCII set.
 
@@ -296,13 +332,7 @@ class VbStr(object):
             return
 
         # Make sure we have a string.
-        try:
-            orig_str = str(orig_str)
-        except:
-            if (isinstance(orig_str, unicode)):
-                orig_str = ''.join(filter(lambda x:x in string.printable, orig_str))
-            else:
-                raise ValueError("Given value cannot be converted to a string.")
+        orig_str = safe_str_convert(orig_str)
         self.orig_str = orig_str
             
         # If this is VBScript each character will be a single byte (like the Python
@@ -319,30 +349,15 @@ class VbStr(object):
             # Replace the multi-byte wide chars with special strings. We will break these out
             # later.
             tmp_str = orig_str
-            for code in self.ascii_map.keys():
+            for code in self.ascii_map:
                 chars = ""
                 for bts in self.ascii_map[code]:
                     pos = 0
                     for bval in bts:
                         chars += chr(bval)
-                    code_str = None
-                    try:
-                        code_str = str(code)
-                    except UnicodeEncodeError:
-                        code_str = filter(isprint, code)
-                    try:
-                        tmp_str = str(tmp_str)
-                    except UnicodeEncodeError:
-                        tmp_str = filter(isprint, tmp_str)
-                    #print tmp_str
-                    #print type(tmp_str)
-                    #print code
-                    #print type(code)
-                    #print pos
-                    #print type(pos)
-                    #print code_str
-                    #print type(code_str)
-                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + str(pos) + "MARK!@#$%%$#@!")
+                    code_str = safe_str_convert(code)
+                    tmp_str = safe_str_convert(tmp_str)
+                    tmp_str = tmp_str.replace(chars, "MARK!@#$%%$#@!:.:.:.:.:.:." + code_str + "_" + safe_str_convert(pos) + "MARK!@#$%%$#@!")
 
             # Split the string up into ASCII char chunks and individual wide chars.
             for val in tmp_str.split("MARK!@#$%"):
@@ -378,7 +393,7 @@ class VbStr(object):
                 r += ":"
             if (len(vb_c) == 1):
                 if (ord(vb_c) == 127):
-                    r += str(hex(ord(vb_c)))
+                    r += safe_str_convert(hex(ord(vb_c)))
                 else:
                     r += vb_c
             else:
@@ -392,45 +407,65 @@ class VbStr(object):
         return r
 
     def len(self):
+        """Get the length of the VB string.
+
+        """
         return len(self.vb_str)
 
     def to_python_str(self):
-        """
-        Return the VB string as a raw Python str.
+        """Return the VB string as a raw Python str.
+
         """
         return "".join(self.vb_str)
 
     def get_chunk(self, start, end):
-        """
-        Return a chunk of the string as a vb_string object.
+        """Return a chunk of the string as a vb_string object.
+
+        @param start (int) The start index of the chunk.
+
+        @param ends (int) The end index of the chunk.
+        
+        @return (VbStr object) The specified substring.
+
         """
 
         # Sanity check.
         if ((start < 0) or (start > len(self.vb_str))):
-            raise ValueError("start index " + str(start) + " out of bounds.")
+            raise ValueError("start index " + safe_str_convert(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(start) + " out of bounds.")
+            raise ValueError("end index " + safe_str_convert(start) + " out of bounds.")
         if (start > end):
-            raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
+            raise ValueError("start index (" + safe_str_convert(start) + ") > end index (" + safe_str_convert(end) + ").")
 
         # Return the chunk.
         return VbStr(self.vb_str[start:end])
 
     def update_chunk(self, start, end, new_str):
-        """
-        Return a new copy of the current string updated with the given chunk
-        replaced with the given string (can be a VbStr or a raw Python string).
+        """Return a new copy of the current string updated with the given
+        chunk replaced with the given string (can be a VbStr or a raw
+        Python string).
 
         The current VB string object is not changed.
+
+        @param start (int) The start index of the chunk.
+
+        @param ends (int) The end index of the chunk.
+
+        @param new_str (VBStr object) The substring to write into the
+        current string.
+        
+        @return (VbStr object) A modified version of the current
+        string. The current string object is not modified.
+
         """
 
         # Sanity check.
         if ((start < 0) or (start >= len(self.vb_str))):
-            raise ValueError("start index " + str(start) + " out of bounds.")
+            raise ValueError("start index " + safe_str_convert(start) + " out of bounds.")
         if ((end < 0) or (end > len(self.vb_str))):
-            raise ValueError("end index " + str(end) + " out of bounds.")
+            raise ValueError("end index " + safe_str_convert(end) + " out of bounds.")
         if (start > end):
-            raise ValueError("start index (" + str(start) + ") > end index (" + str(end) + ").")
+            raise ValueError("start index (" + safe_str_convert(start) + ") > end index (" + safe_str_convert(end) + ").")
 
         # Pull out the unchanged prefix and suffix.
         prefix = self.get_chunk(0, start).to_python_str()

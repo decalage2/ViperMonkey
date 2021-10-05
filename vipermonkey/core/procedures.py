@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.procedures Parsing and Emulation of
+VBA/VBScript Functions and Subs.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Procedures
 
@@ -41,24 +46,41 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
+#import sys
 import logging
-import sys
 
-from vba_context import *
-from statements import *
-from identifiers import *
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
+from pyparsing import CaselessKeyword, Group, Optional, Suppress, \
+    ZeroOrMore, Literal
+
+from vba_context import Context
+from statements import extend_statement_grammar, public_private, simple_statements_line, \
+    bogus_simple_for_each_statement, do_const_assignments, Do_Statement, While_Statement, \
+    For_Each_Statement, For_Statement, FollowedBy, Combine, params_list_paren, bad_next_statement, \
+    bad_if_statement, statements_line, function_type2, type_expression
+from identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
+    type_suffix
+from comments_eol import EOS, comment_single_quote, rem_statement
+from vba_lines import line_terminator
 import utils
-
+from utils import safe_str_convert
 from logger import log
-from tagged_block_finder_visitor import *
-from vba_object import to_python
-from vba_object import _get_var_vals
-from vba_object import _check_for_iocs
+from tagged_block_finder_visitor import tagged_block_finder_visitor
+from vba_object import VBA_Object, eval_arg
+from python_jit import to_python, _check_for_iocs, _get_var_vals
+import vba_conversion
 
 # --- SUB --------------------------------------------------------------------
 
 class Sub(VBA_Object):
+    """Emulate a VBA/VBScript Sub (subroutine).
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name
@@ -90,9 +112,9 @@ class Sub(VBA_Object):
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
-            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+            global_var_init_str += indent_str + safe_str_convert(global_var) + " = " + safe_str_convert(val) + "\n"
 
         # Make a copy of the context so we can mark variables as function
         # arguments.
@@ -101,7 +123,7 @@ class Sub(VBA_Object):
             tmp_context.set(param.name, "__FUNC_ARG__")
 
         # Save the name of the current function so we can handle exit function calls.
-        tmp_context.curr_func_name = str(self.name)
+        tmp_context.curr_func_name = safe_str_convert(self.name)
 
         # Global variable initialization goes first.
         r = global_var_init_str
@@ -116,18 +138,18 @@ class Sub(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r += indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + safe_str_convert(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
         r += indent_str + " " * 4 + "global vm_context\n\n"
         r += indent_str + " " * 4 + "# Function return value.\n"
-        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        r += indent_str + " " * 4 + safe_str_convert(self.name) + " = 0\n\n"
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
-        for global_var in global_var_info.keys():
-            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+        for global_var in global_var_info:
+            r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
         
         # Function body.
@@ -143,15 +165,11 @@ class Sub(VBA_Object):
 
         # create a new context for this execution:
         caller_context = context
-        # Looks like local variables from the calling context can be accessed in the called
-        # function, so keep those.
-        #context = Context(context=caller_context, _locals=context.locals)
-        # TODO: Local variable inheritence needs to be investigated more...
         context = Context(context=caller_context)
         context.in_procedure = True
 
         # Save the name of the current function so we can handle exit function calls.
-        context.curr_func_name = str(self.name)
+        context.curr_func_name = safe_str_convert(self.name)
         
         # We are entering the function so reset whether we executed a goto.
         context.goto_executed = False
@@ -176,6 +194,7 @@ class Sub(VBA_Object):
         if ((params is not None) and (len(params) == len(self.params))):
 
             # TODO: handle named parameters
+            # pylint: disable=consider-using-enumerate
             for i in range(len(params)):
 
                 # Set the parameter value.
@@ -188,7 +207,7 @@ class Sub(VBA_Object):
 
                 # Coerce parameters to String if needed.
                 if ((self.params[i].my_type == "String") and (not self.params[i].is_array)):
-                    param_value = str(param_value)
+                    param_value = safe_str_convert(param_value)
                     
                 # Add the parameter value to the local function context.
                 if (log.getEffectiveLevel() == logging.DEBUG):
@@ -205,7 +224,7 @@ class Sub(VBA_Object):
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
-            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
             #print self
             #print call_info
             #print context.call_stack
@@ -219,7 +238,7 @@ class Sub(VBA_Object):
         do_const_assignments(self.statements, context)
         
         # Set the parameter values in the current context.
-        for param_name in call_info.keys():
+        for param_name in call_info:
             context.set(param_name, call_info[param_name], force_local=True)
 
         # Variable updates can go in the local scope.
@@ -246,10 +265,10 @@ class Sub(VBA_Object):
                 break
             context.clear_error()
 
-            #print "@@@@HERE!!"
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
-            if (context.goto_executed or s.exited_with_goto):
+            if (context.goto_executed or
+                (hasattr(s, "exited_with_goto") and s.exited_with_goto)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Control flow handled by GOTO, so skip rest of procedure statements.")
                 break
@@ -270,7 +289,7 @@ class Sub(VBA_Object):
                     cmd.eval(context=context)
 
         # Save the values of the ByRef parameters.
-        for byref_param in self.byref_params.keys():
+        for byref_param in self.byref_params:
             self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
         # Done with call. Pop this call off the call stack.
@@ -278,9 +297,13 @@ class Sub(VBA_Object):
 
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
-
+        context.exit_func = False
+        
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
+
+        # Same with whether we did any wildcard value tests.
+        caller_context.tested_wildcard = context.tested_wildcard
         
         # Handle subs with no return values.
         try:            
@@ -292,12 +315,14 @@ class Sub(VBA_Object):
             context.set(self.name, '')
 
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Returning from sub " + str(self))
+            log.debug("Returning from sub " + safe_str_convert(self))
+
+        return "NULL"
+            
 
 # 5.3.1.1 Procedure Scope
 #
 # MS-GRAMMAR: procedure-scope = ["global" / "public" / "private" / "friend"]
-
 procedure_scope = Optional(CaselessKeyword('Public') | CaselessKeyword('Private')
                            | CaselessKeyword('Global') | CaselessKeyword('Friend')).suppress()
 
@@ -370,14 +395,17 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 #       [procedure-body EOS]
 #       [end-label] "end" "property" procedure-tail
 
-sub_start = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
-            + Optional(params_list_paren) + EOS.suppress()
-sub_start_single = Optional(CaselessKeyword('Static')) + public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
+sub_start = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+            public_private + Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+            CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') + Optional(params_list_paren) + EOS.suppress()
+sub_start_single = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                   public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
 sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress() | \
           bogus_simple_for_each_statement
 simple_sub_end = (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function'))).suppress()
-sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
+sub_end_single = Optional(Suppress(':')) + (CaselessKeyword('End') + \
+                                            (CaselessKeyword('Sub') | CaselessKeyword('Function')) + EOS).suppress()
 multiline_sub = (sub_start + \
                  Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                  Optional(bad_if_statement('bogus_if')) + \
@@ -405,13 +433,22 @@ sub_start_line.setParseAction(Sub)
 # TODO: Function should inherit from Sub, or use only one class for both
 
 def is_loop_statement(s):
-    return (isinstance(s, For_Statement) or
-            isinstance(s, For_Each_Statement) or
-            isinstance(s, While_Statement) or
-            isinstance(s, Do_Statement))
+    """Check to see if the given VBA_Object is a looping construct
+    (While, For, etc.).
+
+    @param s (VBA_Object object) The thing to check to see if it is a
+    loop statement.
+
+    @return (boolean) True if it is a loop, False if not.
+
+    """
+    return isinstance(s, (Do_Statement, For_Each_Statement, For_Statement, While_Statement))
 
 class Function(VBA_Object):
+    """Emulate a VBA/VBScript Function.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(Function, self).__init__(original_str, location, tokens)
         self.return_type = None
@@ -426,7 +463,7 @@ class Function(VBA_Object):
         self.statements = tokens.statements
         try:
             len(self.statements)
-        except:
+        except TypeError:
             self.statements = [self.statements]
         self.return_type = tokens.return_type
         self.vars = {}
@@ -452,9 +489,9 @@ class Function(VBA_Object):
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
-        for global_var in global_var_info.keys():
+        for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
-            global_var_init_str += indent_str + str(global_var) + " = " + str(val) + "\n"
+            global_var_init_str += indent_str + safe_str_convert(global_var) + " = " + safe_str_convert(val) + "\n"
         
         # Make a copy of the context so we can mark variables as function
         # arguments.
@@ -463,7 +500,7 @@ class Function(VBA_Object):
             tmp_context.set(param.name, "__FUNC_ARG__")
 
         # Save the name of the current function so we can handle exit function calls.
-        tmp_context.curr_func_name = str(self.name)
+        tmp_context.curr_func_name = safe_str_convert(self.name)
 
         # Global variable initialization goes first.
         r = global_var_init_str
@@ -477,18 +514,18 @@ class Function(VBA_Object):
             first = False
             func_args += utils.fix_python_overlap(to_python(param, tmp_context))
         func_args += ")"
-        r += indent_str + "def " + str(self.name) + func_args + ":\n"
+        r += indent_str + "def " + safe_str_convert(self.name) + func_args + ":\n"
 
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
         r += indent_str + " " * 4 + "global vm_context\n\n"
         r += indent_str + " " * 4 + "# Function return value.\n"
-        r += indent_str + " " * 4 + str(self.name) + " = 0\n\n"
+        r += indent_str + " " * 4 + safe_str_convert(self.name) + " = 0\n\n"
 
         # Global variables used in the function.
         r += indent_str + " " * 4 + "# Referenced global variables.\n"
-        for global_var in global_var_info.keys():
-            r += indent_str + " " * 4 + "global " + str(global_var) + "\n"
+        for global_var in global_var_info:
+            r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
             
         # Function body.
@@ -498,7 +535,7 @@ class Function(VBA_Object):
         r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
         
         # Return the function return val.
-        r += "\n" + indent_str + " " * 4 + "return " + str(self.name) + "\n"
+        r += "\n" + indent_str + " " * 4 + "return " + safe_str_convert(self.name) + "\n"
 
         # Done.
         return r
@@ -518,7 +555,7 @@ class Function(VBA_Object):
         context.goto_executed = False
 
         # Save the name of the current function so we can handle exit function calls.
-        context.curr_func_name = str(self.name)
+        context.curr_func_name = safe_str_convert(self.name)
         
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
@@ -595,7 +632,7 @@ class Function(VBA_Object):
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
-            log.warn("Recursive infinite loop detected. Aborting call " + str(call_info))
+            log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
             #print self
             #print call_info
             #print context.call_stack
@@ -609,7 +646,7 @@ class Function(VBA_Object):
         do_const_assignments(self.statements, context)
         
         # Set the parameter values in the current context.
-        for param_name in call_info.keys():
+        for param_name in call_info:
             param_val, param_type = call_info[param_name]
             context.set(param_name, param_val, var_type=param_type, force_local=True)
         
@@ -642,7 +679,8 @@ class Function(VBA_Object):
             # after the loop.
             if (is_loop_statement(s)):
                 context.goto_executed = False
-            
+                s.exited_with_goto = False
+                
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed or s.exited_with_goto):
@@ -669,13 +707,16 @@ class Function(VBA_Object):
 
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
+
+        # Same with whether we did any wildcard value tests.
+        caller_context.tested_wildcard = context.tested_wildcard
         
         # TODO: get result from context.locals
         context.exit_func = False
         try:
 
             # Save the values of the ByRef parameters.
-            for byref_param in self.byref_params.keys():
+            for byref_param in self.byref_params:
                 if (context.contains(byref_param[0].lower())):
                     self.byref_params[byref_param] = context.get(byref_param[0].lower())
 
@@ -688,7 +729,7 @@ class Function(VBA_Object):
 
             # Convert the return value to a String if needed.
             if ((self.return_type == "String") and (not isinstance(return_value, str))):
-                return_value = coerce_to_string(return_value)
+                return_value = vba_conversion.coerce_to_str(return_value)
 
             # Handle array accesses of the results of 0 parameter functions if needed.
             if (array_indices is not None):
@@ -710,20 +751,26 @@ class Function(VBA_Object):
 
                     # Invalid array indices.
                     else:
-                        log.warn("Array indices " + str(array_indices) + " are invalid. " + \
+                        log.warn("Array indices " + safe_str_convert(array_indices) + " are invalid. " + \
                                  "Not doing array access of function return value.")
 
                 # Function does not return array.
                 else:
-                    log.warn(str(self) + " does not return an array. Not doing array access.")
+                    log.warn(safe_str_convert(self) + " does not return an array. Not doing array access.")
                     
             # Copy all the global variables from the function context to the caller
             # context so global updates are tracked.
             for global_var in context.globals.keys():
                 caller_context.globals[global_var] = context.globals[global_var]
-                    
+
+            # Try to identify string decode functions. We are looking
+            # for functions that are called multiple times and always
+            # return a string value.
+            context.track_possible_decoded_str(self.name, return_value)
+                
+            # Done. Return the function result.
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug("Returning from func " + str(self))
+                log.debug("Returning from func " + safe_str_convert(self))
             return return_value
 
         except KeyError:
@@ -732,11 +779,16 @@ class Function(VBA_Object):
             # these funcion values.
             return ''
 
+
 # TODO 5.3.1.4 Function Type Declarations
-function_start = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+function_start = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                 Optional(public_private) + \
+                 Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                  CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                  Optional(params_list_paren) + Optional(function_type2("return_type")) + EOS.suppress()
-function_start_single = Optional(CaselessKeyword('Static')) + Optional(public_private) + Optional(CaselessKeyword('Static')) + \
+function_start_single = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+                        Optional(public_private) + \
+                        Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                         CaselessKeyword('Function').suppress() + TODO_identifier_or_object_attrib('function_name') + \
                         Optional(params_list_paren) + Optional(function_type2) + Suppress(':')
 
@@ -772,9 +824,57 @@ function_start_line.setParseAction(Function)
 # Evaluating a property let handler looks like calling a Sub, so inherit from Sub to get the
 # eval() method.
 class PropertyLet(Sub):
+    """Emulate a VBA/VBScript 'Property Let...' statement.
 
+    """
+    
     def __init__(self, original_str, location, tokens):
         super(PropertyLet, self).__init__(original_str, location, tokens)
+        self.name = tokens.property_name
+        self.params = tokens.params
+        self.min_param_length = len(self.params)
+        for param in self.params:
+            if (param.is_optional):
+                self.min_param_length -= 1
+        self.statements = tokens.statements
+        try:
+            len(self.statements)
+        except TypeError:
+            self.statements = [self.statements]
+        # Get a dict mapping labeled blocks of code to labels.
+        # This will be used to handle GOTO statements when emulating.
+        visitor = tagged_block_finder_visitor()
+        self.accept(visitor)
+        self.tagged_blocks = visitor.blocks
+        log.info('parsed %r' % self)
+
+    def __repr__(self):
+        return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+
+# [ Public | Private | Friend ] [ Static ] Property Let name ( [ arglist ], value )
+# [ statements ]
+# [ Exit Property ]
+# [ statements ]
+# End Property
+
+property_let = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               public_private + \
+               Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               CaselessKeyword('Property').suppress() + \
+               (CaselessKeyword('Let').suppress() | CaselessKeyword('Set').suppress()) + \
+               lex_identifier('property_name') + params_list_paren + \
+               Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
+               (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
+property_let.setParseAction(PropertyLet)
+
+# --- PROPERTY GET --------------------------------------------------------------------
+
+# Evaluating a property get handler looks like calling a Function, so inherit from Function to get the
+# eval() method.
+class PropertyGet(Function):
+
+    def __init__(self, original_str, location, tokens):
+        super(PropertyGet, self).__init__(original_str, location, tokens)
         self.name = tokens.property_name
         self.params = tokens.params
         self.min_param_length = len(self.params)
@@ -794,22 +894,17 @@ class PropertyLet(Sub):
         log.info('parsed %r' % self)
 
     def __repr__(self):
-        return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
-# [ Public | Private | Friend ] [ Static ] Property Letname ( [ arglist ], value )
-# [ statements ]
-# [ Exit Property ]
-# [ statements ]
-# End Property
-
-property_let = Optional(CaselessKeyword('Static')) + public_private + Optional(CaselessKeyword('Static')) + \
-               CaselessKeyword('Property').suppress() + CaselessKeyword('Let').suppress() + \
-               lex_identifier('property_name') + params_list_paren + \
+property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               public_private + \
+               Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
+               CaselessKeyword('Property').suppress() + CaselessKeyword('Get').suppress() + \
+               lex_identifier('property_name') + Optional(params_list_paren) + \
+               Suppress(Optional(CaselessKeyword("As") + type_expression)) + \
                Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
-property_let.setParseAction(PropertyLet)
+property_get.setParseAction(PropertyGet)
 
 # Ugh. Handle cyclic import problem.
 extend_statement_grammar()
-
-

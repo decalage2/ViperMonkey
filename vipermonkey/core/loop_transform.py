@@ -1,3 +1,9 @@
+"""@package vipermonkey.core.loop_transform Transform certain types of
+loops into easier to emulate constructs.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 loop_transform.py - Transform certain types of loops into easier to emulate constructs.
 
@@ -36,16 +42,21 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
 import re
+
+from pyparsing import ParseException
 
 from logger import log
 import statements
 
 def _transform_dummy_loop1(loop):
-    """
-    Transform useless loops like 'y = 20:Do While x < 100:If x = 6 Then y = 30:x = x + 1:Loop' to
-    'y = 30'
+    """Transform useless loops like 'y = 20:Do While x < 100:If x = 6
+    Then y = 30:x = x + 1:Loop' to 'y = 30'
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Do we have this sort of loop?
@@ -103,17 +114,20 @@ def _transform_dummy_loop1(loop):
         loop_repl += run_statement + "\n"
 
     # Parse and return the loop replacement, if it works.
-    import statements
     try:
         obj = statements.statement_block.parseString(loop_repl, parseAll=True)[0]
-    except:
+    except ParseException:
         return loop
     return obj
 
 def _transform_wait_loop(loop):
-    """
-    Transform useless loops like 'Do While x <> y:SomeFunctionCall():Loop' to
-    'SomeFunctionCall()'
+    """Transform useless loops like 'Do While x <>
+    y:SomeFunctionCall():Loop' to 'SomeFunctionCall()'
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Do we have this sort of loop?
@@ -132,12 +146,16 @@ def _transform_wait_loop(loop):
     return loop.body[0]
     
 def transform_loop(loop):
-    """
-    Transform a given VBAObject representing a loop into an easier to emulate construct.
+    """Transform a given VBAObject representing a loop into an easier to
+    emulate construct.
+
+    @param loop (VBA_Object object) The loop to transform.
+
+    @return (VBA_Object object) The transformed loop.
+
     """
 
     # Sanity check.
-    import statements
     if (not isinstance(loop, statements.While_Statement)):
         return loop
     

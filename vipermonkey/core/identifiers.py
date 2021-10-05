@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.identifiers Handle parsing and emulation
+of identifiers.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Identifiers
 
@@ -45,9 +50,14 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from pyparsing import *
-from reserved import *
-from logger import log
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
+
+from pyparsing import CaselessKeyword, Regex, Word, Suppress, Optional, NotAny, \
+    Literal, CharsNotIn, Combine, CaselessLiteral, alphas, alphanums, alphas8bit
+from reserved import reserved_identifier, reserved_type_identifier
 
 # TODO: reduce this list when corresponding statements are implemented
 # Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.

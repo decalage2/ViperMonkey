@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.modules Parsing and emulation of
+VBA/VBScript Modules.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Modules
 
@@ -37,23 +42,36 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# For Python 2+3 support:
-from __future__ import print_function
-
 __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
 import logging
 
-from comments_eol import *
-from procedures import *
-from statements import *
-import vba_context
-from function_defn_visitor import *
-from vba_object import to_python
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
+from pyparsing import Optional, ZeroOrMore, Forward, Suppress, \
+    OneOrMore
+
+from comments_eol import rem_statement, EOL, EOS
+from procedures import function_end, function_start, sub_end, sub_start_line, \
+    function, sub, Function, Sub, property_let, PropertyLet, property_get, \
+    PropertyGet
+from statements import simple_statements_line, for_end, for_start, \
+    type_declaration, simple_if_statement_macro, option_statement, \
+    External_Function, do_const_assignments, external_function, attribute_statement, \
+    Dim_Statement, Global_Var_Statement, Attribute_Statement, If_Statement_Macro, \
+    simple_call_list, dim_statement, global_variable_declaration, \
+    tagged_block, block_statement, orphaned_marker
+from function_defn_visitor import function_defn_visitor
+from vba_object import VBA_Object
+from python_jit import to_python
 from logger import log
+from expressions import expression, expr_const
+from utils import safe_str_convert
 
 # === VBA MODULE AND STATEMENTS ==============================================
 
@@ -62,9 +80,14 @@ from logger import log
 class Module(VBA_Object):
 
     def _handle_func_decls(self, tokens):
-        """
-        Look for functions/subs declared anywhere, including inside the body 
-        of other functions/subs.
+        """Look for functions/subs declared anywhere, including inside the
+        body of other functions/subs. The function/sub declarations
+        will be saved in the subs and functions fields of the current
+        Module object.
+
+        @param tokens (list) A list of pyparsing tokens representing a
+        parsed Module.
+
         """
 
         # Look through each parsed item in the module for function/sub
@@ -88,10 +111,10 @@ class Module(VBA_Object):
                         log.debug("saving func decl: %r" % i.name)
                     self.functions[i.name] = i
 
-                # Property Let function to add?
-                elif isinstance(i, PropertyLet):
+                # Property Let or Get function to add?
+                elif isinstance(i, (PropertyLet, PropertyGet)):
                     if (log.getEffectiveLevel() == logging.DEBUG):
-                        log.debug("saving property let decl: %r" % i.name)
+                        log.debug("saving property let/get decl: %r" % i.name)
                     self.props[i.name] = i
         
     def __init__(self, original_str, location, tokens):
@@ -160,25 +183,23 @@ class Module(VBA_Object):
 
     def __repr__(self):
         r = 'Module %r\n' % self.name
-        for sub in self.subs.values():
-            r += '  %r\n' % sub
+        for sub_ in self.subs.values():
+            r += '  %r\n' % sub_
         for func in self.functions.values():
             r += '  %r\n' % func
         for extfunc in self.external_functions.values():
             r += '  %r\n' % extfunc
         for prop in self.props.values():
-            r += '  %r\n' % func
+            r += '  %r\n' % prop
         return r
 
     def eval(self, context, params=None):
 
         # Perform all of the const assignments first.
         for block in self.loose_lines:
-            if (isinstance(block, Sub) or
-                isinstance(block, Function) or
-                isinstance(block, External_Function)):
+            if isinstance(block, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line const eval of " + str(block))
+                    log.debug("Skip loose line const eval of " + safe_str_convert(block))
                 continue
             if (isinstance(block, LooseLines)):
                 context.global_scope = True
@@ -189,11 +210,9 @@ class Module(VBA_Object):
         # defs) in order.
         done_emulation = False
         for block in self.loose_lines:
-            if (isinstance(block, Sub) or
-                isinstance(block, Function) or
-                isinstance(block, External_Function)):
+            if isinstance(block, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line eval of " + str(block))
+                    log.debug("Skip loose line eval of " + safe_str_convert(block))
                 continue
             context.global_scope = True
             block.eval(context, params)
@@ -207,9 +226,13 @@ class Module(VBA_Object):
         return to_python(self.loose_lines, context, indent=indent, statements=True)
     
     def load_context(self, context):
-        """
-        Load functions/subs defined in the module into the given
-        context.
+        """Load functions/subs defined in the module into the given
+        context. The function/sub names will be associated with the
+        function/sub definitions in the context.
+
+        @param context (VBA_Context object) The context in which to
+        load the functions/subs defined in the current module.
+
         """
         
         for name, _sub in self.subs.items():
@@ -233,7 +256,7 @@ class Module(VBA_Object):
             context.set(name, _function)
         for name, _var in self.global_vars.items():
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, str(_var)))
+                log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
             if (isinstance(name, str)):
                 context.set(name, _var)
                 context.set(name, _var, force_global=True)
@@ -249,6 +272,7 @@ class Module(VBA_Object):
 # MS-GRAMMAR: module = procedural_module | class_module
 
 # Module Header:
+
 
 header_statement = attribute_statement
 # TODO: can we have '::' with an empty statement?
@@ -285,9 +309,9 @@ empty_line = EOL.suppress()
 pointless_empty_tuple = Suppress('(') + Suppress(')')
 
 class LooseLines(VBA_Object):
-    """
-    A list of Visual Basic statements that don't appear in a Sub or Function.
-    This is mainly appicable to VBScript files.
+    """A list of Visual Basic statements that don't appear in a Sub or
+    Function.  This is mainly appicable to VBScript files.
+
     """
 
     def __init__(self, original_str, location, tokens):
@@ -314,16 +338,14 @@ class LooseLines(VBA_Object):
         do_const_assignments(self.block, context)
         
         # Emulate the statements in the block.
-        log.info("Emulating " + str(self) + " ...")
+        log.info("Emulating " + safe_str_convert(self) + " ...")
         context.global_scope = True
         for curr_statement in self.block:
 
             # Don't emulate declared functions.
-            if (isinstance(curr_statement, Sub) or
-                isinstance(curr_statement, Function) or
-                isinstance(curr_statement, External_Function)):
+            if isinstance(curr_statement, (External_Function, Function, Sub)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
-                    log.debug("Skip loose line eval of " + str(curr_statement))
+                    log.debug("Skip loose line eval of " + safe_str_convert(curr_statement))
                 continue
             
             # Is this something we can emulate?
@@ -340,7 +362,9 @@ class LooseLines(VBA_Object):
         # loop with an error.
         context.handle_error(params)
             
-loose_lines <<= OneOrMore(pointless_empty_tuple ^ simple_call_list ^ tagged_block ^ (block_statement + EOS.suppress()) ^ orphaned_marker)('block')
+
+loose_lines <<= OneOrMore(pointless_empty_tuple ^ simple_call_list ^ \
+                          tagged_block ^ (block_statement + EOS.suppress()) ^ orphaned_marker)('block')
 loose_lines.setParseAction(LooseLines)
 
 # TODO: add optional empty lines after each sub/function?
@@ -349,6 +373,7 @@ module_code = ZeroOrMore(
     | sub
     | function
     | property_let
+    | property_get    
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
@@ -363,6 +388,7 @@ module = ZeroOrMore(
     | sub
     | function
     | property_let
+    | property_get
     | Suppress(empty_line)
     | simple_if_statement_macro
     | loose_lines
