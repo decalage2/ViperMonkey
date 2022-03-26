@@ -1387,6 +1387,7 @@ def fix_difficult_code(vba_code):
         print vba_code
     vba_code = re.sub(r"[Aa]s\s+#", "as__HASH", vba_code)
     vba_code = re.sub(r"[Pp]ut\s+#", "put__HASH", vba_code)
+    vba_code = re.sub(r"[Ww]rite\s+#", "write__HASH", vba_code)
     vba_code = re.sub(r"[Gg]et\s+#", "get__HASH", vba_code)
     vba_code = re.sub(r"[Cc]lose\s+#", "close__HASH", vba_code)
 
@@ -1686,6 +1687,7 @@ def fix_difficult_code(vba_code):
     # Put the As, Put and Close statements back.
     r = r.replace("as__HASH", "As #")
     r = r.replace("put__HASH", "Put #")
+    r = r.replace("write__HASH", "Write #")
     r = r.replace("get__HASH", "Get #")
     r = r.replace("close__HASH", "Close #")
 
