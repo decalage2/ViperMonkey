@@ -5483,7 +5483,7 @@ class Write(VbaLibraryFunc):
             return "NULL"
 
         # Get the data.
-        data = str(params[0])
+        data = str(params[1])
 
         # Save writes that look like they are writing URLs.
         if (("http:" in data) or ("https:" in data)):
