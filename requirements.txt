@@ -9,3 +9,5 @@ xlrd
 unidecode==1.2.0
 # regex is not installable on PyPy+Windows, so we only require it if the platform is not Windows or not PyPy:
 regex ; platform_python_implementation!="PyPy" or platform_system!="Windows"
+cryptography>=41.0.4 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
