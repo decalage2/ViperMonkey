@@ -1,4 +1,4 @@
-oletools>=0.56.1 # oletools from 0.54.2 to 0.56 required cryptography, incompatible with PyPy. oletools 0.56.1+ does not require it anymore.
+oletools>=0.56.1,<=0.60.1 # oletools from 0.54.2 to 0.56 required cryptography, incompatible with PyPy. oletools 0.56.1+ does not require it anymore.
 olefile
 prettytable
 colorlog
