@@ -1,3 +1,8 @@
+"""@package vipermonkey.core.utils Utility functions.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey - Utility functions.
 
@@ -37,6 +42,7 @@ import re
 from curses_ascii import isascii
 from curses_ascii import isprint
 import base64
+import string
 
 import logging
 
@@ -51,28 +57,43 @@ except ImportError:
     from logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
-import excel
 
-def safe_str_convert(s):
-    """
-    Convert a string to ASCII without throwing a unicode decode error.
+def _test_char(c):
+    if isinstance(c, int):
+        c = chr(c)
+    return (isprint(c) or (c in "\t\n"))
+
+def safe_str_convert(s, strict=False):
+    """Convert a string to ASCII without throwing a unicode decode error.
+
+    @param s (any) The thing to convert to a str.
+
+    @param strict (boolean) If True make sure that there are no
+    unprintable characters in the given string (if s is a str). If
+    False do no modification of a given str.
+
+    @return (str) The given thing as a string.
+
     """
 
     # Handle Excel strings.
     if (isinstance(s, dict) and ("value" in s)):
         s = s["value"]
 
-    # Do the actualk string conversion.
+    # Do the actual string conversion.
     try:
+        # Strip unprintable characters if needed.
+        if (strict and isinstance(s, str)):
+            s = filter(_test_char, s)
         return str(s)
     except UnicodeDecodeError:
-        return filter(isprint, s)
+        return filter(_test_char, s)
     except UnicodeEncodeError:
-        return filter(isprint, s)
+        return filter(_test_char, s)
 
-class Infix:
-    """
-    Used to define our own infix operators.
+class Infix(object):
+    """Used to define our own infix operators.
+
     """
     def __init__(self, function):
         self.function = function
@@ -88,35 +109,50 @@ class Infix:
         return self.function(value1, value2)
 
 def safe_plus(x,y):
-    """
-    Handle "x + y" where x and y could be some combination of ints and strs.
+    """Handle "x + y" where x and y could be some combination of ints and
+    strs.
+
+    @param x (any) LHS of the addition.
+    @param y (any) RHS of the addition.
+
+    @return (str, float, or int) The result of x+y based on the types
+    of x and y.
+
     """
 
     # Handle Excel Cell objects. Grrr.
+    import excel
     if excel.is_cell_dict(x):
         x = x["value"]
     if excel.is_cell_dict(y):
         y = y["value"]
     
     # Handle NULLs.
-    if (x == "NULL"):
-        x = 0
     if (y == "NULL"):
         y = 0
+    if (x == "NULL"):
+
+        # Ugh. If x is uninitialized and we are adding a string to it
+        # it looks like maybe VB makes this whole thing a string?
+        if isinstance(y, str):
+            x = ""
+        else:
+            x = 0
 
     # Loosely typed languages are terrible. 1 + "3" == 4 while "1" + 3
     # = "13". The type of the 1st argument drives the dynamic type
     # casting (I think) minus variable type information (Dim a as
     # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
+    import vba_conversion
     if (isinstance(x, str)):
-        y = str_convert(y)
+        y = vba_conversion.str_convert(y)
     if (isinstance(x, int)):
-        y = int_convert(y)
+        y = vba_conversion.int_convert(y)
 
     # Easy case first.
-    if ((isinstance(x, int) or isinstance(x, float)) and
-        (isinstance(y, int) or isinstance(y, float))):
+    if (isinstance(x, (float, int)) and
+        isinstance(y, (float, int))):
         return x + y
         
     # Fix data types.
@@ -143,12 +179,22 @@ def safe_plus(x,y):
     # convert things to strings and hope for the best.
     return str(x) + str(y)
 
+
 # Safe plus infix operator. Ugh.
+# pylint: disable=unnecessary-lambda
 plus=Infix(lambda x,y: safe_plus(x, y))
 
 def safe_equals(x,y):
-    """
-    Handle "x = y" where x and y could be some combination of ints and strs.
+    """Handle "x = y" where x and y could be some combination of ints and
+    strs.
+
+    @param x (any) LHS of the equality check.
+    @param y (any) RHS of the equality check.
+
+    @return (boolean) The result of the equality check, taking into
+    account the implicit type conversions VB performs to "help" the
+    programmer.
+
     """
 
     # Handle NULLs.
@@ -156,8 +202,22 @@ def safe_equals(x,y):
         x = 0
     if (y == "NULL"):
         y = 0
-    
+
+    # Handle equality checks on a wildcarded file name. The
+    # current file name is never going to be equal to "".
+    if (((x == "CURRENT_FILE_NAME") and (y == "")) or
+        ((y == "CURRENT_FILE_NAME") and (x == "")) or
+        ((x == "SOME_FILE_NAME") and (y == "")) or
+        ((y == "SOME_FILE_NAME") and (x == ""))):
+        return False
+        
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if ((x in wildcards) or (y in wildcards)):
+        return True
+        
     # Easy case first.
+    # pylint: disable=unidiomatic-typecheck
     if (type(x) == type(y)):
         return x == y
 
@@ -169,14 +229,61 @@ def safe_equals(x,y):
     # Punt. Just convert things to strings and hope for the best.
     return str(x) == str(y)
 
+
 # Safe equals and not equals infix operators. Ugh. Loosely typed languages are terrible.
+# pylint: disable=unnecessary-lambda
 eq=Infix(lambda x,y: safe_equals(x, y))
 neq=Infix(lambda x,y: (not safe_equals(x, y)))
 
-def safe_print(text):
+def safe_gt(x,y):
+    """Handle "x > y" where x and y could be some combination of ints and
+    strs.
+
+    @param x (any) LHS of the check.
+    @param y (any) RHS of the check.
+
+    @return (boolean) The result of the greater than check, taking into
+    account the implicit type conversions VB performs to "help" the
+    programmer.
+
     """
-    Sometimes printing large strings when running in a Docker container triggers exceptions.
-    This function just wraps a print in a try/except block to not crash ViperMonkey when this happens.
+
+    # Handle NULLs.
+    if (x == "NULL"):
+        x = 0
+    if (y == "NULL"):
+        y = 0
+        
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if ((x in wildcards) or (y in wildcards)):
+        return True
+        
+    # Since we are doing > both values should be numbers.
+    try:
+        from vba_conversion import coerce_to_num
+        x = coerce_to_num(x)
+        y = coerce_to_num(y)
+    except ValueError:
+        return False
+
+    # Return the numeric comparison.
+    return (x > y)
+
+# Safe > and < infix operators. Ugh. Loosely typed languages are terrible.
+# pylint: disable=unnecessary-lambda
+gt=Infix(lambda x,y: safe_gt(x, y))
+lt=Infix(lambda x,y: (not safe_gt(x, y)))
+gte=Infix(lambda x,y: (safe_gt(x, y) or safe_equals(x,y)))
+lte=Infix(lambda x,y: (not safe_gt(x, y) or safe_equals(x,y)))
+
+def safe_print(text):
+    """Sometimes printing large strings when running in a Docker
+    container triggers exceptions.  This function just wraps a print
+    in a try/except block to not crash ViperMonkey when this happens.
+
+    @param text (any) The thing to print.
+
     """
     text = safe_str_convert(text)
     try:
@@ -187,18 +294,27 @@ def safe_print(text):
             msg = msg[:100]
         try:
             print(msg)
-        except:
+        except Exception:
             pass
 
     # if our logger has a FileHandler, we need to tee this print to a file as well
     for handler in log.handlers:
-        if type(handler) is FileHandler or type(handler) is CappedFileHandler:
+        if isinstance(handler, (FileHandler, CappedFileHandler)):
             # set the format to be like a print, not a log, then set it back
             handler.setFormatter(logging.Formatter("%(message)s"))
             handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
             handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
 
 def fix_python_overlap(var_name):
+    """Eliminate collisions between VB variable/function names and Python
+    builtin names.
+
+    @param var_name (str) The VB variable/functio name.
+    
+    @return (str) The variable/function name (possibly) modified so
+    that it does not collide with any Python builtin names.
+
+    """
     builtins = set(["str", "list", "bytes", "pass"])
     if (var_name.lower() in builtins):
         var_name = "MAKE_UNIQUE_" + var_name
@@ -210,8 +326,13 @@ def fix_python_overlap(var_name):
     return var_name
 
 def b64_decode(value):
-    """
-    Base64 decode a string.
+    """Base64 decode a string.
+
+    @param value (str) The string to decode.
+
+    @return (str) On success return the base64 decode results, on
+    error return None.
+
     """
 
     try:
@@ -235,15 +356,15 @@ def b64_decode(value):
             return conv_val
     
     # Base64 conversion error.
-    except Exception as e:
+    except Exception:
         pass
 
     # No valid base64 decode.
     return None
 
 class vb_RegExp(object):
-    """
-    Class to simulate a VBS RegEx object in python.
+    """Class to simulate a VBS RegEx object in python.
+
     """
 
     def __init__(self):
@@ -267,6 +388,14 @@ class vb_RegExp(object):
         return pat
         
     def Test(self, string):
+        """Emulation of the VB Regex object Test() method.
+
+        @param string (str) The string to test against the already set
+        regex pattern.
+
+        @return (boolean) True if the pattern matches, False if not.
+
+        """
         pat = self._get_python_pattern()
         #print "PAT: '" + pat + "'"
         #print "STR: '" + string + "'"
@@ -276,6 +405,16 @@ class vb_RegExp(object):
         return (re.match(pat, string) is not None)
 
     def Replace(self, string, rep):
+        """Emulation of the VB Regex object Replace() method. The already set
+        regex pattern is used.
+
+        @param string (str) The string in which to replace substrings.
+
+        @param rep (str) The replacement value.
+
+        @return (boolean) True if the pattern matches, False if not.
+
+        """
         pat = self._get_python_pattern()
         if (pat is None):
             return string
@@ -283,14 +422,19 @@ class vb_RegExp(object):
         r = string
         try:
             r = re.sub(pat, rep, string)
-        except Exception as e:
+        except Exception:
             pass
         return r
 
 def get_num_bytes(i):
-    """
-    Get the minimum number of bytes needed to represent a given
-    int value.
+    """Get the minimum number of bytes needed to represent a given int
+    value.
+
+    @param i (int) The integer to check.
+
+    @return (int) The number of bytes needed to represent the given
+    int.
+
     """
     
     # 1 byte?
@@ -305,71 +449,13 @@ def get_num_bytes(i):
     # Lets go with 8 bytes.
     return 8
 
-def int_convert(arg, leave_alone=False):
-    """
-    Convert a VBA expression to an int, handling VBA NULL.
-    """
-
-    # Easy case.
-    if (isinstance(arg, int)):
-        return arg
-    
-    # NULLs are 0.
-    if (arg == "NULL"):
-        return 0
-
-    # Empty strings are NULL.
-    if (arg == ""):
-        return "NULL"
-    
-    # Leave the wildcard matching value alone.
-    if (arg == "**MATCH ANY**"):
-        return arg
-
-    # Convert float to int?
-    if (isinstance(arg, float)):
-        arg = int(round(arg))
-
-    # Convert hex to int?
-    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
-        hex_str = "0x" + arg.strip()[2:]
-        try:
-            return int(hex_str, 16)
-        except:
-            log.error("Cannot convert hex '" + str(arg) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-            
-    arg_str = str(arg)
-    if ("." in arg_str):
-        arg_str = arg_str[:arg_str.index(".")]
-    try:
-        return int(arg_str)
-    except Exception as e:
-        if (not leave_alone):
-            log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
-            return 0
-        log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
-        return arg_str
-
-def str_convert(arg):
-    """
-    Convert a VBA expression to an str, handling VBA NULL.
-    """
-    if (arg == "NULL"):
-        return ''
-    if (excel.is_cell_dict(arg)):
-        arg = arg["value"]
-    try:
-        return str(arg)
-    except Exception as e:
-        if (isinstance(arg, unicode)):
-            return ''.join(filter(lambda x:x in string.printable, arg))
-        log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
-        return ''
-
 def strip_nonvb_chars(s):
-    """
-    Strip invalid VB characters from a string.
+    """Strip invalid VB characters from a string.
+
+    @param s (str) The string from which to strip invalid characters.
+    
+    @return (str) The cleaned up string.
+
     """
 
     # Handle unicode strings.

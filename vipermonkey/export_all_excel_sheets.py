@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-"""@package export_all_excel_sheets 
-Export all of the sheets of an Excel file as separate CSV files. This
-is Python 3.
+"""@package vipermonkey.export_all_excel_sheets Export all of the
+sheets of an Excel file as separate CSV files. This is Python 3.
+
 """
 
 import sys
@@ -208,7 +208,22 @@ def convert_csv(fname):
     # 
     
     # Connect to the local LibreOffice server.
-    context = connect(Socket(HOST, PORT))
+    context = None
+    attempts = 0
+    while (attempts < 5):
+        attempts += 1
+        try:
+            context = connect(Socket(HOST, PORT))
+            break
+        except ConnectionError:
+            time.sleep(1)
+
+    # Do we have a connection to the headless LibreOffice?
+    if (context is None):        
+
+        # Can't connect to LibreOffice. Punt.
+        print("ERROR: Cannot connect to headless LibreOffice.")
+        return []
 
     # Load the Excel sheet.
     component = get_component(fname, context)
@@ -216,12 +231,18 @@ def convert_csv(fname):
     # Save the currently active sheet.
     r = []
     controller = component.getCurrentController()
-    active_sheet = controller.ActiveSheet
+    active_sheet = None
+    if hasattr(controller, "ActiveSheet"):
+        active_sheet = controller.ActiveSheet
     active_sheet_name = "NO_ACTIVE_SHEET"
     if (active_sheet is not None):
         active_sheet_name = fix_file_name(active_sheet.getName())
     r.append(active_sheet_name)
-        
+
+    # Bomb out if this is not an Excel file.
+    if (not hasattr(component, "getSheets")):
+        return r
+    
     # Iterate on all the sheets in the spreadsheet.
     sheets = component.getSheets()
     enumeration = sheets.createEnumeration()

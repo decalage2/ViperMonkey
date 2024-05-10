@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.vba_lines Parsing VBScript/VBA code
+lines.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Lines
 
@@ -51,9 +56,13 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from logger import log
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
-from pyparsing import *
+from pyparsing import CharsNotIn, Literal, Optional, ZeroOrMore, Word, Combine, \
+    LineStart, replaceWith
 
 # --- WSC = White Space Character --------------------------------------------
 
@@ -68,8 +77,6 @@ from pyparsing import *
 # => see http://www.fileformat.info/info/unicode/category/Zs/list.htm
 
 # TODO: add unicode WS characters, if unicode is properly supported
-
-ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 # IMPORTANT NOTE: it seems preferable NOT to use pyparsing's LineEnd()/lineEnd,
 #                 but line_terminator instead (defined below)
@@ -110,12 +117,14 @@ module_body_lines = Combine(ZeroOrMore(logical_line))  # .setDebug()
 # === FUNCTIONS ==============================================================
 
 def vba_collapse_long_lines(vba_code):
-    """
-    Parse a VBA module code to detect continuation line characters (underscore) and
-    collapse split lines. Continuation line characters are replaced by spaces.
+    """Parse a VBA module code to detect continuation line characters
+    (underscore) and collapse split lines. Continuation line
+    characters are replaced by spaces.
 
-    :param vba_code: str, VBA module code
-    :return: str, VBA module code with long lines collapsed
+    @param vba_code (str) The VBA code to modify.
+
+    @return (str) The given VBA code with long lines collapsed.
+
     """
     # make sure the last line ends with a newline char, otherwise the parser breaks:
     if (vba_code is None):

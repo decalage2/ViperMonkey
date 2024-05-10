@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-"""@package export_doc_text 
-Export the document text/tables of a Word document via unotools.
-This is Python 3.
+"""@package vipermonkey.export_doc_text Export the document
+text/tables of a Word document via unotools.  This is Python 3.
+
 """
 
 # sudo apt install python3-uno
@@ -35,10 +35,25 @@ def is_word_file(fname):
     @return (bool) True if the file is a Word file, False if not.
 
     """
+
+    # Easy case. The file commands tells us this is a Word file.
     typ = subprocess.check_output(["file", fname])
-    return ((b"Microsoft Office Word" in typ) or
-            (b"Word 2007+" in typ) or
-            (b"Microsoft OOXML" in typ))
+    if ((b"Microsoft Office Word" in typ) or
+        (b"Word 2007+" in typ) or
+        (b"Microsoft OOXML" in typ)):
+        return True
+
+    # Harder case. This could be a Word file saved as XML.
+    if (b"XML 1.0 document" not in typ):
+        return False
+    contents = None
+    try:
+        f = open(fname, "r")
+        contents = f.read()
+        f.close()
+    except IOError:
+        return False
+    return ('<?mso-application progid="Word.Document"?>' in contents)
 
 ###################################################################################################
 def wait_for_uno_api():

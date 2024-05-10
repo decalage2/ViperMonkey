@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""@package vipermonkey.core.reserved VBA/VBScript reserved keywords.
+
+"""
+
+# pylint: disable=pointless-string-statement
 """
 ViperMonkey: VBA Grammar - Reserved Keywords
 
@@ -41,18 +45,24 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-from pyparsing import *
+# Important: need to change the default pyparsing whitespace setting, because CRLF
+# is not a whitespace for VBA.
+import pyparsing
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
-from logger import log
-from identifiers import *
+from pyparsing import CaselessKeyword, Group, Word, ZeroOrMore, alphas, \
+    alphanums
 
 # --- RESERVED KEYWORDS ------------------------------------------------------
 
 def caselessKeywordsList(keywords):
-    """
-    build a pyparsing parser from a list of caseless keywords
+    """Build a pyparsing parser from a list of caseless keywords
 
-    :param keywords: tuple or list of keyword names (strings)
+    @param keywords (list) Tuple or list of keyword names (strings).
+
+    @reurn PyParsing parser object for recongizing the given
+    keywords.
+
     """
     # start with the first keyword:
     p = CaselessKeyword(keywords[0])
@@ -60,6 +70,7 @@ def caselessKeywordsList(keywords):
     for kw in keywords[1:]:
         p |= CaselessKeyword(kw)
     return p
+
 
 # 3.3.5.2 Reserved Identifiers and IDENTIFIER
 # A <Statement-keyword> is a <reserved-identifier> that is the first syntactic item of a statement or
@@ -155,4 +166,3 @@ future_reserved = caselessKeywordsList(("CDecl", "Decimal", "DefDec"))
 reserved_identifier = statement_keyword | marker_keyword | operator_identifier \
                       | special_form | reserved_name | literal_identifier | rem_keyword \
                       | reserved_for_implementation_use | future_reserved
-

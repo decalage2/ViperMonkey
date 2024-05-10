@@ -1,4 +1,4 @@
-"""@package excel
+"""@package vipermonkey.core.excel
 Partial implementation of xlrd.book object interface and some Excel
 functions.
 
@@ -59,12 +59,24 @@ except ImportError:
     log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
 
-import utils
+from utils import safe_str_convert
     
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     
 #debug = True
 debug = False
+
+def excel_col_letter_to_index(x): 
+    """Convert letters indicating the Excel column (ex. "AD" in "AD12")
+    to a numeric colum index.
+
+    @param x (str) The Excel alphabetic column.
+    
+    @return (int) The column as a nueric index.
+
+    """
+    x = x.upper()
+    return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
 def _read_sheet_from_csv(filename):
     """Read in an Excel sheet from a CSV file.
@@ -81,7 +93,7 @@ def _read_sheet_from_csv(filename):
     try:
         f = open(filename, 'r')
     except Exception as e:
-        log.error("Cannot open CSV file. " + str(e))
+        log.error("Cannot open CSV file. " + safe_str_convert(e))
         return None
 
     # Read in the full CSV file contents and escape ',' in cell values
@@ -90,15 +102,49 @@ def _read_sheet_from_csv(filename):
     f.close()
     in_str = False
     tmp = ""
-    for c in data:
+    pos = 0
+    while (pos < len(data)):
+
+        # Need to find the next string literal?
+        if not in_str:
+
+            # Any more strings in the data?
+            if ('"' not in data[pos:]):
+
+                # We are done. Add in the rest of the data
+                # and quit.
+                tmp = "".join((tmp, data[pos:]))
+                break
+            
+            # Got a string. Find the start of the next string.
+            next_pos = data[pos:].index('"') + pos + 1            
+
+            # Add in the unchanged data up until the next string.
+            tmp = "".join((tmp, data[pos:next_pos]))
+
+            # We are now in a string.
+            #print (pos, len(data))
+            pos = next_pos
+            in_str = True
+            continue
+
+        # We are processing characters in a string.
+        c = data[pos]
+        pos += 1
+
+        # Moved out of current string?
         if (c == '"'):
-            in_str = not in_str
-        if (in_str and (c == ',')):
-            tmp += "#A_COMMA!!#"
-        elif (in_str and (c == '\n')):
-            tmp += "#A_NEWLINE!!#"
+            in_str = False
+
+        # Hide characters in string if needed.
+        if (c == ','):
+            tmp = "".join((tmp, "#A_COMMA!!#"))
+        elif (c == '\n'):
+            tmp = "".join((tmp, "#A_NEWLINE!!#"))
         else:
-            tmp += c
+            tmp = "".join((tmp, c))
+
+    # Read individual cells from the modified sheet contents.
     data = tmp
     
     # Read in all the cells. Note that this only works for a single sheet.
@@ -116,7 +162,7 @@ def _read_sheet_from_csv(filename):
             cell = cell.replace("#A_COMMA!!#", ",").replace("#A_NEWLINE!!#", "\n")
             
             # Strip " from start and end of value.
-            dat = str(cell)
+            dat = safe_str_convert(cell)
             if (dat.startswith('"')):
                 dat = dat[1:]
             if (dat.endswith('"')):
@@ -151,7 +197,7 @@ def _fix_sheet_name(sheet_name):
 
     # Get the characters given as hex strings in the name.
     pat = r"(0x[0-9a-f]{2})"
-    r = utils.safe_str_convert(sheet_name)
+    r = safe_str_convert(sheet_name)
     hex_strs = re.findall(pat, r)
     if (len(hex_strs) == 0):
         return sheet_name
@@ -162,7 +208,7 @@ def _fix_sheet_name(sheet_name):
             chr_val = int(hex_val, 16)
             r = r.replace(hex_val, chr(chr_val))
         except Exception as e:
-            log.error("Fixing sheet named failed. " + str(e))
+            log.error("Fixing sheet named failed. " + safe_str_convert(e))
     return r
 
 def load_excel_libreoffice(data):
@@ -182,7 +228,7 @@ def load_excel_libreoffice(data):
         return None
     
     # Save the Excel data to a temporary file.
-    out_dir = "/tmp/tmp_excel_file_" + str(random.randrange(0, 10000000000))
+    out_dir = "/tmp/tmp_excel_file_" + safe_str_convert(random.randrange(0, 10000000000))
     f = open(out_dir, 'wb')
     f.write(data)
     f.close()
@@ -192,7 +238,7 @@ def load_excel_libreoffice(data):
     try:
         output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_all_excel_sheets.py", out_dir])
     except Exception as e:
-        log.error("Running export_all_excel_sheets.py failed. " + str(e))
+        log.error("Running export_all_excel_sheets.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -202,7 +248,7 @@ def load_excel_libreoffice(data):
         sheet_files = json.loads(output.replace("'", '"'))
     except Exception as e:
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Loading sheet file names failed. " + str(e))
+            log.debug("Loading sheet file names failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -286,7 +332,7 @@ def load_excel_xlrd(data):
         r = xlrd.open_workbook(file_contents=data)
         return r
     except Exception as e:
-        log.error("Reading in file as Excel with xlrd failed. " + str(e))
+        log.error("Reading in file as Excel with xlrd failed. " + safe_str_convert(e))
         return None
 
 def load_excel(data):
@@ -353,7 +399,7 @@ def _get_alphanum_cell_index(row, col):
         dividend = int((dividend - modulo) / 26)
 
     # Return the alphanumeric cell index.
-    return column_name + str(row)
+    return column_name + safe_str_convert(row)
     
 def get_largest_sheet(workbook):
     """Get the sheet in a workbook with the most cells.
@@ -470,7 +516,7 @@ def _pull_cells_sheet_xlrd(sheet, strip_empty):
             try:
                 curr_cell_xlrd = sheet.cell(curr_row, curr_col)
                 curr_val = curr_cell_xlrd.value
-                if (strip_empty and (len(str(curr_val).strip()) == 0)):
+                if (strip_empty and (len(safe_str_convert(curr_val).strip()) == 0)):
                     continue
                 curr_cell = { "value" : curr_val,
                               "row" : curr_row + 1,
@@ -526,7 +572,7 @@ def _pull_cells_sheet_internal(sheet, strip_empty):
         for curr_col in range(0, max_col + 1):
             try:
                 curr_val = sheet.cell(curr_row, curr_col)
-                if (strip_empty and (len(str(curr_val).strip()) == 0)):
+                if (strip_empty and (len(safe_str_convert(curr_val).strip()) == 0)):
                     continue
                 curr_cell = { "value" : curr_val,
                               "row" : curr_row + 1,
@@ -627,10 +673,10 @@ class ExcelSheet(object):
         if debug:
             r += "Sheet: '" + self.name + "'\n\n"
             for cell in self.cells.keys():
-                r += str(cell) + "\t=\t'" + str(self.cells[cell]) + "'\n"
+                r += safe_str_convert(cell) + "\t=\t'" + safe_str_convert(self.cells[cell]) + "'\n"
         else:
             r += "Sheet: '" + self.name + "'\n"
-            r += str(self.cells)
+            r += safe_str_convert(self.cells)
         self.gloss = r
         return self.gloss
 
@@ -680,7 +726,7 @@ class ExcelSheet(object):
         """
         if ((row, col) in self.cells):
             return self.cells[(row, col)]
-        raise KeyError("Cell (" + str(row) + ", " + str(col) + ") not found.")
+        raise KeyError("Cell (" + safe_str_convert(row) + ", " + safe_str_convert(col) + ") not found.")
 
     def cell_value(self, row, col):
         """Get a cell from the sheet.
@@ -734,13 +780,14 @@ class ExcelBook(object):
         """
         
         # Create empty workbook to fill in later?
+        self.all_cells = None
         self.sheets = []
         if (cells is None):
             return
 
         # Create single sheet workbook?
-        self.sheets.append(ExcelSheet(cells, name))
-
+        self.sheets.append(ExcelSheet(cells, name))        
+        
     def __repr__(self):
         """String version of workbook.
 
@@ -748,8 +795,22 @@ class ExcelBook(object):
         log.info("Converting Excel workbook to str ...")
         r = ""
         for sheet in self.sheets:
-            r += str(sheet) + "\n"
+            r += safe_str_convert(sheet) + "\n"
         return r
+
+    def get_all_cells(self):
+        """Pull all the cells from all sheets in the workbook.
+
+        @return (list) A list of cells from the sheets in the workbook
+        represented as a dict. Each cell dict is of the form { "value"
+        : cell value, "row" : row index, "col" : column index, "index"
+        : AB123 form of cell index }. Note that all the cells for all
+        the sheets go in a single list.
+
+        """
+        if (self.all_cells is None):
+            self.all_cells = pull_cells_workbook(self)
+        return self.all_cells
         
     def sheet_names(self):
         """Get the names of all the sheets in the workbook.
@@ -774,9 +835,9 @@ class ExcelBook(object):
 
         """
         if (index < 0):
-            raise ValueError("Sheet index " + str(index) + " is < 0")
+            raise ValueError("Sheet index " + safe_str_convert(index) + " is < 0")
         if (index >= len(self.sheets)):
-            raise ValueError("Sheet index " + str(index) + " is > num sheets (" + str(len(self.sheets)) + ")")
+            raise ValueError("Sheet index " + safe_str_convert(index) + " is > num sheets (" + safe_str_convert(len(self.sheets)) + ")")
         return self.sheets[index]
 
     def sheet_by_name(self, name):
@@ -792,7 +853,7 @@ class ExcelBook(object):
         for sheet in self.sheets:
             if (sheet.name == name):
                 return sheet
-        raise ValueError("Sheet name '" + str(name) + "' not found.")
+        raise ValueError("Sheet name '" + safe_str_convert(name) + "' not found.")
 
 def make_book(cell_data):
     """Make a new ExcelBook workbook.
