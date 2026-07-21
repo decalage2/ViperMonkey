@@ -2,7 +2,7 @@
 
 """@package vmonkey
 The ViperMonkey command line and programatic interface. The top level
-function for using ViperMonkey programatically is process_file().
+function for using ViperMonkey programmatically is process_file().
 
 ViperMonkey is a specialized engine to parse, analyze and interpret Microsoft
 VBA macros (Visual Basic for Applications), mainly for malware analysis.
